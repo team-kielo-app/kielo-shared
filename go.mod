@@ -1,4 +1,4 @@
-module github.com/khnhle/kielo-shared
+module github.com/team-kielo-app/kielo-shared
 
 go 1.25
 
