@@ -1,0 +1,141 @@
+package gcs
+
+import (
+	"fmt"
+	"os"
+	"strings"
+)
+
+// isRunningInDocker checks if the process is running inside a Docker container
+func isRunningInDocker() bool {
+	if _, err := os.Stat("/.dockerenv"); err == nil {
+		return true
+	}
+	if data, err := os.ReadFile("/proc/1/cgroup"); err == nil {
+		return strings.Contains(string(data), "docker")
+	}
+	return false
+}
+
+// NormalizeEmulatorHost normalizes the emulator endpoint so the storage SDK can use it.
+// Ensures a scheme exists, rewrites localhost to docker host when needed, strips the
+// JSON API path suffix, and trims redundant trailing slashes.
+func NormalizeEmulatorHost(raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return ""
+	}
+
+	// When running inside docker we can't reach localhost of the host machine.
+	if isRunningInDocker() {
+		raw = strings.ReplaceAll(raw, "localhost", "gcs-emulator")
+	}
+
+	// Ensure the value includes a scheme for the storage client.
+	if !strings.Contains(raw, "://") {
+		raw = "http://" + raw
+	}
+
+	raw = strings.TrimRight(raw, "/")
+	raw = strings.TrimSuffix(raw, "/storage/v1")
+	raw = strings.TrimSuffix(raw, "/storage")
+	return raw
+}
+
+// Config holds GCS configuration for all services
+type Config struct {
+	ProjectID            string
+	EmulatorHost         string
+	SignedURLHost        string
+	ServingBaseURL       string
+	MediaUploadsBucket   string
+	ProcessedMediaBucket string
+	ConvoCacheBucket     string
+	ContentStorageBucket string
+}
+
+// Bucket names - centralized constants
+const (
+	MediaUploadsBucketBase   = "kielo-media-uploads"
+	ProcessedMediaBucketBase = "kielo-processed-media"
+	ConvoCacheBucketBase     = "kielo-convo-cache"
+	ContentStorageBucketBase = "kielo-content-storage"
+)
+
+// LoadConfig creates a GCS config from environment variables
+func LoadConfig() Config {
+	projectID := os.Getenv("GCP_PROJECT_ID")
+	if projectID == "" {
+		projectID = "demo-project"
+	}
+
+	servingBaseURL := strings.TrimSpace(os.Getenv("CDN_SERVING_BASE_URL"))
+	servingBaseURL = strings.TrimRight(servingBaseURL, "/")
+
+	var emulatorHost, signedURLHost string
+
+	// Use PORT_GCS_EMULATOR if set, otherwise fall back to legacy vars
+	if portStr := os.Getenv("PORT_GCS_EMULATOR"); portStr != "" {
+		host := os.Getenv("HOST_IP")
+		if isRunningInDocker() {
+			host = "gcs-emulator"
+		} else if host == "" {
+			host = "localhost"
+		}
+		base := fmt.Sprintf("http://%s:%s", host, portStr)
+		emulatorHost = NormalizeEmulatorHost(base)
+		signedURLHost = fmt.Sprintf("localhost:%s", portStr)
+	} else {
+		// Legacy support
+		emulatorHost = os.Getenv("STORAGE_EMULATOR_HOST")
+		if external := os.Getenv("HOST_IP"); external != "" {
+			emulatorHost = fmt.Sprintf("http://%s:4443/storage/v1/", external)
+		}
+		emulatorHost = NormalizeEmulatorHost(emulatorHost)
+		signedURLHost = os.Getenv("GCS_SIGNED_URL_HOST")
+		if signedURLHost == "" && emulatorHost != "" {
+			// Default to localhost:4443 for signed URLs when using emulator
+			signedURLHost = "localhost:4443"
+		}
+	}
+
+	env := os.Getenv("ENVIRONMENT")
+	if env == "" {
+		env = "development"
+	}
+
+	cfg := Config{
+		ProjectID:            projectID,
+		EmulatorHost:         emulatorHost,
+		SignedURLHost:        signedURLHost,
+		ServingBaseURL:       servingBaseURL,
+		MediaUploadsBucket:   GetBucketName(MediaUploadsBucketBase, env, projectID),
+		ProcessedMediaBucket: GetBucketName(ProcessedMediaBucketBase, env, projectID),
+		ConvoCacheBucket:     GetBucketName(ConvoCacheBucketBase, env, projectID),
+		ContentStorageBucket: GetBucketName(ContentStorageBucketBase, env, projectID),
+	}
+
+	// Propagate normalized emulator host so callers using the default storage client honor the same endpoint.
+	if cfg.EmulatorHost != "" {
+		_ = os.Setenv("STORAGE_EMULATOR_HOST", cfg.EmulatorHost)
+	}
+
+	return cfg
+}
+
+// GetBucketName returns environment-appropriate bucket name
+func GetBucketName(baseName, env, projectID string) string {
+	if env == "production" {
+		return fmt.Sprintf("%s-%s", baseName, projectID)
+	}
+	return baseName
+}
+
+func firstNonEmpty(vals ...string) string {
+	for _, v := range vals {
+		if s := strings.TrimSpace(v); s != "" {
+			return s
+		}
+	}
+	return ""
+}
