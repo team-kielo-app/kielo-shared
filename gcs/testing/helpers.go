@@ -4,7 +4,7 @@ import (
 	"context"
 	"log/slog"
 
-	"kielo.app/shared/gcs"
+	"github.com/khnhle/kielo-shared/gcs"
 )
 
 // SetupTestBuckets ensures all required GCS buckets exist for testing
