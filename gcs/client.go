@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -453,14 +454,40 @@ func (c *Client) generateEmulatorUploadURL(ctx context.Context, bucketName, obje
 		return "", fmt.Errorf("emulator upload init response missing Location header")
 	}
 
-	if c.config.SignedURLHost != "" {
-		location, err = c.replaceURLHost(location, c.config.SignedURLHost)
-		if err != nil {
-			return "", fmt.Errorf("failed to rewrite emulator upload URL: %w", err)
-		}
+	// Rewrite host for accessibility from the host/mobile network.
+	location, err = c.rewriteUploadLocation(location)
+	if err != nil {
+		return "", fmt.Errorf("failed to rewrite emulator upload URL: %w", err)
 	}
 
 	return location, nil
+}
+
+// rewriteUploadLocation rewrites the host in the emulator upload URL using (in order):
+// 1) Explicit GCS_SIGNED_URL_HOST (config.SignedURLHost)
+// 2) HOST_IP env, keeping the port from the emulator URL
+func (c *Client) rewriteUploadLocation(location string) (string, error) {
+	u, err := url.Parse(location)
+	if err != nil {
+		return "", err
+	}
+
+	targetHost := strings.TrimSpace(c.config.SignedURLHost)
+	if targetHost == "" {
+		if host := strings.TrimSpace(os.Getenv("HOST_IP")); host != "" {
+			port := u.Port()
+			if port == "" {
+				port = "80"
+			}
+			targetHost = net.JoinHostPort(host, port)
+		}
+	}
+
+	if targetHost != "" {
+		u.Host = targetHost
+	}
+
+	return u.String(), nil
 }
 
 // Close closes the underlying storage client

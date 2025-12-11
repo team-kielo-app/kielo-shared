@@ -76,15 +76,22 @@ func LoadConfig() Config {
 
 	// Use PORT_GCS_EMULATOR if set, otherwise fall back to legacy vars
 	if portStr := os.Getenv("PORT_GCS_EMULATOR"); portStr != "" {
-		host := os.Getenv("HOST_IP")
-		if isRunningInDocker() {
-			host = "gcs-emulator"
-		} else if host == "" {
-			host = "localhost"
+		host := strings.TrimSpace(os.Getenv("HOST_IP"))
+		if host == "" {
+			if isRunningInDocker() {
+				host = "gcs-emulator"
+			} else {
+				host = "localhost"
+			}
 		}
 		base := fmt.Sprintf("http://%s:%s", host, portStr)
 		emulatorHost = NormalizeEmulatorHost(base)
-		signedURLHost = fmt.Sprintf("localhost:%s", portStr)
+		signedURLHost = fmt.Sprintf("%s:%s", host, portStr)
+
+		// Allow explicit override even when PORT_GCS_EMULATOR is set
+		if override := strings.TrimSpace(os.Getenv("GCS_SIGNED_URL_HOST")); override != "" {
+			signedURLHost = override
+		}
 	} else {
 		// Legacy support
 		emulatorHost = os.Getenv("STORAGE_EMULATOR_HOST")
@@ -94,8 +101,12 @@ func LoadConfig() Config {
 		emulatorHost = NormalizeEmulatorHost(emulatorHost)
 		signedURLHost = os.Getenv("GCS_SIGNED_URL_HOST")
 		if signedURLHost == "" && emulatorHost != "" {
-			// Default to localhost:4443 for signed URLs when using emulator
-			signedURLHost = "localhost:4443"
+			// Default to HOST_IP (or localhost) when using emulator without explicit override
+			host := strings.TrimSpace(os.Getenv("HOST_IP"))
+			if host == "" {
+				host = "localhost"
+			}
+			signedURLHost = fmt.Sprintf("%s:%d", host, 4443)
 		}
 	}
 
