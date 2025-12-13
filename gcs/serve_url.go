@@ -57,15 +57,3 @@ func EmulatorHostFromEnv() string {
 	}
 	return NormalizeEmulatorHost(emulatorHost)
 }
-
-// EnsureAltMedia appends alt=media to a URL/path if it is not already present.
-// This is useful for JSON API style GCS emulator URLs which otherwise return metadata.
-func EnsureAltMedia(path string) string {
-	if path == "" || strings.Contains(path, "alt=media") {
-		return path
-	}
-	if strings.Contains(path, "?") {
-		return path + "&alt=media"
-	}
-	return path + "?alt=media"
-}
