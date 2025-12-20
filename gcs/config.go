@@ -129,7 +129,6 @@ func LoadConfig() Config {
 		MediaUploadsBucket:   GetBucketName(MediaUploadsBucketBase, env, projectID),
 		ProcessedMediaBucket: GetBucketName(ProcessedMediaBucketBase, env, projectID),
 		ConvoCacheBucket:     GetBucketName(ConvoCacheBucketBase, env, projectID),
-		ContentStorageBucket: GetBucketName(ContentStorageBucketBase, env, projectID),
 	}
 
 	// Propagate normalized emulator host so callers using the default storage client honor the same endpoint.
