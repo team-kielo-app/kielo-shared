@@ -51,6 +51,7 @@ type Config struct {
 	MediaUploadsBucket   string
 	ProcessedMediaBucket string
 	ConvoCacheBucket     string
+	// Deprecated: ContentStorageBucket is no longer used. All media is stored in ProcessedMediaBucket.
 	ContentStorageBucket string
 }
 
@@ -59,6 +60,7 @@ const (
 	MediaUploadsBucketBase   = "kielo-media-uploads"
 	ProcessedMediaBucketBase = "kielo-processed-media"
 	ConvoCacheBucketBase     = "kielo-convo-cache"
+	// Deprecated: ContentStorageBucketBase is no longer used. Bucket has been removed.
 	ContentStorageBucketBase = "kielo-content-storage"
 )
 
@@ -76,17 +78,21 @@ func LoadConfig() Config {
 
 	// Use PORT_GCS_EMULATOR if set, otherwise fall back to legacy vars
 	if portStr := os.Getenv("PORT_GCS_EMULATOR"); portStr != "" {
-		host := strings.TrimSpace(os.Getenv("HOST_IP"))
-		if host == "" {
-			if isRunningInDocker() {
-				host = "gcs-emulator"
-			} else {
-				host = "localhost"
-			}
+		// For internal container-to-container communication, use docker DNS
+		internalHost := "gcs-emulator"
+		if !isRunningInDocker() {
+			internalHost = "localhost"
 		}
-		base := fmt.Sprintf("http://%s:%s", host, portStr)
+		base := fmt.Sprintf("http://%s:%s", internalHost, portStr)
 		emulatorHost = NormalizeEmulatorHost(base)
-		signedURLHost = fmt.Sprintf("%s:%s", host, portStr)
+
+		// For external client access (mobile/browser), use HOST_IP
+		externalHost := strings.TrimSpace(os.Getenv("HOST_IP"))
+		if externalHost == "" {
+			// Fallback: if HOST_IP not set, use localhost
+			externalHost = "localhost"
+		}
+		signedURLHost = fmt.Sprintf("%s:%s", externalHost, portStr)
 
 		// Allow explicit override even when PORT_GCS_EMULATOR is set
 		if override := strings.TrimSpace(os.Getenv("GCS_SIGNED_URL_HOST")); override != "" {
@@ -123,7 +129,6 @@ func LoadConfig() Config {
 		MediaUploadsBucket:   GetBucketName(MediaUploadsBucketBase, env, projectID),
 		ProcessedMediaBucket: GetBucketName(ProcessedMediaBucketBase, env, projectID),
 		ConvoCacheBucket:     GetBucketName(ConvoCacheBucketBase, env, projectID),
-		ContentStorageBucket: GetBucketName(ContentStorageBucketBase, env, projectID),
 	}
 
 	// Propagate normalized emulator host so callers using the default storage client honor the same endpoint.

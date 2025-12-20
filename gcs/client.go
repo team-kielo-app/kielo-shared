@@ -473,6 +473,7 @@ func (c *Client) rewriteUploadLocation(location string) (string, error) {
 	}
 
 	targetHost := strings.TrimSpace(c.config.SignedURLHost)
+
 	if targetHost == "" {
 		if host := strings.TrimSpace(os.Getenv("HOST_IP")); host != "" {
 			port := u.Port()
@@ -480,10 +481,12 @@ func (c *Client) rewriteUploadLocation(location string) (string, error) {
 				port = "80"
 			}
 			targetHost = net.JoinHostPort(host, port)
+
 		}
 	}
 
 	if targetHost != "" {
+
 		u.Host = targetHost
 	}
 
