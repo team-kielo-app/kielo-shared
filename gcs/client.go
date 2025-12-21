@@ -73,11 +73,24 @@ func NewClient(ctx context.Context, cfg Config, logger *slog.Logger) (*Client, e
 // EnsureBucketExists creates a bucket if it doesn't exist
 // Safe to call multiple times - ignores "already exists" errors
 func (c *Client) EnsureBucketExists(ctx context.Context, bucketName string) error {
+	bucketName = strings.TrimSpace(bucketName)
+	if bucketName == "" {
+		return fmt.Errorf("bucket name is empty")
+	}
 	c.logger.Info("Ensuring bucket exists", "bucket", bucketName)
 
 	// Check cache first
 	if _, exists := c.createdBuckets.Load(bucketName); exists {
 		c.logger.Debug("Bucket already ensured", "bucket", bucketName)
+		return nil
+	}
+
+	if !c.config.ManageBuckets {
+		c.logger.Info("Bucket management disabled; verifying existence only", "bucket", bucketName)
+		if err := c.verifyBucketExists(ctx, bucketName); err != nil {
+			return err
+		}
+		c.createdBuckets.Store(bucketName, true)
 		return nil
 	}
 
@@ -214,6 +227,18 @@ func (c *Client) createBucketViaClient(ctx context.Context, bucketName string) e
 
 	c.logger.Info("Bucket created successfully", "bucket", bucketName, "duration", duration)
 	return nil
+}
+
+func (c *Client) verifyBucketExists(ctx context.Context, bucketName string) error {
+	_, err := c.Client.Bucket(bucketName).Attrs(ctx)
+	if err == nil {
+		c.logger.Debug("Bucket verified", "bucket", bucketName)
+		return nil
+	}
+	if errors.Is(err, storage.ErrBucketNotExist) || strings.Contains(err.Error(), "Not Found") {
+		return fmt.Errorf("bucket %s does not exist and bucket management is disabled", bucketName)
+	}
+	return fmt.Errorf("failed to verify bucket %s: %w", bucketName, err)
 }
 
 // EnsureAllBucketsExist ensures all configured buckets exist

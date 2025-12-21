@@ -53,6 +53,7 @@ type Config struct {
 	ConvoCacheBucket     string
 	// Deprecated: ContentStorageBucket is no longer used. All media is stored in ProcessedMediaBucket.
 	ContentStorageBucket string
+	ManageBuckets        bool
 }
 
 // Bucket names - centralized constants
@@ -116,9 +117,24 @@ func LoadConfig() Config {
 		}
 	}
 
-	env := os.Getenv("ENVIRONMENT")
+	env := strings.ToLower(firstNonEmpty(os.Getenv("ENVIRONMENT"), os.Getenv("APP_ENV"), os.Getenv("ENV")))
 	if env == "" {
-		env = "development"
+		if os.Getenv("K_SERVICE") != "" {
+			env = "production"
+		} else {
+			env = "development"
+		}
+	}
+
+	manageBuckets := parseBoolEnv("GCS_MANAGE_BUCKETS")
+	if manageBuckets == nil {
+		if emulatorHost != "" {
+			manageBuckets = boolPtr(true)
+		} else if env == "production" || env == "prod" {
+			manageBuckets = boolPtr(false)
+		} else {
+			manageBuckets = boolPtr(true)
+		}
 	}
 
 	cfg := Config{
@@ -129,6 +145,21 @@ func LoadConfig() Config {
 		MediaUploadsBucket:   GetBucketName(MediaUploadsBucketBase, env, projectID),
 		ProcessedMediaBucket: GetBucketName(ProcessedMediaBucketBase, env, projectID),
 		ConvoCacheBucket:     GetBucketName(ConvoCacheBucketBase, env, projectID),
+		ContentStorageBucket: GetBucketName(ContentStorageBucketBase, env, projectID),
+		ManageBuckets:        *manageBuckets,
+	}
+
+	if override := strings.TrimSpace(os.Getenv("ORIGINAL_UPLOAD_GCS_BUCKET")); override != "" {
+		cfg.MediaUploadsBucket = override
+	}
+	if override := strings.TrimSpace(os.Getenv("PROCESSED_GCS_BUCKET")); override != "" {
+		cfg.ProcessedMediaBucket = override
+	}
+	if override := strings.TrimSpace(os.Getenv("CONVO_CACHE_GCS_BUCKET")); override != "" {
+		cfg.ConvoCacheBucket = override
+	}
+	if override := strings.TrimSpace(os.Getenv("CONTENT_STORAGE_BUCKET")); override != "" {
+		cfg.ContentStorageBucket = override
 	}
 
 	// Propagate normalized emulator host so callers using the default storage client honor the same endpoint.
@@ -141,7 +172,7 @@ func LoadConfig() Config {
 
 // GetBucketName returns environment-appropriate bucket name
 func GetBucketName(baseName, env, projectID string) string {
-	if env == "production" {
+	if env == "production" || env == "prod" {
 		return fmt.Sprintf("%s-%s", baseName, projectID)
 	}
 	return baseName
@@ -154,4 +185,24 @@ func firstNonEmpty(vals ...string) string {
 		}
 	}
 	return ""
+}
+
+func parseBoolEnv(key string) *bool {
+	value := strings.TrimSpace(os.Getenv(key))
+	if value == "" {
+		return nil
+	}
+	value = strings.ToLower(value)
+	switch value {
+	case "1", "true", "yes", "y", "on":
+		return boolPtr(true)
+	case "0", "false", "no", "n", "off":
+		return boolPtr(false)
+	default:
+		return nil
+	}
+}
+
+func boolPtr(value bool) *bool {
+	return &value
 }
