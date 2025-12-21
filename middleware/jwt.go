@@ -3,10 +3,12 @@ package middleware
 import (
 	"context"
 	"crypto/rsa"
+	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -63,7 +65,7 @@ func JWTAuthWithOptions(jwtSecret string, userChecker UserExistenceChecker, opti
 		return func(c echo.Context) error {
 			// Check for API Gateway user info header first (for mobile-bff compatibility)
 			userInfo := c.Request().Header.Get("x-apigateway-api-userinfo")
-			if userInfo != "" {
+			if userInfo != "" && hasValidInternalAPIKey(c.Request()) {
 				// Parse the user info as JSON claims
 				var claims Claims
 				if err := json.Unmarshal([]byte(userInfo), &claims); err == nil {
@@ -165,6 +167,9 @@ func setClaimsInContext(c echo.Context, claims Claims, options *JWTOptions) {
 func GatewayAuth() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
+			if !hasValidInternalAPIKey(c.Request()) {
+				return echo.NewHTTPError(http.StatusUnauthorized, "Missing or invalid internal API key")
+			}
 			userIDStr := c.Request().Header.Get("X-User-ID")
 			if userIDStr == "" {
 				return echo.NewHTTPError(http.StatusUnauthorized, "Missing user context from gateway")
@@ -262,7 +267,7 @@ func FlexibleAuthWithOptions(jwtSecret string, userChecker UserExistenceChecker,
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			// Try gateway headers first (preferred for internal calls)
-			if userIDStr := c.Request().Header.Get("X-User-ID"); userIDStr != "" {
+			if userIDStr := c.Request().Header.Get("X-User-ID"); userIDStr != "" && hasValidInternalAPIKey(c.Request()) {
 				userID, err := uuid.Parse(userIDStr)
 				if err != nil {
 					return echo.NewHTTPError(http.StatusUnauthorized, "Invalid user ID format")
@@ -338,4 +343,16 @@ func RequireAdminRole() echo.MiddlewareFunc {
 			return echo.NewHTTPError(http.StatusUnauthorized, "authentication required")
 		}
 	}
+}
+
+func hasValidInternalAPIKey(r *http.Request) bool {
+	expected := os.Getenv("KIELO_INTERNAL_API_KEY")
+	if expected == "" {
+		return false
+	}
+	provided := r.Header.Get(InternalAPIKeyHeader)
+	if provided == "" {
+		return false
+	}
+	return subtle.ConstantTimeCompare([]byte(provided), []byte(expected)) == 1
 }
