@@ -409,10 +409,12 @@ func (c *Client) GenerateSignedURL(ctx context.Context, bucketName, objectName s
 		return emulatorURL, nil
 	}
 
-	signedURL, err := storage.SignedURL(bucketName, objectName, opts)
+	// Use bucket.SignedURL() which works with Workload Identity / IAM credentials
+	// This is preferred over storage.SignedURL() in Cloud Run environments
+	signedURL, err := c.Client.Bucket(bucketName).SignedURL(objectName, opts)
 	if err != nil {
 		l.Error("Failed to generate signed URL", "error", err)
-		return "", fmt.Errorf("storage.SignedURL: %w", err)
+		return "", fmt.Errorf("bucket.SignedURL: %w", err)
 	}
 
 	// If SignedURLHost is configured, replace the host in the signed URL
