@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/storage"
+	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 )
 
@@ -27,6 +28,9 @@ type ClientInterface interface {
 	DownloadToBytes(ctx context.Context, bucketName, objectName string) ([]byte, error)
 	UploadBlob(ctx context.Context, sourceFile, bucketName, objectName, contentType string) error
 	DeleteBlob(ctx context.Context, bucketName, objectName string) error
+	CopyBlob(ctx context.Context, srcBucket, srcObject, dstBucket, dstObject string) error
+	CopyPrefix(ctx context.Context, bucket, srcPrefix, dstPrefix string) error
+	DeletePrefix(ctx context.Context, bucket, prefix string) error
 	EnsureBucketExists(ctx context.Context, bucketName string) error
 	EnsureAllBucketsExist(ctx context.Context) error
 	GenerateSignedURL(ctx context.Context, bucketName, objectName string, opts *storage.SignedURLOptions) (string, error)
@@ -390,6 +394,93 @@ func (c *Client) DeleteBlob(ctx context.Context, bucketName, objectName string) 
 		return fmt.Errorf("Object(%q).Delete: %w", objectName, err)
 	}
 	l.Info("Blob deleted successfully")
+	return nil
+}
+
+// CopyBlob copies an object within or across buckets using server-side copy (no download)
+func (c *Client) CopyBlob(ctx context.Context, srcBucket, srcObject, dstBucket, dstObject string) error {
+	l := c.logger.With("operation", "CopyBlob", "src_bucket", srcBucket, "src_object", srcObject, "dst_bucket", dstBucket, "dst_object", dstObject)
+	l.Debug("Attempting to copy blob")
+
+	copyCtx, cancel := context.WithTimeout(ctx, time.Minute*5)
+	defer cancel()
+
+	src := c.Client.Bucket(srcBucket).Object(srcObject)
+	dst := c.Client.Bucket(dstBucket).Object(dstObject)
+
+	copier := dst.CopierFrom(src)
+	copier.CacheControl = "public, max-age=31536000"
+
+	_, err := copier.Run(copyCtx)
+	if err != nil {
+		if errors.Is(err, storage.ErrObjectNotExist) {
+			l.Error("Source object not found for copy", "error", err)
+			return fmt.Errorf("source object not found: gs://%s/%s", srcBucket, srcObject)
+		}
+		l.Error("Failed to copy GCS object", "error", err)
+		return fmt.Errorf("CopierFrom(%q).Run: %w", srcObject, err)
+	}
+
+	l.Info("Blob copied successfully")
+	return nil
+}
+
+// CopyPrefix copies all objects with a given prefix to a new prefix within the same bucket
+func (c *Client) CopyPrefix(ctx context.Context, bucket, srcPrefix, dstPrefix string) error {
+	l := c.logger.With("operation", "CopyPrefix", "bucket", bucket, "src_prefix", srcPrefix, "dst_prefix", dstPrefix)
+	l.Debug("Attempting to copy all objects with prefix")
+
+	it := c.Client.Bucket(bucket).Objects(ctx, &storage.Query{Prefix: srcPrefix})
+	copiedCount := 0
+
+	for {
+		attrs, err := it.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			l.Error("Failed to iterate objects", "error", err)
+			return fmt.Errorf("iterating objects with prefix %s: %w", srcPrefix, err)
+		}
+
+		newPath := strings.Replace(attrs.Name, srcPrefix, dstPrefix, 1)
+		if err := c.CopyBlob(ctx, bucket, attrs.Name, bucket, newPath); err != nil {
+			return fmt.Errorf("copying %s to %s: %w", attrs.Name, newPath, err)
+		}
+		copiedCount++
+	}
+
+	l.Info("Prefix copy completed", "copied_count", copiedCount)
+	return nil
+}
+
+// DeletePrefix deletes all objects with a given prefix
+func (c *Client) DeletePrefix(ctx context.Context, bucket, prefix string) error {
+	l := c.logger.With("operation", "DeletePrefix", "bucket", bucket, "prefix", prefix)
+	l.Debug("Attempting to delete all objects with prefix")
+
+	it := c.Client.Bucket(bucket).Objects(ctx, &storage.Query{Prefix: prefix})
+	deletedCount := 0
+
+	for {
+		attrs, err := it.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			l.Error("Failed to iterate objects for deletion", "error", err)
+			return fmt.Errorf("iterating objects with prefix %s: %w", prefix, err)
+		}
+
+		if err := c.DeleteBlob(ctx, bucket, attrs.Name); err != nil {
+			l.Warn("Failed to delete object during prefix deletion", "object", attrs.Name, "error", err)
+			// Continue deleting other objects
+		} else {
+			deletedCount++
+		}
+	}
+
+	l.Info("Prefix deletion completed", "deleted_count", deletedCount)
 	return nil
 }
 

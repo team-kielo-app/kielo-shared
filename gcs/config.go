@@ -51,8 +51,6 @@ type Config struct {
 	MediaUploadsBucket   string
 	ProcessedMediaBucket string
 	ConvoCacheBucket     string
-	// Deprecated: ContentStorageBucket is no longer used. All media is stored in ProcessedMediaBucket.
-	ContentStorageBucket string
 	ManageBuckets        bool
 }
 
@@ -61,8 +59,6 @@ const (
 	MediaUploadsBucketBase   = "kielo-media-uploads"
 	ProcessedMediaBucketBase = "kielo-processed-media"
 	ConvoCacheBucketBase     = "kielo-convo-cache"
-	// Deprecated: ContentStorageBucketBase is no longer used. Bucket has been removed.
-	ContentStorageBucketBase = "kielo-content-storage"
 )
 
 // LoadConfig creates a GCS config from environment variables
@@ -145,7 +141,6 @@ func LoadConfig() Config {
 		MediaUploadsBucket:   GetBucketName(MediaUploadsBucketBase, env, projectID),
 		ProcessedMediaBucket: GetBucketName(ProcessedMediaBucketBase, env, projectID),
 		ConvoCacheBucket:     GetBucketName(ConvoCacheBucketBase, env, projectID),
-		ContentStorageBucket: GetBucketName(ContentStorageBucketBase, env, projectID),
 		ManageBuckets:        *manageBuckets,
 	}
 
@@ -157,9 +152,6 @@ func LoadConfig() Config {
 	}
 	if override := strings.TrimSpace(os.Getenv("CONVO_CACHE_GCS_BUCKET")); override != "" {
 		cfg.ConvoCacheBucket = override
-	}
-	if override := strings.TrimSpace(os.Getenv("CONTENT_STORAGE_BUCKET")); override != "" {
-		cfg.ContentStorageBucket = override
 	}
 
 	// Propagate normalized emulator host so callers using the default storage client honor the same endpoint.
