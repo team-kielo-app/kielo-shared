@@ -11,6 +11,7 @@ const (
 	EntityTypeKieloTVThumbnail EntityType = "KieloTVThumbnail"
 	EntityTypeKieloTVCarousel  EntityType = "KieloTVCarouselImage"
 	EntityTypeKieloTVAudio     EntityType = "KieloTVAudio"
+	EntityTypeBaseWordAudio    EntityType = "BaseWordAudio"
 	EntityTypeConvoTranscript  EntityType = "ConvoSessionTranscript"
 	EntityTypeConvoReview      EntityType = "ConvoSessionReview"
 )
@@ -23,6 +24,7 @@ var ValidEntityTypes = []EntityType{
 	EntityTypeKieloTVThumbnail,
 	EntityTypeKieloTVCarousel,
 	EntityTypeKieloTVAudio,
+	EntityTypeBaseWordAudio,
 	EntityTypeConvoTranscript,
 	EntityTypeConvoReview,
 }
