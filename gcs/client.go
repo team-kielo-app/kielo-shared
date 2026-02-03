@@ -251,11 +251,15 @@ func (c *Client) EnsureAllBucketsExist(ctx context.Context) error {
 		c.config.MediaUploadsBucket,
 		c.config.ProcessedMediaBucket,
 		c.config.ConvoCacheBucket,
+		c.config.LocalizationBucket,
 	}
 
 	c.logger.Info("Ensuring all GCS buckets exist", "bucket_count", len(buckets), "buckets", buckets)
 
 	for _, bucket := range buckets {
+		if bucket == "" {
+			continue // Skip empty bucket names
+		}
 		if err := c.EnsureBucketExists(ctx, bucket); err != nil {
 			return fmt.Errorf("failed to ensure bucket %s exists: %w", bucket, err)
 		}
