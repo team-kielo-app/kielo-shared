@@ -3,18 +3,19 @@ package media
 type EntityType string
 
 const (
-	EntityTypeGeneric          EntityType = ""
-	EntityTypeUserAvatar       EntityType = "UserAvatar"
-	EntityTypeArticleThumbnail EntityType = "ArticleThumbnail"
-	EntityTypeArticleContent   EntityType = "ArticleContentMedia"
-	EntityTypeKieloTVVideo     EntityType = "KieloTVVideo"
-	EntityTypeKieloTVThumbnail EntityType = "KieloTVThumbnail"
-	EntityTypeKieloTVCarousel  EntityType = "KieloTVCarouselImage"
-	EntityTypeKieloTVAudio     EntityType = "KieloTVAudio"
-	EntityTypeBaseWordAudio    EntityType = "BaseWordAudio"
-	EntityTypeParagraphAudio   EntityType = "ParagraphAudio"
-	EntityTypeConvoTranscript  EntityType = "ConvoSessionTranscript"
-	EntityTypeConvoReview      EntityType = "ConvoSessionReview"
+	EntityTypeGeneric                EntityType = ""
+	EntityTypeUserAvatar             EntityType = "UserAvatar"
+	EntityTypeArticleThumbnail       EntityType = "ArticleThumbnail"
+	EntityTypeArticleContent         EntityType = "ArticleContentMedia"
+	EntityTypeKieloTVVideo           EntityType = "KieloTVVideo"
+	EntityTypeKieloTVThumbnail       EntityType = "KieloTVThumbnail"
+	EntityTypeKieloTVCarousel        EntityType = "KieloTVCarouselImage"
+	EntityTypeKieloTVAudio           EntityType = "KieloTVAudio"
+	EntityTypeBaseWordAudio          EntityType = "BaseWordAudio"
+	EntityTypeParagraphAudio         EntityType = "ParagraphAudio"
+	EntityTypeRoadmapLessonStepAudio EntityType = "RoadmapLessonStepAudio"
+	EntityTypeConvoTranscript        EntityType = "ConvoSessionTranscript"
+	EntityTypeConvoReview            EntityType = "ConvoSessionReview"
 )
 
 var ValidEntityTypes = []EntityType{
@@ -27,6 +28,7 @@ var ValidEntityTypes = []EntityType{
 	EntityTypeKieloTVAudio,
 	EntityTypeBaseWordAudio,
 	EntityTypeParagraphAudio,
+	EntityTypeRoadmapLessonStepAudio,
 	EntityTypeConvoTranscript,
 	EntityTypeConvoReview,
 }
