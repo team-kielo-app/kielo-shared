@@ -39,21 +39,14 @@ func BuildServeBaseURL(bucket, pathPrefix, cdnBaseURL string) string {
 
 // EmulatorHostFromEnv normalizes the emulator host from environment variables using the same logic as LoadConfig.
 func EmulatorHostFromEnv() string {
-	if portStr := os.Getenv("PORT_GCS_EMULATOR"); portStr != "" {
-		host := os.Getenv("HOST_IP")
-		if host == "" {
-			host = "localhost"
-			if isRunningInDocker() {
-				host = "gcs-emulator"
-			}
-		}
-		base := fmt.Sprintf("http://%s:%s", host, portStr)
-		return NormalizeEmulatorHost(base)
+	raw := strings.TrimSpace(os.Getenv("STORAGE_EMULATOR_HOST"))
+	if raw == "" {
+		return ""
 	}
-
-	emulatorHost := os.Getenv("STORAGE_EMULATOR_HOST")
-	if external := os.Getenv("HOST_IP"); external != "" {
-		emulatorHost = fmt.Sprintf("http://%s:4443/storage/v1/", external)
+	// For external URL building, use HOST_IP if available
+	if external := strings.TrimSpace(os.Getenv("HOST_IP")); external != "" {
+		port := ParseEmulatorPort()
+		return NormalizeEmulatorHost(fmt.Sprintf("http://%s:%s", external, port))
 	}
-	return NormalizeEmulatorHost(emulatorHost)
+	return NormalizeEmulatorHost(raw)
 }

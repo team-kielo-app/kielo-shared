@@ -79,37 +79,17 @@ func LoadConfig() Config {
 
 	var emulatorHost, signedURLHost string
 
-	// Use PORT_GCS_EMULATOR if set, otherwise fall back to legacy vars
-	if portStr := os.Getenv("PORT_GCS_EMULATOR"); portStr != "" {
-		// For internal container-to-container communication, use docker DNS
-		internalHost := "gcs-emulator"
-		if !isRunningInDocker() {
-			internalHost = "localhost"
-		}
-		base := fmt.Sprintf("http://%s:%s", internalHost, portStr)
-		emulatorHost = NormalizeEmulatorHost(base)
+	// Emulator configuration: single path via STORAGE_EMULATOR_HOST
+	if raw := strings.TrimSpace(os.Getenv("STORAGE_EMULATOR_HOST")); raw != "" {
+		emulatorHost = NormalizeEmulatorHost(raw)
 
-		// For external client access (mobile/browser), use HOST_IP
+		// Derive signed URL host for external access (browser/mobile)
+		port := ParseEmulatorPort()
 		externalHost := strings.TrimSpace(os.Getenv("HOST_IP"))
 		if externalHost == "" {
-			// Fallback: if HOST_IP not set, use localhost
 			externalHost = "localhost"
 		}
-		signedURLHost = fmt.Sprintf("%s:%s", externalHost, portStr)
-	} else {
-		// Legacy support
-		emulatorHost = os.Getenv("STORAGE_EMULATOR_HOST")
-		if external := os.Getenv("HOST_IP"); external != "" {
-			emulatorHost = fmt.Sprintf("http://%s:4443/storage/v1/", external)
-		}
-		emulatorHost = NormalizeEmulatorHost(emulatorHost)
-		if emulatorHost != "" {
-			host := strings.TrimSpace(os.Getenv("HOST_IP"))
-			if host == "" {
-				host = "localhost"
-			}
-			signedURLHost = fmt.Sprintf("%s:%d", host, 4443)
-		}
+		signedURLHost = fmt.Sprintf("%s:%s", externalHost, port)
 	}
 
 	env := strings.ToLower(firstNonEmpty(os.Getenv("ENVIRONMENT"), os.Getenv("APP_ENV"), os.Getenv("ENV")))

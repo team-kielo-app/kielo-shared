@@ -7,6 +7,27 @@ import (
 	"strings"
 )
 
+// ParseEmulatorPort extracts the port from a STORAGE_EMULATOR_HOST value.
+// Handles: "host:port", "http://host:port", "http://host:port/path".
+// Returns "4443" as default if not parseable.
+func ParseEmulatorPort() string {
+	raw := strings.TrimSpace(os.Getenv("STORAGE_EMULATOR_HOST"))
+	if raw == "" {
+		return "4443"
+	}
+	// Try parsing as URL first
+	if strings.Contains(raw, "://") {
+		if u, err := url.Parse(raw); err == nil && u.Port() != "" {
+			return u.Port()
+		}
+	}
+	// Try host:port
+	if _, port, err := net.SplitHostPort(raw); err == nil && port != "" {
+		return port
+	}
+	return "4443"
+}
+
 // IsLoopbackHostname returns true if the hostname is a loopback address (localhost, 127.x, ::1).
 func IsLoopbackHostname(hostname string) bool {
 	h := strings.TrimSpace(strings.ToLower(hostname))
@@ -21,16 +42,10 @@ func IsLoopbackHostname(hostname string) bool {
 // It uses HOST_IP if set, otherwise falls back to localhost.
 // Returns empty string if no emulator is configured.
 func ExternalEmulatorBaseURL() string {
-	port := strings.TrimSpace(os.Getenv("PORT_GCS_EMULATOR"))
-	if port == "" {
-		port = "4443"
-	}
-
-	// Check if emulator is configured
-	if os.Getenv("STORAGE_EMULATOR_HOST") == "" && os.Getenv("PORT_GCS_EMULATOR") == "" {
+	if strings.TrimSpace(os.Getenv("STORAGE_EMULATOR_HOST")) == "" {
 		return ""
 	}
-
+	port := ParseEmulatorPort()
 	hostIP := strings.TrimSpace(os.Getenv("HOST_IP"))
 	if hostIP != "" {
 		return "http://" + net.JoinHostPort(hostIP, port)
@@ -41,18 +56,15 @@ func ExternalEmulatorBaseURL() string {
 // InternalEmulatorBaseURL returns the GCS emulator base URL suitable for internal Docker service-to-service calls.
 // Returns empty string if no emulator is configured.
 func InternalEmulatorBaseURL() string {
-	if emu := strings.TrimSpace(os.Getenv("STORAGE_EMULATOR_HOST")); emu != "" {
-		if !strings.HasPrefix(emu, "http://") && !strings.HasPrefix(emu, "https://") {
-			emu = "http://" + emu
-		}
-		return strings.TrimRight(emu, "/")
-	}
-
-	port := strings.TrimSpace(os.Getenv("PORT_GCS_EMULATOR"))
-	if port == "" {
+	raw := strings.TrimSpace(os.Getenv("STORAGE_EMULATOR_HOST"))
+	if raw == "" {
 		return ""
 	}
-	return "http://gcs-emulator:" + port
+	normalized := NormalizeEmulatorHost(raw)
+	if normalized == "" {
+		return ""
+	}
+	return normalized
 }
 
 // ContextualizeStorageURL rewrites a GCS storage URL based on the request context.
