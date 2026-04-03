@@ -52,15 +52,19 @@ type Config struct {
 	ProcessedMediaBucket string
 	ConvoCacheBucket     string
 	LocalizationBucket   string
+	WhisperModelsBucket  string
+	PublicAssetsBucket   string
 	ManageBuckets        bool
 }
 
 // Bucket names - centralized constants
 const (
 	MediaUploadsBucketBase   = "kielo-media-uploads"
-	ProcessedMediaBucketBase = "kielo-processed-media"
+	ProcessedMediaBucketBase = "kielo-media-processor"
 	ConvoCacheBucketBase     = "kielo-convo-cache"
 	LocalizationBucketBase   = "kielo-localization"
+	WhisperModelsBucketBase  = "kielo-whisper-models"
+	PublicAssetsBucketBase   = "kielo-public-assets"
 )
 
 // LoadConfig creates a GCS config from environment variables
@@ -92,11 +96,6 @@ func LoadConfig() Config {
 			externalHost = "localhost"
 		}
 		signedURLHost = fmt.Sprintf("%s:%s", externalHost, portStr)
-
-		// Allow explicit override even when PORT_GCS_EMULATOR is set
-		if override := strings.TrimSpace(os.Getenv("GCS_SIGNED_URL_HOST")); override != "" {
-			signedURLHost = override
-		}
 	} else {
 		// Legacy support
 		emulatorHost = os.Getenv("STORAGE_EMULATOR_HOST")
@@ -104,9 +103,7 @@ func LoadConfig() Config {
 			emulatorHost = fmt.Sprintf("http://%s:4443/storage/v1/", external)
 		}
 		emulatorHost = NormalizeEmulatorHost(emulatorHost)
-		signedURLHost = os.Getenv("GCS_SIGNED_URL_HOST")
-		if signedURLHost == "" && emulatorHost != "" {
-			// Default to HOST_IP (or localhost) when using emulator without explicit override
+		if emulatorHost != "" {
 			host := strings.TrimSpace(os.Getenv("HOST_IP"))
 			if host == "" {
 				host = "localhost"
@@ -124,15 +121,13 @@ func LoadConfig() Config {
 		}
 	}
 
-	manageBuckets := parseBoolEnv("GCS_MANAGE_BUCKETS")
-	if manageBuckets == nil {
-		if emulatorHost != "" {
-			manageBuckets = boolPtr(true)
-		} else if env == "production" || env == "prod" {
-			manageBuckets = boolPtr(false)
-		} else {
-			manageBuckets = boolPtr(true)
-		}
+	var manageBuckets *bool
+	if emulatorHost != "" {
+		manageBuckets = boolPtr(true)
+	} else if env == "production" || env == "prod" {
+		manageBuckets = boolPtr(false)
+	} else {
+		manageBuckets = boolPtr(true)
 	}
 
 	cfg := Config{
@@ -144,6 +139,8 @@ func LoadConfig() Config {
 		ProcessedMediaBucket: GetBucketName(ProcessedMediaBucketBase, env, projectID),
 		ConvoCacheBucket:     GetBucketName(ConvoCacheBucketBase, env, projectID),
 		LocalizationBucket:   GetBucketName(LocalizationBucketBase, env, projectID),
+		WhisperModelsBucket:  GetBucketName(WhisperModelsBucketBase, env, projectID),
+		PublicAssetsBucket:   GetBucketName(PublicAssetsBucketBase, env, projectID),
 		ManageBuckets:        *manageBuckets,
 	}
 
@@ -158,6 +155,12 @@ func LoadConfig() Config {
 	}
 	if override := strings.TrimSpace(os.Getenv("LOCALIZATION_BUCKET")); override != "" {
 		cfg.LocalizationBucket = override
+	}
+	if override := strings.TrimSpace(os.Getenv("WHISPER_MODELS_BUCKET")); override != "" {
+		cfg.WhisperModelsBucket = override
+	}
+	if override := strings.TrimSpace(os.Getenv("PUBLIC_ASSETS_BUCKET")); override != "" {
+		cfg.PublicAssetsBucket = override
 	}
 
 	// Propagate normalized emulator host so callers using the default storage client honor the same endpoint.
@@ -183,22 +186,6 @@ func firstNonEmpty(vals ...string) string {
 		}
 	}
 	return ""
-}
-
-func parseBoolEnv(key string) *bool {
-	value := strings.TrimSpace(os.Getenv(key))
-	if value == "" {
-		return nil
-	}
-	value = strings.ToLower(value)
-	switch value {
-	case "1", "true", "yes", "y", "on":
-		return boolPtr(true)
-	case "0", "false", "no", "n", "off":
-		return boolPtr(false)
-	default:
-		return nil
-	}
 }
 
 func boolPtr(value bool) *bool {

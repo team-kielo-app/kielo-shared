@@ -252,6 +252,8 @@ func (c *Client) EnsureAllBucketsExist(ctx context.Context) error {
 		c.config.ProcessedMediaBucket,
 		c.config.ConvoCacheBucket,
 		c.config.LocalizationBucket,
+		c.config.WhisperModelsBucket,
+		c.config.PublicAssetsBucket,
 	}
 
 	c.logger.Info("Ensuring all GCS buckets exist", "bucket_count", len(buckets), "buckets", buckets)
