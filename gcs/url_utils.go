@@ -142,15 +142,28 @@ func NormalizeInternalStorageURL(rawURL string) string {
 		return trimmed
 	}
 
-	// Don't rewrite if the internal base itself is loopback (no Docker networking)
+	// Don't rewrite loopback URLs when the configured emulator is also loopback.
+	// STORAGE_EMULATOR_HOST=localhost:4443 means no Docker networking — loopback
+	// URLs (127.0.0.1, localhost) should stay as-is.
+	rawEmulator := strings.TrimSpace(os.Getenv("STORAGE_EMULATOR_HOST"))
+	if rawEmulator != "" {
+		rawHost := rawEmulator
+		if strings.Contains(rawHost, "://") {
+			if u, err := url.Parse(rawHost); err == nil {
+				rawHost = u.Hostname()
+			}
+		} else if h, _, err := net.SplitHostPort(rawHost); err == nil {
+			rawHost = h
+		}
+		if IsLoopbackHostname(rawHost) && IsLoopbackHostname(currentHost) {
+			return trimmed
+		}
+	}
+
 	parsedInternal, err := url.Parse(internalBase)
 	if err != nil || parsedInternal == nil {
 		return trimmed
 	}
-	if IsLoopbackHostname(parsedInternal.Hostname()) {
-		return trimmed
-	}
-
 	parsed.Scheme = parsedInternal.Scheme
 	parsed.Host = parsedInternal.Host
 	return parsed.String()
