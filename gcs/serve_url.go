@@ -2,6 +2,7 @@ package gcs
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"strings"
 )
@@ -30,11 +31,51 @@ func BuildServeBaseURL(bucket, pathPrefix, cdnBaseURL string) string {
 		base := strings.TrimRight(emu, "/")
 		base = strings.TrimSuffix(base, "/storage/v1")
 		base = strings.TrimSuffix(base, "/storage")
-		return fmt.Sprintf("%s/storage/v1/b/%s/o/%s", base, bucket, prefix)
+		return BuildStoragePrefix(base, bucket, prefix)
 	}
 
 	// Default GCS public URL.
 	return fmt.Sprintf("https://storage.googleapis.com/%s/%s", bucket, prefix)
+}
+
+// StorageAPIPath is the GCS JSON API path prefix for object operations.
+const StorageAPIPath = "/storage/v1/b/"
+
+// UploadAPIPath is the GCS JSON API path prefix for resumable uploads.
+const UploadAPIPath = "/upload/storage/v1/b/"
+
+// BuildObjectURL builds a GCS object URL: {base}/storage/v1/b/{bucket}/o/{encodedObject}
+// The base should be scheme://host[:port], optionally with /storage/v1 suffix (stripped).
+// The object path is URL-encoded for safe use in the GCS API path.
+func BuildObjectURL(base, bucket, objectPath string) string {
+	return buildStoragePath(base, bucket) + url.PathEscape(objectPath)
+}
+
+// BuildStoragePrefix builds a GCS prefix URL: {base}/storage/v1/b/{bucket}/o/{prefix}/
+// Unlike BuildObjectURL, the prefix is NOT URL-encoded (it's a path prefix, not a specific object).
+func BuildStoragePrefix(base, bucket, prefix string) string {
+	prefix = strings.Trim(prefix, "/")
+	if prefix != "" {
+		prefix += "/"
+	}
+	return buildStoragePath(base, bucket) + prefix
+}
+
+func buildStoragePath(base, bucket string) string {
+	base = strings.TrimRight(base, "/")
+	base = strings.TrimSuffix(base, "/storage/v1")
+	base = strings.TrimSuffix(base, "/storage")
+	return fmt.Sprintf("%s/storage/v1/b/%s/o/", base, bucket)
+}
+
+// BuildObjectFetchURL builds a GCS object URL with ?alt=media for fetching content.
+func BuildObjectFetchURL(base, bucket, objectPath string) string {
+	return BuildObjectURL(base, bucket, objectPath) + "?alt=media"
+}
+
+// IsStorageAPIPath returns true if the URL path is a GCS storage API path.
+func IsStorageAPIPath(urlPath string) bool {
+	return strings.HasPrefix(urlPath, "/storage/v1/b/") || strings.HasPrefix(urlPath, "/upload/storage/v1/b/")
 }
 
 // EmulatorHostFromEnv normalizes the emulator host from environment variables using the same logic as LoadConfig.

@@ -83,7 +83,7 @@ func ContextualizeStorageURL(requestHostname, rawURL string) string {
 	}
 
 	// Only rewrite GCS storage API paths
-	if !strings.HasPrefix(parsed.Path, "/storage/v1/") && !strings.HasPrefix(parsed.Path, "/upload/storage/v1/") {
+	if !IsStorageAPIPath(parsed.Path) {
 		return trimmed
 	}
 
@@ -127,7 +127,7 @@ func NormalizeInternalStorageURL(rawURL string) string {
 		return trimmed
 	}
 
-	if !strings.HasPrefix(parsed.Path, "/storage/v1/") && !strings.HasPrefix(parsed.Path, "/upload/storage/v1/") {
+	if !IsStorageAPIPath(parsed.Path) {
 		return trimmed
 	}
 
