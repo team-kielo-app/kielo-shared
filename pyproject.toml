@@ -13,3 +13,6 @@ version = {attr = "kielo_shared.__version__"}
 
 [tool.setuptools.packages.find]
 include = ["kielo_shared*"]
+
+[tool.setuptools.package-data]
+kielo_shared = ["*.json"]
