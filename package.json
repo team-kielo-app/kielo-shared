@@ -1,0 +1,13 @@
+{
+  "name": "@kielo/shared",
+  "version": "0.3.10",
+  "description": "Shared utilities for Kielo platform services",
+  "main": "ts/index.ts",
+  "types": "ts/index.ts",
+  "files": ["ts/", "gcs.json"],
+  "exports": {
+    ".": "./ts/index.ts",
+    "./gcs": "./ts/gcs_utils.ts",
+    "./gcs.json": "./gcs.json"
+  }
+}

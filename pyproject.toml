@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kielo-shared"
+dynamic = ["version"]
+description = "Shared utilities for Kielo platform services"
+requires-python = ">=3.11"
+
+[tool.setuptools.dynamic]
+version = {attr = "kielo_shared.__version__"}
+
+[tool.setuptools.packages.find]
+include = ["kielo_shared*"]

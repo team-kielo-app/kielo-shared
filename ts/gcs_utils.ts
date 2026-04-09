@@ -5,7 +5,7 @@
  *   import { ensureAltMedia, buildObjectUrl, isStorageApiPath, BUCKETS } from "@kielo/shared/gcs_utils";
  */
 
-import config from "./gcs.json";
+import config from "../gcs.json";
 
 export const STORAGE_API_PATH: string = config.storageAPIPath;
 export const UPLOAD_API_PATH: string = config.uploadAPIPath;
