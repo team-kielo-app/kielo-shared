@@ -31,7 +31,7 @@ export function buildObjectUrl(base: string, bucket: string, objectPath: string)
   let b = base.replace(/\/+$/, "");
   if (b.endsWith("/storage/v1")) b = b.slice(0, -"/storage/v1".length);
   if (b.endsWith("/storage")) b = b.slice(0, -"/storage".length);
-  return `${b}/storage/v1/b/${bucket}/o/${encodeURIComponent(objectPath)}`;
+  return `${b}${STORAGE_API_PATH}${bucket}/o/${encodeURIComponent(objectPath)}`;
 }
 
 /** Build a GCS object URL with ?alt=media for fetching content. */

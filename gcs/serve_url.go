@@ -65,7 +65,7 @@ func buildStoragePath(base, bucket string) string {
 	base = strings.TrimRight(base, "/")
 	base = strings.TrimSuffix(base, "/storage/v1")
 	base = strings.TrimSuffix(base, "/storage")
-	return fmt.Sprintf("%s/storage/v1/b/%s/o/", base, bucket)
+	return fmt.Sprintf("%s%s%s/o/", base, StorageAPIPath, bucket)
 }
 
 // BuildObjectFetchURL builds a GCS object URL with ?alt=media for fetching content.
@@ -75,7 +75,7 @@ func BuildObjectFetchURL(base, bucket, objectPath string) string {
 
 // IsStorageAPIPath returns true if the URL path is a GCS storage API path.
 func IsStorageAPIPath(urlPath string) bool {
-	return strings.HasPrefix(urlPath, "/storage/v1/b/") || strings.HasPrefix(urlPath, "/upload/storage/v1/b/")
+	return strings.HasPrefix(urlPath, StorageAPIPath) || strings.HasPrefix(urlPath, UploadAPIPath)
 }
 
 // EmulatorHostFromEnv normalizes the emulator host from environment variables using the same logic as LoadConfig.

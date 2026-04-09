@@ -546,7 +546,7 @@ func (c *Client) generateEmulatorUploadURL(ctx context.Context, bucketName, obje
 		return "", fmt.Errorf("emulator host not configured")
 	}
 
-	uploadInitURL := fmt.Sprintf("%s/upload/storage/v1/b/%s/o?uploadType=resumable&name=%s", baseURL, bucketName, url.QueryEscape(objectName))
+	uploadInitURL := fmt.Sprintf("%s%s%s/o?uploadType=resumable&name=%s", baseURL, UploadAPIPath, bucketName, url.QueryEscape(objectName))
 	payload, err := json.Marshal(map[string]string{"name": objectName})
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal emulator upload payload: %w", err)

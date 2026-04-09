@@ -42,7 +42,7 @@ def build_object_url(base: str, bucket: str, object_path: str) -> str:
     if base.endswith("/storage"):
         base = base[: -len("/storage")]
     encoded = quote(object_path, safe="")
-    return f"{base}/storage/v1/b/{bucket}/o/{encoded}"
+    return f"{base}{STORAGE_API_PATH}{bucket}/o/{encoded}"
 
 
 def build_object_fetch_url(base: str, bucket: str, object_path: str) -> str:
