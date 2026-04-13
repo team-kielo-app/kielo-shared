@@ -114,6 +114,53 @@ func ContextualizeStorageURL(requestHostname, rawURL string) string {
 	return parsed.String()
 }
 
+// ContextualizeServiceURL rewrites any internal Docker service URL for external access.
+// It handles both GCS storage URLs and arbitrary service URLs (e.g., kielo-ktv-api:8080).
+// For GCS URLs it delegates to ContextualizeStorageURL.
+// For other internal Docker hostnames (no dots in hostname), it rewrites to HOST_IP.
+// Pass the requesting client's hostname to determine rewrite direction.
+func ContextualizeServiceURL(requestHostname, rawURL string) string {
+	trimmed := strings.TrimSpace(rawURL)
+	if trimmed == "" {
+		return trimmed
+	}
+
+	parsed, err := url.Parse(trimmed)
+	if err != nil || parsed == nil || parsed.Host == "" {
+		return trimmed
+	}
+
+	// GCS storage URLs — delegate to the specialized handler
+	if IsStorageAPIPath(parsed.Path) {
+		return ContextualizeStorageURL(requestHostname, rawURL)
+	}
+
+	// Only rewrite when the request is external (loopback) and the URL is an internal Docker hostname
+	hostname := parsed.Hostname()
+	if hostname == "" {
+		return trimmed
+	}
+
+	// Internal Docker hostnames have no dots (e.g., "kielo-ktv-api", "gcs-emulator")
+	if strings.Contains(hostname, ".") {
+		return trimmed
+	}
+
+	// Only rewrite for external callers (loopback requests from browser)
+	reqHost := strings.TrimSpace(strings.ToLower(requestHostname))
+	if reqHost == "" || !IsLoopbackHostname(reqHost) {
+		return trimmed
+	}
+
+	// Rewrite host to HOST_IP (or localhost) keeping the original port
+	hostIP := strings.TrimSpace(os.Getenv("HOST_IP"))
+	if hostIP == "" {
+		hostIP = "localhost"
+	}
+	parsed.Host = net.JoinHostPort(hostIP, parsed.Port())
+	return parsed.String()
+}
+
 // NormalizeInternalStorageURL rewrites an external GCS emulator URL to use the internal Docker hostname.
 // Useful when CMS receives URLs with HOST_IP but needs to fetch from inside Docker.
 func NormalizeInternalStorageURL(rawURL string) string {

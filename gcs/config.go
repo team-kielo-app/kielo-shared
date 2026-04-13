@@ -54,7 +54,6 @@ type Config struct {
 	LocalizationBucket   string
 	WhisperModelsBucket  string
 	PublicAssetsBucket   string
-	ManageBuckets        bool
 }
 
 // Bucket names - centralized constants
@@ -101,15 +100,6 @@ func LoadConfig() Config {
 		}
 	}
 
-	var manageBuckets *bool
-	if emulatorHost != "" {
-		manageBuckets = boolPtr(true)
-	} else if env == "production" || env == "prod" {
-		manageBuckets = boolPtr(false)
-	} else {
-		manageBuckets = boolPtr(true)
-	}
-
 	cfg := Config{
 		ProjectID:            projectID,
 		EmulatorHost:         emulatorHost,
@@ -121,7 +111,6 @@ func LoadConfig() Config {
 		LocalizationBucket:   GetBucketName(LocalizationBucketBase, env, projectID),
 		WhisperModelsBucket:  GetBucketName(WhisperModelsBucketBase, env, projectID),
 		PublicAssetsBucket:   GetBucketName(PublicAssetsBucketBase, env, projectID),
-		ManageBuckets:        *manageBuckets,
 	}
 
 	if override := strings.TrimSpace(os.Getenv("ORIGINAL_UPLOAD_GCS_BUCKET")); override != "" {
@@ -168,6 +157,3 @@ func firstNonEmpty(vals ...string) string {
 	return ""
 }
 
-func boolPtr(value bool) *bool {
-	return &value
-}
