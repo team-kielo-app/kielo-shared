@@ -54,6 +54,7 @@ type Config struct {
 	LocalizationBucket   string
 	WhisperModelsBucket  string
 	PublicAssetsBucket   string
+	SocialMediaBucket    string
 }
 
 // Bucket names - centralized constants
@@ -64,6 +65,7 @@ const (
 	LocalizationBucketBase   = "kielo-localization"
 	WhisperModelsBucketBase  = "kielo-whisper-models"
 	PublicAssetsBucketBase   = "kielo-public-assets"
+	SocialMediaBucketBase    = "kielo-social-media"
 )
 
 // LoadConfig creates a GCS config from environment variables
@@ -111,6 +113,7 @@ func LoadConfig() Config {
 		LocalizationBucket:   GetBucketName(LocalizationBucketBase, env, projectID),
 		WhisperModelsBucket:  GetBucketName(WhisperModelsBucketBase, env, projectID),
 		PublicAssetsBucket:   GetBucketName(PublicAssetsBucketBase, env, projectID),
+		SocialMediaBucket:    SocialMediaBucketBase,
 	}
 
 	if override := strings.TrimSpace(os.Getenv("ORIGINAL_UPLOAD_GCS_BUCKET")); override != "" {
@@ -130,6 +133,9 @@ func LoadConfig() Config {
 	}
 	if override := strings.TrimSpace(os.Getenv("PUBLIC_ASSETS_BUCKET")); override != "" {
 		cfg.PublicAssetsBucket = override
+	}
+	if override := strings.TrimSpace(firstNonEmpty(os.Getenv("SOCIAL_MEDIA_BUCKET"), os.Getenv("KTV_SOCIAL_MEDIA_BUCKET"))); override != "" {
+		cfg.SocialMediaBucket = override
 	}
 
 	// Propagate normalized emulator host so callers using the default storage client honor the same endpoint.
@@ -156,4 +162,3 @@ func firstNonEmpty(vals ...string) string {
 	}
 	return ""
 }
-

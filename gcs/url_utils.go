@@ -69,8 +69,11 @@ func InternalEmulatorBaseURL() string {
 
 // ContextualizeStorageURL rewrites a GCS storage URL based on the request context.
 // For loopback requests (localhost/127.x): rewrites to external emulator URL (using HOST_IP).
-// For internal Docker requests: rewrites to internal emulator URL (gcs-emulator:port).
-// For non-storage URLs or production: returns the URL unchanged.
+// For internal Docker requests (single-word hostname): rewrites to internal emulator URL (gcs-emulator:port).
+// For any other caller (LAN IP, FQDN) in emulator mode: rewrites to external emulator URL. In
+// production (no emulator configured) ExternalEmulatorBaseURL returns empty and the URL is
+// returned unchanged, so real GCS URLs like storage.googleapis.com are never touched.
+// For non-storage URLs: returns the URL unchanged.
 func ContextualizeStorageURL(requestHostname, rawURL string) string {
 	trimmed := strings.TrimSpace(rawURL)
 	if trimmed == "" {
@@ -92,12 +95,23 @@ func ContextualizeStorageURL(requestHostname, rawURL string) string {
 		return trimmed
 	}
 
+	// Strip :port so downstream classification works for "host:port" inputs.
+	if h, _, splitErr := net.SplitHostPort(hostname); splitErr == nil {
+		hostname = h
+	}
+
 	var targetBase string
-	if IsLoopbackHostname(hostname) {
+	switch {
+	case IsLoopbackHostname(hostname):
 		targetBase = ExternalEmulatorBaseURL()
-	} else if !strings.Contains(hostname, ".") {
-		// Internal Docker hostname (no dots)
+	case !strings.Contains(hostname, "."):
+		// Single-label hostname ⇒ internal Docker service
 		targetBase = InternalEmulatorBaseURL()
+	default:
+		// LAN IP or FQDN. In emulator mode this is an external dev caller
+		// that needs the HOST_IP-based URL; in production ExternalEmulatorBaseURL
+		// returns empty, so real GCS URLs pass through untouched.
+		targetBase = ExternalEmulatorBaseURL()
 	}
 
 	if targetBase == "" {
@@ -117,8 +131,10 @@ func ContextualizeStorageURL(requestHostname, rawURL string) string {
 // ContextualizeServiceURL rewrites any internal Docker service URL for external access.
 // It handles both GCS storage URLs and arbitrary service URLs (e.g., kielo-ktv-api:8080).
 // For GCS URLs it delegates to ContextualizeStorageURL.
-// For other internal Docker hostnames (no dots in hostname), it rewrites to HOST_IP.
-// Pass the requesting client's hostname to determine rewrite direction.
+// For other internal Docker hostnames (no dots in hostname), it rewrites to HOST_IP
+// when the caller is external (loopback, LAN IP, or FQDN). Internal Docker callers
+// get the URL unchanged so service-to-service traffic stays on the Docker network.
+// Pass the requesting client's Host header to determine rewrite direction.
 func ContextualizeServiceURL(requestHostname, rawURL string) string {
 	trimmed := strings.TrimSpace(rawURL)
 	if trimmed == "" {
@@ -135,24 +151,31 @@ func ContextualizeServiceURL(requestHostname, rawURL string) string {
 		return ContextualizeStorageURL(requestHostname, rawURL)
 	}
 
-	// Only rewrite when the request is external (loopback) and the URL is an internal Docker hostname
+	// Internal Docker hostnames have no dots (e.g., "kielo-ktv-api", "gcs-emulator").
+	// Only those are candidates for rewriting — FQDN/IP URLs are left alone.
 	hostname := parsed.Hostname()
-	if hostname == "" {
+	if hostname == "" || strings.Contains(hostname, ".") {
 		return trimmed
 	}
 
-	// Internal Docker hostnames have no dots (e.g., "kielo-ktv-api", "gcs-emulator")
-	if strings.Contains(hostname, ".") {
-		return trimmed
-	}
-
-	// Only rewrite for external callers (loopback requests from browser)
+	// Classify the caller. Strip :port first so "localhost:8080" works.
 	reqHost := strings.TrimSpace(strings.ToLower(requestHostname))
-	if reqHost == "" || !IsLoopbackHostname(reqHost) {
+	if reqHost == "" {
+		return trimmed
+	}
+	if h, _, splitErr := net.SplitHostPort(reqHost); splitErr == nil {
+		reqHost = h
+	}
+
+	// Another internal Docker service is calling us — keep the internal hostname
+	// so service-to-service traffic stays on the Docker network.
+	if !IsLoopbackHostname(reqHost) && !strings.Contains(reqHost, ".") {
 		return trimmed
 	}
 
-	// Rewrite host to HOST_IP (or localhost) keeping the original port
+	// External caller (loopback, LAN IP, or FQDN). Rewrite to HOST_IP (or localhost).
+	// We preserve the original port: Docker services are expected to expose
+	// matching host ports (e.g. "8080:8080"), not gratuitously-renumbered ones.
 	hostIP := strings.TrimSpace(os.Getenv("HOST_IP"))
 	if hostIP == "" {
 		hostIP = "localhost"

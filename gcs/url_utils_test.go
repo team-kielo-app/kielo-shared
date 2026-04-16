@@ -4,6 +4,11 @@ import (
 	"testing"
 )
 
+const (
+	testPublicHost    = "public.test"
+	testAltPublicHost = "edge.test"
+)
+
 func TestContextualizeStorageURL(t *testing.T) {
 	tests := []struct {
 		name            string
@@ -43,17 +48,17 @@ func TestContextualizeStorageURL(t *testing.T) {
 			name:            "loopback request rewrites to HOST_IP",
 			requestHostname: "localhost",
 			rawURL:          "http://gcs-emulator:4443/storage/v1/b/bucket/o/obj",
-			envHostIP:       "192.168.1.70",
+			envHostIP:       testPublicHost,
 			envEmulatorHost: "gcs-emulator:4443",
-			want:            "http://192.168.1.70:4443/storage/v1/b/bucket/o/obj",
+			want:            "http://public.test:4443/storage/v1/b/bucket/o/obj",
 		},
 		{
 			name:            "loopback 127.0.0.1 request rewrites to HOST_IP",
 			requestHostname: "127.0.0.1",
 			rawURL:          "http://gcs-emulator:4443/storage/v1/b/bucket/o/obj",
-			envHostIP:       "10.0.0.5",
+			envHostIP:       testAltPublicHost,
 			envEmulatorHost: "gcs-emulator:4443",
-			want:            "http://10.0.0.5:4443/storage/v1/b/bucket/o/obj",
+			want:            "http://edge.test:4443/storage/v1/b/bucket/o/obj",
 		},
 		{
 			name:            "loopback without HOST_IP falls back to localhost",
@@ -71,9 +76,33 @@ func TestContextualizeStorageURL(t *testing.T) {
 			want:            "http://gcs-emulator:4443/storage/v1/b/bucket/o/obj",
 		},
 		{
-			name:            "external hostname with dots unchanged",
+			name:            "FQDN in emulator mode rewrites to external",
 			requestHostname: "api.kielo.app",
 			rawURL:          "http://gcs-emulator:4443/storage/v1/b/bucket/o/obj",
+			envHostIP:       testPublicHost,
+			envEmulatorHost: "gcs-emulator:4443",
+			want:            "http://public.test:4443/storage/v1/b/bucket/o/obj",
+		},
+		{
+			name:            "LAN IP request rewrites to external",
+			requestHostname: "192.168.1.70:8083",
+			rawURL:          "http://gcs-emulator:4443/storage/v1/b/bucket/o/obj",
+			envHostIP:       testPublicHost,
+			envEmulatorHost: "gcs-emulator:4443",
+			want:            "http://public.test:4443/storage/v1/b/bucket/o/obj",
+		},
+		{
+			name:            "loopback with port still rewrites to external",
+			requestHostname: "localhost:8083",
+			rawURL:          "http://gcs-emulator:4443/storage/v1/b/bucket/o/obj",
+			envHostIP:       testPublicHost,
+			envEmulatorHost: "gcs-emulator:4443",
+			want:            "http://public.test:4443/storage/v1/b/bucket/o/obj",
+		},
+		{
+			name:            "internal docker hostname with port routes internal",
+			requestHostname: "kielo-cms:8080",
+			rawURL:          "http://somehost:4443/storage/v1/b/bucket/o/obj",
 			envEmulatorHost: "gcs-emulator:4443",
 			want:            "http://gcs-emulator:4443/storage/v1/b/bucket/o/obj",
 		},
@@ -131,16 +160,16 @@ func TestContextualizeServiceURL(t *testing.T) {
 			name:            "GCS storage URL delegates to ContextualizeStorageURL",
 			requestHostname: "localhost",
 			rawURL:          "http://gcs-emulator:4443/storage/v1/b/bucket/o/obj?alt=media",
-			envHostIP:       "192.168.1.70",
+			envHostIP:       testPublicHost,
 			envEmulatorHost: "gcs-emulator:4443",
-			want:            "http://192.168.1.70:4443/storage/v1/b/bucket/o/obj?alt=media",
+			want:            "http://public.test:4443/storage/v1/b/bucket/o/obj?alt=media",
 		},
 		{
 			name:            "internal docker hostname rewritten for loopback request",
 			requestHostname: "localhost",
 			rawURL:          "http://kielo-ktv-api:8080/api/v1/outputs/video.mp4",
-			envHostIP:       "192.168.1.70",
-			want:            "http://192.168.1.70:8080/api/v1/outputs/video.mp4",
+			envHostIP:       testPublicHost,
+			want:            "http://public.test:8080/api/v1/outputs/video.mp4",
 		},
 		{
 			name:            "internal docker hostname without HOST_IP falls back to localhost",
@@ -153,42 +182,63 @@ func TestContextualizeServiceURL(t *testing.T) {
 			name:            "port is preserved during rewrite",
 			requestHostname: "localhost",
 			rawURL:          "http://kielo-cms:9999/some/path",
-			envHostIP:       "10.0.0.5",
-			want:            "http://10.0.0.5:9999/some/path",
+			envHostIP:       testAltPublicHost,
+			want:            "http://edge.test:9999/some/path",
 		},
 		{
 			name:            "query string preserved during rewrite",
 			requestHostname: "localhost",
 			rawURL:          "http://kielo-ktv-api:8080/api/v1/outputs/video.mp4?token=abc",
-			envHostIP:       "192.168.1.70",
-			want:            "http://192.168.1.70:8080/api/v1/outputs/video.mp4?token=abc",
+			envHostIP:       testPublicHost,
+			want:            "http://public.test:8080/api/v1/outputs/video.mp4?token=abc",
 		},
 		{
 			name:            "external hostname with dots not rewritten",
 			requestHostname: "localhost",
 			rawURL:          "https://storage.googleapis.com/bucket/obj",
-			envHostIP:       "192.168.1.70",
+			envHostIP:       testPublicHost,
 			want:            "https://storage.googleapis.com/bucket/obj",
 		},
 		{
 			name:            "non-loopback request does not rewrite internal hostname",
 			requestHostname: "kielo-cms",
 			rawURL:          "http://kielo-ktv-api:8080/api/v1/outputs/video.mp4",
-			envHostIP:       "192.168.1.70",
+			envHostIP:       testPublicHost,
 			want:            "http://kielo-ktv-api:8080/api/v1/outputs/video.mp4",
 		},
 		{
-			name:            "production hostname does not rewrite",
+			name:            "FQDN caller rewrites internal URL to HOST_IP",
 			requestHostname: "api.kielo.app",
 			rawURL:          "http://kielo-ktv-api:8080/api/v1/outputs/video.mp4",
-			envHostIP:       "192.168.1.70",
+			envHostIP:       testPublicHost,
+			want:            "http://public.test:8080/api/v1/outputs/video.mp4",
+		},
+		{
+			name:            "LAN IP caller rewrites internal URL to HOST_IP",
+			requestHostname: "192.168.1.108:8084",
+			rawURL:          "http://kielo-ktv-api:8080/api/v1/outputs/video.mp4",
+			envHostIP:       testPublicHost,
+			want:            "http://public.test:8080/api/v1/outputs/video.mp4",
+		},
+		{
+			name:            "loopback with port still rewrites",
+			requestHostname: "localhost:8084",
+			rawURL:          "http://kielo-ktv-api:8080/api/v1/outputs/video.mp4",
+			envHostIP:       testPublicHost,
+			want:            "http://public.test:8080/api/v1/outputs/video.mp4",
+		},
+		{
+			name:            "internal docker caller with port keeps internal URL",
+			requestHostname: "kielo-cms:8080",
+			rawURL:          "http://kielo-ktv-api:8080/api/v1/outputs/video.mp4",
+			envHostIP:       testPublicHost,
 			want:            "http://kielo-ktv-api:8080/api/v1/outputs/video.mp4",
 		},
 		{
 			name:            "empty request hostname does not rewrite",
 			requestHostname: "",
 			rawURL:          "http://kielo-ktv-api:8080/api/v1/outputs/video.mp4",
-			envHostIP:       "192.168.1.70",
+			envHostIP:       testPublicHost,
 			want:            "http://kielo-ktv-api:8080/api/v1/outputs/video.mp4",
 		},
 	}
@@ -244,8 +294,8 @@ func TestIsLoopbackHostname(t *testing.T) {
 		{"::1", true},
 		{"gcs-emulator", false},
 		{"kielo-cms", false},
-		{"192.168.1.70", false},
-		{"10.0.0.5", false},
+		{testPublicHost, false},
+		{testAltPublicHost, false},
 		{"api.kielo.app", false},
 		{"", false},
 	}
@@ -268,9 +318,9 @@ func TestExternalEmulatorBaseURL(t *testing.T) {
 		want        string
 	}{
 		{"no emulator configured", "", "", ""},
-		{"emulator with HOST_IP", "gcs-emulator:4443", "192.168.1.70", "http://192.168.1.70:4443"},
+		{"emulator with HOST_IP", "gcs-emulator:4443", testPublicHost, "http://public.test:4443"},
 		{"emulator without HOST_IP", "gcs-emulator:4443", "", "http://localhost:4443"},
-		{"emulator with custom port", "gcs-emulator:9999", "10.0.0.5", "http://10.0.0.5:9999"},
+		{"emulator with custom port", "gcs-emulator:9999", testAltPublicHost, "http://edge.test:9999"},
 	}
 
 	for _, tt := range tests {

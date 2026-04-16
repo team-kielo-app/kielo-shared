@@ -9,7 +9,8 @@
     "convoCache": "kielo-convo-cache",
     "localization": "kielo-localization",
     "whisperModels": "kielo-whisper-models",
-    "publicAssets": "kielo-public-assets"
+    "publicAssets": "kielo-public-assets",
+    "socialMedia": "kielo-social-media"
   },
   "envVars": {
     "emulatorHost": "STORAGE_EMULATOR_HOST",
