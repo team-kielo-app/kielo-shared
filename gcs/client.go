@@ -14,7 +14,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	"cloud.google.com/go/storage"
@@ -31,8 +30,6 @@ type ClientInterface interface {
 	CopyBlob(ctx context.Context, srcBucket, srcObject, dstBucket, dstObject string) error
 	CopyPrefix(ctx context.Context, bucket, srcPrefix, dstPrefix string) error
 	DeletePrefix(ctx context.Context, bucket, prefix string) error
-	EnsureBucketExists(ctx context.Context, bucketName string) error
-	EnsureAllBucketsExist(ctx context.Context) error
 	GenerateSignedURL(ctx context.Context, bucketName, objectName string, opts *storage.SignedURLOptions) (string, error)
 	Close() error
 }
@@ -40,9 +37,8 @@ type ClientInterface interface {
 // Client wraps the GCS storage client with unified configuration
 type Client struct {
 	*storage.Client
-	config         Config
-	logger         *slog.Logger
-	createdBuckets sync.Map // map[string]bool to cache bucket creation status
+	config Config
+	logger *slog.Logger
 }
 
 // NewClient creates a new GCS client with proper emulator support
@@ -72,52 +68,6 @@ func NewClient(ctx context.Context, cfg Config, logger *slog.Logger) (*Client, e
 
 	l.Info("GCS client initialized successfully")
 	return gcsClient, nil
-}
-
-// EnsureBucketExists creates a bucket if it doesn't exist
-// Safe to call multiple times - ignores "already exists" errors
-func (c *Client) EnsureBucketExists(ctx context.Context, bucketName string) error {
-	bucketName = strings.TrimSpace(bucketName)
-	if bucketName == "" {
-		return fmt.Errorf("bucket name is empty")
-	}
-	c.logger.Info("Ensuring bucket exists", "bucket", bucketName)
-
-	// Check cache first
-	if _, exists := c.createdBuckets.Load(bucketName); exists {
-		c.logger.Debug("Bucket already ensured", "bucket", bucketName)
-		return nil
-	}
-
-	if !c.config.ManageBuckets {
-		c.logger.Info("Bucket management disabled; verifying existence only", "bucket", bucketName)
-		if err := c.verifyBucketExists(ctx, bucketName); err != nil {
-			return err
-		}
-		c.createdBuckets.Store(bucketName, true)
-		return nil
-	}
-
-	var err error
-	if c.config.EmulatorHost != "" {
-		// For emulator, try to create via HTTP API first (more reliable for fake-gcs-server)
-		if err = c.createBucketViaHTTP(ctx, bucketName); err != nil {
-			c.logger.Debug("HTTP bucket creation failed, trying Go client", "error", err)
-			// Fall back to Go client
-			err = c.createBucketViaClient(ctx, bucketName)
-		}
-	} else {
-		// For production GCP
-		err = c.createBucketViaClient(ctx, bucketName)
-	}
-
-	if err != nil {
-		return err
-	}
-
-	// Cache successful creation
-	c.createdBuckets.Store(bucketName, true)
-	return nil
 }
 
 func configureLogger(base *slog.Logger) *slog.Logger {
@@ -192,81 +142,6 @@ func (h *levelOverrideHandler) WithGroup(name string) slog.Handler {
 		inner:    h.inner.WithGroup(name),
 		minLevel: h.minLevel,
 	}
-}
-
-// createBucketViaHTTP creates a bucket using the emulator's HTTP API
-func (c *Client) createBucketViaHTTP(ctx context.Context, bucketName string) error {
-	// This would require HTTP client implementation
-	// For now, we'll use the Go client approach which works for both
-	return c.createBucketViaClient(ctx, bucketName)
-}
-
-// createBucketViaClient creates a bucket using the Go storage client
-func (c *Client) createBucketViaClient(ctx context.Context, bucketName string) error {
-	projectID := c.config.ProjectID
-	if projectID == "" {
-		projectID = "demo-project" // Default for emulator
-	}
-
-	start := time.Now()
-	err := c.Client.Bucket(bucketName).Create(ctx, projectID, nil)
-	duration := time.Since(start)
-
-	if err != nil {
-		c.logger.Debug("Bucket creation failed", "bucket", bucketName, "duration", duration, "error", err)
-		// Ignore context cancellation (assume bucket exists or operation was interrupted)
-		if errors.Is(err, context.Canceled) {
-			c.logger.Debug("Bucket creation canceled, assuming it exists or will be created", "bucket", bucketName)
-			return nil
-		}
-		// Ignore common "already exists" errors
-		if strings.Contains(err.Error(), "already exists") ||
-			strings.Contains(err.Error(), "You already own this bucket") ||
-			strings.Contains(err.Error(), "Not Found") { // Some emulators return this
-			c.logger.Debug("Bucket already exists or creation not needed", "bucket", bucketName)
-			return nil
-		}
-		return fmt.Errorf("failed to create bucket %s: %w", bucketName, err)
-	}
-
-	c.logger.Info("Bucket created successfully", "bucket", bucketName, "duration", duration)
-	return nil
-}
-
-func (c *Client) verifyBucketExists(ctx context.Context, bucketName string) error {
-	_, err := c.Client.Bucket(bucketName).Attrs(ctx)
-	if err == nil {
-		c.logger.Debug("Bucket verified", "bucket", bucketName)
-		return nil
-	}
-	if errors.Is(err, storage.ErrBucketNotExist) || strings.Contains(err.Error(), "Not Found") {
-		return fmt.Errorf("bucket %s does not exist and bucket management is disabled", bucketName)
-	}
-	return fmt.Errorf("failed to verify bucket %s: %w", bucketName, err)
-}
-
-// EnsureAllBucketsExist ensures all configured buckets exist
-func (c *Client) EnsureAllBucketsExist(ctx context.Context) error {
-	buckets := []string{
-		c.config.MediaUploadsBucket,
-		c.config.ProcessedMediaBucket,
-		c.config.ConvoCacheBucket,
-		c.config.LocalizationBucket,
-	}
-
-	c.logger.Info("Ensuring all GCS buckets exist", "bucket_count", len(buckets), "buckets", buckets)
-
-	for _, bucket := range buckets {
-		if bucket == "" {
-			continue // Skip empty bucket names
-		}
-		if err := c.EnsureBucketExists(ctx, bucket); err != nil {
-			return fmt.Errorf("failed to ensure bucket %s exists: %w", bucket, err)
-		}
-	}
-
-	c.logger.Info("All GCS buckets verified/created successfully", "bucket_count", len(buckets))
-	return nil
 }
 
 // DownloadBlob downloads a blob from GCS to a local file
@@ -403,7 +278,11 @@ func (c *Client) DeleteBlob(ctx context.Context, bucketName, objectName string) 
 
 // CopyBlob copies an object within or across buckets using server-side copy (no download)
 func (c *Client) CopyBlob(ctx context.Context, srcBucket, srcObject, dstBucket, dstObject string) error {
-	l := c.logger.With("operation", "CopyBlob", "src_bucket", srcBucket, "src_object", srcObject, "dst_bucket", dstBucket, "dst_object", dstObject)
+	l := c.logger.With(
+		"operation", "CopyBlob",
+		"src_bucket", srcBucket, "src_object", srcObject,
+		"dst_bucket", dstBucket, "dst_object", dstObject,
+	)
 	l.Debug("Attempting to copy blob")
 
 	copyCtx, cancel := context.WithTimeout(ctx, time.Minute*5)
@@ -536,7 +415,9 @@ func (c *Client) replaceURLHost(urlStr, newHost string) (string, error) {
 }
 
 // generateEmulatorUploadURL starts a resumable upload session on the emulator and returns its upload URL.
-func (c *Client) generateEmulatorUploadURL(ctx context.Context, bucketName, objectName string, opts *storage.SignedURLOptions) (string, error) {
+func (c *Client) generateEmulatorUploadURL(
+	ctx context.Context, bucketName, objectName string, opts *storage.SignedURLOptions,
+) (string, error) {
 	baseURL := strings.TrimSuffix(c.config.EmulatorHost, "/")
 	baseURL = strings.TrimSuffix(baseURL, "/storage/v1")
 	baseURL = strings.TrimSuffix(baseURL, "/storage")
@@ -544,7 +425,7 @@ func (c *Client) generateEmulatorUploadURL(ctx context.Context, bucketName, obje
 		return "", fmt.Errorf("emulator host not configured")
 	}
 
-	uploadInitURL := fmt.Sprintf("%s/upload/storage/v1/b/%s/o?uploadType=resumable&name=%s", baseURL, bucketName, url.QueryEscape(objectName))
+	uploadInitURL := fmt.Sprintf("%s%s%s/o?uploadType=resumable&name=%s", baseURL, UploadAPIPath, bucketName, url.QueryEscape(objectName))
 	payload, err := json.Marshal(map[string]string{"name": objectName})
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal emulator upload payload: %w", err)
@@ -603,12 +484,9 @@ func (c *Client) rewriteUploadLocation(location string) (string, error) {
 				port = "80"
 			}
 			targetHost = net.JoinHostPort(host, port)
-
 		}
 	}
-
 	if targetHost != "" {
-
 		u.Host = targetHost
 	}
 
