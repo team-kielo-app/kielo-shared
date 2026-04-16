@@ -25,7 +25,7 @@ def resolve_ca_bundle_path() -> str | None:
     ]
 
     try:
-        import certifi  # type: ignore
+        import certifi
 
         candidates.append(certifi.where())
     except Exception:

@@ -8,15 +8,15 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-const InternalAPIKeyHeader = "X-Internal-API-Key"
+const InternalAPIKeyHeader = "X-Internal-API-Key" //nolint:gosec // header name, not a credential
 
 // InternalAPIKeyConfig controls internal API key authentication behavior.
 type InternalAPIKeyConfig struct {
-	ExpectedKey          string
-	HeaderName           string
-	AllowMissingExpected bool
-	AllowPaths           []string
-	AllowPathPrefixes    []string
+	ExpectedKey           string
+	HeaderName            string
+	AllowMissingExpected  bool
+	AllowPaths            []string
+	AllowPathPrefixes     []string
 	MissingExpectedStatus int
 	MissingStatus         int
 	InvalidStatus         int
@@ -25,8 +25,8 @@ type InternalAPIKeyConfig struct {
 // NewInternalAPIKeyConfig returns a config populated with default status codes.
 func NewInternalAPIKeyConfig(expectedKey string) InternalAPIKeyConfig {
 	return InternalAPIKeyConfig{
-		ExpectedKey:          expectedKey,
-		HeaderName:           InternalAPIKeyHeader,
+		ExpectedKey:           expectedKey,
+		HeaderName:            InternalAPIKeyHeader,
 		MissingExpectedStatus: http.StatusInternalServerError,
 		MissingStatus:         http.StatusUnauthorized,
 		InvalidStatus:         http.StatusUnauthorized,
@@ -91,11 +91,11 @@ func InternalAPIKeyMiddleware(cfg InternalAPIKeyConfig) func(http.Handler) http.
 }
 
 type internalAPIKeyConfig struct {
-	expectedKey          string
-	headerName           string
-	allowMissingExpected bool
-	allowPaths           map[string]struct{}
-	allowPathPrefixes    []string
+	expectedKey           string
+	headerName            string
+	allowMissingExpected  bool
+	allowPaths            map[string]struct{}
+	allowPathPrefixes     []string
 	missingExpectedStatus int
 	missingStatus         int
 	invalidStatus         int
@@ -135,11 +135,11 @@ func normalizeInternalAPIKeyConfig(cfg InternalAPIKeyConfig) internalAPIKeyConfi
 		allowPathPrefixes = append(allowPathPrefixes, trimmed)
 	}
 	return internalAPIKeyConfig{
-		expectedKey:          strings.TrimSpace(cfg.ExpectedKey),
-		headerName:           headerName,
-		allowMissingExpected: cfg.AllowMissingExpected,
-		allowPaths:           allowPaths,
-		allowPathPrefixes:    allowPathPrefixes,
+		expectedKey:           strings.TrimSpace(cfg.ExpectedKey),
+		headerName:            headerName,
+		allowMissingExpected:  cfg.AllowMissingExpected,
+		allowPaths:            allowPaths,
+		allowPathPrefixes:     allowPathPrefixes,
 		missingExpectedStatus: missingExpectedStatus,
 		missingStatus:         missingStatus,
 		invalidStatus:         invalidStatus,

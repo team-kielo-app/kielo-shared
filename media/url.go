@@ -13,7 +13,7 @@ import (
 // media-processor and stored in media_assets.variants (JSONB).
 //
 // Only the fields that callers actually need to construct serve URLs are
-// modelled here; additional metadata in the JSON is ignored on unmarshal.
+// modeled here; additional metadata in the JSON is ignored on unmarshal.
 type Variant struct {
 	Path     string  `json:"path"`
 	MimeType string  `json:"mime_type,omitempty"`

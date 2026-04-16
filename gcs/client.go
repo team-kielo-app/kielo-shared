@@ -278,7 +278,11 @@ func (c *Client) DeleteBlob(ctx context.Context, bucketName, objectName string) 
 
 // CopyBlob copies an object within or across buckets using server-side copy (no download)
 func (c *Client) CopyBlob(ctx context.Context, srcBucket, srcObject, dstBucket, dstObject string) error {
-	l := c.logger.With("operation", "CopyBlob", "src_bucket", srcBucket, "src_object", srcObject, "dst_bucket", dstBucket, "dst_object", dstObject)
+	l := c.logger.With(
+		"operation", "CopyBlob",
+		"src_bucket", srcBucket, "src_object", srcObject,
+		"dst_bucket", dstBucket, "dst_object", dstObject,
+	)
 	l.Debug("Attempting to copy blob")
 
 	copyCtx, cancel := context.WithTimeout(ctx, time.Minute*5)
@@ -411,7 +415,9 @@ func (c *Client) replaceURLHost(urlStr, newHost string) (string, error) {
 }
 
 // generateEmulatorUploadURL starts a resumable upload session on the emulator and returns its upload URL.
-func (c *Client) generateEmulatorUploadURL(ctx context.Context, bucketName, objectName string, opts *storage.SignedURLOptions) (string, error) {
+func (c *Client) generateEmulatorUploadURL(
+	ctx context.Context, bucketName, objectName string, opts *storage.SignedURLOptions,
+) (string, error) {
 	baseURL := strings.TrimSuffix(c.config.EmulatorHost, "/")
 	baseURL = strings.TrimSuffix(baseURL, "/storage/v1")
 	baseURL = strings.TrimSuffix(baseURL, "/storage")
@@ -478,12 +484,9 @@ func (c *Client) rewriteUploadLocation(location string) (string, error) {
 				port = "80"
 			}
 			targetHost = net.JoinHostPort(host, port)
-
 		}
 	}
-
 	if targetHost != "" {
-
 		u.Host = targetHost
 	}
 
