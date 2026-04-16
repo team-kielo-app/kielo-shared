@@ -59,3 +59,4 @@ tmp/
 node_modules/
 
 output.txt
+kielo_shared.egg-info/
