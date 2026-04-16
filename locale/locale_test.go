@@ -34,3 +34,10 @@ func TestNormalizeAcceptLanguage(t *testing.T) {
 	assert.Equal(t, "de-DE", NormalizeAcceptLanguage("de-DE,de;q=0.9"))
 	assert.Equal(t, "", NormalizeAcceptLanguage(""))
 }
+
+func TestSupportLocaleCandidates(t *testing.T) {
+	assert.Equal(t, []string{"vi-VN", "vi", "en"}, SupportLocaleCandidates("vi_VN"))
+	assert.Equal(t, []string{"pt-BR", "pt", "en"}, SupportLocaleCandidates(" pt_BR "))
+	assert.Equal(t, []string{"en-US", "en"}, SupportLocaleCandidates("en_US"))
+	assert.Nil(t, SupportLocaleCandidates(""))
+}

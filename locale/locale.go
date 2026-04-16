@@ -2,6 +2,8 @@ package locale
 
 import "strings"
 
+const TierASupportLocale = "en"
+
 // NormalizeLocaleCode normalizes a locale code to BCP 47 format.
 // It lowercases the base language, uppercases 2-3 char region subtags,
 // titlecases 4-char script subtags, replaces underscores with hyphens,
@@ -54,4 +56,39 @@ func NormalizeAcceptLanguage(value string) string {
 	first := strings.SplitN(value, ",", 2)[0]
 	tag := strings.SplitN(first, ";", 2)[0]
 	return NormalizeLocaleCode(tag)
+}
+
+// BaseLocale returns the normalized base language subtag for any locale-like input.
+func BaseLocale(value string) string {
+	return NormalizeLearningLanguageCode(value)
+}
+
+// SupportLocaleCandidates returns the canonical lookup chain for support-language
+// content. It prefers the requested locale, then its base locale, and finally
+// English as the Tier A support locale when the requested locale is not already
+// English.
+func SupportLocaleCandidates(requested string) []string {
+	normalized := NormalizeLocaleCode(requested)
+	if normalized == "" {
+		return nil
+	}
+	seen := map[string]struct{}{}
+	var out []string
+	appendUnique := func(value string) {
+		value = NormalizeLocaleCode(value)
+		if value == "" {
+			return
+		}
+		if _, ok := seen[value]; ok {
+			return
+		}
+		seen[value] = struct{}{}
+		out = append(out, value)
+	}
+	appendUnique(normalized)
+	appendUnique(BaseLocale(normalized))
+	if BaseLocale(normalized) != TierASupportLocale && normalized != TierASupportLocale {
+		appendUnique(TierASupportLocale)
+	}
+	return out
 }
