@@ -1,0 +1,5 @@
+Metadata-Version: 2.4
+Name: kielo-shared
+Version: 0.3.10
+Summary: Shared utilities for Kielo platform services
+Requires-Python: >=3.11

@@ -1,0 +1,20 @@
+{
+  "storageAPIPath": "/storage/v1/b/",
+  "uploadAPIPath": "/upload/storage/v1/b/",
+  "altMediaParam": "alt=media",
+  "defaultEmulatorPort": 4443,
+  "buckets": {
+    "mediaUploads": "kielo-media-uploads",
+    "mediaProcessor": "kielo-media-processor",
+    "convoCache": "kielo-convo-cache",
+    "localization": "kielo-localization",
+    "whisperModels": "kielo-whisper-models",
+    "publicAssets": "kielo-public-assets",
+    "socialMedia": "kielo-social-media"
+  },
+  "envVars": {
+    "emulatorHost": "STORAGE_EMULATOR_HOST",
+    "hostIP": "HOST_IP",
+    "projectID": "GCP_PROJECT_ID"
+  }
+}
