@@ -202,10 +202,26 @@ def register_search_path_listener(engine: Any, search_path: str) -> None:
     :func:`sqlalchemy.ext.asyncio.create_async_engine`.
     """
     normalized = _validate_search_path_idents(search_path)
-    sync_engine = getattr(engine, "sync_engine", engine)
+    is_async_engine = hasattr(engine, "sync_engine")
+    sync_engine = engine.sync_engine if is_async_engine else engine
 
     @event.listens_for(sync_engine, "connect")
     def _on_connect(dbapi_connection, connection_record):  # noqa: ARG001
+        # For async engines the "dbapi_connection" is SQLAlchemy's asyncpg
+        # adapter, which wraps every cursor.execute() in an implicit
+        # transaction it never closes here. That leaves the raw asyncpg
+        # connection's `_top_xact` dangling, so the next pool_pre_ping
+        # eventually raises "cannot use Connection.transaction() in a
+        # manually started transaction" (observed in Cloud Run + PgBouncer).
+        # Talk to the raw asyncpg.Connection directly to avoid the wrapper's
+        # transaction machinery entirely.
+        if is_async_engine:
+            raw = getattr(dbapi_connection, "driver_connection", None)
+            if raw is not None and hasattr(raw, "execute"):
+                from sqlalchemy.util.concurrency import await_only
+
+                await_only(raw.execute(f"SET search_path TO {normalized}"))
+                return
         cursor = dbapi_connection.cursor()
         try:
             cursor.execute(f"SET search_path TO {normalized}")
