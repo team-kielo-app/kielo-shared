@@ -36,11 +36,93 @@ def test_build_asyncpg_url_and_connect_args_strips_ssl_query_params(monkeypatch)
         db_utils.KLEARN_DB_SEARCH_PATH,
     )
 
-    assert async_url == "postgresql+asyncpg://user:pass@example.com:5432/app"
+    assert async_url.startswith("postgresql+asyncpg://user:pass@example.com:5432/app")
+    # SQLAlchemy's asyncpg dialect prepared-statement cache must be off too.
+    assert "prepared_statement_cache_size=0" in async_url
     # search_path must NOT be sent via asyncpg server_settings — it gets
     # rejected by PgBouncer/PlanetScale as an unsupported startup parameter.
     assert "server_settings" not in connect_args
     assert connect_args["ssl"] is not None
+    # statement_cache_size must be 0 under PgBouncer transaction pooling —
+    # cached prepared-statement plans become invalid when PgBouncer reassigns
+    # the backend between transactions.
+    assert connect_args["statement_cache_size"] == 0
+
+
+def test_build_asyncpg_url_and_connect_args_sets_statement_cache_without_ssl():
+    async_url, connect_args = db_utils.build_asyncpg_url_and_connect_args(
+        "postgresql://user:pass@example.com:5432/app",
+        db_utils.KLEARN_DB_SEARCH_PATH,
+    )
+    assert connect_args == {"statement_cache_size": 0}
+    assert "prepared_statement_cache_size=0" in async_url
+
+
+def test_build_asyncpg_url_respects_existing_prepared_statement_cache_size():
+    async_url, _ = db_utils.build_asyncpg_url_and_connect_args(
+        "postgresql://user:pass@example.com:5432/app?prepared_statement_cache_size=50",
+        db_utils.KLEARN_DB_SEARCH_PATH,
+    )
+    # Do not stomp on an explicit caller-provided override.
+    assert async_url.count("prepared_statement_cache_size=") == 1
+    assert "prepared_statement_cache_size=50" in async_url
+
+
+def test_register_asyncpg_disconnect_handler_flags_interface_error():
+    import asyncpg
+    from sqlalchemy import event
+
+    class FakeAsyncEngine:
+        def __init__(self):
+            self.sync_engine = object()
+
+    captured: list = []
+
+    def fake_listens_for(target, identifier, **kwargs):
+        def decorator(fn):
+            captured.append((target, identifier, fn))
+            return fn
+
+        return decorator
+
+    engine = FakeAsyncEngine()
+    original = event.listens_for
+    event.listens_for = fake_listens_for
+    try:
+        db_utils.register_asyncpg_disconnect_handler(engine)
+    finally:
+        event.listens_for = original
+
+    assert len(captured) == 1
+    target, identifier, fn = captured[0]
+    assert target is engine.sync_engine
+    assert identifier == "handle_error"
+
+    class Ctx:
+        is_disconnect = False
+        original_exception: Exception | None = None
+
+    for exc_cls in (
+        asyncpg.exceptions.InterfaceError,
+        asyncpg.exceptions.ConnectionDoesNotExistError,
+        asyncpg.exceptions.ConnectionFailureError,
+    ):
+        ctx = Ctx()
+        ctx.original_exception = exc_cls("boom")
+        fn(ctx)
+        assert ctx.is_disconnect is True, f"{exc_cls} not flagged as disconnect"
+
+    # Unrelated exceptions must not be flagged.
+    ctx = Ctx()
+    ctx.original_exception = ValueError("not a connection problem")
+    fn(ctx)
+    assert ctx.is_disconnect is False
+
+    # Missing original_exception must not crash.
+    ctx = Ctx()
+    ctx.original_exception = None
+    fn(ctx)
+    assert ctx.is_disconnect is False
 
 
 def test_register_search_path_listener_rejects_bad_identifier():
@@ -78,6 +160,7 @@ def test_register_search_path_listener_sync_engine_uses_cursor():
     """Sync engines (no `sync_engine` attribute) keep running SET search_path
     through the standard DBAPI cursor — that path is safe for psycopg2/3.
     """
+
     # Use a tiny plain class so `hasattr(engine, 'sync_engine')` is False.
     class FakeSyncEngine:
         pass
@@ -106,46 +189,24 @@ def test_register_search_path_listener_sync_engine_uses_cursor():
     )
 
 
-def test_register_search_path_listener_async_engine_uses_raw_asyncpg():
-    """Async engines hand the connect listener SQLAlchemy's asyncpg adapter.
-    Going through `dbapi_connection.cursor()` on that adapter starts an
-    implicit transaction it never closes, which eventually breaks
-    `pool_pre_ping` under PgBouncer. The listener must bypass the adapter
-    and talk to `driver_connection` (the raw asyncpg.Connection) instead.
+def test_register_search_path_listener_async_engine_skips_connect_cursor_path():
+    """Async engines should not execute search_path in the connect hook.
+
+    We apply search_path via the SQLAlchemy ``begin`` event (SET LOCAL), which
+    avoids asyncpg transaction-state edge cases during pool pre-ping.
     """
-    import asyncio
-    from unittest.mock import MagicMock
 
     class FakeAsyncEngine:
         def __init__(self):
             self.sync_engine = object()  # listener targets this
 
-    executed: list[str] = []
-
-    class FakeRawAsyncpgConn:
-        async def execute(self, sql: str):
-            executed.append(sql)
-            return "OK"
-
-    raw = FakeRawAsyncpgConn()
-
     class FakeAdapter:
-        driver_connection = raw
-
         def cursor(self):
-            raise AssertionError("async engine must not fall back to cursor()")
+            raise AssertionError("async engine connect hook must not use cursor()")
 
     engine = FakeAsyncEngine()
     listeners = _capture_listeners(engine, db_utils.KLEARN_DB_SEARCH_PATH)
     by_event = {identifier: (target, fn) for target, identifier, fn in listeners}
 
-    # Call the connect listener. `await_only` inside the listener requires a
-    # running greenlet spawn — easiest path is to invoke it from inside an
-    # `asyncio.run(greenlet_spawn(...))` context.
-    from sqlalchemy.util.concurrency import greenlet_spawn
-
-    async def _drive():
-        await greenlet_spawn(by_event["connect"][1], FakeAdapter(), MagicMock())
-
-    asyncio.run(_drive())
-    assert executed == ["SET search_path TO public,users,klearn,cms"]
+    # Should no-op (and specifically must not call cursor()).
+    by_event["connect"][1](FakeAdapter(), object())

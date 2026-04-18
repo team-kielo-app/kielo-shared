@@ -19,11 +19,34 @@ export function isStorageApiPath(urlPath: string): boolean {
   return urlPath.startsWith(STORAGE_API_PATH) || urlPath.startsWith(UPLOAD_API_PATH);
 }
 
-/** Append ?alt=media to a URL if not already present. */
+/**
+ * Append ?alt=media to a URL if not already present.
+ * Skips non-remote schemes (data:, file:, ph:, blob:) and no-ops if the
+ * param is already there. Uses WHATWG URL parsing when available so
+ * pre-existing query strings are preserved correctly.
+ */
 export function ensureAltMedia(url: string): string {
-  if (url.includes(ALT_MEDIA_PARAM)) return url;
-  const separator = url.includes("?") ? "&" : "?";
-  return `${url}${separator}${ALT_MEDIA_PARAM}`;
+  if (
+    !url ||
+    url.startsWith("data:") ||
+    url.startsWith("file:") ||
+    url.startsWith("ph:") ||
+    url.startsWith("blob:") ||
+    url.includes(ALT_MEDIA_PARAM)
+  ) {
+    return url;
+  }
+
+  try {
+    const parsed = new URL(url);
+    if (parsed.searchParams.get("alt") !== "media") {
+      parsed.searchParams.set("alt", "media");
+    }
+    return parsed.toString();
+  } catch {
+    const separator = url.includes("?") ? "&" : "?";
+    return `${url}${separator}${ALT_MEDIA_PARAM}`;
+  }
 }
 
 /** Build a GCS object URL: {base}/storage/v1/b/{bucket}/o/{encodedObject} */
