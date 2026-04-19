@@ -116,6 +116,13 @@ def build_asyncpg_url_and_connect_args(
     the engine separately via :func:`register_search_path_listener`.
     The ``search_path`` parameter is kept in the signature for backward
     compatibility but is intentionally unused here.
+
+    ``statement_cache_size`` is always set to ``0``. asyncpg's default
+    behaviour is to keep a server-side prepared-statement plan keyed by
+    statement id; under PgBouncer transaction pooling the backend connection
+    can be reassigned between transactions, so the cached plan id is no
+    longer valid and the next statement fails. Disabling the cache is the
+    documented PlanetScale / PgBouncer configuration.
     """
     normalized = normalize_postgres_url(db_url)
     split_url = urlsplit(normalized)
@@ -135,13 +142,22 @@ def build_asyncpg_url_and_connect_args(
             continue
         filtered_params.append((key, value))
 
+    # SQLAlchemy's asyncpg dialect reads ``prepared_statement_cache_size`` from
+    # the URL query string. Force it to 0: under PgBouncer transaction pooling
+    # (PlanetScale) the dialect-level prepared-statement cache is keyed on
+    # connections that can be reassigned between transactions, which corrupts
+    # the cache. This is separate from asyncpg's own cache, disabled below via
+    # ``connect_args["statement_cache_size"] = 0``; both must be off.
+    if not any(k.lower() == "prepared_statement_cache_size" for k, _ in filtered_params):
+        filtered_params.append(("prepared_statement_cache_size", "0"))
+
     cleaned_query = urlencode(filtered_params)
     cleaned_url = urlunsplit(split_url._replace(query=cleaned_query))
     async_db_url = cleaned_url.replace("postgresql://", "postgresql+asyncpg://", 1)
 
     cafile = sslrootcert if sslrootcert and os.path.exists(sslrootcert) else None
 
-    connect_args: dict[str, Any] = {}
+    connect_args: dict[str, Any] = {"statement_cache_size": 0}
     if sslmode:
         mode = sslmode.lower()
         if mode == "disable":
@@ -189,10 +205,10 @@ def register_search_path_listener(engine: Any, search_path: str) -> None:
 
     Two listeners are registered to cover both deployment modes:
 
-    * ``connect`` — fires once per new asyncpg connection. Sets ``search_path``
-      at the session level. Works for direct Postgres connections; harmless
-      (immediately superseded by ``SET LOCAL``) for pooled deployments.
-    * ``begin`` — fires at the start of every SQLAlchemy transaction. Issues
+    * ``connect`` — for sync engines only, sets ``search_path`` at the
+      session level via a DBAPI cursor.
+    * ``begin`` — for all engines, fires at the start of every SQLAlchemy
+      transaction and issues
       ``SET LOCAL search_path`` so the value applies for the lifetime of
       that transaction. This is required for PlanetScale / Neon / any
       PgBouncer-fronted Postgres that resets session state between
@@ -202,10 +218,13 @@ def register_search_path_listener(engine: Any, search_path: str) -> None:
     :func:`sqlalchemy.ext.asyncio.create_async_engine`.
     """
     normalized = _validate_search_path_idents(search_path)
-    sync_engine = getattr(engine, "sync_engine", engine)
+    is_async_engine = hasattr(engine, "sync_engine")
+    sync_engine = engine.sync_engine if is_async_engine else engine
 
     @event.listens_for(sync_engine, "connect")
     def _on_connect(dbapi_connection, connection_record):  # noqa: ARG001
+        if is_async_engine:
+            return
         cursor = dbapi_connection.cursor()
         try:
             cursor.execute(f"SET search_path TO {normalized}")
@@ -217,3 +236,39 @@ def register_search_path_listener(engine: Any, search_path: str) -> None:
         # SET LOCAL applies for the duration of the current transaction only,
         # so it survives PgBouncer reusing backends across transactions.
         conn.exec_driver_sql(f"SET LOCAL search_path TO {normalized}")
+
+
+def register_asyncpg_disconnect_handler(engine: Any) -> None:
+    """Teach SQLAlchemy's pool to treat asyncpg connection-level failures as
+    disconnects so the pool invalidates and evicts the bad connection instead
+    of surfacing the error to the caller.
+
+    SQLAlchemy's built-in ``is_disconnect()`` classifier for the asyncpg
+    dialect does not match every shape of ``asyncpg.InterfaceError`` — in
+    particular the "cannot use Connection.transaction() in a manually started
+    transaction" and "connection is closed" variants that appear when a
+    pooled connection has been corrupted or closed out-of-band (PgBouncer
+    idle timeout, backend recycle, mid-transaction exception). Without this
+    listener those errors bubble up through ``pool_pre_ping`` as raw 500s.
+
+    Call once per async engine, after :func:`create_async_engine`. Safe to
+    call on sync engines too; it simply has nothing to match against.
+    """
+    sync_engine = engine.sync_engine if hasattr(engine, "sync_engine") else engine
+
+    @event.listens_for(sync_engine, "handle_error")
+    def _mark_asyncpg_disconnect(context):  # noqa: ANN001 - SQLAlchemy event type
+        original = context.original_exception
+        if original is None:
+            return
+        try:
+            import asyncpg
+        except ImportError:
+            return
+        disconnect_types = (
+            asyncpg.exceptions.InterfaceError,
+            asyncpg.exceptions.ConnectionDoesNotExistError,
+            asyncpg.exceptions.ConnectionFailureError,
+        )
+        if isinstance(original, disconnect_types):
+            context.is_disconnect = True
