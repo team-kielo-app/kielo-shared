@@ -148,7 +148,9 @@ def build_asyncpg_url_and_connect_args(
     # connections that can be reassigned between transactions, which corrupts
     # the cache. This is separate from asyncpg's own cache, disabled below via
     # ``connect_args["statement_cache_size"] = 0``; both must be off.
-    if not any(k.lower() == "prepared_statement_cache_size" for k, _ in filtered_params):
+    if not any(
+        k.lower() == "prepared_statement_cache_size" for k, _ in filtered_params
+    ):
         filtered_params.append(("prepared_statement_cache_size", "0"))
 
     cleaned_query = urlencode(filtered_params)
@@ -222,7 +224,7 @@ def register_search_path_listener(engine: Any, search_path: str) -> None:
     sync_engine = engine.sync_engine if is_async_engine else engine
 
     @event.listens_for(sync_engine, "connect")
-    def _on_connect(dbapi_connection, connection_record):  # noqa: ARG001
+    def _on_connect(dbapi_connection, _connection_record):  # noqa: ARG001
         if is_async_engine:
             return
         cursor = dbapi_connection.cursor()
