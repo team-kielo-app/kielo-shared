@@ -59,3 +59,9 @@ tmp/
 node_modules/
 
 output.txt
+kielo_shared.egg-info/
+# Python bytecode + pytest caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
