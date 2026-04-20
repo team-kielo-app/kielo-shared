@@ -68,61 +68,59 @@ def test_build_asyncpg_url_respects_existing_prepared_statement_cache_size():
     assert "prepared_statement_cache_size=50" in async_url
 
 
-def test_register_asyncpg_disconnect_handler_flags_interface_error():
+def test_register_asyncpg_disconnect_handler_patches_is_disconnect_and_adds_listener():
     import asyncpg
-    from sqlalchemy import event
+    from sqlalchemy.ext.asyncio import create_async_engine
 
-    class FakeAsyncEngine:
-        def __init__(self):
-            self.sync_engine = object()
+    engine = create_async_engine(
+        "postgresql+asyncpg://placeholder:placeholder@localhost/placeholder"
+    )
+    dialect = engine.sync_engine.dialect
+    before = dialect.is_disconnect
 
-    captured: list = []
+    db_utils.register_asyncpg_disconnect_handler(engine)
 
-    def fake_listens_for(target, identifier, **kwargs):
-        def decorator(fn):
-            captured.append((target, identifier, fn))
-            return fn
+    # (1) Dialect.is_disconnect must be replaced with our patched version.
+    assert dialect.is_disconnect is not before
 
-        return decorator
+    # (2) Patched is_disconnect must recognise the production error.
+    err = asyncpg.exceptions.InterfaceError(
+        "cannot use Connection.transaction() in a manually started transaction"
+    )
+    assert dialect.is_disconnect(err, None, None) is True
 
-    engine = FakeAsyncEngine()
-    original = event.listens_for
-    event.listens_for = fake_listens_for
-    try:
-        db_utils.register_asyncpg_disconnect_handler(engine)
-    finally:
-        event.listens_for = original
-
-    assert len(captured) == 1
-    target, identifier, fn = captured[0]
-    assert target is engine.sync_engine
-    assert identifier == "handle_error"
-
-    class Ctx:
-        is_disconnect = False
-        original_exception: Exception | None = None
-
-    for exc_cls in (
-        asyncpg.exceptions.InterfaceError,
-        asyncpg.exceptions.ConnectionDoesNotExistError,
-        asyncpg.exceptions.ConnectionFailureError,
+    # Also: connection-closed variants.
+    for msg in (
+        "cannot perform operation: another operation is in progress",
+        "cannot perform operation on closed connection",
+        "connection is closed",
     ):
-        ctx = Ctx()
-        ctx.original_exception = exc_cls("boom")
-        fn(ctx)
-        assert ctx.is_disconnect is True, f"{exc_cls} not flagged as disconnect"
+        assert dialect.is_disconnect(
+            asyncpg.exceptions.InterfaceError(msg), None, None
+        ) is True, f"should flag: {msg}"
 
-    # Unrelated exceptions must not be flagged.
-    ctx = Ctx()
-    ctx.original_exception = ValueError("not a connection problem")
-    fn(ctx)
-    assert ctx.is_disconnect is False
+    # Drill into __cause__ (SQLAlchemy wraps asyncpg errors).
+    class Wrapped(Exception):
+        pass
 
-    # Missing original_exception must not crash.
-    ctx = Ctx()
-    ctx.original_exception = None
-    fn(ctx)
-    assert ctx.is_disconnect is False
+    inner = asyncpg.exceptions.InterfaceError(
+        "cannot use Connection.transaction() in a manually started transaction"
+    )
+    outer = Wrapped("translated")
+    outer.__cause__ = inner
+    assert dialect.is_disconnect(outer, None, None) is True
+
+    # Unrelated errors stay unaffected.
+    assert dialect.is_disconnect(ValueError("nope"), None, None) is False
+    assert dialect.is_disconnect(
+        asyncpg.exceptions.InterfaceError("some other message"), None, None
+    ) is False
+
+    # (3) handle_error listener is registered for mid-statement errors.
+    from sqlalchemy.event.registry import _key_to_collection
+
+    events = {k[1] for k in _key_to_collection if k[0] == id(engine.sync_engine)}
+    assert "handle_error" in events
 
 
 def test_register_search_path_listener_rejects_bad_identifier():
