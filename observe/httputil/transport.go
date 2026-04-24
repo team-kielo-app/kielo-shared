@@ -2,6 +2,7 @@ package httputil
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/team-kielo-app/kielo-shared/observe"
 )
@@ -23,6 +24,17 @@ func TracingTransport(base http.RoundTripper) http.RoundTripper {
 		base = http.DefaultTransport
 	}
 	return &tracingTransport{base: base}
+}
+
+// NewClient returns an [*http.Client] with the given timeout and an outbound
+// [TracingTransport] attached so every request propagates W3C traceparent
+// headers. Prefer this helper over ad-hoc &http.Client{Timeout: X} so trace
+// propagation stays consistent across Kielo services.
+func NewClient(timeout time.Duration) *http.Client {
+	return &http.Client{
+		Timeout:   timeout,
+		Transport: TracingTransport(nil),
+	}
 }
 
 type tracingTransport struct {
