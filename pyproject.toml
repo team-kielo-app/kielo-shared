@@ -8,9 +8,15 @@ dynamic = ["version"]
 description = "Shared utilities for Kielo platform services"
 requires-python = ">=3.11"
 dependencies = [
+    "SQLAlchemy",
     "certifi",
     "httpx>=0.24",
 ]
+
+[tool.deptry]
+
+[tool.deptry.per_rule_ignores]
+DEP001 = ["asyncpg"]
 
 [tool.setuptools.dynamic]
 version = {attr = "kielo_shared.__version__"}

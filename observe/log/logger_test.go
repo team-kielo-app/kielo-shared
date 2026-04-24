@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
-	"os"
 	"testing"
 
 	"github.com/team-kielo-app/kielo-shared/observe"
@@ -45,8 +44,7 @@ func TestNew_RespectsLevel(t *testing.T) {
 }
 
 func TestNew_LOGLEVELEnv(t *testing.T) {
-	os.Setenv("LOG_LEVEL", "ERROR")
-	defer os.Unsetenv("LOG_LEVEL")
+	t.Setenv("LOG_LEVEL", "ERROR")
 
 	var buf bytes.Buffer
 	logger := New("test", WithOutput(&buf))

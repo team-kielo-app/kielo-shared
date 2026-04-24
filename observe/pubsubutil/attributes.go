@@ -13,8 +13,9 @@
 package pubsubutil
 
 import (
-	"github.com/team-kielo-app/kielo-shared/observe"
 	"context"
+
+	"github.com/team-kielo-app/kielo-shared/observe"
 )
 
 const (

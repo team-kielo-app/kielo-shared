@@ -2,6 +2,7 @@ package httputil
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"log/slog"
 	"net/http"
@@ -14,9 +15,9 @@ import (
 	observelog "github.com/team-kielo-app/kielo-shared/observe/log"
 )
 
-func newTestContext(method, path string, headers http.Header) (echo.Context, *httptest.ResponseRecorder) {
+func newTestContext(path string, headers http.Header) (echo.Context, *httptest.ResponseRecorder) {
 	e := echo.New()
-	req := httptest.NewRequest(method, path, nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, path, nil)
 	for k, vals := range headers {
 		for _, v := range vals {
 			req.Header.Add(k, v)
@@ -27,7 +28,7 @@ func newTestContext(method, path string, headers http.Header) (echo.Context, *ht
 }
 
 func TestRequestTracing_CreatesNewTrace(t *testing.T) {
-	c, rec := newTestContext(http.MethodGet, "/test", nil)
+	c, rec := newTestContext("/test", nil)
 
 	handler := RequestTracing()(func(c echo.Context) error {
 		tc, ok := observe.FromContext(c.Request().Context())
@@ -55,7 +56,7 @@ func TestRequestTracing_CreatesNewTrace(t *testing.T) {
 func TestRequestTracing_ParsesTraceparent(t *testing.T) {
 	h := http.Header{}
 	h.Set("Traceparent", "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01")
-	c, _ := newTestContext(http.MethodGet, "/test", h)
+	c, _ := newTestContext("/test", h)
 
 	handler := RequestTracing()(func(c echo.Context) error {
 		tc, _ := observe.FromContext(c.Request().Context())
@@ -79,7 +80,7 @@ func TestRequestTracing_ParsesTraceparent(t *testing.T) {
 func TestRequestTracing_FallsBackToClientTraceId(t *testing.T) {
 	h := http.Header{}
 	h.Set("X-Client-Trace-Id", "my-mobile-trace")
-	c, _ := newTestContext(http.MethodGet, "/test", h)
+	c, _ := newTestContext("/test", h)
 
 	handler := RequestTracing()(func(c echo.Context) error {
 		tc, _ := observe.FromContext(c.Request().Context())
@@ -95,7 +96,7 @@ func TestRequestTracing_FallsBackToClientTraceId(t *testing.T) {
 }
 
 func TestRequestTracing_StoresInEchoContext(t *testing.T) {
-	c, _ := newTestContext(http.MethodGet, "/test", nil)
+	c, _ := newTestContext("/test", nil)
 
 	handler := RequestTracing()(func(c echo.Context) error {
 		tc, ok := TraceFromEcho(c)
@@ -115,8 +116,8 @@ func TestRequestTracing_StoresInEchoContext(t *testing.T) {
 
 func TestRequestLogger_StatusLevels(t *testing.T) {
 	tests := []struct {
-		name     string
-		status   int
+		name      string
+		status    int
 		wantLevel string
 	}{
 		{"2xx_info", 200, "INFO"},
@@ -129,7 +130,7 @@ func TestRequestLogger_StatusLevels(t *testing.T) {
 			var buf bytes.Buffer
 			logger := observelog.New("test", observelog.WithOutput(&buf), observelog.WithLevel(slog.LevelDebug))
 
-			c, _ := newTestContext(http.MethodGet, "/test", nil)
+			c, _ := newTestContext("/test", nil)
 
 			// Set up trace context first
 			tc := observe.New()
@@ -158,7 +159,7 @@ func TestRequestLogger_IncludesTraceFields(t *testing.T) {
 	var buf bytes.Buffer
 	logger := observelog.New("test", observelog.WithOutput(&buf))
 
-	c, _ := newTestContext(http.MethodGet, "/api/v1/test", nil)
+	c, _ := newTestContext("/api/v1/test", nil)
 	tc := observe.New()
 	ctx := observe.WithContext(c.Request().Context(), tc)
 	c.SetRequest(c.Request().WithContext(ctx))
