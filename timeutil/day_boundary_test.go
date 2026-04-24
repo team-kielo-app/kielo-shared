@@ -81,8 +81,8 @@ func TestParseTimezoneOffsetMinutes(t *testing.T) {
 		{"180", 180, true},
 		{" -480 ", -480, true},
 		{"0", 0, true},
-		{"841", 0, false},   // > 14h
-		{"-841", 0, false},  // < -14h
+		{"841", 0, false},  // > 14h
+		{"-841", 0, false}, // < -14h
 		{"abc", 0, false},
 		{"180.5", 0, false},
 	}

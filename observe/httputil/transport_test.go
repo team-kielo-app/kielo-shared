@@ -25,9 +25,12 @@ func TestTracingTransport_InjectsHeaders(t *testing.T) {
 	}))
 
 	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, "http://example.com/test", nil)
-	_, err := transport.RoundTrip(req)
+	resp, err := transport.RoundTrip(req)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if resp != nil && resp.Body != nil {
+		_ = resp.Body.Close()
 	}
 
 	if capturedReq.Header.Get("Traceparent") == "" {
@@ -52,7 +55,10 @@ func TestTracingTransport_CreatesChildSpan(t *testing.T) {
 	}))
 
 	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, "http://example.com/test", nil)
-	_, _ = transport.RoundTrip(req)
+	resp, _ := transport.RoundTrip(req)
+	if resp != nil && resp.Body != nil {
+		_ = resp.Body.Close()
+	}
 
 	// Parse the injected traceparent to verify child span
 	injectedTP := capturedReq.Header.Get("Traceparent")
@@ -78,9 +84,12 @@ func TestTracingTransport_NoContext_StillInjects(t *testing.T) {
 	}))
 
 	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://example.com", nil)
-	_, err := transport.RoundTrip(req)
+	resp, err := transport.RoundTrip(req)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if resp != nil && resp.Body != nil {
+		_ = resp.Body.Close()
 	}
 }
 
@@ -95,7 +104,10 @@ func TestTracingTransport_DoesNotMutateOriginalHeaders(t *testing.T) {
 	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, "http://example.com", nil)
 	originalHeaders := req.Header.Clone()
 
-	_, _ = transport.RoundTrip(req)
+	resp, _ := transport.RoundTrip(req)
+	if resp != nil && resp.Body != nil {
+		_ = resp.Body.Close()
+	}
 
 	// Original request headers should be unchanged (transport clones the request)
 	if req.Header.Get("Traceparent") != originalHeaders.Get("Traceparent") {

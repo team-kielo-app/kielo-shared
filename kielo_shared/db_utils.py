@@ -148,7 +148,9 @@ def build_asyncpg_url_and_connect_args(
     # connections that can be reassigned between transactions, which corrupts
     # the cache. This is separate from asyncpg's own cache, disabled below via
     # ``connect_args["statement_cache_size"] = 0``; both must be off.
-    if not any(k.lower() == "prepared_statement_cache_size" for k, _ in filtered_params):
+    if not any(
+        k.lower() == "prepared_statement_cache_size" for k, _ in filtered_params
+    ):
         filtered_params.append(("prepared_statement_cache_size", "0"))
 
     cleaned_query = urlencode(filtered_params)
@@ -222,7 +224,7 @@ def register_search_path_listener(engine: Any, search_path: str) -> None:
     sync_engine = engine.sync_engine if is_async_engine else engine
 
     @event.listens_for(sync_engine, "connect")
-    def _on_connect(dbapi_connection, connection_record):  # noqa: ARG001
+    def _on_connect(dbapi_connection, _connection_record):  # noqa: ARG001
         if is_async_engine:
             return
         cursor = dbapi_connection.cursor()
@@ -238,37 +240,86 @@ def register_search_path_listener(engine: Any, search_path: str) -> None:
         conn.exec_driver_sql(f"SET LOCAL search_path TO {normalized}")
 
 
+_ASYNCPG_STATE_DISCONNECT_MARKERS = (
+    # SQLAlchemy's asyncpg dialect `is_disconnect()` only checks for
+    # "connection is closed". These additional asyncpg InterfaceError
+    # shapes indicate the raw asyncpg connection has unrecoverable state
+    # (transaction tracking desynced from the backend), which happens when
+    # a prior `asyncpg.Transaction.rollback()` itself failed (network blip,
+    # timeout, server-side reset) — it leaves `Connection._top_xact` set
+    # while SQLAlchemy's wrapper resets `_started=False` and returns the
+    # connection to the pool "clean". The next `pool_pre_ping` calls
+    # `conn.transaction().start()` and fails.
+    "cannot use Connection.transaction() in a manually started transaction",
+    "cannot perform operation: another operation is in progress",
+    "cannot perform operation on closed connection",
+    "connection is closed",
+)
+
+
 def register_asyncpg_disconnect_handler(engine: Any) -> None:
-    """Teach SQLAlchemy's pool to treat asyncpg connection-level failures as
-    disconnects so the pool invalidates and evicts the bad connection instead
-    of surfacing the error to the caller.
+    """Teach SQLAlchemy's pool and error-handling path to recognise asyncpg
+    connection-state failures as disconnects, so the pool invalidates the
+    bad connection instead of propagating the error to the caller.
 
-    SQLAlchemy's built-in ``is_disconnect()`` classifier for the asyncpg
-    dialect does not match every shape of ``asyncpg.InterfaceError`` — in
-    particular the "cannot use Connection.transaction() in a manually started
-    transaction" and "connection is closed" variants that appear when a
-    pooled connection has been corrupted or closed out-of-band (PgBouncer
-    idle timeout, backend recycle, mid-transaction exception). Without this
-    listener those errors bubble up through ``pool_pre_ping`` as raw 500s.
+    Two integration points are needed because SQLAlchemy routes errors
+    differently depending on where they surface:
 
-    Call once per async engine, after :func:`create_async_engine`. Safe to
-    call on sync engines too; it simply has nothing to match against.
+    1. ``is_disconnect()`` on the dialect — consulted by ``pool_pre_ping``
+       during connection checkout. SQLAlchemy's built-in asyncpg matcher
+       only recognises ``"connection is closed"`` and misses the
+       transaction-state InterfaceError variants observed in production
+       on PlanetScale / PgBouncer. We extend it on the engine's dialect
+       instance (not the class) so only engines that opt in are affected.
+
+    2. ``handle_error`` event listener — fires during statement execution.
+       Covers the case where an InterfaceError surfaces *after* a
+       connection has been successfully checked out (mid-query), so the
+       pool still evicts the bad connection instead of returning it on
+       the next checkout.
+
+    Call once per async engine, after :func:`create_async_engine`.
     """
-    sync_engine = engine.sync_engine if hasattr(engine, "sync_engine") else engine
+    try:
+        import asyncpg
+    except ImportError:
+        return
 
+    sync_engine = engine.sync_engine if hasattr(engine, "sync_engine") else engine
+    dialect = sync_engine.dialect
+
+    # --- (1) Extend dialect.is_disconnect for pool_pre_ping. ---
+    _original_is_disconnect = dialect.is_disconnect
+
+    def _is_disconnect(e, connection, cursor):
+        if _original_is_disconnect(e, connection, cursor):
+            return True
+        # SQLAlchemy wraps asyncpg errors; check the exception itself plus
+        # anything it wraps (``__cause__``) or originated from (``orig``).
+        candidates = (e, getattr(e, "__cause__", None), getattr(e, "orig", None))
+        for candidate in candidates:
+            if isinstance(candidate, asyncpg.exceptions.InterfaceError):
+                message = str(candidate)
+                if any(
+                    marker in message for marker in _ASYNCPG_STATE_DISCONNECT_MARKERS
+                ):
+                    return True
+        return False
+
+    dialect.is_disconnect = _is_disconnect
+
+    # --- (2) handle_error event for mid-statement InterfaceErrors. ---
     @event.listens_for(sync_engine, "handle_error")
     def _mark_asyncpg_disconnect(context):  # noqa: ANN001 - SQLAlchemy event type
         original = context.original_exception
         if original is None:
             return
-        try:
-            import asyncpg
-        except ImportError:
-            return
-        disconnect_types = (
-            asyncpg.exceptions.InterfaceError,
-            asyncpg.exceptions.ConnectionDoesNotExistError,
-            asyncpg.exceptions.ConnectionFailureError,
-        )
-        if isinstance(original, disconnect_types):
+        if isinstance(
+            original,
+            (
+                asyncpg.exceptions.InterfaceError,
+                asyncpg.exceptions.ConnectionDoesNotExistError,
+                asyncpg.exceptions.ConnectionFailureError,
+            ),
+        ):
             context.is_disconnect = True

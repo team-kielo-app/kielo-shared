@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -15,7 +16,7 @@ func TestFlexibleAuth_HeaderTrustRequiresInternalKey(t *testing.T) {
 	mw := FlexibleAuth("", nil)
 
 	t.Run("rejects header trust without internal key", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/", nil)
 		req.Header.Set("X-User-ID", "00000000-0000-0000-0000-000000000001")
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
@@ -37,7 +38,7 @@ func TestFlexibleAuth_HeaderTrustRequiresInternalKey(t *testing.T) {
 	})
 
 	t.Run("accepts header trust with internal key", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/", nil)
 		req.Header.Set("X-User-ID", "00000000-0000-0000-0000-000000000002")
 		req.Header.Set("X-Internal-API-Key", "test-internal-key")
 		rec := httptest.NewRecorder()
