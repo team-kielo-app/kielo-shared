@@ -41,3 +41,49 @@ func TestSupportLocaleCandidates(t *testing.T) {
 	assert.Equal(t, []string{"en-US", "en"}, SupportLocaleCandidates("en_US"))
 	assert.Nil(t, SupportLocaleCandidates(""))
 }
+
+// TestSupportLocaleCandidates_EdgeCases pins dedup and Tier-A-fallback
+// behavior for shapes the main test didn't cover. These are the
+// invariants callers (LocalizationService.ResolveTemplate, mobile-bff
+// support-language resolver, email locale router) rely on to avoid
+// double-querying the translations table for the same code, or
+// double-appending English to the candidate list.
+func TestSupportLocaleCandidates_EdgeCases(t *testing.T) {
+	// Bare English: must NOT double-append — ["en"] not ["en", "en"].
+	// Would otherwise cause duplicate getApprovedTranslation calls
+	// for the same key_id + language_code pair.
+	assert.Equal(t, []string{"en"}, SupportLocaleCandidates("en"))
+
+	// Bare non-English base: 2-tier chain (self, then en). Since the
+	// base equals the normalized form, dedup collapses the middle
+	// entry, leaving [base, en].
+	assert.Equal(t, []string{"sv", "en"}, SupportLocaleCandidates("sv"))
+
+	// Legacy 'vn' alias canonicalizes to 'vi' before fanout.
+	assert.Equal(t, []string{"vi", "en"}, SupportLocaleCandidates("vn"))
+	assert.Equal(t, []string{"vi-VN", "vi", "en"}, SupportLocaleCandidates("vn_vn"))
+
+	// Mixed-case input normalizes cleanly through the whole chain.
+	assert.Equal(t, []string{"sv-SE", "sv", "en"}, SupportLocaleCandidates("SV_se"))
+
+	// Script subtag zh-Hant-TW: base is zh, full locale preserved at
+	// position 0, en terminates the chain. Exercises the multi-subtag
+	// path through NormalizeLocaleCode.
+	candidates := SupportLocaleCandidates("zh-Hant-TW")
+	assert.Equal(t, "zh-Hant-TW", candidates[0])
+	assert.Equal(t, "zh", candidates[1])
+	assert.Equal(t, "en", candidates[len(candidates)-1])
+}
+
+// TestBaseLocale pins the behavior of the alias exported for
+// readability. Callers use BaseLocale when they mean "language subtag
+// only, not the full locale" — renaming or altering this must not
+// change semantics.
+func TestBaseLocale(t *testing.T) {
+	assert.Equal(t, "sv", BaseLocale("sv-SE"))
+	assert.Equal(t, "vi", BaseLocale("vi_VN"))
+	assert.Equal(t, "vi", BaseLocale("vn"))
+	assert.Equal(t, "en", BaseLocale("en-US"))
+	assert.Equal(t, "", BaseLocale(""))
+	assert.Equal(t, "", BaseLocale("  "))
+}
