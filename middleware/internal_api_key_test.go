@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -38,7 +39,7 @@ func TestEcho_AllowsRequestWithCorrectKey(t *testing.T) {
 	e.Use(InternalAPIKeyAuth(NewInternalAPIKeyConfig(testKey)))
 	e.GET("/private", echoHandlerReturningOK)
 
-	req := httptest.NewRequest(http.MethodGet, "/private", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/private", nil)
 	req.Header.Set(InternalAPIKeyHeader, testKey)
 	rec := httptest.NewRecorder()
 	e.ServeHTTP(rec, req)
@@ -56,7 +57,7 @@ func TestEcho_RejectsRequestWithMissingHeader(t *testing.T) {
 	e.Use(InternalAPIKeyAuth(NewInternalAPIKeyConfig(testKey)))
 	e.GET("/private", echoHandlerReturningOK)
 
-	req := httptest.NewRequest(http.MethodGet, "/private", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/private", nil)
 	rec := httptest.NewRecorder()
 	e.ServeHTTP(rec, req)
 
@@ -68,7 +69,7 @@ func TestEcho_RejectsRequestWithWrongKey(t *testing.T) {
 	e.Use(InternalAPIKeyAuth(NewInternalAPIKeyConfig(testKey)))
 	e.GET("/private", echoHandlerReturningOK)
 
-	req := httptest.NewRequest(http.MethodGet, "/private", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/private", nil)
 	req.Header.Set(InternalAPIKeyHeader, "wrong-key")
 	rec := httptest.NewRecorder()
 	e.ServeHTTP(rec, req)
@@ -85,7 +86,7 @@ func TestEcho_TrimsWhitespaceOnProvidedKey(t *testing.T) {
 	e.Use(InternalAPIKeyAuth(NewInternalAPIKeyConfig(testKey)))
 	e.GET("/private", echoHandlerReturningOK)
 
-	req := httptest.NewRequest(http.MethodGet, "/private", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/private", nil)
 	req.Header.Set(InternalAPIKeyHeader, "   ")
 	rec := httptest.NewRecorder()
 	e.ServeHTTP(rec, req)
@@ -104,7 +105,7 @@ func TestEcho_TrimsWhitespaceOnExpectedKey(t *testing.T) {
 	e.Use(InternalAPIKeyAuth(cfg))
 	e.GET("/private", echoHandlerReturningOK)
 
-	req := httptest.NewRequest(http.MethodGet, "/private", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/private", nil)
 	req.Header.Set(InternalAPIKeyHeader, testKey)
 	rec := httptest.NewRecorder()
 	e.ServeHTTP(rec, req)
@@ -119,7 +120,7 @@ func TestEcho_ReturnsMisconfigErrorWhenKeyUnset(t *testing.T) {
 	e.Use(InternalAPIKeyAuth(NewInternalAPIKeyConfig("")))
 	e.GET("/private", echoHandlerReturningOK)
 
-	req := httptest.NewRequest(http.MethodGet, "/private", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/private", nil)
 	req.Header.Set(InternalAPIKeyHeader, "anything")
 	rec := httptest.NewRecorder()
 	e.ServeHTTP(rec, req)
@@ -138,7 +139,7 @@ func TestEcho_AllowMissingExpectedEnablesDevPassThrough(t *testing.T) {
 	e.Use(InternalAPIKeyAuth(cfg))
 	e.GET("/private", echoHandlerReturningOK)
 
-	req := httptest.NewRequest(http.MethodGet, "/private", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/private", nil)
 	rec := httptest.NewRecorder()
 	e.ServeHTTP(rec, req)
 	assert.Equal(t, http.StatusOK, rec.Code)
@@ -156,13 +157,13 @@ func TestEcho_AllowPathsBypassesAuth(t *testing.T) {
 	e.GET("/private", echoHandlerReturningOK)
 
 	// Allowed path: no header → 200.
-	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/healthz", nil)
 	rec := httptest.NewRecorder()
 	e.ServeHTTP(rec, req)
 	assert.Equal(t, http.StatusOK, rec.Code)
 
 	// Non-allowed path: still 401.
-	req = httptest.NewRequest(http.MethodGet, "/private", nil)
+	req = httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/private", nil)
 	rec = httptest.NewRecorder()
 	e.ServeHTTP(rec, req)
 	assert.Equal(t, http.StatusUnauthorized, rec.Code)
@@ -178,14 +179,14 @@ func TestEcho_AllowPathPrefixesBypassesAuth(t *testing.T) {
 	e.GET("/pubsub/any-topic", echoHandlerReturningOK)
 	e.GET("/pubsub-not-this", echoHandlerReturningOK)
 
-	req := httptest.NewRequest(http.MethodGet, "/pubsub/any-topic", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/pubsub/any-topic", nil)
 	rec := httptest.NewRecorder()
 	e.ServeHTTP(rec, req)
 	assert.Equal(t, http.StatusOK, rec.Code)
 
 	// "/pubsub-not-this" doesn't start with "/pubsub/" (note the slash).
 	// Must NOT match the prefix — prefixes are literal, not glob.
-	req = httptest.NewRequest(http.MethodGet, "/pubsub-not-this", nil)
+	req = httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/pubsub-not-this", nil)
 	rec = httptest.NewRecorder()
 	e.ServeHTTP(rec, req)
 	assert.Equal(t, http.StatusUnauthorized, rec.Code)
@@ -202,14 +203,14 @@ func TestEcho_CustomHeaderNameRespected(t *testing.T) {
 	e.GET("/private", echoHandlerReturningOK)
 
 	// Wrong header name → still 401.
-	req := httptest.NewRequest(http.MethodGet, "/private", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/private", nil)
 	req.Header.Set(InternalAPIKeyHeader, testKey) // old default
 	rec := httptest.NewRecorder()
 	e.ServeHTTP(rec, req)
 	assert.Equal(t, http.StatusUnauthorized, rec.Code)
 
 	// Correct custom header → 200.
-	req = httptest.NewRequest(http.MethodGet, "/private", nil)
+	req = httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/private", nil)
 	req.Header.Set("X-Service-Token", testKey)
 	rec = httptest.NewRecorder()
 	e.ServeHTTP(rec, req)
@@ -220,7 +221,7 @@ func TestEcho_CustomHeaderNameRespected(t *testing.T) {
 
 func TestNetHTTP_AllowsWithCorrectKey(t *testing.T) {
 	wrapped := InternalAPIKeyMiddleware(NewInternalAPIKeyConfig(testKey))(netHTTPHandlerReturningOK())
-	req := httptest.NewRequest(http.MethodGet, "/private", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/private", nil)
 	req.Header.Set(InternalAPIKeyHeader, testKey)
 	rec := httptest.NewRecorder()
 	wrapped.ServeHTTP(rec, req)
@@ -232,7 +233,7 @@ func TestNetHTTP_AllowsWithCorrectKey(t *testing.T) {
 
 func TestNetHTTP_RejectsMissingKey(t *testing.T) {
 	wrapped := InternalAPIKeyMiddleware(NewInternalAPIKeyConfig(testKey))(netHTTPHandlerReturningOK())
-	req := httptest.NewRequest(http.MethodGet, "/private", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/private", nil)
 	rec := httptest.NewRecorder()
 	wrapped.ServeHTTP(rec, req)
 
@@ -241,7 +242,7 @@ func TestNetHTTP_RejectsMissingKey(t *testing.T) {
 
 func TestNetHTTP_RejectsWrongKey(t *testing.T) {
 	wrapped := InternalAPIKeyMiddleware(NewInternalAPIKeyConfig(testKey))(netHTTPHandlerReturningOK())
-	req := httptest.NewRequest(http.MethodGet, "/private", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/private", nil)
 	req.Header.Set(InternalAPIKeyHeader, "wrong")
 	rec := httptest.NewRecorder()
 	wrapped.ServeHTTP(rec, req)
@@ -251,7 +252,7 @@ func TestNetHTTP_RejectsWrongKey(t *testing.T) {
 
 func TestNetHTTP_ReturnsMisconfigWhenKeyUnset(t *testing.T) {
 	wrapped := InternalAPIKeyMiddleware(NewInternalAPIKeyConfig(""))(netHTTPHandlerReturningOK())
-	req := httptest.NewRequest(http.MethodGet, "/private", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/private", nil)
 	req.Header.Set(InternalAPIKeyHeader, "anything")
 	rec := httptest.NewRecorder()
 	wrapped.ServeHTTP(rec, req)
@@ -264,12 +265,12 @@ func TestNetHTTP_AllowPathsBypasses(t *testing.T) {
 	cfg.AllowPaths = []string{"/healthz"}
 	wrapped := InternalAPIKeyMiddleware(cfg)(netHTTPHandlerReturningOK())
 
-	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/healthz", nil)
 	rec := httptest.NewRecorder()
 	wrapped.ServeHTTP(rec, req)
 	assert.Equal(t, http.StatusOK, rec.Code)
 
-	req = httptest.NewRequest(http.MethodGet, "/private", nil)
+	req = httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/private", nil)
 	rec = httptest.NewRecorder()
 	wrapped.ServeHTTP(rec, req)
 	assert.Equal(t, http.StatusUnauthorized, rec.Code)

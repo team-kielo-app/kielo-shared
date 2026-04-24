@@ -8,7 +8,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-const InternalAPIKeyHeader = "X-Internal-API-Key" //nolint:gosec // header name, not a credential
+const InternalAPIKeyHeader = "X-Internal-API-Key"
 
 // InternalAPIKeyConfig controls internal API key authentication behavior.
 type InternalAPIKeyConfig struct {

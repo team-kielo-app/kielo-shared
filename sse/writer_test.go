@@ -1,6 +1,7 @@
 package sse
 
 import (
+	"context"
 	"net/http/httptest"
 	"testing"
 
@@ -28,7 +29,7 @@ func (f *flushableRecorder) Flush() { f.flushed++ }
 func newWriterWithRecorder(t *testing.T) (*Writer, *flushableRecorder) {
 	t.Helper()
 	e := echo.New()
-	req := httptest.NewRequest("GET", "/stream", nil)
+	req := httptest.NewRequestWithContext(context.Background(), "GET", "/stream", nil)
 	rec := &flushableRecorder{ResponseRecorder: httptest.NewRecorder()}
 	c := e.NewContext(req, rec)
 	w, err := NewWriter(c)

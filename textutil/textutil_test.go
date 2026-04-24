@@ -103,8 +103,8 @@ func TestStringFromMap_ReturnsFirstNonEmptyByKeyOrder(t *testing.T) {
 	// "fallback" second. The FIRST populated key wins regardless of
 	// map iteration order (which Go randomizes).
 	m := map[string]any{
-		"learning_language_code":  "sv",
-		"language_code":           "fi", // legacy alias, should not win
+		"learning_language_code": "sv",
+		"language_code":          "fi", // legacy alias, should not win
 	}
 	assert.Equal(t, "sv", StringFromMap(m, "learning_language_code", "language_code"))
 	// Swap the preferred order and the fallback wins when preferred is absent.

@@ -170,7 +170,7 @@ func TestTranslateBatch_EmptyInputsSkipsNetwork(t *testing.T) {
 }
 
 func TestTranslateBatch_HonorsContextCancellation(t *testing.T) {
-	// A cancelled context before the HTTP call must NOT crash and
+	// A canceled context before the HTTP call must NOT crash and
 	// must return nil. This exercises the http.NewRequestWithContext
 	// + httpClient.Do error path.
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

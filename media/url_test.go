@@ -84,7 +84,7 @@ func TestPreferredVariantURL_SkipsEmptyPathVariants(t *testing.T) {
 	// next key, not return a broken URL.
 	base := "https://cdn.example.com/assets/"
 	variants := map[string]Variant{
-		"main":    {Path: "  "},   // whitespace-only path → empty after trim
+		"main":    {Path: "  "}, // whitespace-only path → empty after trim
 		"preview": {Path: "ok.jpg"},
 	}
 	got := PreferredVariantURL(base, variants, "main", "preview")

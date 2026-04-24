@@ -29,7 +29,7 @@ func TestIsValidEntityType_AcceptsAllKnownTypes(t *testing.T) {
 
 func TestIsValidEntityType_RejectsUnknown(t *testing.T) {
 	assert.False(t, IsValidEntityType("RandomThing"))
-	assert.False(t, IsValidEntityType("userAvatar")) // case-sensitive
+	assert.False(t, IsValidEntityType("userAvatar"))   // case-sensitive
 	assert.False(t, IsValidEntityType(" UserAvatar ")) // no trim
 }
 
@@ -73,7 +73,7 @@ func TestEffectiveClientHost_PrefersXForwardedHost(t *testing.T) {
 	// internal docker name. X-Forwarded-Host carries the original
 	// external host — which is the one that must appear in
 	// media URLs returned to the mobile app.
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/", nil)
 	req.Host = "mobile-bff.internal:8085"
 	req.Header.Set("X-Forwarded-Host", "api.kielo.app")
 	assert.Equal(t, "api.kielo.app", EffectiveClientHost(req))
@@ -82,14 +82,14 @@ func TestEffectiveClientHost_PrefersXForwardedHost(t *testing.T) {
 func TestEffectiveClientHost_ParsesXForwardedChain(t *testing.T) {
 	// X-Forwarded-Host may be a comma-separated chain when multiple
 	// proxies are in front. The origin (first entry) wins.
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/", nil)
 	req.Host = "internal.local"
 	req.Header.Set("X-Forwarded-Host", "api.kielo.app, gateway.local, mobile-bff.local")
 	assert.Equal(t, "api.kielo.app", EffectiveClientHost(req))
 }
 
 func TestEffectiveClientHost_TrimsXForwardedHeaderWhitespace(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/", nil)
 	req.Host = "internal"
 	req.Header.Set("X-Forwarded-Host", "  api.kielo.app  ")
 	assert.Equal(t, "api.kielo.app", EffectiveClientHost(req))
@@ -98,7 +98,7 @@ func TestEffectiveClientHost_TrimsXForwardedHeaderWhitespace(t *testing.T) {
 func TestEffectiveClientHost_FallsBackToRequestHost(t *testing.T) {
 	// No X-Forwarded-Host header → Host wins. This is the
 	// non-proxied direct-call path.
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/", nil)
 	req.Host = "direct.example.com"
 	assert.Equal(t, "direct.example.com", EffectiveClientHost(req))
 }
@@ -113,7 +113,7 @@ func TestEffectiveClientHost_SkipsBlankXForwardedHeader(t *testing.T) {
 	// A header present but blank should NOT be preferred — that
 	// would return "" and misclassify the request as un-hosted.
 	// Instead, fall through to Host.
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/", nil)
 	req.Host = "direct.example.com"
 	req.Header.Set("X-Forwarded-Host", "   ")
 	assert.Equal(t, "direct.example.com", EffectiveClientHost(req))
