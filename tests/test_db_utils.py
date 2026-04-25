@@ -208,3 +208,156 @@ def test_register_search_path_listener_async_engine_skips_connect_cursor_path():
 
     # Should no-op (and specifically must not call cursor()).
     by_event["connect"][1](FakeAdapter(), object())
+
+
+# --- Per-language dynamic resolver -----------------------------------------
+
+
+def test_validate_language_ident_accepts_iso_codes():
+    assert db_utils._validate_language_ident("fi") == "fi"
+    assert db_utils._validate_language_ident("sv") == "sv"
+    assert db_utils._validate_language_ident("vi") == "vi"
+    assert db_utils._validate_language_ident("zh_CN") == "zh_CN"
+
+
+def test_validate_language_ident_rejects_garbage():
+    import pytest
+
+    for bad in ("FI", "f", "english", "fi-en", "fi; DROP", "", "fi_cn"):
+        with pytest.raises(ValueError, match="Invalid language identifier"):
+            db_utils._validate_language_ident(bad)
+
+
+def test_set_active_language_validates():
+    import pytest
+
+    with pytest.raises(ValueError, match="Invalid language identifier"):
+        db_utils.set_active_language("public; DROP TABLE users")
+
+
+def test_active_language_contextvar_roundtrip():
+    assert db_utils.get_active_language() is None
+    token = db_utils.set_active_language("sv")
+    try:
+        assert db_utils.get_active_language() == "sv"
+    finally:
+        db_utils.reset_active_language(token)
+    assert db_utils.get_active_language() is None
+
+
+def test_make_per_language_search_path_default_template():
+    resolver = db_utils.make_per_language_search_path()
+    token = db_utils.set_active_language("sv")
+    try:
+        assert resolver() == "klearn_sv, cms_sv, klearn, cms, users, localization, communications, convo, media, public"
+    finally:
+        db_utils.reset_active_language(token)
+
+
+def test_make_per_language_search_path_custom_template():
+    resolver = db_utils.make_per_language_search_path(
+        template="cms_{lang}, _shared"
+    )
+    token = db_utils.set_active_language("fi")
+    try:
+        assert resolver() == "cms_fi, _shared"
+    finally:
+        db_utils.reset_active_language(token)
+
+
+def test_make_per_language_search_path_fallback_when_unset():
+    resolver = db_utils.make_per_language_search_path(fallback="_shared, public")
+    # No active language set on this context.
+    assert resolver() == "_shared, public"
+
+
+def test_make_per_language_search_path_raises_without_fallback():
+    import pytest
+
+    resolver = db_utils.make_per_language_search_path()
+    with pytest.raises(RuntimeError, match="Active language is not set"):
+        resolver()
+
+
+def test_register_search_path_listener_callable_resolves_per_transaction():
+    """With a callable path, the begin listener resolves on every transaction.
+
+    Two consecutive begins under different active languages must issue
+    different SET LOCAL search_path statements — proving per-request routing
+    works under a connection pool that reuses backends.
+    """
+    from unittest.mock import MagicMock
+
+    class FakeSyncEngine:
+        pass
+
+    engine = FakeSyncEngine()
+    resolver = db_utils.make_per_language_search_path()
+    listeners = _capture_listeners(engine, resolver)
+    by_event = {identifier: (target, fn) for target, identifier, fn in listeners}
+
+    sa_conn = MagicMock()
+
+    token_fi = db_utils.set_active_language("fi")
+    try:
+        by_event["begin"][1](sa_conn)
+    finally:
+        db_utils.reset_active_language(token_fi)
+
+    token_sv = db_utils.set_active_language("sv")
+    try:
+        by_event["begin"][1](sa_conn)
+    finally:
+        db_utils.reset_active_language(token_sv)
+
+    calls = [c.args[0] for c in sa_conn.exec_driver_sql.call_args_list]
+    assert calls == [
+        "SET LOCAL search_path TO klearn_fi,cms_fi,klearn,cms,users,localization,communications,convo,media,public",
+        "SET LOCAL search_path TO klearn_sv,cms_sv,klearn,cms,users,localization,communications,convo,media,public",
+    ]
+
+
+def test_register_search_path_listener_callable_skips_sync_connect():
+    """With a callable path the connect hook can't resolve (no language ctx
+    bound yet); it must no-op rather than crash on a missing language.
+    """
+
+    class FakeSyncEngine:
+        pass
+
+    engine = FakeSyncEngine()
+    resolver = db_utils.make_per_language_search_path()
+    listeners = _capture_listeners(engine, resolver)
+    by_event = {identifier: (target, fn) for target, identifier, fn in listeners}
+
+    class FakeAdapter:
+        def cursor(self):
+            raise AssertionError(
+                "callable search_path connect hook must not call cursor()"
+            )
+
+    # Must not raise even though no language is set on this context.
+    by_event["connect"][1](FakeAdapter(), object())
+
+
+def test_register_search_path_listener_callable_validates_resolver_output():
+    """A resolver that returns a malformed path must fail at transaction begin
+    (the SQL injection guard runs every time, not just at engine setup).
+    """
+    import pytest
+    from unittest.mock import MagicMock
+
+    class FakeSyncEngine:
+        pass
+
+    engine = FakeSyncEngine()
+
+    def bad_resolver():
+        return "public; DROP TABLE users"
+
+    listeners = _capture_listeners(engine, bad_resolver)
+    by_event = {identifier: (target, fn) for target, identifier, fn in listeners}
+
+    sa_conn = MagicMock()
+    with pytest.raises(ValueError, match="Invalid search_path identifier"):
+        by_event["begin"][1](sa_conn)
