@@ -77,6 +77,26 @@ func TestApply_NoOpWithoutLanguageInContext(t *testing.T) {
 	assert.Empty(t, tx.queries, "no SET LOCAL should be issued without an active language")
 }
 
+func TestApplyRequired_ReturnsNoActiveLanguageWithoutLanguageInContext(t *testing.T) {
+	tx := &recordingTx{}
+	err := ApplyRequired(context.Background(), tx)
+	assert.ErrorIs(t, err, sharedDB.ErrNoActiveLanguage)
+	assert.Empty(t, tx.queries, "strict helper must not issue SQL without an active language")
+}
+
+func TestApplyRequired_IssuesSetLocalWhenLanguageInContext(t *testing.T) {
+	tx := &recordingTx{}
+	ctx := sharedDB.WithLanguage(context.Background(), "sv")
+
+	err := ApplyRequired(ctx, tx)
+	require.NoError(t, err)
+	require.Len(t, tx.queries, 1)
+	assert.Equal(t,
+		"SET LOCAL search_path TO klearn_sv,cms_sv,klearn,cms,users,localization,communications,convo,media,public",
+		tx.queries[0],
+	)
+}
+
 func TestApply_PropagatesExecError(t *testing.T) {
 	wantErr := errors.New("boom")
 	tx := &recordingTx{execErr: wantErr}
@@ -237,5 +257,84 @@ func TestWithReadTx_NoLanguage_NoApplyIssued(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, called)
 	assert.Empty(t, tx.queries, "no SET LOCAL when ctx has no language")
+	assert.True(t, tx.rolledBack)
+}
+
+func TestWithRequiredReadTx_NoLanguage_ReturnsErrorBeforeFn(t *testing.T) {
+	tx := &trackingTx{}
+	beginner := &stubBeginner{tx: tx}
+
+	called := false
+	err := WithRequiredReadTx(context.Background(), beginner, func(_ pgx.Tx) error {
+		called = true
+		return nil
+	})
+	assert.ErrorIs(t, err, sharedDB.ErrNoActiveLanguage)
+	assert.False(t, called)
+	assert.Empty(t, tx.queries)
+	assert.True(t, tx.rolledBack)
+}
+
+func TestWithRequiredTx_NoLanguage_ReturnsErrorBeforeFn(t *testing.T) {
+	tx := &trackingTx{}
+	beginner := &stubBeginner{tx: tx}
+
+	called := false
+	err := WithRequiredTx(context.Background(), beginner, func(_ pgx.Tx) error {
+		called = true
+		return nil
+	})
+	assert.ErrorIs(t, err, sharedDB.ErrNoActiveLanguage)
+	assert.False(t, called)
+	assert.False(t, tx.committed)
+	assert.True(t, tx.rolledBack)
+}
+
+func TestWithRequiredReadTx_HappyPath_RunsFnAndRollsBack(t *testing.T) {
+	// Strict variant with a language present must behave identically
+	// to the lenient WithReadTx — Apply, run fn, rollback.
+	tx := &trackingTx{}
+	beginner := &stubBeginner{tx: tx}
+	ctx := sharedDB.WithLanguage(context.Background(), "sv")
+
+	calls := 0
+	err := WithRequiredReadTx(ctx, beginner, func(_ pgx.Tx) error {
+		calls++
+		return nil
+	})
+	require.NoError(t, err)
+	assert.Equal(t, 1, calls)
+	require.Len(t, tx.queries, 1, "Apply should issue exactly one SET LOCAL")
+	assert.True(t, tx.rolledBack)
+	assert.False(t, tx.committed)
+}
+
+func TestWithRequiredTx_HappyPath_RunsFnAndCommits(t *testing.T) {
+	// Strict variant with a language present must commit on fn success.
+	tx := &trackingTx{}
+	beginner := &stubBeginner{tx: tx}
+	ctx := sharedDB.WithLanguage(context.Background(), "vi")
+
+	err := WithRequiredTx(ctx, beginner, func(_ pgx.Tx) error {
+		return nil
+	})
+	require.NoError(t, err)
+	require.Len(t, tx.queries, 1, "Apply should issue exactly one SET LOCAL")
+	assert.True(t, tx.committed)
+	assert.False(t, tx.rolledBack)
+}
+
+func TestWithRequiredTx_FnError_RollsBack(t *testing.T) {
+	// fn errors after Apply succeeded must roll back, not commit.
+	tx := &trackingTx{}
+	beginner := &stubBeginner{tx: tx}
+	ctx := sharedDB.WithLanguage(context.Background(), "fi")
+	wantErr := errors.New("write conflict")
+
+	err := WithRequiredTx(ctx, beginner, func(_ pgx.Tx) error {
+		return wantErr
+	})
+	assert.ErrorIs(t, err, wantErr)
+	assert.False(t, tx.committed)
 	assert.True(t, tx.rolledBack)
 }

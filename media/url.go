@@ -138,11 +138,10 @@ func joinServeBaseAndVariantPath(serveBaseURL, variantPath string) string {
 			return base
 		}
 		if gcs.IsStorageAPIPath(parsedBase.Path) {
-			bucketAndPrefix := strings.TrimPrefix(parsedBase.Path, gcs.StorageAPIPath)
-			parts := strings.SplitN(bucketAndPrefix, "/o/", 2)
-			if len(parts) == 2 {
-				bucket := strings.TrimSpace(parts[0])
-				objectPrefix := strings.Trim(parts[1], "/")
+			bucketAndPrefix, _ := strings.CutPrefix(parsedBase.Path, gcs.StorageAPIPath)
+			if bucketPart, prefixPart, ok := strings.Cut(bucketAndPrefix, "/o/"); ok {
+				bucket := strings.TrimSpace(bucketPart)
+				objectPrefix := strings.Trim(prefixPart, "/")
 				objectPath := strings.TrimLeft(vPath, "/")
 				if objectPrefix != "" {
 					objectPath = objectPrefix + "/" + objectPath

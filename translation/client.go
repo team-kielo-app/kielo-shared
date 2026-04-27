@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 )
@@ -81,7 +82,7 @@ func (c *Client) TranslateBatch(ctx context.Context, texts []string, sourceLang,
 		copy(result, body.Translations)
 		return result
 	}
-	return body.Translations
+	return slices.Clone(body.Translations)
 }
 
 func (c *Client) URL() string {

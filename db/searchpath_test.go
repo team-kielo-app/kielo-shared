@@ -8,7 +8,7 @@ import (
 )
 
 func TestValidateLanguageIdent_AcceptsISOCodes(t *testing.T) {
-	for _, lang := range []string{"fi", "sv", "vi", "en", "zh_CN", "pt_BR"} {
+	for _, lang := range []string{"fi", "sv", "vi", "en", "zh", "pt"} {
 		if err := ValidateLanguageIdent(lang); err != nil {
 			t.Errorf("ValidateLanguageIdent(%q) = %v, want nil", lang, err)
 		}
@@ -16,7 +16,7 @@ func TestValidateLanguageIdent_AcceptsISOCodes(t *testing.T) {
 }
 
 func TestValidateLanguageIdent_RejectsGarbage(t *testing.T) {
-	for _, lang := range []string{"FI", "f", "english", "fi-en", "fi; DROP", "", "fi_cn"} {
+	for _, lang := range []string{"FI", "f", "english", "fi-en", "fi; DROP", "", "fi_cn", "zh_CN", "pt_BR"} {
 		if err := ValidateLanguageIdent(lang); err == nil {
 			t.Errorf("ValidateLanguageIdent(%q) = nil, want error", lang)
 		}
@@ -149,6 +149,43 @@ func TestIssueSearchPathForContext_NoLanguage(t *testing.T) {
 	}
 	if len(exec.queries) != 0 {
 		t.Errorf("expected no SQL to be issued; got %v", exec.queries)
+	}
+}
+
+func TestApplySearchPathToTx_NoLanguageNoOp(t *testing.T) {
+	exec := &fakeExec{}
+	err := ApplySearchPathToTx(context.Background(), exec.Exec)
+	if err != nil {
+		t.Fatalf("ApplySearchPathToTx: %v", err)
+	}
+	if len(exec.queries) != 0 {
+		t.Errorf("expected optional helper to issue no SQL without language; got %v", exec.queries)
+	}
+}
+
+func TestApplySearchPathToTxRequired_NoLanguageErrors(t *testing.T) {
+	exec := &fakeExec{}
+	err := ApplySearchPathToTxRequired(context.Background(), exec.Exec)
+	if !errors.Is(err, ErrNoActiveLanguage) {
+		t.Errorf("got %v, want ErrNoActiveLanguage", err)
+	}
+	if len(exec.queries) != 0 {
+		t.Errorf("expected strict helper to issue no SQL without language; got %v", exec.queries)
+	}
+}
+
+func TestApplySearchPathToTxRequired_IssuesSetLocal(t *testing.T) {
+	exec := &fakeExec{}
+	ctx := WithLanguage(context.Background(), "sv")
+	err := ApplySearchPathToTxRequired(ctx, exec.Exec)
+	if err != nil {
+		t.Fatalf("ApplySearchPathToTxRequired: %v", err)
+	}
+	if len(exec.queries) != 1 {
+		t.Fatalf("got %d queries, want 1", len(exec.queries))
+	}
+	if exec.queries[0] != "SET LOCAL search_path TO klearn_sv,cms_sv,klearn,cms,users,localization,communications,convo,media,public" {
+		t.Errorf("got %q", exec.queries[0])
 	}
 }
 

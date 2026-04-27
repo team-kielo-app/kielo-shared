@@ -504,12 +504,13 @@ func (c *Client) Close() error {
 
 // ParseGCSURI parses a GCS URI (gs://bucket/path) and returns bucket and path
 func ParseGCSURI(uri string) (bucket, path string, err error) {
-	if !strings.HasPrefix(uri, "gs://") {
+	trimmedURI, ok := strings.CutPrefix(uri, "gs://")
+	if !ok {
 		return "", "", fmt.Errorf("invalid GCS URI format: %s", uri)
 	}
-	parts := strings.SplitN(strings.TrimPrefix(uri, "gs://"), "/", 2)
-	if len(parts) != 2 {
+	bucket, path, ok = strings.Cut(trimmedURI, "/")
+	if !ok {
 		return "", "", fmt.Errorf("invalid GCS URI format, missing path: %s", uri)
 	}
-	return parts[0], parts[1], nil
+	return bucket, path, nil
 }

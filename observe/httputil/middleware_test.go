@@ -144,7 +144,7 @@ func TestRequestLogger_StatusLevels(t *testing.T) {
 
 			_ = handler(c)
 
-			var entry map[string]interface{}
+			var entry map[string]any
 			if err := json.Unmarshal(buf.Bytes(), &entry); err != nil {
 				t.Fatalf("invalid JSON: %v\nraw: %s", err, buf.String())
 			}
@@ -169,7 +169,7 @@ func TestRequestLogger_IncludesTraceFields(t *testing.T) {
 	})
 	_ = handler(c)
 
-	var entry map[string]interface{}
+	var entry map[string]any
 	if err := json.Unmarshal(buf.Bytes(), &entry); err != nil {
 		t.Fatalf("invalid JSON: %v\nraw: %s", err, buf.String())
 	}

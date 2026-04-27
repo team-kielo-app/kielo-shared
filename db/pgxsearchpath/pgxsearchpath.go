@@ -67,6 +67,71 @@ func Apply(ctx context.Context, tx pgx.Tx) error {
 	return sharedDB.ApplySearchPathToTx(ctx, exec)
 }
 
+// ApplyRequired is the strict variant of Apply. Use it for request
+// handlers that touch migrated per-language tables and must fail when
+// middleware did not attach an active learning language.
+func ApplyRequired(ctx context.Context, tx pgx.Tx) error {
+	exec := func(c context.Context, query string) error {
+		_, err := tx.Exec(c, query)
+		return err
+	}
+	return sharedDB.ApplySearchPathToTxRequired(ctx, exec)
+}
+
+// applyFn matches Apply / ApplyRequired's signature so the WithReadTx /
+// WithTx machinery can be parameterized by which strictness variant the
+// caller wants without duplicating the surrounding tx-management body.
+type applyFn func(ctx context.Context, tx pgx.Tx) error
+
+// withReadTx is the inner read-tx body: Begin → apply → fn → Rollback
+// (always). The exported wrappers parameterize it with Apply or
+// ApplyRequired so the surrounding boilerplate lives in exactly one
+// place rather than being duplicated for the strict variant.
+func withReadTx(ctx context.Context, db TxBeginner, apply applyFn, fn func(tx pgx.Tx) error) error {
+	tx, err := db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("pgxsearchpath: begin read tx: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	if err := apply(ctx, tx); err != nil {
+		return err
+	}
+	return fn(tx)
+}
+
+// withTx is the inner read-write body: Begin → apply → fn → Commit on
+// success / Rollback on any error. As with withReadTx, parameterized by
+// the apply variant so WithTx and WithRequiredTx don't duplicate the
+// commit/rollback bookkeeping.
+//
+// If both fn and Commit succeed but the deferred Rollback then fires
+// (e.g. ctx cancellation between Commit return and Rollback scheduling)
+// the rollback error is intentionally swallowed — pgx considers
+// "rollback after successful commit" a no-op error.
+func withTx(ctx context.Context, db TxBeginner, apply applyFn, fn func(tx pgx.Tx) error) error {
+	tx, err := db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("pgxsearchpath: begin tx: %w", err)
+	}
+	committed := false
+	defer func() {
+		if !committed {
+			_ = tx.Rollback(ctx)
+		}
+	}()
+	if err := apply(ctx, tx); err != nil {
+		return err
+	}
+	if err := fn(tx); err != nil {
+		return err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("pgxsearchpath: commit tx: %w", err)
+	}
+	committed = true
+	return nil
+}
+
 // WithReadTx opens a read-only-style transaction (Begin → Apply → fn →
 // Rollback), runs fn, and discards the tx unconditionally. Use for
 // repository reads that need per-language search_path scoping but
@@ -79,15 +144,14 @@ func Apply(ctx context.Context, tx pgx.Tx) error {
 // Replaces the per-service `withReadTx` boilerplate that was previously
 // hand-rolled in kielo-user-service / kielo-cms / kielo-content-service.
 func WithReadTx(ctx context.Context, db TxBeginner, fn func(tx pgx.Tx) error) error {
-	tx, err := db.Begin(ctx)
-	if err != nil {
-		return fmt.Errorf("pgxsearchpath: begin read tx: %w", err)
-	}
-	defer func() { _ = tx.Rollback(ctx) }()
-	if err := Apply(ctx, tx); err != nil {
-		return err
-	}
-	return fn(tx)
+	return withReadTx(ctx, db, Apply, fn)
+}
+
+// WithRequiredReadTx is the strict variant of WithReadTx. It returns
+// ErrNoActiveLanguage (wrapped) and does not run fn when ctx has no
+// active learning language.
+func WithRequiredReadTx(ctx context.Context, db TxBeginner, fn func(tx pgx.Tx) error) error {
+	return withReadTx(ctx, db, ApplyRequired, fn)
 }
 
 // WithTx opens a read-write transaction (Begin → Apply → fn → Commit on
@@ -97,30 +161,14 @@ func WithReadTx(ctx context.Context, db TxBeginner, fn func(tx pgx.Tx) error) er
 //
 // Errors from Begin / Apply / Commit are wrapped with context. fn's
 // error is returned verbatim so callers can `errors.Is` against domain
-// sentinels. If both fn and Commit succeed but the deferred Rollback
-// fires (e.g. ctx cancellation between Commit return and Rollback
-// scheduling) it's intentionally swallowed — pgx considers
-// "rollback after successful commit" a no-op error.
+// sentinels.
 func WithTx(ctx context.Context, db TxBeginner, fn func(tx pgx.Tx) error) error {
-	tx, err := db.Begin(ctx)
-	if err != nil {
-		return fmt.Errorf("pgxsearchpath: begin tx: %w", err)
-	}
-	committed := false
-	defer func() {
-		if !committed {
-			_ = tx.Rollback(ctx)
-		}
-	}()
-	if err := Apply(ctx, tx); err != nil {
-		return err
-	}
-	if err := fn(tx); err != nil {
-		return err
-	}
-	if err := tx.Commit(ctx); err != nil {
-		return fmt.Errorf("pgxsearchpath: commit tx: %w", err)
-	}
-	committed = true
-	return nil
+	return withTx(ctx, db, Apply, fn)
+}
+
+// WithRequiredTx is the strict variant of WithTx. It returns
+// ErrNoActiveLanguage (wrapped) and does not run fn when ctx has no
+// active learning language.
+func WithRequiredTx(ctx context.Context, db TxBeginner, fn func(tx pgx.Tx) error) error {
+	return withTx(ctx, db, ApplyRequired, fn)
 }

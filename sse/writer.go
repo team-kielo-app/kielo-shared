@@ -12,10 +12,10 @@ import (
 
 // Event represents an SSE event
 type Event struct {
-	Event string      `json:"event,omitempty"`
-	Data  interface{} `json:"data"`
-	ID    string      `json:"id,omitempty"`
-	Retry int         `json:"retry,omitempty"`
+	Event string `json:"event,omitempty"`
+	Data  any    `json:"data"`
+	ID    string `json:"id,omitempty"`
+	Retry int    `json:"retry,omitempty"`
 }
 
 // Writer provides SSE streaming capabilities
@@ -51,7 +51,7 @@ func NewWriter(c echo.Context) (*Writer, error) {
 }
 
 // SendEvent sends a named event with JSON data
-func (w *Writer) SendEvent(eventName string, data interface{}) error {
+func (w *Writer) SendEvent(eventName string, data any) error {
 	jsonData, err := json.Marshal(data)
 	if err != nil {
 		return fmt.Errorf("failed to marshal data: %w", err)
@@ -121,12 +121,12 @@ func (w *Writer) SetHeartbeatDelay(d time.Duration) {
 
 // JobStatusEvent represents a job status update event
 type JobStatusEvent struct {
-	JobID    string      `json:"job_id"`
-	Status   string      `json:"status"`
-	Progress int         `json:"progress,omitempty"`
-	Message  string      `json:"message,omitempty"`
-	Result   interface{} `json:"result,omitempty"`
-	Error    string      `json:"error,omitempty"`
+	JobID    string `json:"job_id"`
+	Status   string `json:"status"`
+	Progress int    `json:"progress,omitempty"`
+	Message  string `json:"message,omitempty"`
+	Result   any    `json:"result,omitempty"`
+	Error    string `json:"error,omitempty"`
 }
 
 type ErrorEvent struct {
@@ -150,7 +150,7 @@ func (w *Writer) SendJobProgress(jobID string, progress int, message string) err
 }
 
 // SendJobComplete sends a job completion event
-func (w *Writer) SendJobComplete(jobID string, result interface{}) error {
+func (w *Writer) SendJobComplete(jobID string, result any) error {
 	return w.SendEvent("job_complete", JobStatusEvent{
 		JobID:  jobID,
 		Status: "completed",

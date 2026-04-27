@@ -31,11 +31,10 @@ DEFAULT_PER_LANGUAGE_SEARCH_PATH_TEMPLATE = (
 )
 
 _SEARCH_PATH_IDENT_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
-# Stricter than the search_path identifier regex: language codes are
-# lowercase ISO 639-1/639-3 with optional uppercase region (e.g. "fi",
-# "sv", "zh_CN"). Used by the per-language resolver before formatting it
-# into a schema name.
-_LANGUAGE_IDENT_RE = re.compile(r"^[a-z]{2,3}(_[A-Z]{2})?$")
+# Stricter than the search_path identifier regex: internal language codes are
+# lowercase ISO 639-1/639-3 base codes (e.g. "fi", "sv", "zh"). Used by the
+# per-language resolver before formatting it into a schema name.
+_LANGUAGE_IDENT_RE = re.compile(r"^[a-z]{2,3}$")
 
 SearchPathResolver = Callable[[], str]
 SearchPathSpec = Union[str, SearchPathResolver]
@@ -252,8 +251,7 @@ def _validate_language_ident(lang: str) -> str:
     if not is_valid_language_ident(lang):
         raise ValueError(
             f"Invalid language identifier: {lang!r}. "
-            f"Expected ISO 639 lowercase code with optional region (e.g. 'fi', "
-            f"'sv', 'zh_CN')."
+            f"Expected ISO 639 lowercase base code (e.g. 'fi', 'sv', 'zh')."
         )
     return lang
 

@@ -217,13 +217,13 @@ def test_validate_language_ident_accepts_iso_codes():
     assert db_utils._validate_language_ident("fi") == "fi"
     assert db_utils._validate_language_ident("sv") == "sv"
     assert db_utils._validate_language_ident("vi") == "vi"
-    assert db_utils._validate_language_ident("zh_CN") == "zh_CN"
+    assert db_utils._validate_language_ident("zh") == "zh"
 
 
 def test_validate_language_ident_rejects_garbage():
     import pytest
 
-    for bad in ("FI", "f", "english", "fi-en", "fi; DROP", "", "fi_cn"):
+    for bad in ("FI", "f", "english", "fi-en", "fi; DROP", "", "fi_cn", "zh_CN"):
         with pytest.raises(ValueError, match="Invalid language identifier"):
             db_utils._validate_language_ident(bad)
 

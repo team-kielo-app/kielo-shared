@@ -125,8 +125,5 @@ func NextDayStartUTC(ctx context.Context, now time.Time) time.Time {
 // next local midnight. Returns 0 (not negative) if `now` already crossed.
 func SecondsUntilNextDayStart(ctx context.Context, now time.Time) int {
 	seconds := int(NextDayStartUTC(ctx, now).Sub(now.UTC()).Seconds())
-	if seconds < 0 {
-		return 0
-	}
-	return seconds
+	return max(seconds, 0)
 }

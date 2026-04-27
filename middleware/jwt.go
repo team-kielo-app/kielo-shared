@@ -91,12 +91,12 @@ func JWTAuthWithOptions(jwtSecret string, userChecker UserExistenceChecker, opti
 				return echo.NewHTTPError(http.StatusUnauthorized, "Missing authorization header")
 			}
 
-			tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-			if tokenString == authHeader {
+			tokenString, ok := strings.CutPrefix(authHeader, "Bearer ")
+			if !ok {
 				return echo.NewHTTPError(http.StatusBadRequest, "Invalid authorization header format")
 			}
 
-			keyFunc := func(token *jwt.Token) (interface{}, error) {
+			keyFunc := func(token *jwt.Token) (any, error) {
 				// If RSA public key is provided, use it
 				if options != nil && (options.PublicKeyPEM != "" || options.PublicKey != nil) {
 					// Ensure the token is signed with an RSA algorithm

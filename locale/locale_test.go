@@ -8,12 +8,12 @@ import (
 
 func TestNormalizeLocaleCode(t *testing.T) {
 	assert.Equal(t, "vi", NormalizeLocaleCode(" vn "))
-	assert.Equal(t, "vi-VN", NormalizeLocaleCode("vi_VN"))
-	assert.Equal(t, "sv-SE", NormalizeLocaleCode("sv-SE"))
-	assert.Equal(t, "sv-SE", NormalizeLocaleCode("sv_se"))
-	assert.Equal(t, "vi-VN", NormalizeLocaleCode("vn_vn"))
-	assert.Equal(t, "zh-Hant-TW", NormalizeLocaleCode("zh-Hant-TW"))
-	assert.Equal(t, "pt-BR", NormalizeLocaleCode(" pt_BR "))
+	assert.Equal(t, "vi", NormalizeLocaleCode("vi_VN"))
+	assert.Equal(t, "sv", NormalizeLocaleCode("sv-SE"))
+	assert.Equal(t, "sv", NormalizeLocaleCode("sv_se"))
+	assert.Equal(t, "vi", NormalizeLocaleCode("vn_vn"))
+	assert.Equal(t, "zh", NormalizeLocaleCode("zh-Hant-TW"))
+	assert.Equal(t, "pt", NormalizeLocaleCode(" pt_BR "))
 	assert.Equal(t, "", NormalizeLocaleCode(""))
 	assert.Equal(t, "", NormalizeLocaleCode("  "))
 }
@@ -26,19 +26,26 @@ func TestNormalizeLearningLanguageCode(t *testing.T) {
 	assert.Equal(t, "", NormalizeLearningLanguageCode(""))
 }
 
+func TestNormalizeSourceLocale(t *testing.T) {
+	assert.Equal(t, "sv", NormalizeSourceLocale(" sv_SE "))
+	assert.Equal(t, "zh", NormalizeSourceLocale("zh-Hant-TW"))
+	assert.Equal(t, "vi", NormalizeSourceLocale("vn"))
+	assert.Equal(t, "", NormalizeSourceLocale(""))
+}
+
 func TestNormalizeAcceptLanguage(t *testing.T) {
-	assert.Equal(t, "pt-BR", NormalizeAcceptLanguage(" pt_BR "))
-	assert.Equal(t, "zh-Hant-TW", NormalizeAcceptLanguage("zh-Hant-TW,zh;q=0.9"))
+	assert.Equal(t, "pt", NormalizeAcceptLanguage(" pt_BR "))
+	assert.Equal(t, "zh", NormalizeAcceptLanguage("zh-Hant-TW,zh;q=0.9"))
 	assert.Equal(t, "vi", NormalizeAcceptLanguage(" vn "))
-	assert.Equal(t, "vi-VN", NormalizeAcceptLanguage("vi_VN"))
-	assert.Equal(t, "de-DE", NormalizeAcceptLanguage("de-DE,de;q=0.9"))
+	assert.Equal(t, "vi", NormalizeAcceptLanguage("vi_VN"))
+	assert.Equal(t, "de", NormalizeAcceptLanguage("de-DE,de;q=0.9"))
 	assert.Equal(t, "", NormalizeAcceptLanguage(""))
 }
 
 func TestSupportLocaleCandidates(t *testing.T) {
-	assert.Equal(t, []string{"vi-VN", "vi", "en"}, SupportLocaleCandidates("vi_VN"))
-	assert.Equal(t, []string{"pt-BR", "pt", "en"}, SupportLocaleCandidates(" pt_BR "))
-	assert.Equal(t, []string{"en-US", "en"}, SupportLocaleCandidates("en_US"))
+	assert.Equal(t, []string{"vi", "en"}, SupportLocaleCandidates("vi_VN"))
+	assert.Equal(t, []string{"pt", "en"}, SupportLocaleCandidates(" pt_BR "))
+	assert.Equal(t, []string{"en"}, SupportLocaleCandidates("en_US"))
 	assert.Nil(t, SupportLocaleCandidates(""))
 }
 
@@ -61,17 +68,14 @@ func TestSupportLocaleCandidates_EdgeCases(t *testing.T) {
 
 	// Legacy 'vn' alias canonicalizes to 'vi' before fanout.
 	assert.Equal(t, []string{"vi", "en"}, SupportLocaleCandidates("vn"))
-	assert.Equal(t, []string{"vi-VN", "vi", "en"}, SupportLocaleCandidates("vn_vn"))
+	assert.Equal(t, []string{"vi", "en"}, SupportLocaleCandidates("vn_vn"))
 
 	// Mixed-case input normalizes cleanly through the whole chain.
-	assert.Equal(t, []string{"sv-SE", "sv", "en"}, SupportLocaleCandidates("SV_se"))
+	assert.Equal(t, []string{"sv", "en"}, SupportLocaleCandidates("SV_se"))
 
-	// Script subtag zh-Hant-TW: base is zh, full locale preserved at
-	// position 0, en terminates the chain. Exercises the multi-subtag
-	// path through NormalizeLocaleCode.
+	// Script subtag zh-Hant-TW: base is zh, en terminates the chain.
 	candidates := SupportLocaleCandidates("zh-Hant-TW")
-	assert.Equal(t, "zh-Hant-TW", candidates[0])
-	assert.Equal(t, "zh", candidates[1])
+	assert.Equal(t, "zh", candidates[0])
 	assert.Equal(t, "en", candidates[len(candidates)-1])
 }
 

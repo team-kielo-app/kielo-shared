@@ -47,11 +47,11 @@ const DefaultPerLanguageSearchPathTemplate = "klearn_{lang}, cms_{lang}, klearn,
 // must run after a language-extracting middleware.
 var ErrNoActiveLanguage = errors.New("kielo-shared/db: no active language on context")
 
-// languageIdentRe matches ISO 639-1/639-3 lowercase codes with an
-// optional uppercase region (e.g. "fi", "sv", "vi", "zh_CN"). Stricter
-// than the search_path identifier regex on purpose: language codes
-// only, since the result is interpolated into a schema name.
-var languageIdentRe = regexp.MustCompile(`^[a-z]{2,3}(_[A-Z]{2})?$`)
+// languageIdentRe matches Kielo's internal canonical base language codes.
+// Region/script suffixes are not valid schema suffixes: use "sv", not
+// "sv_SE". Stricter than the search_path identifier regex on purpose,
+// since the result is interpolated into schema names such as cms_sv.
+var languageIdentRe = regexp.MustCompile(`^[a-z]{2,3}$`)
 
 // searchPathIdentRe matches a single schema identifier. Used to validate
 // the result of formatting a template before issuing SET search_path,
@@ -91,7 +91,7 @@ func LanguageFromContext(ctx context.Context) (string, bool) {
 func ValidateLanguageIdent(lang string) error {
 	if !languageIdentRe.MatchString(lang) {
 		return fmt.Errorf(
-			"kielo-shared/db: invalid language identifier %q (expected ISO 639 lowercase with optional region, e.g. \"fi\", \"sv\", \"zh_CN\")",
+			"kielo-shared/db: invalid language identifier %q (expected lowercase base language code, e.g. \"fi\", \"sv\", \"vi\")",
 			lang,
 		)
 	}
@@ -101,9 +101,8 @@ func ValidateLanguageIdent(lang string) error {
 // validateSearchPathIdents rejects any element that isn't a plain
 // identifier. Mirrors _validate_search_path_idents in db_utils.py.
 func validateSearchPathIdents(searchPath string) (string, error) {
-	parts := strings.Split(searchPath, ",")
-	cleaned := make([]string, 0, len(parts))
-	for _, part := range parts {
+	var cleaned []string
+	for part := range strings.SplitSeq(searchPath, ",") {
 		part = strings.TrimSpace(part)
 		if part == "" {
 			continue
@@ -176,10 +175,11 @@ func IssueSearchPathForContext(
 	return exec(ctx, "SET LOCAL search_path TO "+path)
 }
 
-// ApplySearchPathToTx is the standard repository-side helper for
-// per-request search_path routing. Call it once at the top of every
-// read transaction that should be language-scoped. The exec closure
-// adapts whichever pgx-or-database/sql tx type the service uses.
+// ApplySearchPathToTx is the optional repository-side helper for
+// per-request search_path routing. Call it once at the top of
+// transactions that may be language-scoped but still support legacy or
+// background fallback behavior. The exec closure adapts whichever
+// pgx-or-database/sql tx type the service uses.
 //
 // Behavior:
 //   - If ctx has no active language attached (legacy callers, background
@@ -207,6 +207,22 @@ func ApplySearchPathToTx(
 			return nil
 		}
 		return fmt.Errorf("kielo-shared/db: ApplySearchPathToTx: %w", err)
+	}
+	return nil
+}
+
+// ApplySearchPathToTxRequired is the strict repository-side helper for
+// request handlers that touch per-language tables and must never fall
+// back to the connection-level search_path. Missing ctx language returns
+// ErrNoActiveLanguage, wrapped for call-site context.
+func ApplySearchPathToTxRequired(
+	ctx context.Context,
+	exec func(ctx context.Context, query string) error,
+) error {
+	if err := IssueSearchPathForContext(
+		ctx, DefaultPerLanguageSearchPathTemplate, exec,
+	); err != nil {
+		return fmt.Errorf("kielo-shared/db: ApplySearchPathToTxRequired: %w", err)
 	}
 	return nil
 }
