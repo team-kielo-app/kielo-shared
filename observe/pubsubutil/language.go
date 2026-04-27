@@ -80,3 +80,20 @@ func LanguageFromAttributes(attrs map[string]string) string {
 	}
 	return attrs[LanguageAttribute]
 }
+
+// WithLanguageFromAttributes is the canonical subscriber recipe: extract
+// learning_language_code from a Pub/Sub message's attributes and apply
+// it to ctx via sharedDB.WithLanguage so downstream DB transactions
+// scope to the correct per-language schema. No-op when the attribute
+// is missing or invalid (resolver's legacy fallback applies).
+//
+// Replaces verbatim activeLanguageFromAttributes /
+// scopeActiveLanguageFromAttributes helpers that lived in every
+// subscriber's pubsub_handler.go.
+func WithLanguageFromAttributes(ctx context.Context, attrs map[string]string) context.Context {
+	lang := LanguageFromAttributes(attrs)
+	if lang == "" {
+		return ctx
+	}
+	return sharedDB.WithLanguage(ctx, lang)
+}

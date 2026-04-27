@@ -92,3 +92,30 @@ func TestLanguageFromAttributes(t *testing.T) {
 	assert.Empty(t, LanguageFromAttributes(map[string]string{"event_type": "x"}))
 	assert.Empty(t, LanguageFromAttributes(nil))
 }
+
+func TestWithLanguageFromAttributes_AppliesValidLang(t *testing.T) {
+	ctx := WithLanguageFromAttributes(context.Background(), map[string]string{"learning_language_code": "sv"})
+	got, ok := sharedDB.LanguageFromContext(ctx)
+	assert.True(t, ok)
+	assert.Equal(t, "sv", got)
+}
+
+func TestWithLanguageFromAttributes_PassthroughOnEmpty(t *testing.T) {
+	parent := context.Background()
+
+	ctx := WithLanguageFromAttributes(parent, nil)
+	_, ok := sharedDB.LanguageFromContext(ctx)
+	assert.False(t, ok, "nil attrs must not apply a language")
+
+	ctx = WithLanguageFromAttributes(parent, map[string]string{"event_type": "x"})
+	_, ok = sharedDB.LanguageFromContext(ctx)
+	assert.False(t, ok, "missing language attr must not apply a language")
+}
+
+func TestWithLanguageFromAttributes_PassthroughOnInvalidLang(t *testing.T) {
+	// sharedDB.WithLanguage rejects malformed idents — the helper must
+	// not poison ctx in that case.
+	ctx := WithLanguageFromAttributes(context.Background(), map[string]string{"learning_language_code": "../etc/passwd"})
+	_, ok := sharedDB.LanguageFromContext(ctx)
+	assert.False(t, ok, "invalid lang must not be applied")
+}

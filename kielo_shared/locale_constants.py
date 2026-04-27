@@ -35,6 +35,59 @@ LEGACY_DEFAULT_LEARNING_LANGUAGE: str = "fi"
 # hints, glosses, explanations, and other localized support content.
 TIER_A_SUPPORT_LOCALE: str = "en"
 
+# Canonical mapping from base language code to its English display name.
+# Used by:
+#   * LLM prompts that need to name the learner's language ("You are a
+#     {language} dictionary assistant...")
+#   * Admin UI labels
+#   * Telemetry / log fields
+#
+# Single source of truth so a service can't accidentally drop to a
+# generic placeholder ("learning-language") when handling a locale that
+# the platform officially supports. Add new locales here, not in a
+# per-feature map. Keys are normalized base codes (matching
+# normalize_locale_code output); values are the canonical English names.
+LANGUAGE_DISPLAY_NAMES: Mapping[str, str] = {
+    "ar": "Arabic",
+    "bn": "Bengali",
+    "de": "German",
+    "en": "English",
+    "es": "Spanish",
+    "fi": "Finnish",
+    "fr": "French",
+    "hi": "Hindi",
+    "hu": "Hungarian",
+    "it": "Italian",
+    "ja": "Japanese",
+    "ko": "Korean",
+    "nl": "Dutch",
+    "pl": "Polish",
+    "pt": "Portuguese",
+    "ru": "Russian",
+    "sr": "Serbian",
+    "sv": "Swedish",
+    "th": "Thai",
+    "tr": "Turkish",
+    "uk": "Ukrainian",
+    "vi": "Vietnamese",
+    "zh": "Chinese",
+}
+
+
+def language_display_name(code: str | None, fallback: str = "") -> str:
+    """Return the English display name for a base locale code.
+
+    Normalizes input first, so callers can pass any locale-like value
+    (``"vi"``, ``"vi-VN"``, ``"vn"`` for the Vietnamese alias). Falls
+    back to ``fallback`` (or the normalized code itself if no fallback
+    is supplied) when the code isn't in the canonical map — never returns
+    an empty string for non-empty input.
+    """
+    normalized = normalize_locale_code(code)
+    if not normalized:
+        return fallback
+    return LANGUAGE_DISPLAY_NAMES.get(normalized, fallback or normalized)
+
 
 def normalize_locale_code(code: str | None) -> str:
     """Normalize locale-like input to the platform's base language code."""
@@ -119,9 +172,11 @@ def language_from_attributes(
 
 __all__ = [
     "LANGUAGE_ATTRIBUTE",
+    "LANGUAGE_DISPLAY_NAMES",
     "LEGACY_DEFAULT_LEARNING_LANGUAGE",
     "TIER_A_SUPPORT_LOCALE",
     "base_locale",
+    "language_display_name",
     "language_from_attributes",
     "normalize_accept_language",
     "normalize_learning_language_code",

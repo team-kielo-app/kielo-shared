@@ -16,20 +16,20 @@ import (
 // — the activity filter is applied in SQL — but we still seed both
 // fields so the test data mirrors what the real query returns.
 type stubRows struct {
-	codes  []string
-	idx    int
-	closed bool
+	codes   []string
+	idx     int
+	closed  bool
 	scanErr error
 	iterErr error
 }
 
-func (r *stubRows) Close()                                     { r.closed = true }
-func (r *stubRows) Err() error                                 { return r.iterErr }
-func (r *stubRows) CommandTag() pgconn.CommandTag              { return pgconn.CommandTag{} }
+func (r *stubRows) Close()                                       { r.closed = true }
+func (r *stubRows) Err() error                                   { return r.iterErr }
+func (r *stubRows) CommandTag() pgconn.CommandTag                { return pgconn.CommandTag{} }
 func (r *stubRows) FieldDescriptions() []pgconn.FieldDescription { return nil }
-func (r *stubRows) Values() ([]any, error)                     { return nil, nil }
-func (r *stubRows) RawValues() [][]byte                        { return nil }
-func (r *stubRows) Conn() *pgx.Conn                            { return nil }
+func (r *stubRows) Values() ([]any, error)                       { return nil, nil }
+func (r *stubRows) RawValues() [][]byte                          { return nil }
+func (r *stubRows) Conn() *pgx.Conn                              { return nil }
 
 func (r *stubRows) Next() bool {
 	if r.idx >= len(r.codes) {
@@ -58,9 +58,9 @@ func (r *stubRows) Scan(dest ...any) error {
 // Query and records the SQL it received. Its Exec returns no-op so the
 // outer WithReadTx -> Apply path never fails.
 type queryingTx struct {
-	rows     *stubRows
-	queryErr error
-	queries  []string
+	rows       *stubRows
+	queryErr   error
+	queries    []string
 	rolledBack bool
 }
 
@@ -92,7 +92,7 @@ func (t *queryingTx) Query(_ context.Context, sql string, _ ...any) (pgx.Rows, e
 	return t.rows, nil
 }
 func (t *queryingTx) QueryRow(_ context.Context, _ string, _ ...any) pgx.Row { panic("not used") }
-func (t *queryingTx) Conn() *pgx.Conn                                       { return nil }
+func (t *queryingTx) Conn() *pgx.Conn                                        { return nil }
 
 // listLanguagesBeginner returns the same queryingTx for every Begin call
 // so tests can inspect what happened on the tx after the helper ran.
