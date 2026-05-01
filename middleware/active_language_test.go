@@ -79,12 +79,24 @@ func TestActiveLanguage_QueryParamFallback(t *testing.T) {
 
 func TestActiveLanguage_JWTClaimFallback(t *testing.T) {
 	c := newRequestRecorder(t, "/x", nil)
-	c.Set(JWTClaimKey, "vi")
+	c.Set(JWTClaimKey, "sv-SE")
 
 	handler := ActiveLanguage(nil)(func(c echo.Context) error {
 		got, _ := db.LanguageFromContext(c.Request().Context())
-		if got != "vi" {
-			t.Errorf("got %q, want vi", got)
+		if got != "sv" {
+			t.Errorf("got %q, want sv", got)
+		}
+		return nil
+	})
+	_ = handler(c)
+}
+
+func TestActiveLanguage_UnsupportedLearningLanguageLeavesContextEmpty(t *testing.T) {
+	c := newRequestRecorder(t, "/x?learning_language_code=vi", nil)
+
+	handler := ActiveLanguage(nil)(func(c echo.Context) error {
+		if _, ok := db.LanguageFromContext(c.Request().Context()); ok {
+			t.Error("expected localization-only language to be ignored for active learning context")
 		}
 		return nil
 	})
@@ -123,7 +135,7 @@ func TestActiveLanguage_AllSourcesBadLeavesContextEmpty(t *testing.T) {
 	c := newRequestRecorder(t, "/x?learning_language_code=BAD", map[string]string{
 		ActiveLanguageHeader: "english",
 	})
-	c.Set(JWTClaimKey, "fi-en")
+	c.Set(JWTClaimKey, "english")
 
 	handler := ActiveLanguage(nil)(func(c echo.Context) error {
 		if _, ok := db.LanguageFromContext(c.Request().Context()); ok {

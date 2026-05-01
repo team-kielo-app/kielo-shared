@@ -5,6 +5,7 @@ from kielo_shared.locale_constants import (
     base_locale,
     language_display_name,
     language_from_attributes,
+    normalize_supported_learning_language_code,
     normalize_accept_language,
     normalize_learning_language_code,
     normalize_locale_code,
@@ -16,9 +17,18 @@ from kielo_shared.locale_constants import (
 def test_locale_normalizers_return_base_language_codes() -> None:
     assert normalize_locale_code("sv-SE") == "sv"
     assert normalize_learning_language_code(" fi-FI ") == "fi"
+    assert normalize_learning_language_code("vi-VN") == ""
     assert normalize_source_locale("en-US") == "en"
     assert normalize_accept_language("pt-BR,pt;q=0.9") == "pt"
     assert base_locale("zh_CN") == "zh"
+    assert base_locale("vn") == "vi"
+
+
+def test_supported_learning_language_normalizer_filters_localization_locales() -> None:
+    assert normalize_supported_learning_language_code("sv-SE") == "sv"
+    assert normalize_supported_learning_language_code("fi-FI") == "fi"
+    assert normalize_supported_learning_language_code("vi-VN") == ""
+    assert normalize_supported_learning_language_code("en") == ""
 
 
 def test_support_locale_candidates_are_base_only() -> None:
@@ -29,8 +39,8 @@ def test_support_locale_candidates_are_base_only() -> None:
 def test_language_from_attributes_normalizes_to_base_code() -> None:
     # Region-tagged publisher attributes collapse to base codes.
     assert language_from_attributes({LANGUAGE_ATTRIBUTE: "sv-SE"}) == "sv"
-    # Vietnamese alias normalizes to canonical 'vi'.
-    assert language_from_attributes({LANGUAGE_ATTRIBUTE: "vn"}) == "vi"
+    # Vietnamese is a localization locale, not an authored learning language.
+    assert language_from_attributes({LANGUAGE_ATTRIBUTE: "vn"}) is None
     # Already-canonical codes pass through unchanged.
     assert language_from_attributes({LANGUAGE_ATTRIBUTE: "fi"}) == "fi"
 

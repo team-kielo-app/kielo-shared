@@ -110,20 +110,20 @@ func (b *listLanguagesBeginner) Begin(_ context.Context) (pgx.Tx, error) {
 	return b.tx, nil
 }
 
-func TestListActiveLanguageCodes_ReturnsCodesInQueryOrder(t *testing.T) {
+func TestListActiveLearningLanguageCodes_ReturnsCodesInQueryOrder(t *testing.T) {
 	// SQL ORDERs by code, so the helper itself doesn't sort — pin that
-	// the slice it returns matches what the rows yielded, in order.
+	// the slice it returns matches supported learning-language rows, in order.
 	rows := &stubRows{codes: []string{"fi", "sv", "vi"}}
 	tx := &queryingTx{rows: rows}
 	beginner := &listLanguagesBeginner{tx: tx}
 
-	codes, err := ListActiveLanguageCodes(context.Background(), beginner)
+	codes, err := ListActiveLearningLanguageCodes(context.Background(), beginner)
 	require.NoError(t, err)
-	assert.Equal(t, []string{"fi", "sv", "vi"}, codes)
+	assert.Equal(t, []string{"fi", "sv"}, codes)
 	assert.True(t, rows.closed, "rows must be closed after iteration")
 }
 
-func TestListActiveLanguageCodes_EmptyResultReturnsNilSlice(t *testing.T) {
+func TestListActiveLearningLanguageCodes_EmptyResultReturnsNilSlice(t *testing.T) {
 	// is_active = FALSE filtering happens in SQL; the helper itself just
 	// iterates whatever rows it receives. Empty rows -> nil/empty slice
 	// without error.
@@ -131,12 +131,12 @@ func TestListActiveLanguageCodes_EmptyResultReturnsNilSlice(t *testing.T) {
 	tx := &queryingTx{rows: rows}
 	beginner := &listLanguagesBeginner{tx: tx}
 
-	codes, err := ListActiveLanguageCodes(context.Background(), beginner)
+	codes, err := ListActiveLearningLanguageCodes(context.Background(), beginner)
 	require.NoError(t, err)
 	assert.Empty(t, codes)
 }
 
-func TestListActiveLanguageCodes_QueryHasIsActiveFilterAndOrderBy(t *testing.T) {
+func TestListActiveLearningLanguageCodes_QueryHasIsActiveFilterAndOrderBy(t *testing.T) {
 	// Pin the SQL so changes to the WHERE/ORDER BY are caught: the
 	// downstream contract (active-only, alphabetical) lives in the SQL
 	// not in the Go code.
@@ -144,7 +144,7 @@ func TestListActiveLanguageCodes_QueryHasIsActiveFilterAndOrderBy(t *testing.T) 
 	tx := &queryingTx{rows: rows}
 	beginner := &listLanguagesBeginner{tx: tx}
 
-	_, err := ListActiveLanguageCodes(context.Background(), beginner)
+	_, err := ListActiveLearningLanguageCodes(context.Background(), beginner)
 	require.NoError(t, err)
 
 	// queries[0] is the SET LOCAL search_path Apply issues IF a language
@@ -156,45 +156,45 @@ func TestListActiveLanguageCodes_QueryHasIsActiveFilterAndOrderBy(t *testing.T) 
 	assert.Contains(t, tx.queries[0], "ORDER BY code")
 }
 
-func TestListActiveLanguageCodes_RunsInsideReadTxRolledBack(t *testing.T) {
+func TestListActiveLearningLanguageCodes_RunsInsideReadTxRolledBack(t *testing.T) {
 	// The helper opens a read tx via WithReadTx, which always rolls back.
 	rows := &stubRows{codes: []string{"fi"}}
 	tx := &queryingTx{rows: rows}
 	beginner := &listLanguagesBeginner{tx: tx}
 
-	_, err := ListActiveLanguageCodes(context.Background(), beginner)
+	_, err := ListActiveLearningLanguageCodes(context.Background(), beginner)
 	require.NoError(t, err)
 	assert.Equal(t, 1, beginner.calls, "Begin should be called once")
 	assert.True(t, tx.rolledBack, "read tx must always rollback")
 }
 
-func TestListActiveLanguageCodes_PropagatesQueryError(t *testing.T) {
+func TestListActiveLearningLanguageCodes_PropagatesQueryError(t *testing.T) {
 	wantErr := errors.New("connection lost")
 	tx := &queryingTx{queryErr: wantErr}
 	beginner := &listLanguagesBeginner{tx: tx}
 
-	codes, err := ListActiveLanguageCodes(context.Background(), beginner)
+	codes, err := ListActiveLearningLanguageCodes(context.Background(), beginner)
 	assert.Nil(t, codes)
 	assert.Error(t, err)
 	assert.ErrorIs(t, err, wantErr)
 }
 
-func TestListActiveLanguageCodes_PropagatesBeginError(t *testing.T) {
+func TestListActiveLearningLanguageCodes_PropagatesBeginError(t *testing.T) {
 	wantErr := errors.New("pool exhausted")
 	beginner := &listLanguagesBeginner{beginErr: wantErr}
 
-	codes, err := ListActiveLanguageCodes(context.Background(), beginner)
+	codes, err := ListActiveLearningLanguageCodes(context.Background(), beginner)
 	assert.Nil(t, codes)
 	assert.ErrorIs(t, err, wantErr)
 }
 
-func TestListActiveLanguageCodes_PropagatesScanError(t *testing.T) {
+func TestListActiveLearningLanguageCodes_PropagatesScanError(t *testing.T) {
 	scanErr := errors.New("bad scan")
 	rows := &stubRows{codes: []string{"fi"}, scanErr: scanErr}
 	tx := &queryingTx{rows: rows}
 	beginner := &listLanguagesBeginner{tx: tx}
 
-	codes, err := ListActiveLanguageCodes(context.Background(), beginner)
+	codes, err := ListActiveLearningLanguageCodes(context.Background(), beginner)
 	assert.Nil(t, codes)
 	assert.ErrorIs(t, err, scanErr)
 }

@@ -19,8 +19,8 @@ func TestNormalizeLocaleCode(t *testing.T) {
 }
 
 func TestNormalizeLearningLanguageCode(t *testing.T) {
-	assert.Equal(t, "vi", NormalizeLearningLanguageCode(" vn "))
-	assert.Equal(t, "vi", NormalizeLearningLanguageCode("vi_VN"))
+	assert.Equal(t, "", NormalizeLearningLanguageCode(" vn "))
+	assert.Equal(t, "", NormalizeLearningLanguageCode("vi_VN"))
 	assert.Equal(t, "sv", NormalizeLearningLanguageCode("sv-SE"))
 	assert.Equal(t, "sv", NormalizeLearningLanguageCode("sv_SE"))
 	assert.Equal(t, "", NormalizeLearningLanguageCode(""))

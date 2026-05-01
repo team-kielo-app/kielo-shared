@@ -11,6 +11,8 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from sqlalchemy import event
 
+from kielo_shared.locale_constants import SUPPORTED_LEARNING_LANGUAGES
+
 VECTOR_DB_SEARCH_PATH = "cms, klearn, public"
 KLEARN_DB_SEARCH_PATH = "public, users, klearn, cms"
 
@@ -251,7 +253,16 @@ def _validate_language_ident(lang: str) -> str:
     if not is_valid_language_ident(lang):
         raise ValueError(
             f"Invalid language identifier: {lang!r}. "
-            f"Expected ISO 639 lowercase base code (e.g. 'fi', 'sv', 'zh')."
+            f"Expected ISO 639 lowercase base code (e.g. 'fi', 'sv')."
+        )
+    return lang
+
+
+def _validate_learning_language_ident(lang: str) -> str:
+    _validate_language_ident(lang)
+    if lang not in SUPPORTED_LEARNING_LANGUAGES:
+        raise ValueError(
+            f"Unsupported learning language: {lang!r}. Supported values are 'fi' and 'sv'."
         )
     return lang
 
@@ -262,10 +273,10 @@ def set_active_language(lang: str) -> contextvars.Token[str | None]:
     Returns a token that callers can pass to :func:`reset_active_language`
     if they want to restore the previous value (Starlette/FastAPI request
     middleware should not need to — the contextvar is implicitly per-task).
-    Raises ``ValueError`` if ``lang`` doesn't match the language identifier
-    regex, so bad inputs fail loud at the boundary.
+    Raises ``ValueError`` if ``lang`` is not one of the supported authored
+    learning languages, so localization locales do not become schema suffixes.
     """
-    return _active_language.set(_validate_language_ident(lang))
+    return _active_language.set(_validate_learning_language_ident(lang))
 
 
 def reset_active_language(token: contextvars.Token[str | None]) -> None:
@@ -314,7 +325,7 @@ def make_per_language_search_path(
             )
         # Defensive — we already validated on `set_active_language`, but a
         # caller could write directly to the contextvar.
-        _validate_language_ident(lang)
+        _validate_learning_language_ident(lang)
         return template.format(lang=lang)
 
     return resolver

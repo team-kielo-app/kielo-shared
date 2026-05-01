@@ -56,6 +56,13 @@ func TestWithLanguage_RejectsInvalidLangSilently(t *testing.T) {
 	}
 }
 
+func TestWithLanguage_RejectsUnsupportedLearningLanguageSilently(t *testing.T) {
+	ctx := WithLanguage(context.Background(), "vi")
+	if _, ok := LanguageFromContext(ctx); ok {
+		t.Error("WithLanguage with localization-only language should not attach anything")
+	}
+}
+
 func TestBuildSearchPath_DefaultTemplate(t *testing.T) {
 	got, err := BuildSearchPath("sv", DefaultPerLanguageSearchPathTemplate)
 	if err != nil {

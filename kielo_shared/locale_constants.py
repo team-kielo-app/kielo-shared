@@ -31,6 +31,11 @@ LANGUAGE_ATTRIBUTE: str = "learning_language_code"
 # the platform; the schema-per-language migration preserves this.
 LEGACY_DEFAULT_LEARNING_LANGUAGE: str = "fi"
 
+# Languages for which Kielo currently has authored learning content and
+# per-language learning schemas. Support/localization locales are broader and
+# intentionally continue to include languages such as Vietnamese.
+SUPPORTED_LEARNING_LANGUAGES: frozenset[str] = frozenset({"fi", "sv"})
+
 # The Tier-A support language. English is the universal fallback for
 # hints, glosses, explanations, and other localized support content.
 TIER_A_SUPPORT_LOCALE: str = "en"
@@ -102,8 +107,19 @@ def normalize_locale_code(code: str | None) -> str:
 
 
 def normalize_learning_language_code(code: str | None) -> str:
-    """Normalize locale-like input and return only the base learning language."""
-    return normalize_locale_code(code)
+    """Normalize input and return it only for authored learning languages."""
+    normalized = normalize_locale_code(code)
+    return normalized if normalized in SUPPORTED_LEARNING_LANGUAGES else ""
+
+
+def is_supported_learning_language(code: str | None) -> bool:
+    """Return True when ``code`` is an authored learning-content language."""
+    return normalize_learning_language_code(code) in SUPPORTED_LEARNING_LANGUAGES
+
+
+def normalize_supported_learning_language_code(code: str | None) -> str:
+    """Explicit alias for learning-language boundaries."""
+    return normalize_learning_language_code(code)
 
 
 def normalize_source_locale(code: str | None) -> str:
@@ -124,7 +140,7 @@ def normalize_accept_language(value: str | None) -> str:
 
 def base_locale(value: str | None) -> str:
     """Return the normalized base locale for locale-like input."""
-    return normalize_learning_language_code(value)
+    return normalize_locale_code(value)
 
 
 def support_locale_candidates(requested: str | None) -> list[str]:
@@ -151,22 +167,23 @@ def language_from_attributes(
 ) -> Optional[str]:
     """Extract a normalized learning_language_code from Pub/Sub attributes.
 
-    Returns the canonical base language code (``"sv"``, ``"vi"``, ...)
-    when the publisher attached a recognizable value, or ``None`` when
-    the attribute is missing/empty/unparseable.
+    Returns the canonical base learning-language code when the publisher
+    attached a supported value, or ``None`` when the attribute is
+    missing/empty/unsupported.
 
     Subscribers across the platform — both kielolearn-engine and
     kielo-ingest-processor — call this helper so they extract the same
     field, normalize the same way, and reject the same invalid values.
-    Validation happens at the schema-routing layer (db_utils) rather
-    than here; this function's job is normalization, not regex enforcement.
+    This is intentionally stricter than support-locale normalization:
+    Vietnamese may be a localization language, but it must not become a
+    learning schema suffix.
     """
     if attrs is None:
         return None
     raw = attrs.get(LANGUAGE_ATTRIBUTE)
     if not isinstance(raw, str):
         return None
-    normalized = normalize_learning_language_code(raw)
+    normalized = normalize_supported_learning_language_code(raw)
     return normalized or None
 
 
@@ -174,13 +191,16 @@ __all__ = [
     "LANGUAGE_ATTRIBUTE",
     "LANGUAGE_DISPLAY_NAMES",
     "LEGACY_DEFAULT_LEARNING_LANGUAGE",
+    "SUPPORTED_LEARNING_LANGUAGES",
     "TIER_A_SUPPORT_LOCALE",
     "base_locale",
+    "is_supported_learning_language",
     "language_display_name",
     "language_from_attributes",
     "normalize_accept_language",
     "normalize_learning_language_code",
     "normalize_locale_code",
+    "normalize_supported_learning_language_code",
     "normalize_source_locale",
     "support_locale_candidates",
 ]

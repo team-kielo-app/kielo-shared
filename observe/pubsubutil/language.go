@@ -4,6 +4,7 @@ import (
 	"context"
 
 	sharedDB "github.com/team-kielo-app/kielo-shared/db"
+	"github.com/team-kielo-app/kielo-shared/locale"
 )
 
 // LanguageAttribute is the canonical Pub/Sub message attribute name used
@@ -57,15 +58,16 @@ func InjectLanguageAttribute(attrs map[string]string, ctx context.Context) {
 // don't have to special-case the empty-map result.
 func EventAttributes(ctx context.Context, eventType string) map[string]string {
 	lang, hasLang := sharedDB.LanguageFromContext(ctx)
-	if eventType == "" && !hasLang {
-		return nil
-	}
-	attrs := make(map[string]string, 2)
+	attrs := make(map[string]string, 4)
 	if eventType != "" {
 		attrs[EventTypeAttribute] = eventType
 	}
 	if hasLang {
 		attrs[LanguageAttribute] = lang
+	}
+	InjectTraceAttributes(attrs, ctx)
+	if len(attrs) == 0 {
+		return nil
 	}
 	return attrs
 }
@@ -78,7 +80,7 @@ func LanguageFromAttributes(attrs map[string]string) string {
 	if attrs == nil {
 		return ""
 	}
-	return attrs[LanguageAttribute]
+	return locale.NormalizeSupportedLearningLanguageCode(attrs[LanguageAttribute])
 }
 
 // WithLanguageFromAttributes is the canonical subscriber recipe: extract

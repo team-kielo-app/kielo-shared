@@ -24,10 +24,11 @@ type UserExistenceChecker interface {
 
 // Claims represents the JWT claims structure
 type Claims struct {
-	UserID      uuid.UUID `json:"user_id"`
-	Email       string    `json:"email,omitempty"`
-	Role        string    `json:"role,omitempty"`
-	DeviceToken string    `json:"device_token,omitempty"`
+	UserID           uuid.UUID `json:"user_id"`
+	Email            string    `json:"email,omitempty"`
+	Role             string    `json:"role,omitempty"`
+	DeviceToken      string    `json:"device_token,omitempty"`
+	LearningLanguage string    `json:"learning_language_code,omitempty"`
 	jwt.RegisteredClaims
 }
 
@@ -160,6 +161,12 @@ func setClaimsInContext(c echo.Context, claims Claims, options *JWTOptions) {
 		c.Set("userID", claims.UserID)
 		c.Set("userEmail", claims.Email)
 		c.Set("deviceToken", claims.DeviceToken)
+	}
+	// Always expose the learning language claim under the canonical key so
+	// active_language.DefaultExtractor (and any other consumer) can read it
+	// regardless of which storage shape the service chose above.
+	if claims.LearningLanguage != "" {
+		c.Set(JWTClaimKey, claims.LearningLanguage)
 	}
 }
 

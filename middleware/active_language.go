@@ -12,6 +12,7 @@ import (
 	"github.com/labstack/echo/v4"
 
 	"github.com/team-kielo-app/kielo-shared/db"
+	"github.com/team-kielo-app/kielo-shared/locale"
 )
 
 const (
@@ -60,20 +61,20 @@ type ActiveLanguageExtractor func(c echo.Context) string
 func DefaultExtractor(c echo.Context) string {
 	for _, header := range []string{ActiveLanguageHeader, MobileLanguageHeader} {
 		if v := strings.TrimSpace(c.Request().Header.Get(header)); v != "" {
-			if db.ValidateLanguageIdent(v) == nil {
-				return v
+			if lang := locale.NormalizeSupportedLearningLanguageCode(v); lang != "" {
+				return lang
 			}
 		}
 	}
 	if v := strings.TrimSpace(c.QueryParam(ActiveLanguageQueryParam)); v != "" {
-		if db.ValidateLanguageIdent(v) == nil {
-			return v
+		if lang := locale.NormalizeSupportedLearningLanguageCode(v); lang != "" {
+			return lang
 		}
 	}
 	if claim, ok := c.Get(JWTClaimKey).(string); ok {
 		if v := strings.TrimSpace(claim); v != "" {
-			if db.ValidateLanguageIdent(v) == nil {
-				return v
+			if lang := locale.NormalizeSupportedLearningLanguageCode(v); lang != "" {
+				return lang
 			}
 		}
 	}
@@ -97,6 +98,9 @@ func ActiveLanguage(extract ActiveLanguageExtractor) echo.MiddlewareFunc {
 				return next(c)
 			}
 			req := c.Request()
+			if db.ValidateLearningLanguageIdent(lang) != nil {
+				return next(c)
+			}
 			ctx := db.WithLanguage(req.Context(), lang)
 			c.SetRequest(req.WithContext(ctx))
 			return next(c)

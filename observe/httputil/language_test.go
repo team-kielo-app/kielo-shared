@@ -61,7 +61,7 @@ func TestApplyActiveLanguageHeader_EndToEndOverHTTP(t *testing.T) {
 	}))
 	defer server.Close()
 
-	ctx := sharedDB.WithLanguage(context.Background(), "vi")
+	ctx := sharedDB.WithLanguage(context.Background(), "sv")
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, server.URL, nil)
 	require.NoError(t, err)
 	ApplyActiveLanguageHeader(req)
@@ -70,5 +70,5 @@ func TestApplyActiveLanguageHeader_EndToEndOverHTTP(t *testing.T) {
 	require.NoError(t, err)
 	resp.Body.Close()
 
-	assert.Equal(t, "vi", observed)
+	assert.Equal(t, "sv", observed)
 }

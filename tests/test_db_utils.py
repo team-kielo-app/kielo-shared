@@ -1,3 +1,5 @@
+import pytest
+
 from kielo_shared import db_utils
 
 
@@ -218,6 +220,13 @@ def test_validate_language_ident_accepts_iso_codes():
     assert db_utils._validate_language_ident("sv") == "sv"
     assert db_utils._validate_language_ident("vi") == "vi"
     assert db_utils._validate_language_ident("zh") == "zh"
+
+
+def test_validate_learning_language_ident_rejects_localization_only_locale():
+    assert db_utils._validate_learning_language_ident("fi") == "fi"
+    assert db_utils._validate_learning_language_ident("sv") == "sv"
+    with pytest.raises(ValueError, match="Unsupported learning language"):
+        db_utils._validate_learning_language_ident("vi")
 
 
 def test_validate_language_ident_rejects_garbage():

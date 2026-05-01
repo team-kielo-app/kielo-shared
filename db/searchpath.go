@@ -60,13 +60,18 @@ var searchPathIdentRe = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 
 type ctxKey struct{}
 
+var supportedLearningLanguageIdents = map[string]struct{}{
+	"fi": {},
+	"sv": {},
+}
+
 // WithLanguage attaches a validated language code to ctx. Returns the
 // original ctx unchanged if lang fails ValidateLanguageIdent, so callers
 // that pass through user input fall back safely to "no language" rather
 // than poisoning the context. Use ValidateLanguageIdent directly if you
 // want bad input to fail loud.
 func WithLanguage(ctx context.Context, lang string) context.Context {
-	if err := ValidateLanguageIdent(lang); err != nil {
+	if err := ValidateLearningLanguageIdent(lang); err != nil {
 		return ctx
 	}
 	return context.WithValue(ctx, ctxKey{}, lang)
@@ -91,7 +96,22 @@ func LanguageFromContext(ctx context.Context) (string, bool) {
 func ValidateLanguageIdent(lang string) error {
 	if !languageIdentRe.MatchString(lang) {
 		return fmt.Errorf(
-			"kielo-shared/db: invalid language identifier %q (expected lowercase base language code, e.g. \"fi\", \"sv\", \"vi\")",
+			"kielo-shared/db: invalid language identifier %q (expected lowercase base language code, e.g. \"fi\" or \"sv\")",
+			lang,
+		)
+	}
+	return nil
+}
+
+// ValidateLearningLanguageIdent rejects values that are syntactically valid
+// locales but are not currently supported authored learning languages.
+func ValidateLearningLanguageIdent(lang string) error {
+	if err := ValidateLanguageIdent(lang); err != nil {
+		return err
+	}
+	if _, ok := supportedLearningLanguageIdents[lang]; !ok {
+		return fmt.Errorf(
+			"kielo-shared/db: unsupported learning language %q (supported: \"fi\", \"sv\")",
 			lang,
 		)
 	}
@@ -134,7 +154,7 @@ func validateSearchPathIdents(searchPath string) (string, error) {
 // canonicalised (whitespace-trimmed, comma-joined) string suitable for
 // SET search_path TO ....
 func BuildSearchPath(lang, template string) (string, error) {
-	if err := ValidateLanguageIdent(lang); err != nil {
+	if err := ValidateLearningLanguageIdent(lang); err != nil {
 		return "", err
 	}
 	formatted := strings.ReplaceAll(template, "{lang}", lang)

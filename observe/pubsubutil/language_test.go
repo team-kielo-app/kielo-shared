@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	sharedDB "github.com/team-kielo-app/kielo-shared/db"
+	"github.com/team-kielo-app/kielo-shared/observe"
 )
 
 func TestEventAttributes_NoLanguageNoEventType(t *testing.T) {
@@ -30,12 +31,40 @@ func TestEventAttributes_OnlyLanguage(t *testing.T) {
 }
 
 func TestEventAttributes_BothEventTypeAndLanguage(t *testing.T) {
-	ctx := sharedDB.WithLanguage(context.Background(), "vi")
+	ctx := sharedDB.WithLanguage(context.Background(), "fi")
 	got := EventAttributes(ctx, "purchase.confirmation.v1")
 	assert.Equal(t, map[string]string{
 		"event_type":             "purchase.confirmation.v1",
-		"learning_language_code": "vi",
+		"learning_language_code": "fi",
 	}, got)
+}
+
+func TestEventAttributes_StampsTraceFromContext(t *testing.T) {
+	tc := observe.New()
+	ctx := observe.WithContext(context.Background(), tc)
+	got := EventAttributes(ctx, "user.profile.updated.v1")
+	assert.Equal(t, "user.profile.updated.v1", got["event_type"])
+	assert.Equal(t, tc.TraceID, got["trace_id"])
+	assert.Equal(t, tc.SpanID, got["span_id"])
+	if tc.RequestID != "" {
+		assert.Equal(t, tc.RequestID, got["request_id"])
+	}
+}
+
+func TestEventAttributes_StampsTraceWithLanguage(t *testing.T) {
+	tc := observe.New()
+	ctx := observe.WithContext(context.Background(), tc)
+	ctx = sharedDB.WithLanguage(ctx, "fi")
+	got := EventAttributes(ctx, "purchase.confirmation.v1")
+	assert.Equal(t, "purchase.confirmation.v1", got["event_type"])
+	assert.Equal(t, "fi", got["learning_language_code"])
+	assert.Equal(t, tc.TraceID, got["trace_id"])
+}
+
+func TestEventAttributes_NoTraceWithoutContext(t *testing.T) {
+	got := EventAttributes(context.Background(), "user.profile.updated.v1")
+	_, hasTrace := got["trace_id"]
+	assert.False(t, hasTrace)
 }
 
 func TestEventAttributes_DropsInvalidLanguage(t *testing.T) {
@@ -89,6 +118,7 @@ func TestInjectLanguageAttribute_NilMapIsNoOp(t *testing.T) {
 
 func TestLanguageFromAttributes(t *testing.T) {
 	assert.Equal(t, "sv", LanguageFromAttributes(map[string]string{"learning_language_code": "sv"}))
+	assert.Empty(t, LanguageFromAttributes(map[string]string{"learning_language_code": "vi"}))
 	assert.Empty(t, LanguageFromAttributes(map[string]string{"event_type": "x"}))
 	assert.Empty(t, LanguageFromAttributes(nil))
 }
@@ -118,4 +148,10 @@ func TestWithLanguageFromAttributes_PassthroughOnInvalidLang(t *testing.T) {
 	ctx := WithLanguageFromAttributes(context.Background(), map[string]string{"learning_language_code": "../etc/passwd"})
 	_, ok := sharedDB.LanguageFromContext(ctx)
 	assert.False(t, ok, "invalid lang must not be applied")
+}
+
+func TestWithLanguageFromAttributes_PassthroughOnUnsupportedLearningLanguage(t *testing.T) {
+	ctx := WithLanguageFromAttributes(context.Background(), map[string]string{"learning_language_code": "vi"})
+	_, ok := sharedDB.LanguageFromContext(ctx)
+	assert.False(t, ok, "localization-only language must not be applied as active learning language")
 }

@@ -100,7 +100,7 @@ func TestApplyRequired_IssuesSetLocalWhenLanguageInContext(t *testing.T) {
 func TestApply_PropagatesExecError(t *testing.T) {
 	wantErr := errors.New("boom")
 	tx := &recordingTx{execErr: wantErr}
-	ctx := sharedDB.WithLanguage(context.Background(), "vi")
+	ctx := sharedDB.WithLanguage(context.Background(), "sv")
 
 	err := Apply(ctx, tx)
 	assert.Error(t, err)
@@ -211,7 +211,7 @@ func TestWithTx_WrapsCommitError(t *testing.T) {
 	commitErr := errors.New("commit failed")
 	tx := &trackingTx{commitErr: commitErr}
 	beginner := &stubBeginner{tx: tx}
-	ctx := sharedDB.WithLanguage(context.Background(), "vi")
+	ctx := sharedDB.WithLanguage(context.Background(), "sv")
 
 	err := WithTx(ctx, beginner, func(_ pgx.Tx) error {
 		return nil
@@ -313,7 +313,7 @@ func TestWithRequiredTx_HappyPath_RunsFnAndCommits(t *testing.T) {
 	// Strict variant with a language present must commit on fn success.
 	tx := &trackingTx{}
 	beginner := &stubBeginner{tx: tx}
-	ctx := sharedDB.WithLanguage(context.Background(), "vi")
+	ctx := sharedDB.WithLanguage(context.Background(), "sv")
 
 	err := WithRequiredTx(ctx, beginner, func(_ pgx.Tx) error {
 		return nil

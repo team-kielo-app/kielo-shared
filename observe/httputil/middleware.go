@@ -4,10 +4,12 @@ package httputil
 
 import (
 	"log/slog"
+	"net/http"
 	"time"
 
 	"github.com/labstack/echo/v4"
 
+	"github.com/team-kielo-app/kielo-shared/db"
 	"github.com/team-kielo-app/kielo-shared/observe"
 )
 
@@ -47,6 +49,26 @@ func TraceFromEcho(c echo.Context) (observe.TraceContext, bool) {
 	return tc, ok
 }
 
+// RequestTracingStdlib wraps a stdlib http.Handler with the same trace
+// context plumbing as [RequestTracing]. Use this for services that don't
+// run on Echo (raw http.Server, custom routers).
+func RequestTracingStdlib(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		incoming := observe.FromHeaders(r.Header)
+		tc := observe.ChildSpan(incoming)
+		ctx := observe.WithContext(r.Context(), tc)
+		observe.InjectHeaders(w.Header(), tc)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+// RequestTracingChi is the chi-flavored middleware. chi accepts a
+// `func(http.Handler) http.Handler` so this is a thin alias around
+// [RequestTracingStdlib].
+func RequestTracingChi(next http.Handler) http.Handler {
+	return RequestTracingStdlib(next)
+}
+
 // RequestLogger returns Echo middleware that logs each request with structured
 // fields including trace context. It should be registered after [RequestTracing].
 //
@@ -81,6 +103,10 @@ func RequestLogger(logger *slog.Logger) echo.MiddlewareFunc {
 			// Add user_id if available from auth middleware
 			if uid, ok := c.Get("userID").(string); ok && uid != "" {
 				attrs = append(attrs, slog.String("user_id", uid))
+			}
+
+			if lang, ok := db.LanguageFromContext(ctx); ok && lang != "" {
+				attrs = append(attrs, slog.String("learning_language_code", lang))
 			}
 
 			level := slog.LevelInfo

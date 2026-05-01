@@ -71,6 +71,9 @@ def event_attributes(event_type: str, **extra: str) -> dict[str, str]:
         if isinstance(value, str) and value:
             attrs[key] = value
     inject_language_attribute(attrs)
+    from kielo_shared.trace import current_trace_context, inject_trace_attributes
+
+    inject_trace_attributes(attrs, current_trace_context())
     return attrs
 
 

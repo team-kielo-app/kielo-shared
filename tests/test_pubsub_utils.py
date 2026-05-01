@@ -22,6 +22,14 @@ from kielo_shared.pubsub_utils import (
     inject_language_attribute,
 )
 from kielo_shared.locale_constants import LANGUAGE_ATTRIBUTE
+from kielo_shared.trace import (
+    ATTR_REQUEST_ID,
+    ATTR_SPAN_ID,
+    ATTR_TRACE_ID,
+    new_trace_context,
+    reset_current_trace_context,
+    set_current_trace_context,
+)
 
 
 def test_event_attributes_stamps_event_type_only_when_no_language() -> None:
@@ -64,6 +72,24 @@ def test_inject_language_attribute_noop_without_active_language() -> None:
     attrs: dict[str, str] = {}
     inject_language_attribute(attrs)
     assert LANGUAGE_ATTRIBUTE not in attrs
+
+
+def test_event_attributes_stamps_trace_from_contextvar() -> None:
+    tc = new_trace_context()
+    token = set_current_trace_context(tc)
+    try:
+        attrs = event_attributes("user.profile.updated.v1")
+    finally:
+        reset_current_trace_context(token)
+    assert attrs[EVENT_TYPE_ATTRIBUTE] == "user.profile.updated.v1"
+    assert attrs[ATTR_TRACE_ID] == tc.trace_id
+    assert attrs[ATTR_SPAN_ID] == tc.span_id
+    assert attrs[ATTR_REQUEST_ID] == tc.request_id
+
+
+def test_event_attributes_no_trace_without_contextvar() -> None:
+    attrs = event_attributes("user.profile.updated.v1")
+    assert ATTR_TRACE_ID not in attrs
 
 
 def test_set_active_language_rejects_region_tagged_input() -> None:
