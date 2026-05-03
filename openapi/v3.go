@@ -59,16 +59,17 @@ type Registry struct {
 }
 
 type routeEntry struct {
-	method        string
-	path          string
-	summary       string
-	description   string
-	tag           string
-	pathParams    []paramSpec
-	queryParams   []paramSpec
-	requestBody   any // value of struct type (zero); nil if no body
-	responseBody  any // zero value of response struct
-	errorCodes    []int // additional non-2xx HTTP codes documented
+	method            string
+	path              string
+	summary           string
+	description       string
+	tag               string
+	pathParams        []paramSpec
+	queryParams       []paramSpec
+	requestBody       any   // value of struct type (zero); nil if no body
+	responseBody      any   // zero value of response struct
+	untypedResponse   bool  // true if route returns JSON but the schema is upstream-owned
+	errorCodes        []int // additional non-2xx HTTP codes documented
 }
 
 type paramSpec struct {
@@ -141,6 +142,15 @@ type Route struct {
 	// singletons, T{} for the rare bare-object response.
 	Response any
 
+	// UntypedResponse marks routes that return JSON but whose schema
+	// lives in an upstream service that mobile-bff does not import.
+	// When true (and Response is nil), the spec emits "200: application/json"
+	// with an empty schema instead of falsely advertising "204 No Content".
+	// Prefer Response: <typed>{} whenever the type is reachable; reach for
+	// this flag only for proxy passthrough where mirroring upstream types
+	// would be churn or duplication.
+	UntypedResponse bool
+
 	// ErrorCodes are HTTP codes (besides 200/201/204 implied by the
 	// method) that the handler can return. The canonical error envelope
 	// is auto-documented for each.
@@ -205,16 +215,17 @@ func (w *Wrapper) register(method, path string, h echo.HandlerFunc, route Route,
 	w.reg.mu.Lock()
 	defer w.reg.mu.Unlock()
 	w.reg.routes = append(w.reg.routes, routeEntry{
-		method:       method,
-		path:         w.prefix + path,
-		summary:      route.Summary,
-		description:  route.Description,
-		tag:          route.Tag,
-		pathParams:   toParamSpecs(route.PathParams),
-		queryParams:  toParamSpecs(route.QueryParams),
-		requestBody:  route.RequestBody,
-		responseBody: route.Response,
-		errorCodes:   route.ErrorCodes,
+		method:          method,
+		path:            w.prefix + path,
+		summary:         route.Summary,
+		description:     route.Description,
+		tag:             route.Tag,
+		pathParams:      toParamSpecs(route.PathParams),
+		queryParams:     toParamSpecs(route.QueryParams),
+		requestBody:     route.RequestBody,
+		responseBody:    route.Response,
+		untypedResponse: route.UntypedResponse,
+		errorCodes:      route.ErrorCodes,
 	})
 	return er
 }
@@ -354,7 +365,8 @@ func (r *Registry) operationDoc(rt routeEntry) map[string]any {
 	}
 
 	resp := map[string]any{}
-	if rt.responseBody != nil {
+	switch {
+	case rt.responseBody != nil:
 		resp["200"] = map[string]any{
 			"description": "Success",
 			"content": map[string]any{
@@ -363,7 +375,20 @@ func (r *Registry) operationDoc(rt routeEntry) map[string]any {
 				},
 			},
 		}
-	} else {
+	case rt.untypedResponse:
+		// Honest fallback: route returns JSON but the schema lives in an
+		// upstream service we don't yet import. Emit the 200 + content
+		// type so codegen knows there's a body, but leave the schema open
+		// (`{}` accepts any JSON value per OpenAPI 3.x).
+		resp["200"] = map[string]any{
+			"description": "Success (schema upstream-owned)",
+			"content": map[string]any{
+				"application/json": map[string]any{
+					"schema": map[string]any{},
+				},
+			},
+		}
+	default:
 		resp["204"] = map[string]any{"description": "No Content"}
 	}
 	// Always document the canonical error envelope — every v3 endpoint
