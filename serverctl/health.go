@@ -45,13 +45,87 @@ func Liveness() echo.HandlerFunc {
 //
 // The ping ctx is bounded by readinessPingTimeout so a stuck pgx pool
 // can't outlive the orchestrator's probe window.
+//
+// For services with more than just a database (Redis, Pub/Sub,
+// upstream HTTP services), use ReadinessWithChecks instead.
 func Readiness(db Pinger) echo.HandlerFunc {
+	return ReadinessWithChecks([]ReadinessCheck{
+		{Name: "database", Check: func(ctx context.Context) error { return db.Ping(ctx) }},
+	})
+}
+
+// ReadinessCheck is one named dependency probe. Run inside a 2s
+// timeout context; any non-nil error fails the readiness check and
+// surfaces in the JSON response body so the operator running
+// `curl /readyz` can immediately see which dep is sick.
+type ReadinessCheck struct {
+	Name  string
+	Check func(ctx context.Context) error
+}
+
+// readinessReport is the JSON body returned by ReadinessWithChecks.
+// Aggregated `status` is "ready" only when every individual check
+// passes; otherwise "not_ready" with each failed dep's error.
+type readinessReport struct {
+	Status string                  `json:"status"`
+	Checks map[string]readinessDep `json:"checks"`
+}
+
+type readinessDep struct {
+	OK    bool   `json:"ok"`
+	Error string `json:"error,omitempty"`
+}
+
+// ReadinessWithChecks returns an Echo handler that runs every supplied
+// dep check in parallel under a shared 2s deadline. Returns 200 with
+// `{"status":"ready", "checks": {...}}` when ALL checks pass, otherwise
+// 503 with the same shape but `status:"not_ready"` and the error
+// message on each failed dep.
+//
+// Use this on /readyz for services with multiple deps (Pub/Sub +
+// Redis + upstream HTTP). Cloud Run's readiness probe sees the 5xx
+// status code and pulls the instance out of the load balancer rotation
+// without killing the container — exactly what we want during a
+// transient downstream outage. Liveness (/health) keeps returning 200
+// so the container itself isn't restarted.
+//
+// Empty checks slice is valid and always returns 200 — equivalent to
+// Liveness, but distinct semantically.
+func ReadinessWithChecks(checks []ReadinessCheck) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		ctx, cancel := context.WithTimeout(c.Request().Context(), readinessPingTimeout)
 		defer cancel()
-		if err := db.Ping(ctx); err != nil {
-			return c.String(http.StatusServiceUnavailable, "Database connection failed")
+
+		report := readinessReport{
+			Status: "ready",
+			Checks: make(map[string]readinessDep, len(checks)),
 		}
-		return c.String(http.StatusOK, "OK")
+		// Run checks in parallel — one slow dep shouldn't serialize the
+		// whole probe. Bounded by the shared ctx deadline.
+		type result struct {
+			name string
+			err  error
+		}
+		results := make(chan result, len(checks))
+		for _, ch := range checks {
+			go func() {
+				results <- result{name: ch.Name, err: ch.Check(ctx)}
+			}()
+		}
+		anyFailed := false
+		for range checks {
+			r := <-results
+			dep := readinessDep{OK: r.err == nil}
+			if r.err != nil {
+				dep.Error = r.err.Error()
+				anyFailed = true
+			}
+			report.Checks[r.name] = dep
+		}
+		if anyFailed {
+			report.Status = "not_ready"
+			return c.JSON(http.StatusServiceUnavailable, report)
+		}
+		return c.JSON(http.StatusOK, report)
 	}
 }

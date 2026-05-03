@@ -436,7 +436,20 @@ func structSchema(t reflect.Type, r *Registry) any {
 		if name == "" {
 			name = f.Name
 		}
-		props[name] = fieldSchema(f.Type, r)
+		schema := fieldSchema(f.Type, r)
+		// `kielo:"deprecated"` struct tag flows through to the OpenAPI
+		// spec's per-field `deprecated: true` (OpenAPI 3.0+ supports
+		// this on schema objects). Optionally include a sunset date /
+		// successor field name via `kielo:"deprecated,since=2026-09-01,use=next_page_key"`
+		// — those land in `x-kielo-deprecation` so codegen can hint
+		// callers without bloating the spec's standard fields.
+		if kt := f.Tag.Get("kielo"); kt != "" {
+			if schemaMap, ok := schema.(map[string]any); ok {
+				applyKieloTag(schemaMap, kt)
+				schema = schemaMap
+			}
+		}
+		props[name] = schema
 		if !contains(opts, "omitempty") {
 			required = append(required, name)
 		}
@@ -482,6 +495,35 @@ func fieldSchema(t reflect.Type, r *Registry) any {
 		return structSchema(t, r)
 	default:
 		return map[string]any{"type": "object"}
+	}
+}
+
+// applyKieloTag parses the `kielo:"..."` struct tag and merges its
+// directives into the per-field schema map.
+//
+// Recognized directives:
+//   - "deprecated"               → schema.deprecated = true
+//   - "since=YYYY-MM-DD"         → x-kielo-deprecation.since = "..."
+//   - "use=other_field_name"     → x-kielo-deprecation.use = "..."
+//
+// Unknown directives are ignored so a future addition doesn't fail
+// the spec generation.
+func applyKieloTag(schema map[string]any, tag string) {
+	parts := strings.Split(tag, ",")
+	deprecation := map[string]any{}
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		switch {
+		case p == "deprecated":
+			schema["deprecated"] = true
+		case strings.HasPrefix(p, "since="):
+			deprecation["since"] = strings.TrimPrefix(p, "since=")
+		case strings.HasPrefix(p, "use="):
+			deprecation["use"] = strings.TrimPrefix(p, "use=")
+		}
+	}
+	if len(deprecation) > 0 {
+		schema["x-kielo-deprecation"] = deprecation
 	}
 }
 
