@@ -161,6 +161,11 @@ func setClaimsInContext(c echo.Context, claims Claims, options *JWTOptions) {
 		c.Set("userID", claims.UserID)
 		c.Set("userEmail", claims.Email)
 		c.Set("deviceToken", claims.DeviceToken)
+		// Also expose role under a stable key. Handlers that need to
+		// authorize cross-user reads (e.g. an admin reading another
+		// user's profile) read this without having to switch the
+		// service-wide storage shape.
+		c.Set("userRole", claims.Role)
 	}
 	// Always expose the learning language claim under the canonical key so
 	// active_language.DefaultExtractor (and any other consumer) can read it
