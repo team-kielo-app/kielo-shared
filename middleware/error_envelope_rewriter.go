@@ -1,7 +1,7 @@
 // error_envelope_rewriter.go: response middleware that auto-upgrades
 // legacy hand-built error bodies to the canonical envelope.
 //
-// Background (ADR-004 §5): the audit catalogued ~552 hand-rolled
+// Background (ADR-004 §5): the audit cataloged ~552 hand-rolled
 // `c.JSON(http.StatusXxx, map[string]string{"error": "msg"})` sites
 // across the Go services. These bypass CanonicalEchoErrorHandler entirely,
 // so the response body is `{"error": "msg"}` — missing `error.code`,
@@ -109,7 +109,7 @@ func LegacyErrorEnvelopeRewriter() echo.MiddlewareFunc {
 // rewriteLegacyErrorBody returns the canonical envelope bytes if `body`
 // matches the legacy `{"error": "string"}` shape, else (nil, false).
 //
-// Recognised legacy shapes (all observed in the audit):
+// Recognized legacy shapes (all observed in the audit):
 //
 //	{"error": "msg"}                              → upgrade
 //	{"error": "msg", "details": "more"}           → upgrade, fold details into error.details

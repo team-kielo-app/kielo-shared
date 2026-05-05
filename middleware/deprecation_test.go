@@ -8,6 +8,9 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
+	"github.com/prometheus/client_golang/prometheus/testutil"
+
+	sharedmetrics "github.com/team-kielo-app/kielo-shared/observe/metrics"
 )
 
 func TestDeprecation_DefaultSunsetIs90Days(t *testing.T) {
@@ -114,6 +117,87 @@ func TestDeprecation_SkipFunctionExemptsRoute(t *testing.T) {
 	}
 	if got := rec.Header().Get("Sunset"); got != "" {
 		t.Errorf("Skip should suppress Sunset header, got %q", got)
+	}
+}
+
+func TestLegacyAlias_EmitsHeadersAndIncrementsCounter(t *testing.T) {
+	sharedmetrics.LegacyAliasHitsTotal.Reset()
+	sunset := time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)
+	mw := LegacyAlias(LegacyAliasOptions{
+		Service:    "mobile-bff",
+		Successor:  "/api/v3/me/recommendations/articles",
+		SunsetDate: sunset,
+	})
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/api/v3/feed", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v3/feed")
+
+	if err := mw(func(c echo.Context) error { return c.NoContent(http.StatusOK) })(c); err != nil {
+		t.Fatalf("handler error: %v", err)
+	}
+
+	if got := rec.Header().Get("Deprecation"); got != "true" {
+		t.Errorf("Deprecation = %q, want %q", got, "true")
+	}
+	if got := rec.Header().Get("Sunset"); got != sunset.Format(http.TimeFormat) {
+		t.Errorf("Sunset = %q, want %q", got, sunset.Format(http.TimeFormat))
+	}
+	wantLink := "</api/v3/me/recommendations/articles>; rel=\"successor-version\""
+	if got := rec.Header().Get("Link"); got != wantLink {
+		t.Errorf("Link = %q, want %q", got, wantLink)
+	}
+
+	got := testutil.ToFloat64(sharedmetrics.LegacyAliasHitsTotal.WithLabelValues(
+		"mobile-bff", "/api/v3/feed", "/api/v3/me/recommendations/articles"))
+	if got != 1 {
+		t.Errorf("counter = %v, want 1", got)
+	}
+}
+
+func TestLegacyAlias_MissingConfigIsNoOp(t *testing.T) {
+	// Empty Service / Successor → no-op middleware. Avoids a service
+	// panic at boot if a route is wired with the wrong options.
+	sharedmetrics.LegacyAliasHitsTotal.Reset()
+	mw := LegacyAlias(LegacyAliasOptions{Service: "", Successor: ""})
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/api/v3/feed", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	if err := mw(func(c echo.Context) error { return c.NoContent(http.StatusOK) })(c); err != nil {
+		t.Fatalf("handler error: %v", err)
+	}
+	if got := rec.Header().Get("Deprecation"); got != "" {
+		t.Errorf("misconfigured middleware should be a no-op, got Deprecation=%q", got)
+	}
+}
+
+func TestLegacyAlias_CounterIncrementsEvenOnHandlerError(t *testing.T) {
+	// We want to count every alias hit, not just successful ones —
+	// otherwise a backend regression that makes the alias 5xx would
+	// hide its usage and let us delete it prematurely.
+	sharedmetrics.LegacyAliasHitsTotal.Reset()
+	mw := LegacyAlias(LegacyAliasOptions{
+		Service:    "mobile-bff",
+		Successor:  "/api/v3/me/recommendations/articles",
+		SunsetDate: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC),
+	})
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/api/v3/feed", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v3/feed")
+
+	_ = mw(func(c echo.Context) error {
+		return echo.NewHTTPError(http.StatusInternalServerError, "boom")
+	})(c)
+
+	got := testutil.ToFloat64(sharedmetrics.LegacyAliasHitsTotal.WithLabelValues(
+		"mobile-bff", "/api/v3/feed", "/api/v3/me/recommendations/articles"))
+	if got != 1 {
+		t.Errorf("counter = %v, want 1 (alias hits should be counted regardless of handler outcome)", got)
 	}
 }
 

@@ -40,6 +40,8 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
+
+	sharedmetrics "github.com/team-kielo-app/kielo-shared/observe/metrics"
 )
 
 // DeprecationOptions controls the headers emitted by Deprecation().
@@ -108,6 +110,86 @@ func Deprecation(opts DeprecationOptions) echo.MiddlewareFunc {
 			h.Set("Deprecation", "true")
 			h.Set("Sunset", sunsetHeader)
 			h.Set("Link", "<"+successor+">; rel=\"successor-version\"")
+
+			return next(c)
+		}
+	}
+}
+
+// LegacyAliasOptions configures LegacyAlias() — a sibling to Deprecation()
+// for the v3-alias-to-canonical case (vs. v1-to-v3).
+//
+// Why we need a separate helper from Deprecation():
+//
+//	(a) The default v1→v3 path substitution doesn't apply: both alias
+//	    and canonical live under /api/v3, with disjoint path shapes
+//	    (e.g. /api/v3/feed → /api/v3/me/recommendations/articles).
+//	    Successor MUST be supplied explicitly.
+//	(b) We want a usage counter so we can tell when an alias has
+//	    decayed to zero traffic and is safe to delete. Production
+//	    rollback discipline says: don't delete a legacy alias until
+//	    the metric stays at zero across one or two mobile-app release
+//	    cycles (App Store / Play Store reviews + adoption curve).
+type LegacyAliasOptions struct {
+	// Service is the short name of the service emitting the metric
+	// (e.g. "mobile-bff"). Must be non-empty.
+	Service string
+	// Successor is the canonical v3 path the alias forwards to. Must
+	// be non-empty. Used both in the Link header and the metric label.
+	Successor string
+	// SunsetDate is the wall-clock instant after which the alias MAY
+	// return 410 Gone. Zero value defaults to 90 days after process
+	// start, but for alias deprecation a fixed date is preferred so
+	// the headers stay stable across rolling deploys.
+	SunsetDate time.Time
+}
+
+// LegacyAlias returns Echo middleware that marks a route as a v3 alias
+// of a canonical v3 path. On every request it:
+//
+//   - increments kielo_v3_legacy_alias_hits_total{service,path,successor}
+//     so a burn-down dashboard can show when usage drops to zero;
+//   - sets Deprecation: true, Sunset: <RFC 7231 date>, and
+//     Link: <successor>; rel="successor-version" headers on the response.
+//
+// The metric increment happens before the handler runs (so we count
+// every request hitting the alias, including those that 4xx/5xx out).
+// Headers are set before calling next so they ride out on the response
+// head even for SSE / streaming handlers that flush early.
+//
+// Apply per-route at registration time:
+//
+//	v3.GET("/feed",
+//	    feedHandler.GetFeed,
+//	    middleware.LegacyAlias(middleware.LegacyAliasOptions{
+//	        Service:    "mobile-bff",
+//	        Successor:  "/api/v3/me/recommendations/articles",
+//	        SunsetDate: time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC),
+//	    }))
+func LegacyAlias(opts LegacyAliasOptions) echo.MiddlewareFunc {
+	if opts.Service == "" || opts.Successor == "" {
+		// Misconfigured callers get a no-op — preferable to a panic at
+		// route registration which would take down the whole service.
+		// The empty-arg case is loud enough at code review.
+		return func(next echo.HandlerFunc) echo.HandlerFunc { return next }
+	}
+	sunset := opts.SunsetDate
+	if sunset.IsZero() {
+		sunset = time.Now().Add(90 * 24 * time.Hour)
+	}
+	sunsetHeader := sunset.UTC().Format(http.TimeFormat)
+	linkHeader := "<" + opts.Successor + ">; rel=\"successor-version\""
+
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			sharedmetrics.LegacyAliasHitsTotal.
+				WithLabelValues(opts.Service, c.Path(), opts.Successor).
+				Inc()
+
+			h := c.Response().Header()
+			h.Set("Deprecation", "true")
+			h.Set("Sunset", sunsetHeader)
+			h.Set("Link", linkHeader)
 
 			return next(c)
 		}

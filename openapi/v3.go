@@ -50,26 +50,26 @@ import (
 // one Registry per service; Service() and Title() are stamped into the
 // emitted spec.
 type Registry struct {
-	mu       sync.Mutex
-	service  string
-	title    string
-	version  string
-	routes   []routeEntry
-	schemas  map[string]any // by Go type name; populated lazily on use
+	mu      sync.Mutex
+	service string
+	title   string
+	version string
+	routes  []routeEntry
+	schemas map[string]any // by Go type name; populated lazily on use
 }
 
 type routeEntry struct {
-	method            string
-	path              string
-	summary           string
-	description       string
-	tag               string
-	pathParams        []paramSpec
-	queryParams       []paramSpec
-	requestBody       any   // value of struct type (zero); nil if no body
-	responseBody      any   // zero value of response struct
-	untypedResponse   bool  // true if route returns JSON but the schema is upstream-owned
-	errorCodes        []int // additional non-2xx HTTP codes documented
+	method          string
+	path            string
+	summary         string
+	description     string
+	tag             string
+	pathParams      []paramSpec
+	queryParams     []paramSpec
+	requestBody     any   // value of struct type (zero); nil if no body
+	responseBody    any   // zero value of response struct
+	untypedResponse bool  // true if route returns JSON but the schema is upstream-owned
+	errorCodes      []int // additional non-2xx HTTP codes documented
 }
 
 type paramSpec struct {
@@ -609,13 +609,13 @@ func canonicalErrorResponses() map[string]any {
 		},
 	}
 	return map[string]any{
-		"BadRequest":      canon,
-		"Unauthorized":    canon,
-		"Forbidden":       canon,
-		"NotFound":        canon,
-		"Conflict":        canon,
-		"InternalError":   canon,
-		"CanonicalError":  canon,
+		"BadRequest":     canon,
+		"Unauthorized":   canon,
+		"Forbidden":      canon,
+		"NotFound":       canon,
+		"Conflict":       canon,
+		"InternalError":  canon,
+		"CanonicalError": canon,
 	}
 }
 
@@ -633,12 +633,12 @@ func schemaRef(v any) string {
 // WriteSpecToFile serializes the registry to a JSON file. Typically called
 // from main() in dev mode, or `go run`-driven from a Makefile target.
 func (r *Registry) WriteSpecToFile(path string) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
 		return err
 	}
 	data, err := r.MarshalJSON()
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(path, data, 0o644)
+	return os.WriteFile(path, data, 0o600)
 }

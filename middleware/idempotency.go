@@ -108,6 +108,18 @@ func (w *captureResponseWriter) Write(b []byte) (int, error) {
 	return w.buf.Write(b)
 }
 
+// resolvedIdempotencyOptions holds Idempotency middleware options after
+// zero-value defaults have been resolved. Internal helper type — splits
+// the validated config out of the public IdempotencyOptions struct so
+// the per-request handler can be a small flat function.
+type resolvedIdempotencyOptions struct {
+	rdb         *redis.Client
+	responseTTL time.Duration
+	lockTTL     time.Duration
+	keyMaxLen   int
+	subjectFn   func(c echo.Context) string
+}
+
 // Idempotency returns Echo middleware enforcing the Idempotency-Key
 // contract above. Safe to mount on a group containing GETs (they pass
 // through unchanged).
@@ -118,97 +130,111 @@ func Idempotency(opts IdempotencyOptions) echo.MiddlewareFunc {
 		return func(next echo.HandlerFunc) echo.HandlerFunc { return next }
 	}
 
-	responseTTL := opts.ResponseTTL
-	if responseTTL <= 0 {
-		responseTTL = 24 * time.Hour
+	resolved := resolvedIdempotencyOptions{
+		rdb:         opts.Redis,
+		responseTTL: opts.ResponseTTL,
+		lockTTL:     opts.LockTTL,
+		keyMaxLen:   opts.KeyMaxLen,
+		subjectFn:   opts.Subject,
 	}
-	lockTTL := opts.LockTTL
-	if lockTTL <= 0 {
-		lockTTL = 30 * time.Second
+	if resolved.responseTTL <= 0 {
+		resolved.responseTTL = 24 * time.Hour
 	}
-	keyMaxLen := opts.KeyMaxLen
-	if keyMaxLen <= 0 {
-		keyMaxLen = 255
+	if resolved.lockTTL <= 0 {
+		resolved.lockTTL = 30 * time.Second
 	}
-	subjectFn := opts.Subject
-	if subjectFn == nil {
-		subjectFn = func(c echo.Context) string { return "anonymous" }
+	if resolved.keyMaxLen <= 0 {
+		resolved.keyMaxLen = 255
+	}
+	if resolved.subjectFn == nil {
+		resolved.subjectFn = func(c echo.Context) string { return "anonymous" }
 	}
 
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			method := c.Request().Method
-			// GET/HEAD/OPTIONS are already idempotent by HTTP spec.
-			if method == http.MethodGet || method == http.MethodHead || method == http.MethodOptions {
-				return next(c)
-			}
-
-			rawKey := strings.TrimSpace(c.Request().Header.Get("Idempotency-Key"))
-			if rawKey == "" {
-				return next(c)
-			}
-			if len(rawKey) > keyMaxLen {
-				return echo.NewHTTPError(
-					http.StatusBadRequest,
-					fmt.Sprintf("Idempotency-Key exceeds %d chars", keyMaxLen),
-				)
-			}
-
-			subject := strings.TrimSpace(subjectFn(c))
-			if subject == "" {
-				subject = "anonymous"
-			}
-
-			// Route signature uses Echo's path template (not the
-			// concrete URL) so two requests to /me/items/A and
-			// /me/items/B with the same key share one slot — that's
-			// the correct semantic since the key is supposed to
-			// identify a logical operation, not a specific URL.
-			routeSig := method + " " + c.Path()
-			redisKey := buildIdempotencyKey(routeSig, subject, rawKey)
-
-			ctx, cancel := context.WithTimeout(c.Request().Context(), 2*time.Second)
-			defer cancel()
-
-			// SetNX with the lock sentinel. "1" = winning request,
-			// goes on to run the handler. Any other return means
-			// somebody else got there first.
-			ok, err := opts.Redis.SetNX(ctx, redisKey, "lock", lockTTL).Result()
-			if err == nil && ok {
-				return runAndCache(c, next, opts.Redis, redisKey, responseTTL)
-			}
-
-			// Concurrent retry or replay. Read the existing slot.
-			cached, err := opts.Redis.Get(ctx, redisKey).Bytes()
-			if err == redis.Nil || len(cached) == 0 {
-				return next(c)
-			}
-			if err != nil {
-				// Redis unavailable — fail open rather than blocking
-				// real traffic on infra issues.
-				return next(c)
-			}
-			if string(cached) == "lock" {
-				// Original request still running.
-				return c.JSON(http.StatusConflict, map[string]any{
-					"error": map[string]string{
-						"code":    "IDEMPOTENT_REQUEST_IN_FLIGHT",
-						"message": "Original request with this Idempotency-Key is still in flight. Retry after a brief delay.",
-					},
-				})
-			}
-
-			var stored idempotencyResult
-			if json.Unmarshal(cached, &stored) != nil {
-				return next(c)
-			}
-			for k, v := range stored.Header {
-				c.Response().Header().Set(k, v)
-			}
-			c.Response().Header().Set("Idempotent-Replayed", "true")
-			return c.Blob(stored.Status, "application/json", stored.Body)
+			return handleIdempotentRequest(c, next, resolved)
 		}
 	}
+}
+
+func handleIdempotentRequest(c echo.Context, next echo.HandlerFunc, o resolvedIdempotencyOptions) error {
+	method := c.Request().Method
+	// GET/HEAD/OPTIONS are already idempotent by HTTP spec.
+	if method == http.MethodGet || method == http.MethodHead || method == http.MethodOptions {
+		return next(c)
+	}
+
+	rawKey := strings.TrimSpace(c.Request().Header.Get("Idempotency-Key"))
+	if rawKey == "" {
+		return next(c)
+	}
+	if len(rawKey) > o.keyMaxLen {
+		return echo.NewHTTPError(
+			http.StatusBadRequest,
+			fmt.Sprintf("Idempotency-Key exceeds %d chars", o.keyMaxLen),
+		)
+	}
+
+	subject := strings.TrimSpace(o.subjectFn(c))
+	if subject == "" {
+		subject = "anonymous"
+	}
+
+	// Route signature uses Echo's path template (not the concrete URL)
+	// so two requests to /me/items/A and /me/items/B with the same key
+	// share one slot — that's the correct semantic since the key is
+	// supposed to identify a logical operation, not a specific URL.
+	routeSig := method + " " + c.Path()
+	redisKey := buildIdempotencyKey(routeSig, subject, rawKey)
+
+	ctx, cancel := context.WithTimeout(c.Request().Context(), 2*time.Second)
+	defer cancel()
+
+	// SetNX with the lock sentinel. ok=true means winning request,
+	// runs the handler. Otherwise somebody else got there first.
+	ok, err := o.rdb.SetNX(ctx, redisKey, "lock", o.lockTTL).Result()
+	if err == nil && ok {
+		return runAndCache(c, next, o.rdb, redisKey, o.responseTTL)
+	}
+
+	return replayCachedIdempotentResponse(ctx, c, next, o.rdb, redisKey)
+}
+
+func replayCachedIdempotentResponse(
+	ctx context.Context,
+	c echo.Context,
+	next echo.HandlerFunc,
+	rdb *redis.Client,
+	redisKey string,
+) error {
+	cached, err := rdb.Get(ctx, redisKey).Bytes()
+	if err == redis.Nil || len(cached) == 0 {
+		return next(c)
+	}
+	if err != nil {
+		// Redis unavailable — fail open rather than blocking real
+		// traffic on infra issues.
+		return next(c)
+	}
+	if string(cached) == "lock" {
+		// Original request still running.
+		return c.JSON(http.StatusConflict, map[string]any{
+			"error": map[string]string{
+				"code":    "IDEMPOTENT_REQUEST_IN_FLIGHT",
+				"message": "Original request with this Idempotency-Key is still in flight. Retry after a brief delay.",
+			},
+		})
+	}
+
+	var stored idempotencyResult
+	if json.Unmarshal(cached, &stored) != nil {
+		return next(c)
+	}
+	for k, v := range stored.Header {
+		c.Response().Header().Set(k, v)
+	}
+	c.Response().Header().Set("Idempotent-Replayed", "true")
+	return c.Blob(stored.Status, "application/json", stored.Body)
 }
 
 // runAndCache wraps the handler with a capture writer, runs it, and
@@ -284,4 +310,3 @@ func buildIdempotencyKey(routeSig, subject, rawKey string) string {
 	h := sha256.Sum256([]byte(subject + ":" + rawKey))
 	return "idem:" + routeSig + ":" + hex.EncodeToString(h[:])
 }
-

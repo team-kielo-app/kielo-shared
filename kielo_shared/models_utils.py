@@ -247,15 +247,18 @@ def normalize_transcription_payload(
         for item in raw_segments:
             if not isinstance(item, Mapping):
                 continue
-            # Accept both neutral keys (``text_primary`` / ``words_array``)
-            # and legacy language-suffixed keys (``text_fi`` /
-            # ``words_array_fi``) from upstream transcription payloads.
-            # Emit BOTH the neutral shape (required by the updated
-            # ``TranscriptionSegment`` model in ingest-processor) and the
-            # legacy aliases (still read by kielolearn-engine's
-            # transcription pipeline and older consumers).
+            # Accept neutral keys (``text`` / ``text_primary`` / ``words_array``).
+            # Older payloads with ``text_fi`` / ``words_array_fi`` are tolerated
+            # for backward compat with anything that still emits them.
+            #
+            # Emit BOTH ``text`` (read by kielolearn-engine) and
+            # ``text_primary`` (consumed by ingest-processor's
+            # ``TranscriptionSegment`` Pydantic model).
             text_primary = str(
-                item.get("text_primary") or item.get("text_fi") or ""
+                item.get("text")
+                or item.get("text_primary")
+                or item.get("text_fi")
+                or ""
             )
             words_array = (
                 item.get("words_array")
@@ -267,11 +270,10 @@ def normalize_transcription_payload(
                     "segment_index": int(item.get("segment_index", 0)),
                     "start_time": float(item.get("start_time", 0.0)),
                     "end_time": float(item.get("end_time", 0.0)),
+                    "text": text_primary,
                     "text_primary": text_primary,
-                    "text_fi": text_primary,
                     "words": item.get("words") or [],
                     "words_array": words_array,
-                    "words_array_fi": words_array,
                 }
             )
 
