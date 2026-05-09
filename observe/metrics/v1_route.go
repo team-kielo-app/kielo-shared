@@ -30,14 +30,15 @@ import (
 //   - service: short service name (e.g. "mobile-bff", "kielo-cms")
 //   - method:  HTTP method ("GET", "POST", …)
 //   - path:    Echo path template, e.g. "/api/v1/me/saved-items/:itemType/:itemId".
-//              Echo's c.Path() returns the template (with placeholders),
-//              not the resolved URL — so cardinality stays bounded by the
-//              number of registered routes, not the number of UUIDs in
-//              flight.
+//     Echo's c.Path() returns the template (with placeholders),
+//     not the resolved URL — so cardinality stays bounded by the
+//     number of registered routes, not the number of UUIDs in
+//     flight.
 var V1RouteHitsTotal = promauto.NewCounterVec(
 	prometheus.CounterOpts{
 		Name: "kielo_v1_route_hits_total",
-		Help: "Number of requests served by a /api/v1/* legacy route. Burn down to zero (over two mobile-release cycles) before deleting the route.",
+		Help: "Number of requests served by a /api/v1/* legacy route. " +
+			"Burn down to zero (over two mobile-release cycles) before deleting the route.",
 	},
 	[]string{"service", "method", "path"},
 )

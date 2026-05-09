@@ -9,6 +9,7 @@ import (
 	"net/http"
 
 	"github.com/team-kielo-app/kielo-shared/middleware"
+	"github.com/team-kielo-app/kielo-shared/observe"
 )
 
 // InternalAPIKeyHeader is the canonical header name for service-to-service
@@ -58,5 +59,13 @@ func PrepareInternalJSONRequest(
 		req.Header.Set("Content-Type", "application/json")
 	}
 	ApplyActiveLanguageHeader(req)
+	// Forward the active trace context onto the outbound request so the
+	// downstream service can treat this call as a child span and the
+	// mobile-issued X-Client-Trace-Id flows end-to-end through every
+	// internal hop. No-op when ctx carries no trace (background workers
+	// without a request scope).
+	if tc, ok := observe.FromContext(ctx); ok {
+		observe.InjectHeaders(req.Header, tc)
+	}
 	return req, nil
 }

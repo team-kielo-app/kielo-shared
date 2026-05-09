@@ -16,7 +16,14 @@ dependencies = [
 [tool.deptry]
 
 [tool.deptry.per_rule_ignores]
-DEP001 = ["asyncpg", "fastapi"]
+DEP001 = ["asyncpg", "fastapi", "prometheus_client"]
+
+[tool.vulture]
+# `ex` is the redis-py kwarg for TTL — Protocol abstract methods declare it
+# so callers can pass it positionally or by name. Vulture sees the abstract
+# method body (`...`) and flags it unused.
+# `executemany` is the SQLAlchemy event hook signature — fixed by the framework.
+ignore_names = ["ex", "executemany"]
 
 [tool.setuptools.dynamic]
 version = {attr = "kielo_shared.__version__"}

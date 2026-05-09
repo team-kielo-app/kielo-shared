@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	sharedDB "github.com/team-kielo-app/kielo-shared/db"
+	"github.com/team-kielo-app/kielo-shared/observe"
 )
 
 func TestPrepareInternalJSONRequest_NilBody(t *testing.T) {
@@ -21,6 +22,30 @@ func TestPrepareInternalJSONRequest_NilBody(t *testing.T) {
 	assert.Equal(t, "secret", req.Header.Get(InternalAPIKeyHeader))
 	assert.Empty(t, req.Header.Get("Content-Type"), "GET with no body shouldn't set Content-Type")
 	assert.Equal(t, http.NoBody, req.Body)
+}
+
+func TestPrepareInternalJSONRequest_ForwardsTraceWhenCtxHasOne(t *testing.T) {
+	tc := observe.TraceContext{
+		TraceID:   "0123456789abcdef0123456789abcdef",
+		SpanID:    "0011223344556677",
+		RequestID: "req-trace-test",
+	}
+	ctx := observe.WithContext(context.Background(), tc)
+
+	req, err := PrepareInternalJSONRequest(ctx, http.MethodGet, "https://svc.test/api", "k", nil)
+	require.NoError(t, err)
+	// Backward-compat header: downstream services that haven't adopted
+	// traceparent yet still correlate via this.
+	assert.Equal(t, tc.TraceID, req.Header.Get("X-Client-Trace-Id"))
+	assert.Equal(t, tc.RequestID, req.Header.Get("X-Request-Id"))
+	assert.NotEmpty(t, req.Header.Get("Traceparent"))
+}
+
+func TestPrepareInternalJSONRequest_NoTraceWhenCtxHasNone(t *testing.T) {
+	req, err := PrepareInternalJSONRequest(context.Background(), http.MethodGet, "https://svc.test/api", "k", nil)
+	require.NoError(t, err)
+	assert.Empty(t, req.Header.Get("X-Client-Trace-Id"))
+	assert.Empty(t, req.Header.Get("Traceparent"))
 }
 
 func TestPrepareInternalJSONRequest_WithBody(t *testing.T) {

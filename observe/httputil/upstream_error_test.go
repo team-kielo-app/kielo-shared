@@ -15,10 +15,10 @@ import (
 
 func TestUpstreamError_Classifiers(t *testing.T) {
 	tests := []struct {
-		name     string
-		err      *UpstreamError
-		client   bool
-		server   bool
+		name   string
+		err    *UpstreamError
+		client bool
+		server bool
 	}{
 		{"nil", nil, false, false},
 		{"400", &UpstreamError{StatusCode: 400}, true, false},

@@ -129,7 +129,7 @@ func (w *captureResponseWriter) Write(b []byte) (int, error) {
 // behind the interface and isn't promoted, so we have to forward it
 // explicitly. Idempotency caching is meaningless for an upgraded
 // connection — the response body is empty and the protocol switch
-// can't be replayed — so the safe behaviour on upgrade is to
+// can't be replayed — so the safe behavior on upgrade is to
 // short-circuit caching and hand control to the underlying writer.
 func (w *captureResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 	hj, ok := w.ResponseWriter.(http.Hijacker)

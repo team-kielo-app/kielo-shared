@@ -111,6 +111,7 @@ func APIErrorStdlib(w http.ResponseWriter, ctx context.Context, status int, code
 // the canonical ErrorEnvelope shape. Register it in main.go via:
 //
 //	e.HTTPErrorHandler = middleware.CanonicalEchoErrorHandler
+//
 // CodedHTTPError is the opt-in interface for structured error bodies that
 // want their stable code + human-readable message landed in the canonical
 // envelope's `error.code` and `error.message` slots respectively (instead
