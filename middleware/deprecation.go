@@ -48,6 +48,14 @@ import (
 // Zero value is valid: SunsetDate defaults to 90 days from process
 // start, SuccessorPath is derived by /api/v1 → /api/v3 substitution.
 type DeprecationOptions struct {
+	// Service is the short service name used as the `service` label on
+	// the kielo_v1_route_hits_total counter ("mobile-bff", "kielo-cms",
+	// "user-service", …). When empty, the metric is NOT incremented —
+	// callers that want the v1-sunset burn-down signal must set it.
+	// Kept optional rather than required so existing callers don't break
+	// at upgrade time; the contract test (Rule 7, future) will catch any
+	// new v1 group registered without a Service.
+	Service string
 	// SunsetDate is the wall-clock instant after which the route MAY
 	// return 410 Gone. Format MUST be RFC 7231 IMF-fixdate when
 	// rendered to the wire (we handle that). Zero value defaults to
@@ -65,7 +73,8 @@ type DeprecationOptions struct {
 	// clients about a v3 mirror that doesn't exist.
 	//
 	// Returning true from Skip suppresses Deprecation/Sunset/Link
-	// emission for that request. If nil, every request gets headers.
+	// emission AND the metric increment for that request. If nil,
+	// every request gets the full treatment.
 	Skip func(echo.Context) bool
 }
 
@@ -89,6 +98,7 @@ func Deprecation(opts DeprecationOptions) echo.MiddlewareFunc {
 	// for every request handled by this instance.
 	sunsetHeader := sunset.UTC().Format(http.TimeFormat)
 	successorOverride := opts.SuccessorPath
+	service := opts.Service
 
 	skip := opts.Skip
 
@@ -96,6 +106,19 @@ func Deprecation(opts DeprecationOptions) echo.MiddlewareFunc {
 		return func(c echo.Context) error {
 			if skip != nil && skip(c) {
 				return next(c)
+			}
+
+			// Bump the v1-sunset burn-down counter BEFORE the handler
+			// runs so we count every request — including ones that
+			// 4xx/5xx out — not just the 2xx path. We want to know
+			// "is anyone still calling this route", regardless of
+			// outcome. Service is optional (callers that haven't
+			// updated their registration get the headers but no
+			// metric); the contract test will eventually require it.
+			if service != "" {
+				sharedmetrics.V1RouteHitsTotal.
+					WithLabelValues(service, c.Request().Method, c.Path()).
+					Inc()
 			}
 
 			// Compute Link target before calling next so we can write

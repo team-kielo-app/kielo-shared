@@ -40,8 +40,11 @@
 package middleware
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
+	"errors"
+	"net"
 	"net/http"
 	"strings"
 
@@ -68,6 +71,13 @@ func LegacyErrorEnvelopeRewriter() echo.MiddlewareFunc {
 				c.Response().Writer = rec.original
 				rec.flush()
 				return handlerErr
+			}
+
+			// Streaming or hijacked: bytes are already on the wire,
+			// nothing to rewrite. The captureWriter has already
+			// passed everything through; just let the response settle.
+			if rec.passThrough {
+				return nil
 			}
 
 			// Only consider 4xx/5xx with a JSON body.
@@ -193,6 +203,15 @@ func extractExtras(raw map[string]json.RawMessage) map[string]any {
 // Echo's standard wrapping calls WriteHeader once with the final status
 // and then Write zero or more times with the body chunks. We capture
 // both and replay them to the original writer at flush().
+//
+// Streaming handlers (SSE, hijacked WebSocket): once Flush() or Hijack()
+// is called, the writer switches to pass-through mode — buffered bytes
+// drain to the original writer once and every subsequent Write goes
+// straight through. Without that, an SSE handler that writes a frame,
+// flushes, writes the next frame, flushes would have the second-frame
+// bytes sit in cw.buf forever (the deferred swap in the middleware's
+// outer scope only flushes once, at request end). The flag is one-way:
+// once set, we never re-buffer.
 type captureWriter struct {
 	original    http.ResponseWriter
 	header      http.Header
@@ -200,6 +219,7 @@ type captureWriter struct {
 	status      int
 	wroteHeader bool
 	flushed     bool
+	passThrough bool
 }
 
 func newCaptureWriter(w http.ResponseWriter) *captureWriter {
@@ -215,6 +235,15 @@ func newCaptureWriter(w http.ResponseWriter) *captureWriter {
 func (cw *captureWriter) Header() http.Header { return cw.header }
 
 func (cw *captureWriter) WriteHeader(status int) {
+	if cw.passThrough {
+		// Once we've committed to streaming, status writes go straight
+		// through. Subsequent calls in the same request are handled by
+		// the underlying writer's own once-only semantics.
+		cw.original.WriteHeader(status)
+		cw.wroteHeader = true
+		cw.status = status
+		return
+	}
 	if cw.wroteHeader {
 		return
 	}
@@ -223,6 +252,9 @@ func (cw *captureWriter) WriteHeader(status int) {
 }
 
 func (cw *captureWriter) Write(p []byte) (int, error) {
+	if cw.passThrough {
+		return cw.original.Write(p)
+	}
 	return cw.buf.Write(p)
 }
 
@@ -237,20 +269,55 @@ func (cw *captureWriter) flush() {
 	}
 	if cw.buf.Len() > 0 {
 		_, _ = cw.original.Write(cw.buf.Bytes())
+		cw.buf.Reset()
 	}
 }
 
 // Flush implements http.Flusher so SSE-style streaming handlers still
 // work — they bypass our buffer entirely on the first flush.
 func (cw *captureWriter) Flush() {
-	// First flush forces the buffered data through and switches us to
-	// pass-through mode. Subsequent writes go straight to the
-	// underlying writer.
+	// First flush forces the buffered data through AND switches us to
+	// pass-through mode. Without the mode switch, subsequent Write
+	// calls would silently re-buffer instead of streaming — same bug
+	// the idempotency middleware shipped a fix for, just on a
+	// different shared writer.
 	cw.flush()
+	cw.passThrough = true
 	if f, ok := cw.original.(http.Flusher); ok {
 		f.Flush()
 	}
 }
+
+// Hijack implements http.Hijacker so reverse-proxy WebSocket upgrades
+// (httputil.ReverseProxy → 101 Switching Protocols) can take over the
+// underlying TCP connection. Without this, any handler routed through
+// LegacyErrorEnvelopeRewriter — which is registered globally on the CMS
+// edge — would see WS upgrades fail with "non-Hijacker ResponseWriter
+// type *echo.Response" because echo.Response.Hijack() delegates to
+// http.NewResponseController(r.Writer).Hijack(), and r.Writer at that
+// point is *captureWriter. The middleware is response-shape only and
+// has no business intercepting upgraded connections, so we flush any
+// buffered bytes (none expected for a fresh request) and forward to
+// the underlying writer's Hijack.
+func (cw *captureWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	hj, ok := cw.original.(http.Hijacker)
+	if !ok {
+		return nil, nil, errors.New("kielo-shared/middleware: underlying ResponseWriter is not an http.Hijacker")
+	}
+	cw.flush()
+	// After hijack the WS protocol owns the connection; any stray
+	// post-handshake Write that somehow lands here must NOT re-enter
+	// our buffer (which would never reach the wire). Flip the flag for
+	// defensive symmetry with Flush even though hijacked handlers
+	// shouldn't be writing through this path at all.
+	cw.passThrough = true
+	return hj.Hijack()
+}
+
+// Unwrap exposes the underlying ResponseWriter so http.NewResponseController
+// in callers can find any interface (Pusher, ReadDeadlineSetter, …) we
+// haven't explicitly proxied. Pairs with Hijack/Flush above.
+func (cw *captureWriter) Unwrap() http.ResponseWriter { return cw.original }
 
 // observePassthrough — dummy use of observe to keep the import explicit
 // and the package linkable even on Go versions that prune unused imports.

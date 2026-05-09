@@ -40,8 +40,11 @@
 package middleware
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
+	"errors"
+	"net"
 	"net/http"
 	"strings"
 
@@ -236,3 +239,25 @@ func (cw *singletonCaptureWriter) Flush() {
 		f.Flush()
 	}
 }
+
+// Hijack implements http.Hijacker so reverse-proxy WebSocket upgrades
+// (httputil.ReverseProxy → 101 Switching Protocols) can take over the
+// underlying TCP connection. Same fix shape as captureWriter in
+// error_envelope_rewriter.go — a body-rewriting middleware has no
+// business intercepting upgraded connections, so we flush any buffered
+// bytes (none expected on a fresh request) and forward to the
+// underlying writer's Hijack.
+func (cw *singletonCaptureWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	hj, ok := cw.original.(http.Hijacker)
+	if !ok {
+		return nil, nil, errors.New("kielo-shared/middleware: underlying ResponseWriter is not an http.Hijacker")
+	}
+	cw.flush()
+	cw.streamed = true
+	return hj.Hijack()
+}
+
+// Unwrap exposes the underlying ResponseWriter so http.NewResponseController
+// in callers can find any interface (Pusher, ReadDeadlineSetter, …) we
+// haven't explicitly proxied.
+func (cw *singletonCaptureWriter) Unwrap() http.ResponseWriter { return cw.original }

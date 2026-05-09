@@ -288,6 +288,14 @@ def get_active_language() -> str | None:
     return _active_language.get()
 
 
+def require_active_language() -> str:
+    """Return the active language or fail instead of silently defaulting."""
+    language = get_active_language()
+    if not language:
+        raise RuntimeError("active learning language is required")
+    return language
+
+
 def make_per_language_search_path(
     template: str = DEFAULT_PER_LANGUAGE_SEARCH_PATH_TEMPLATE,
     fallback: str | None = None,

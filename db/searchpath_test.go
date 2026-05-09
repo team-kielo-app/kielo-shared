@@ -36,6 +36,20 @@ func TestWithLanguage_RoundTrip(t *testing.T) {
 	}
 }
 
+func TestRequireLanguageFromContext(t *testing.T) {
+	if _, err := RequireLanguageFromContext(context.Background()); !errors.Is(err, ErrNoActiveLanguage) {
+		t.Fatalf("got %v, want ErrNoActiveLanguage", err)
+	}
+
+	got, err := RequireLanguageFromContext(WithLanguage(context.Background(), "sv"))
+	if err != nil {
+		t.Fatalf("RequireLanguageFromContext returned error: %v", err)
+	}
+	if got != "sv" {
+		t.Fatalf("got %q, want sv", got)
+	}
+}
+
 func TestWithLanguage_RejectsInvalidLangSilently(t *testing.T) {
 	// Bad input should not poison the context — it should fall through to
 	// "no language", which downstream IssueSearchPathForContext treats as

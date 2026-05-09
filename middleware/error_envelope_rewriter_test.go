@@ -199,3 +199,73 @@ func TestRewriter_TraceIDFromContext(t *testing.T) {
 		t.Errorf("code: got %v", errObj["code"])
 	}
 }
+
+// TestRewriter_FlushSwitchesToPassThroughAndStreams pins the SSE/streaming
+// invariant: once a handler calls Flush(), subsequent Write calls must
+// reach the wire (not get buffered into cw.buf). Without the pass-through
+// switch the second SSE frame would sit in the buffer until request end —
+// breaking real-time streaming for any handler routed through this
+// middleware. Mirrors the same fix shipped on the Idempotency wrapper.
+func TestRewriter_FlushSwitchesToPassThroughAndStreams(t *testing.T) {
+	e := echo.New()
+	e.Use(LegacyErrorEnvelopeRewriter())
+	e.GET("/sse", func(c echo.Context) error {
+		c.Response().Header().Set("Content-Type", "text/event-stream")
+		c.Response().WriteHeader(http.StatusOK)
+		_, _ = c.Response().Write([]byte("event: first\ndata: a\n\n"))
+		c.Response().Flush()
+		// This second frame is the one that would silently buffer
+		// without the pass-through fix.
+		_, _ = c.Response().Write([]byte("event: second\ndata: b\n\n"))
+		c.Response().Flush()
+		return nil
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/sse", nil)
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+
+	body := rec.Body.String()
+	if !strings.Contains(body, "data: a") {
+		t.Errorf("first frame missing from body: %q", body)
+	}
+	if !strings.Contains(body, "data: b") {
+		t.Errorf("second frame (post-flush) missing from body — pass-through switch broken: %q", body)
+	}
+}
+
+// TestRewriter_StreamedResponseSkipsRewrite confirms the rewriter
+// doesn't try to inspect/rewrite a body that's already streamed to the
+// wire — passThrough should short-circuit the legacy-shape detection
+// in the outer middleware.
+func TestRewriter_StreamedResponseSkipsRewrite(t *testing.T) {
+	e := echo.New()
+	e.Use(LegacyErrorEnvelopeRewriter())
+	e.GET("/sse-error", func(c echo.Context) error {
+		c.Response().Header().Set("Content-Type", "application/json")
+		c.Response().WriteHeader(http.StatusBadRequest)
+		// Stream a legacy-looking body; rewriter MUST NOT touch it
+		// once we've flushed (we can't unwrite bytes already on the
+		// wire).
+		_, _ = c.Response().Write([]byte(`{"error":"already streamed"}`))
+		c.Response().Flush()
+		return nil
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/sse-error", nil)
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+
+	// The body should be the original legacy shape, NOT the canonical
+	// envelope — because the rewriter saw passThrough and bailed.
+	body := rec.Body.String()
+	if !strings.Contains(body, `"error":"already streamed"`) {
+		t.Errorf("expected legacy body untouched after stream, got: %q", body)
+	}
+	// Specifically: NO "code" field added (that would mean the
+	// rewriter tried to upgrade and probably appended a second JSON
+	// payload after the streamed bytes).
+	if strings.Contains(body, `"code"`) {
+		t.Errorf("rewriter appended canonical envelope after streamed body: %q", body)
+	}
+}

@@ -1,15 +1,12 @@
 """Shared locale constants for the Kielo platform.
 
-These two constants are the universal answers to two questions every
-service has to answer when localizing content:
+These constants are the universal answers every service has to use when
+localizing content:
 
-  * What language do we *teach* by default? Finnish (LEGACY_DEFAULT_LEARNING_LANGUAGE).
   * What language do we *support the learner in* by default? English (TIER_A_SUPPORT_LOCALE).
 
-Pre-rollout publishers may emit messages without a learning_language_code
-attribute and pre-rollout DB rows may have NULL learning_language_code.
-These constants are the single source of truth for what those legacy
-gaps resolve to.
+Missing learning_language_code is not defaulted here. Runtime callers must
+provide an explicit authored learning language and fail loud when it is absent.
 
 Kept in kielo_shared so every Python service (kielolearn-engine,
 kielo-ingest-processor, future Python services) imports the same value
@@ -25,11 +22,6 @@ from typing import Mapping, Optional
 # services. Mirrors `pubsubutil.LanguageAttribute` in the Go side and
 # the X-Kielo-Learning-Language HTTP header.
 LANGUAGE_ATTRIBUTE: str = "learning_language_code"
-
-# The default learning language for legacy data where learning_language_code
-# is NULL or missing. Finnish is the original/default learning language of
-# the platform; the schema-per-language migration preserves this.
-LEGACY_DEFAULT_LEARNING_LANGUAGE: str = "fi"
 
 # Languages for which Kielo currently has authored learning content and
 # per-language learning schemas. Support/localization locales are broader and
@@ -122,6 +114,14 @@ def normalize_supported_learning_language_code(code: str | None) -> str:
     return normalize_learning_language_code(code)
 
 
+def require_supported_learning_language_code(code: str | None) -> str:
+    """Normalize a learning language code or fail instead of defaulting."""
+    normalized = normalize_supported_learning_language_code(code)
+    if not normalized:
+        raise ValueError("learning_language_code is required and must be one of: fi, sv")
+    return normalized
+
+
 def normalize_source_locale(code: str | None) -> str:
     """Normalize authored/source locale to the platform's base language code."""
     return normalize_locale_code(code)
@@ -190,7 +190,6 @@ def language_from_attributes(
 __all__ = [
     "LANGUAGE_ATTRIBUTE",
     "LANGUAGE_DISPLAY_NAMES",
-    "LEGACY_DEFAULT_LEARNING_LANGUAGE",
     "SUPPORTED_LEARNING_LANGUAGES",
     "TIER_A_SUPPORT_LOCALE",
     "base_locale",
@@ -202,5 +201,6 @@ __all__ = [
     "normalize_locale_code",
     "normalize_supported_learning_language_code",
     "normalize_source_locale",
+    "require_supported_learning_language_code",
     "support_locale_candidates",
 ]

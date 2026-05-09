@@ -78,7 +78,19 @@ func TestSlowRequest_OverBudgetLogs(t *testing.T) {
 }
 
 func TestSlowRequest_HealthProbesSkippedByDefault(t *testing.T) {
-	for _, path := range []string{"/health", "/readyz", "/metrics", "/health/ready"} {
+	for _, path := range []string{
+		"/health",
+		"/readyz",
+		"/metrics",
+		"/health/ready",
+		// SSE / streaming endpoints — by convention any path ending in
+		// `/stream` is intentionally long-lived and should not log slow.
+		"/api/v1/me/notifications/stream",
+		"/api/v3/me/notifications/stream",
+		"/api/v3/concept-hubs/generation/abc/stream",
+		"/api/v3/conversations/sessions/abc/transcript/live/stream",
+		"/api/v3/tts/paragraphs/jobs/abc/stream",
+	} {
 		_, logged := runSlowReq(
 			t,
 			SlowRequestLogger(SlowRequestOptions{Threshold: 5 * time.Millisecond}),

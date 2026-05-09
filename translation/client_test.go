@@ -22,16 +22,16 @@ import (
 // (Finnish, Swedish, Vietnamese).
 
 func TestNewClient_TrimsTrailingSlashOnURL(t *testing.T) {
-	// modelsURL is joined with "/api/v1/translations" in both
+	// modelsURL is joined with "/api/v3/translations" in both
 	// TranslateBatch and URL(). If NewClient doesn't trim a trailing
-	// slash, we'd send requests to "…//api/v1/translations" and most
+	// slash, we'd send requests to "…//api/v3/translations" and most
 	// reverse proxies would 404.
 	c := NewClient("https://models.example.com/", "", nil)
-	assert.Equal(t, "https://models.example.com/api/v1/translations", c.URL())
+	assert.Equal(t, "https://models.example.com/api/v3/translations", c.URL())
 
 	// Double slash also gets collapsed to zero via TrimRight.
 	c2 := NewClient("https://models.example.com////", "", nil)
-	assert.Equal(t, "https://models.example.com/api/v1/translations", c2.URL())
+	assert.Equal(t, "https://models.example.com/api/v3/translations", c2.URL())
 }
 
 func TestNewClient_UsesDefaultHTTPClientWhenNil(t *testing.T) {
@@ -89,7 +89,7 @@ func TestTranslateBatch_RoundTripsThroughModelsEndpoint(t *testing.T) {
 	// Path, method (implicit via httptest), payload, and headers all
 	// pinned — these are the exact wire contract the models service
 	// depends on.
-	assert.Equal(t, "/api/v1/translations", receivedPath)
+	assert.Equal(t, "/api/v3/translations", receivedPath)
 	assert.Equal(t, []string{"Hello", "Thank you"}, receivedBody.Texts)
 	assert.Equal(t, "en", receivedBody.SourceLang)
 	assert.Equal(t, "sv", receivedBody.TargetLang)
@@ -189,11 +189,11 @@ func TestURL_ReturnsCanonicalEndpoint(t *testing.T) {
 	// Callers (e.g. observability labels, error messages) read URL()
 	// as the authoritative string. Pin the exact format.
 	c := NewClient("https://models.example.com", "", nil)
-	assert.Equal(t, "https://models.example.com/api/v1/translations", c.URL())
+	assert.Equal(t, "https://models.example.com/api/v3/translations", c.URL())
 
 	// Even when URL is blank, URL() doesn't panic — it just returns
 	// the suffix. Callers use this for display; don't assume they
 	// gate on IsAvailable first.
 	empty := NewClient("", "", nil)
-	assert.True(t, strings.HasSuffix(empty.URL(), "/api/v1/translations"))
+	assert.True(t, strings.HasSuffix(empty.URL(), "/api/v3/translations"))
 }

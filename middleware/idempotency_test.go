@@ -175,6 +175,51 @@ func TestIdempotency_ErrorResponseNotCached(t *testing.T) {
 	}
 }
 
+func TestIdempotency_FlushSwitchesToPassThroughAndSkipsCache(t *testing.T) {
+	rdb := newTestRedis(t)
+	mw := Idempotency(IdempotencyOptions{Redis: rdb})
+
+	var calls int32
+	handler := mw(func(c echo.Context) error {
+		atomic.AddInt32(&calls, 1)
+		c.Response().WriteHeader(http.StatusOK)
+		if _, err := c.Response().Write([]byte("a")); err != nil {
+			return err
+		}
+		c.Response().Flush()
+		_, err := c.Response().Write([]byte("b"))
+		return err
+	})
+
+	e := echo.New()
+	doRequest := func() *httptest.ResponseRecorder {
+		req := httptest.NewRequest(http.MethodPost, "/stream", bytes.NewReader([]byte("{}")))
+		req.Header.Set("Idempotency-Key", "stream-key")
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		c.SetPath("/stream")
+		if err := handler(c); err != nil {
+			t.Fatalf("handler error: %v", err)
+		}
+		return rec
+	}
+
+	first := doRequest()
+	second := doRequest()
+	if got := atomic.LoadInt32(&calls); got != 2 {
+		t.Fatalf(
+			"flushed responses must not be cached; calls=%d, want 2; first=%d/%q second=%d/%q replay=%q",
+			got, first.Code, first.Body.String(), second.Code, second.Body.String(), second.Header().Get("Idempotent-Replayed"),
+		)
+	}
+	if first.Body.String() != "ab" || second.Body.String() != "ab" {
+		t.Fatalf("flushed response body mismatch: first=%q second=%q", first.Body.String(), second.Body.String())
+	}
+	if second.Header().Get("Idempotent-Replayed") != "" {
+		t.Fatalf("flushed response should not be replayed, got header %q", second.Header().Get("Idempotent-Replayed"))
+	}
+}
+
 func TestIdempotency_DifferentSubjectsDontShare(t *testing.T) {
 	rdb := newTestRedis(t)
 

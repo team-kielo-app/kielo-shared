@@ -229,3 +229,116 @@ func TestDeprecation_HeadersWrittenBeforeFlush(t *testing.T) {
 		t.Error("Sunset header missing on streaming response")
 	}
 }
+
+func TestDeprecation_MetricIncrementedWhenServiceProvided(t *testing.T) {
+	sharedmetrics.V1RouteHitsTotal.Reset()
+	mw := Deprecation(DeprecationOptions{Service: "test-service"})
+
+	e := echo.New()
+	e.GET("/api/v1/things/:id", func(c echo.Context) error {
+		return mw(func(c echo.Context) error {
+			return c.NoContent(http.StatusNoContent)
+		})(c)
+	})
+
+	for _, id := range []string{"abc", "def", "abc"} {
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/things/"+id, nil)
+		rec := httptest.NewRecorder()
+		e.ServeHTTP(rec, req)
+	}
+
+	// The path label MUST be the Echo template, not the resolved URL —
+	// otherwise the cardinality scales with the number of UUIDs in
+	// flight rather than the number of registered routes.
+	got := testutil.ToFloat64(sharedmetrics.V1RouteHitsTotal.WithLabelValues(
+		"test-service", "GET", "/api/v1/things/:id",
+	))
+	if got != 3 {
+		t.Errorf("counter for /api/v1/things/:id = %v, want 3", got)
+	}
+}
+
+func TestDeprecation_MetricNotIncrementedWhenServiceMissing(t *testing.T) {
+	// Backwards compatibility: legacy callers passing
+	// DeprecationOptions{} get headers but no metric (avoids polluting
+	// the counter with empty-service rows). Once every group declares
+	// a Service this branch can be tightened to a hard error.
+	sharedmetrics.V1RouteHitsTotal.Reset()
+	mw := Deprecation(DeprecationOptions{}) // no Service
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/silent", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	if err := mw(func(c echo.Context) error {
+		return c.NoContent(http.StatusNoContent)
+	})(c); err != nil {
+		t.Fatalf("handler error: %v", err)
+	}
+
+	got := testutil.ToFloat64(sharedmetrics.V1RouteHitsTotal.WithLabelValues(
+		"", "GET", "/api/v1/silent",
+	))
+	if got != 0 {
+		t.Errorf("counter for empty service = %v, want 0", got)
+	}
+}
+
+func TestDeprecation_MetricIncrementedEvenOnHandlerError(t *testing.T) {
+	// A v1 route that 4xx/5xx out is still a hit — we want to track
+	// "was this URL reached at all", regardless of outcome.
+	sharedmetrics.V1RouteHitsTotal.Reset()
+	mw := Deprecation(DeprecationOptions{Service: "errs"})
+
+	e := echo.New()
+	e.GET("/api/v1/will-fail", func(c echo.Context) error {
+		return mw(func(c echo.Context) error {
+			return echo.NewHTTPError(http.StatusBadRequest, "nope")
+		})(c)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/will-fail", nil)
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+
+	got := testutil.ToFloat64(sharedmetrics.V1RouteHitsTotal.WithLabelValues(
+		"errs", "GET", "/api/v1/will-fail",
+	))
+	if got != 1 {
+		t.Errorf("counter on 4xx response = %v, want 1", got)
+	}
+}
+
+func TestDeprecation_MetricSuppressedBySkip(t *testing.T) {
+	sharedmetrics.V1RouteHitsTotal.Reset()
+	mw := Deprecation(DeprecationOptions{
+		Service: "skipper",
+		Skip: func(c echo.Context) bool {
+			return strings.HasPrefix(c.Request().URL.Path, "/api/v1/events/")
+		},
+	})
+
+	e := echo.New()
+	e.POST("/api/v1/events/behavioral", func(c echo.Context) error {
+		return mw(func(c echo.Context) error {
+			return c.NoContent(http.StatusNoContent)
+		})(c)
+	})
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/events/behavioral", strings.NewReader("{}"))
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+
+	got := testutil.ToFloat64(sharedmetrics.V1RouteHitsTotal.WithLabelValues(
+		"skipper", "POST", "/api/v1/events/behavioral",
+	))
+	if got != 0 {
+		t.Errorf("counter for skipped path = %v, want 0", got)
+	}
+	// And the headers should be suppressed too (Skip is one switch, not
+	// two): otherwise we'd be telling clients about a non-existent
+	// successor on routes that genuinely have no v3 mirror.
+	if dep := rec.Header().Get("Deprecation"); dep != "" {
+		t.Errorf("Deprecation header = %q, want empty (Skip should suppress headers)", dep)
+	}
+}

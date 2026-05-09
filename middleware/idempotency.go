@@ -37,12 +37,15 @@
 package middleware
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -88,12 +91,20 @@ type idempotencyResult struct {
 // SingletonEnvelopeWrapper.
 type captureResponseWriter struct {
 	http.ResponseWriter
-	status int
-	buf    bytes.Buffer
-	wrote  bool
+	status      int
+	buf         bytes.Buffer
+	wrote       bool
+	passThrough bool
+	hijacked    bool
 }
 
 func (w *captureResponseWriter) WriteHeader(code int) {
+	if w.passThrough {
+		w.ResponseWriter.WriteHeader(code)
+		w.wrote = true
+		w.status = code
+		return
+	}
 	if w.wrote {
 		return
 	}
@@ -105,7 +116,59 @@ func (w *captureResponseWriter) Write(b []byte) (int, error) {
 	if !w.wrote {
 		w.WriteHeader(http.StatusOK)
 	}
+	if w.passThrough {
+		return w.ResponseWriter.Write(b)
+	}
 	return w.buf.Write(b)
+}
+
+// Hijack implements http.Hijacker so reverse-proxy WebSocket upgrades
+// can take over the underlying TCP connection through this wrapper.
+// The embedded http.ResponseWriter only promotes interface methods
+// (Header / Write / WriteHeader); Hijack lives on the concrete type
+// behind the interface and isn't promoted, so we have to forward it
+// explicitly. Idempotency caching is meaningless for an upgraded
+// connection — the response body is empty and the protocol switch
+// can't be replayed — so the safe behaviour on upgrade is to
+// short-circuit caching and hand control to the underlying writer.
+func (w *captureResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	hj, ok := w.ResponseWriter.(http.Hijacker)
+	if !ok {
+		return nil, nil, errors.New("kielo-shared/middleware: underlying ResponseWriter is not an http.Hijacker")
+	}
+	w.hijacked = true
+	w.passThrough = true
+	return hj.Hijack()
+}
+
+// Flush implements http.Flusher so SSE / streaming handlers behave
+// correctly when this middleware is in the chain. Body buffering is
+// abandoned on first flush — caching a partial stream would replay a
+// truncated response on retry, which is worse than skipping the cache.
+func (w *captureResponseWriter) Flush() {
+	w.enablePassThrough()
+	if f, ok := w.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
+	}
+}
+
+// Unwrap exposes the underlying ResponseWriter so http.NewResponseController
+// in callers can find any interface (Pusher, ReadDeadlineSetter, …) we
+// haven't explicitly proxied.
+func (w *captureResponseWriter) Unwrap() http.ResponseWriter { return w.ResponseWriter }
+
+func (w *captureResponseWriter) enablePassThrough() {
+	if w.passThrough {
+		return
+	}
+	w.passThrough = true
+	if w.wrote {
+		w.ResponseWriter.WriteHeader(w.status)
+	}
+	if w.buf.Len() > 0 {
+		_, _ = w.ResponseWriter.Write(w.buf.Bytes())
+		w.buf.Reset()
+	}
 }
 
 // resolvedIdempotencyOptions holds Idempotency middleware options after
@@ -255,6 +318,13 @@ func runAndCache(
 	defer func() { c.Response().Writer = originalWriter }()
 
 	err := next(c)
+
+	if capture.passThrough || capture.hijacked {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		_ = rdb.Del(ctx, redisKey).Err()
+		return err
+	}
 
 	status := capture.status
 	if status == 0 {

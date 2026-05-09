@@ -90,6 +90,16 @@ func LanguageFromContext(ctx context.Context) (string, bool) {
 	return lang, true
 }
 
+// RequireLanguageFromContext returns the language attached by WithLanguage,
+// or ErrNoActiveLanguage if no language is present on ctx.
+func RequireLanguageFromContext(ctx context.Context) (string, error) {
+	lang, ok := LanguageFromContext(ctx)
+	if !ok {
+		return "", ErrNoActiveLanguage
+	}
+	return lang, nil
+}
+
 // ValidateLanguageIdent rejects anything that isn't a recognizable
 // language code. The result is interpolated into a schema name; looser
 // identifier rules would let arbitrary identifiers through.

@@ -22,13 +22,34 @@ type UserExistenceChecker interface {
 	UserExists(ctx context.Context, userID uuid.UUID) (bool, error)
 }
 
-// Claims represents the JWT claims structure
+// Claims represents the JWT claims structure.
+//
+// JSON-tag policy for each field — DO NOT bulk-remove omitempty:
+//
+//   - UserID: required on every token; no omitempty (would marshal as
+//     the zero UUID if accidentally unset, which we want to surface).
+//   - Email: legitimately empty for SSO/broker logins that haven't
+//     received an email scope. omitempty only affects marshaling
+//     (smaller JWT body); consumers that gate on email must check
+//     for empty string explicitly.
+//   - Role: legitimately empty for anonymous tokens and pre-RBAC
+//     legacy tokens. Admin-gating consumers compare against "admin"
+//     so empty correctly fails the check. omitempty is safe.
+//   - DeviceToken: legitimately empty for web sessions (admin-ui) —
+//     only mobile clients populate it. omitempty is correct.
+//   - LearningLanguage: NOT omitempty by design (ADR-001 strict
+//     learning-language contract). Empty here is always a bug —
+//     either a user signed up before the contract or onboarding
+//     never completed. Empty issuance is metered via
+//     LanguageDefaultFallbackTotal so we can refuse it once the
+//     metric reads zero across a release cycle. Restoring omitempty
+//     here would silently hide that incident class.
 type Claims struct {
 	UserID           uuid.UUID `json:"user_id"`
 	Email            string    `json:"email,omitempty"`
 	Role             string    `json:"role,omitempty"`
 	DeviceToken      string    `json:"device_token,omitempty"`
-	LearningLanguage string    `json:"learning_language_code,omitempty"`
+	LearningLanguage string    `json:"learning_language_code"`
 	jwt.RegisteredClaims
 }
 

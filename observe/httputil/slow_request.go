@@ -50,16 +50,32 @@ type SlowRequestOptions struct {
 	Skip func(c echo.Context) bool
 }
 
-// defaultSlowRequestSkip filters out probe / metric paths whose latency
-// is uninteresting in the slow-request feed. /readyz can legitimately
-// take 1-2s during a DB ping; we don't want every probe to log.
+// defaultSlowRequestSkip filters out paths whose latency is uninteresting
+// in the slow-request feed:
+//
+//   - probe / metric routes — /readyz can legitimately take 1-2s during a
+//     DB ping; we don't want every probe to log.
+//   - SSE / streaming routes — by convention any path ending in `/stream`
+//     is intentionally long-lived (notifications, TTS, transcripts,
+//     generation jobs, etc.). The middleware would otherwise emit a WARN
+//     line on every connection close, drowning the warn channel. Callers
+//     that want to budget a streaming endpoint differently can pass a
+//     custom Skip predicate.
 func defaultSlowRequestSkip(c echo.Context) bool {
 	p := c.Request().URL.Path
 	switch p {
-	case "/health", "/healthz", "/readyz", "/readiness", "/livez", "/metrics":
+	case "/health",
+		"/healthz",
+		"/readyz",
+		"/readiness",
+		"/livez",
+		"/metrics":
 		return true
 	}
-	return strings.HasPrefix(p, "/health/")
+	if strings.HasPrefix(p, "/health/") {
+		return true
+	}
+	return strings.HasSuffix(p, "/stream")
 }
 
 // SlowRequestLogger returns Echo middleware that emits a warn-level

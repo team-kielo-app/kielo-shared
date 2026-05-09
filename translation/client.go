@@ -57,7 +57,7 @@ func (c *Client) TranslateBatch(ctx context.Context, texts []string, sourceLang,
 	if err != nil {
 		return nil
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.modelsURL+"/api/v1/translations", bytes.NewReader(payload))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.modelsURL+"/api/v3/translations", bytes.NewReader(payload))
 	if err != nil {
 		return nil
 	}
@@ -86,5 +86,5 @@ func (c *Client) TranslateBatch(ctx context.Context, texts []string, sourceLang,
 }
 
 func (c *Client) URL() string {
-	return fmt.Sprintf("%s/api/v1/translations", c.modelsURL)
+	return fmt.Sprintf("%s/api/v3/translations", c.modelsURL)
 }

@@ -111,6 +111,23 @@ func APIErrorStdlib(w http.ResponseWriter, ctx context.Context, status int, code
 // the canonical ErrorEnvelope shape. Register it in main.go via:
 //
 //	e.HTTPErrorHandler = middleware.CanonicalEchoErrorHandler
+// CodedHTTPError is the opt-in interface for structured error bodies that
+// want their stable code + human-readable message landed in the canonical
+// envelope's `error.code` and `error.message` slots respectively (instead
+// of being JSON-stringified into `error.message` as a serialized struct).
+//
+// Real case: kielo-auth-service emits AuthErrorBody{ErrorCode, Message} via
+// `echo.NewHTTPError(401, AuthErrorBody{...})`. Without this interface
+// CanonicalEchoErrorHandler hits the `default` json-marshal branch and the
+// envelope becomes `{"error": {"code": "UNAUTHORIZED", "message":
+// "{\"error_code\":\"AUTH_INVALID_CREDENTIALS\",\"message\":\"Invalid
+// email or password.\"}", ...}}` — mobile clients then surface raw JSON to
+// the user.
+type CodedHTTPError interface {
+	HTTPErrorCode() string
+	HTTPErrorMessage() string
+}
+
 func CanonicalEchoErrorHandler(err error, c echo.Context) {
 	if c.Response().Committed {
 		return
@@ -126,17 +143,33 @@ func CanonicalEchoErrorHandler(err error, c echo.Context) {
 		switch m := he.Message.(type) {
 		case string:
 			message = m
+		case CodedHTTPError:
+			code = m.HTTPErrorCode()
+			message = m.HTTPErrorMessage()
 		case error:
-			message = m.Error()
+			if coded, ok := m.(CodedHTTPError); ok {
+				code = coded.HTTPErrorCode()
+				message = coded.HTTPErrorMessage()
+			} else {
+				message = m.Error()
+			}
 		default:
 			if m != nil {
-				if b, mErr := json.Marshal(m); mErr == nil {
+				if coded, ok := m.(CodedHTTPError); ok {
+					code = coded.HTTPErrorCode()
+					message = coded.HTTPErrorMessage()
+				} else if b, mErr := json.Marshal(m); mErr == nil {
 					message = string(b)
 				}
 			}
 		}
 	} else if err != nil {
-		message = err.Error()
+		if coded, ok := err.(CodedHTTPError); ok {
+			code = coded.HTTPErrorCode()
+			message = coded.HTTPErrorMessage()
+		} else {
+			message = err.Error()
+		}
 	}
 
 	if code == "" {

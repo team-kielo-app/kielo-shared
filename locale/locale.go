@@ -17,6 +17,27 @@ var supportedLearningLanguages = map[string]struct{}{
 	"sv": {},
 }
 
+// SupportedLearningLanguages returns the canonical learning-content language
+// codes the platform currently authors content for, sorted lexicographically
+// for deterministic output. Callers that need to fan out work across every
+// per-language schema (cms_<lang>, klearn_<lang>) should source the list
+// from here rather than hardcoding it — adding a new language only updates
+// the supportedLearningLanguages map above and contract tests pick up the
+// rest.
+func SupportedLearningLanguages() []string {
+	codes := make([]string, 0, len(supportedLearningLanguages))
+	for code := range supportedLearningLanguages {
+		codes = append(codes, code)
+	}
+	// Sort in-place for determinism without pulling sort into this small file.
+	for i := 1; i < len(codes); i++ {
+		for j := i; j > 0 && codes[j-1] > codes[j]; j-- {
+			codes[j-1], codes[j] = codes[j], codes[j-1]
+		}
+	}
+	return codes
+}
+
 // NormalizeLocaleCode normalizes any locale-like value to Kielo's internal
 // canonical language code: base language only, lowercase. Region/script
 // subtags are intentionally discarded; provider-specific locale tags must be
