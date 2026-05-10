@@ -23,6 +23,7 @@ item_id) belongs in trace logs, not metrics.
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any
 
 
@@ -116,13 +117,129 @@ if PROMETHEUS_AVAILABLE:
         labelnames=("stage", "result"),
     )
 
+    # TTS seam (`kielo_shared.seam.tts`). Mirrors the Go-side family
+    # in `kielo-shared/observe/metrics/tts.go` — same name + label
+    # vocabulary so dashboards aggregate Go (kielo-convo) and Python
+    # (engine) TTS callers under one metric.
+    TTS_CALLS_TOTAL = Counter(
+        "kielo_tts_calls_total",
+        "TTS provider call count by provider/task/voice/error.",
+        labelnames=("provider", "task", "voice", "error"),
+    )
+    TTS_LATENCY_SECONDS = Histogram(
+        "kielo_tts_latency_seconds",
+        "TTS provider latency in seconds.",
+        labelnames=("provider", "task", "voice"),
+        buckets=_LATENCY_BUCKETS_S,
+    )
+
+    # Caller-side TTS cache effectiveness signal. Distinct from
+    # `kielo_tts_calls_total` because cache HITS short-circuit
+    # before the provider call — the provider counter never
+    # increments, leaving cache health invisible. This counter
+    # closes that gap.
+    #
+    # Labels:
+    #   * caller — pinned per call-site
+    #     (`convo_greeting_prime`, `klearn_tts_baseword`, etc.).
+    #     Bounded set; same vocabulary as the seam `task` tag.
+    #   * outcome — "hit" | "miss". Bounded enum.
+    TTS_CACHE_RESULT_TOTAL = Counter(
+        "kielo_tts_cache_result_total",
+        "TTS caller-side cache lookup outcomes by caller/outcome.",
+        labelnames=("caller", "outcome"),
+    )
+
+    # STT seam (`kielo_shared.seam.stt`). Phase STT-1 — factory
+    # construction-time metrics only; per-transcript runtime
+    # metrics are out of scope.
+    STT_CALLS_TOTAL = Counter(
+        "kielo_stt_calls_total",
+        "STT factory construction count by provider/task/language/error.",
+        labelnames=("provider", "task", "language", "error"),
+    )
+    STT_KEYTERMS_COUNT = Histogram(
+        "kielo_stt_keyterms_count",
+        "Keyterm count per STT factory construction.",
+        labelnames=("provider", "task", "language"),
+        buckets=(0, 1, 2, 5, 10, 25, 50, 100),
+    )
+
+    # Phase I — idempotency layer for engine async / generation
+    # workflows. One emit per `run_idempotent(...)` call.
+    #
+    # Bounded labels:
+    #   * namespace — caller-pinned per workflow
+    #     (`topic_list_prompt`, `concept_hub_generation`, etc.).
+    #     Same vocabulary as the seam `task` label.
+    #   * result — bounded enum: "started" (new run), "hit"
+    #     (cached succeeded result returned), "in_progress"
+    #     (existing run within TTL — caller maps to 202),
+    #     "conflict" (incompatible request body for same key),
+    #     "failed" (run completed with error stored), "error"
+    #     (run raised; transient, caller may retry).
+    IDEMPOTENCY_TOTAL = Counter(
+        "kielo_idempotency_total",
+        "Idempotent-execution outcomes by namespace/result.",
+        labelnames=("namespace", "result"),
+    )
+    IDEMPOTENCY_LATENCY_S = Histogram(
+        "kielo_idempotency_latency_seconds",
+        "Idempotent-execution wall-clock latency by namespace/result.",
+        labelnames=("namespace", "result"),
+        buckets=_LATENCY_BUCKETS_S,
+    )
+
+    # F-lite generate+validate layer. Emits one record per
+    # `generate_with_validation` call (NOT per attempt — the attempts
+    # observation pins distribution shape).
+    LLM_GENERATE_VALIDATE_TOTAL = Counter(
+        "kielo_llm_generate_validate_total",
+        "F-lite generate+validate outcomes by task/valid/cached/error_class.",
+        labelnames=("task", "valid", "cached", "error_class"),
+    )
+    LLM_GENERATE_VALIDATE_ATTEMPTS = Histogram(
+        "kielo_llm_generate_validate_attempts",
+        "Attempt-count distribution per generate+validate call.",
+        labelnames=("task", "valid"),
+        buckets=(1, 2, 3, 5, 10),
+    )
+
+    # Pub/Sub publish + ack telemetry. Mirrors the Go-side family in
+    # kielo-shared/observe/metrics/pubsub.go so dashboards and alerts can
+    # treat Python and Go publishers uniformly.
+    PUBSUB_PUBLISH_TOTAL = Counter(
+        "kielo_pubsub_publish_total",
+        "Pub/Sub publish attempts by service/topic/outcome (success|error|skipped).",
+        labelnames=("service", "topic", "outcome"),
+    )
+    PUBSUB_PUBLISH_LATENCY_S = Histogram(
+        "kielo_pubsub_publish_latency_seconds",
+        "Pub/Sub publish wall-clock latency by service/topic.",
+        labelnames=("service", "topic"),
+        buckets=(0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0),
+    )
+    PUBSUB_ACK_TOTAL = Counter(
+        "kielo_pubsub_ack_total",
+        "Pub/Sub consumer ack outcomes by service/topic/outcome (ack|nack|deadletter|drop).",
+        labelnames=("service", "topic", "outcome"),
+    )
+
 
 # ────────────────────────────── emitters ─────────────────────────────────
 
 
 def llm_emit(record: dict[str, Any]) -> None:
-    """Emit one `llm_call` record. Safe with or without prometheus_client."""
-    logger.info("llm_call %s", record)
+    """Emit one `llm_call` record. Safe with or without prometheus_client.
+
+    Log level policy (Phase D+3.2 transition cleanup):
+      * success path (`error` empty)  → DEBUG; metric is the durable signal.
+      * failure path (`error` set)    → INFO; carries diagnostic context.
+    """
+    if str(record.get("error") or ""):
+        logger.info("llm_call %s", record)
+    else:
+        logger.debug("llm_call %s", record)
     if not PROMETHEUS_AVAILABLE:
         return
     try:
@@ -153,8 +270,14 @@ def llm_emit(record: dict[str, Any]) -> None:
 
 
 def localization_emit(record: dict[str, Any]) -> None:
-    """Emit one `localization_batch` record."""
-    logger.info("localization_batch %s", record)
+    """Emit one `localization_batch` record.
+
+    Same log policy as `llm_emit`: success → DEBUG, error → INFO.
+    """
+    if str(record.get("error") or ""):
+        logger.info("localization_batch %s", record)
+    else:
+        logger.debug("localization_batch %s", record)
     if not PROMETHEUS_AVAILABLE:
         return
     try:
@@ -180,6 +303,264 @@ def localization_emit(record: dict[str, Any]) -> None:
         ).observe(float(record.get("char_count") or 0))
     except Exception as exc:  # noqa: BLE001
         logger.debug("localization_emit prometheus fanout failed: %s", exc)
+
+
+def pubsub_publish_emit(
+    *,
+    service: str,
+    topic: str,
+    error: bool = False,
+    skipped: bool = False,
+    latency_seconds: float = 0.0,
+) -> None:
+    """Record one Pub/Sub publish attempt.
+
+    `skipped=True` covers short-circuit paths (publisher disabled in dev,
+    payload empty, dry_run flag) — distinct from `error=True` so dashboards
+    separate "couldn't publish" from "deliberately didn't publish".
+    Latency is observed only for actual attempts (skipped paths leave the
+    histogram untouched).
+
+    Log policy: error path → INFO (caller is interested), success +
+    skipped → DEBUG (high frequency; metric is the durable signal).
+    """
+    if error:
+        logger.info(
+            "pubsub_publish service=%s topic=%s error=%s skipped=%s latency_s=%.4f",
+            service,
+            topic,
+            error,
+            skipped,
+            latency_seconds,
+        )
+    else:
+        logger.debug(
+            "pubsub_publish service=%s topic=%s error=%s skipped=%s latency_s=%.4f",
+            service,
+            topic,
+            error,
+            skipped,
+            latency_seconds,
+        )
+    if not PROMETHEUS_AVAILABLE:
+        return
+    try:
+        if skipped:
+            outcome = "skipped"
+        elif error:
+            outcome = "error"
+        else:
+            outcome = "success"
+        PUBSUB_PUBLISH_TOTAL.labels(
+            service=service, topic=topic, outcome=outcome
+        ).inc()
+        if not skipped:
+            PUBSUB_PUBLISH_LATENCY_S.labels(
+                service=service, topic=topic
+            ).observe(latency_seconds)
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("pubsub_publish_emit fanout failed: %s", exc)
+
+
+def pubsub_ack_emit(
+    *,
+    service: str,
+    topic: str,
+    outcome: str = "ack",
+) -> None:
+    """Record one Pub/Sub consumer ack outcome.
+
+    `outcome` is one of "ack" | "nack" | "deadletter" | "drop". The "drop"
+    outcome covers handlers that 2xx-ack a delivery but discard it
+    intentionally (e.g. the engine behavioral-event handler dropping
+    missing-language envelopes).
+
+    Log policy: ack → DEBUG (success path); nack/deadletter → INFO
+    (degradation signal); drop → DEBUG (intentional discard).
+    """
+    if outcome in ("nack", "deadletter"):
+        logger.info(
+            "pubsub_ack service=%s topic=%s outcome=%s",
+            service,
+            topic,
+            outcome,
+        )
+    else:
+        logger.debug(
+            "pubsub_ack service=%s topic=%s outcome=%s",
+            service,
+            topic,
+            outcome,
+        )
+    if not PROMETHEUS_AVAILABLE:
+        return
+    try:
+        PUBSUB_ACK_TOTAL.labels(
+            service=service, topic=topic, outcome=outcome
+        ).inc()
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("pubsub_ack_emit fanout failed: %s", exc)
+
+
+# ──────── error_class sanitization for generate_validate emitter ────────
+
+
+# Strips index-style suffixes (`_0_`, `_12_`) so multi-item errors
+# don't blow cardinality (e.g. `example_0_missing_text` and
+# `example_5_missing_text` collapse to `example_missing_text`).
+_INDEX_IN_NAME_RE = re.compile(r"_\d+_")
+# Trailing index (e.g. `step_3`) — same intent.
+_TRAILING_INDEX_RE = re.compile(r"_\d+$")
+# Conservative max length so a runaway error string never becomes
+# a high-cardinality label by itself.
+_ERROR_CLASS_MAX_LEN = 64
+
+
+def _sanitize_error_class(raw: str | None) -> str:
+    """Reduce a validator error string to a stable bucket name.
+
+    Keeps the prefix before the first `:` (everything after is
+    typically a value: term, count, exception message), strips
+    embedded indices, lowercases, length-caps. Never returns
+    free-form user/LLM text — only the validator's own error tags
+    plus exception class names.
+    """
+    if not raw:
+        return ""
+    prefix = raw.split(":", 1)[0]
+    cleaned = _INDEX_IN_NAME_RE.sub("_", prefix)
+    cleaned = _TRAILING_INDEX_RE.sub("", cleaned)
+    cleaned = cleaned.strip().lower()
+    if len(cleaned) > _ERROR_CLASS_MAX_LEN:
+        cleaned = cleaned[:_ERROR_CLASS_MAX_LEN]
+    return cleaned
+
+
+def llm_generate_validate_emit(
+    *,
+    task: str,
+    prompt_version: str = "",
+    valid: bool,
+    cached: bool | None = None,
+    attempts: int = 1,
+    validation_errors: list[str] | None = None,
+) -> None:
+    """Emit one F-lite generate+validate outcome.
+
+    Always logs the structured line (preserves the existing log
+    surface used during the migration). When prometheus_client is
+    importable, also increments the labelled counter and observes
+    the attempts histogram. Label cardinality is bounded:
+      * `task` — caller's seam task tag (~10-20 stable values)
+      * `valid` — "true" | "false"
+      * `cached` — "true" | "false" | "unknown"
+      * `error_class` — sanitized first error tag, "" on success
+    """
+    error_class = _sanitize_error_class(
+        validation_errors[0] if validation_errors else None
+    )
+    # Log policy: success → DEBUG (metric carries the same labels);
+    # failure → INFO (validation errors are diagnostic).
+    if valid:
+        logger.debug(
+            "llm_generate_validate task=%s prompt_version=%s attempts=%d valid=%s "
+            "cached=%s error_class=%s error_count=%d",
+            task,
+            prompt_version,
+            attempts,
+            valid,
+            cached,
+            error_class,
+            len(validation_errors or []),
+        )
+    else:
+        logger.info(
+            "llm_generate_validate task=%s prompt_version=%s attempts=%d valid=%s "
+            "cached=%s error_class=%s error_count=%d",
+            task,
+            prompt_version,
+            attempts,
+            valid,
+            cached,
+            error_class,
+            len(validation_errors or []),
+        )
+    if not PROMETHEUS_AVAILABLE:
+        return
+    try:
+        cached_label = (
+            "true" if cached is True else "false" if cached is False else "unknown"
+        )
+        valid_label = "true" if valid else "false"
+        LLM_GENERATE_VALIDATE_TOTAL.labels(
+            task=task,
+            valid=valid_label,
+            cached=cached_label,
+            error_class=error_class,
+        ).inc()
+        LLM_GENERATE_VALIDATE_ATTEMPTS.labels(
+            task=task, valid=valid_label
+        ).observe(float(attempts))
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("llm_generate_validate_emit prometheus fanout failed: %s", exc)
+
+
+def idempotency_emit(
+    *,
+    namespace: str,
+    result: str,
+    latency_seconds: float = 0.0,
+) -> None:
+    """Increment the idempotency outcome counter + observe latency.
+
+    `result` is bounded: "started" | "hit" | "in_progress" |
+    "conflict" | "failed" | "error". Other values accepted but
+    caller is responsible for keeping the label set bounded.
+
+    Log policy: "started" + "hit" → DEBUG (success-path);
+    "conflict" + "failed" + "error" + "in_progress" → INFO
+    (caller-actionable signal).
+    """
+    quiet_results = {"started", "hit"}
+    if result in quiet_results:
+        logger.debug(
+            "idempotency namespace=%s result=%s latency_s=%.4f",
+            namespace, result, latency_seconds,
+        )
+    else:
+        logger.info(
+            "idempotency namespace=%s result=%s latency_s=%.4f",
+            namespace, result, latency_seconds,
+        )
+    if not PROMETHEUS_AVAILABLE:
+        return
+    try:
+        IDEMPOTENCY_TOTAL.labels(namespace=namespace, result=result).inc()
+        IDEMPOTENCY_LATENCY_S.labels(
+            namespace=namespace, result=result
+        ).observe(latency_seconds)
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("idempotency_emit prometheus fanout failed: %s", exc)
+
+
+def tts_cache_emit(*, caller: str, outcome: str) -> None:
+    """Increment the TTS caller-side cache outcome counter.
+
+    `outcome` is "hit" | "miss" (bounded enum). Other values are
+    accepted but recorded as-is — caller is responsible for keeping
+    the label set bounded.
+
+    Log policy: high-frequency hot path. DEBUG always — metric is
+    the durable signal; cache-cold rate is queryable from
+    `kielo_tts_cache_result_total{outcome="miss"}`.
+    """
+    logger.debug("tts_cache caller=%s outcome=%s", caller, outcome)
+    if not PROMETHEUS_AVAILABLE:
+        return
+    try:
+        TTS_CACHE_RESULT_TOTAL.labels(caller=caller, outcome=outcome).inc()
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("tts_cache_emit prometheus fanout failed: %s", exc)
 
 
 def prewarm_emit(*, stage: str, result: str) -> None:
@@ -211,8 +592,13 @@ def metrics_text() -> bytes:
 
 __all__ = [
     "PROMETHEUS_AVAILABLE",
+    "idempotency_emit",
     "llm_emit",
+    "llm_generate_validate_emit",
     "localization_emit",
     "metrics_text",
     "prewarm_emit",
+    "pubsub_ack_emit",
+    "pubsub_publish_emit",
+    "tts_cache_emit",
 ]

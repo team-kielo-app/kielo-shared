@@ -5,6 +5,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -14,13 +15,16 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-// These tests require a reachable Redis (CI hits the same docker-compose
-// instance dev uses on 127.0.0.1:6379). Skips when Redis isn't up so
-// CI-without-infra runs cleanly.
+// These tests require a reachable Redis. Honors REDIS_HOST (used by the
+// monorepo test-runner where redis lives at `redis:6379`) and falls back
+// to localhost for plain local dev. Skips cleanly when no redis is up.
 
 func newTestRedis(t *testing.T) *redis.Client {
 	t.Helper()
-	addr := "127.0.0.1:6379"
+	addr := os.Getenv("REDIS_HOST")
+	if addr == "" {
+		addr = "127.0.0.1:6379"
+	}
 	rdb := redis.NewClient(&redis.Options{Addr: addr, DB: 15})
 	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
 	defer cancel()

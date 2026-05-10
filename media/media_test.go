@@ -61,6 +61,7 @@ func TestWithRequestHost_SkipsBlankValues(t *testing.T) {
 func TestRequestHostFromContext_HandlesNilAndMissing(t *testing.T) {
 	// Defensive: some plumbing paths may inadvertently pass a nil
 	// context. The helper must not panic — return "" cleanly.
+	//lint:ignore SA1012 deliberately testing nil-safety of the helper
 	//nolint:staticcheck // SA1012: deliberately testing nil-safety
 	assert.Equal(t, "", RequestHostFromContext(nil))
 

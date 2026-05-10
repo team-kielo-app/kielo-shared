@@ -22,17 +22,27 @@ from __future__ import annotations
 from kielo_shared.observability.db_trace import attach_query_trace
 from kielo_shared.observability.metrics import (
     PROMETHEUS_AVAILABLE,
+    idempotency_emit,
     llm_emit,
+    llm_generate_validate_emit,
     localization_emit,
     metrics_text,
     prewarm_emit,
+    pubsub_ack_emit,
+    pubsub_publish_emit,
+    tts_cache_emit,
 )
 
 __all__ = [
     "PROMETHEUS_AVAILABLE",
     "attach_query_trace",
+    "idempotency_emit",
     "llm_emit",
+    "llm_generate_validate_emit",
     "localization_emit",
     "metrics_text",
     "prewarm_emit",
+    "pubsub_ack_emit",
+    "pubsub_publish_emit",
+    "tts_cache_emit",
 ]
