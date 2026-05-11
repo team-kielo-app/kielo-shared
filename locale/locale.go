@@ -136,13 +136,13 @@ var languageDisplayNames = map[string]string{
 	"zh": "Chinese",
 }
 
-// IsSupportedAppLanguage reports whether code is one of the platform's
-// recognized UI / app-language codes. Use this to gate user input on
+// IsSupportedSupportLanguage reports whether code is one of the platform's
+// recognized UI / support-language codes. Use this to gate user input on
 // /me/device-preferences and similar endpoints — a code outside this set
 // has no DisplayName, no support content, and would eventually surface as
 // a generic placeholder in the mobile UI. Validate at the API boundary
 // so bad input gets a 4xx instead of a silent stale-display state.
-func IsSupportedAppLanguage(code string) bool {
+func IsSupportedSupportLanguage(code string) bool {
 	normalized := NormalizeLocaleCode(code)
 	if normalized == "" {
 		return false
