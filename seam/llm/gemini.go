@@ -11,6 +11,8 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/team-kielo-app/kielo-shared/observe/httputil"
 )
 
 // GeminiJSONProvider calls
@@ -32,7 +34,7 @@ type GeminiJSONProvider struct {
 // timeouts override via ctx anyway.
 func NewGeminiJSONProvider(apiKey string, client *http.Client) *GeminiJSONProvider {
 	if client == nil {
-		client = &http.Client{Timeout: 30 * time.Second}
+		client = httputil.NewClient(30 * time.Second)
 	}
 	return &GeminiJSONProvider{
 		APIKey:       apiKey,

@@ -225,6 +225,35 @@ if PROMETHEUS_AVAILABLE:
         labelnames=("service", "topic", "outcome"),
     )
 
+    # v1-sunset burn-down counters. Mirrors the deleted Go-side family
+    # (`kielo_v1_route_hits_total`, `kielo_v3_legacy_alias_hits_total`)
+    # so dashboards aggregate Go services + Python (kielolearn-engine)
+    # uniformly. Used by `kielo_shared.middleware.legacy_alias.Deprecation`
+    # / `LegacyAlias` ASGI middleware (FastAPI/Starlette) and by callers
+    # outside the middleware (manual increments are NOT expected — the
+    # middleware owns the increment site so labels stay consistent).
+    #
+    # Cardinality controls:
+    #   * `service` — short service name pinned per process
+    #     ("kielolearn-engine", "mobile-bff", …). Bounded.
+    #   * `method` — HTTP verb. Bounded enum.
+    #   * `path` — Starlette route template, NOT the request URL
+    #     (so `/users/{id}` instead of `/users/42`). Bounded by the
+    #     route table at startup. Callers MUST pass the template.
+    #   * `successor` — successor v3 path template. Bounded by config.
+    V1_ROUTE_HITS_TOTAL = Counter(
+        "kielo_v1_route_hits_total",
+        "Hit count for /api/v1 (or /klearn/api/v1) routes still in service. "
+        "Drives the v1-sunset burn-down dashboard.",
+        labelnames=("service", "method", "path"),
+    )
+    LEGACY_ALIAS_HITS_TOTAL = Counter(
+        "kielo_v3_legacy_alias_hits_total",
+        "Hit count for v3 legacy-alias routes that forward to a canonical "
+        "v3 successor. Drives the alias sunset burn-down dashboard.",
+        labelnames=("service", "path", "successor"),
+    )
+
 
 # ────────────────────────────── emitters ─────────────────────────────────
 
@@ -578,6 +607,65 @@ def prewarm_emit(*, stage: str, result: str) -> None:
             logger.debug("prewarm_emit prometheus fanout failed: %s", exc)
 
 
+# ────────────────────── v1-sunset burn-down emitters ────────────────────
+
+
+def v1_route_hit_emit(*, service: str, method: str, path: str) -> None:
+    """Increment the v1-route hit counter. Used by the `Deprecation`
+    ASGI middleware in `kielo_shared.middleware.legacy_alias`.
+
+    `path` MUST be the route template (e.g. `/klearn/api/v1/sessions/{id}`),
+    NOT the request URL — otherwise label cardinality explodes with each
+    distinct path-param value. Caller is responsible for resolving the
+    template from the Starlette match.
+
+    Log policy: DEBUG. High-frequency hot path; the metric is the durable
+    signal.
+    """
+    logger.debug(
+        "v1_route_hit service=%s method=%s path=%s",
+        service,
+        method,
+        path,
+    )
+    if not PROMETHEUS_AVAILABLE:
+        return
+    try:
+        V1_ROUTE_HITS_TOTAL.labels(
+            service=service, method=method, path=path
+        ).inc()
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("v1_route_hit_emit prometheus fanout failed: %s", exc)
+
+
+def legacy_alias_hit_emit(
+    *, service: str, path: str, successor: str
+) -> None:
+    """Increment the v3 legacy-alias hit counter. Used by the
+    `LegacyAlias` ASGI middleware in `kielo_shared.middleware.legacy_alias`.
+
+    `path` is the alias route template; `successor` is the canonical v3
+    path template the alias forwards to. Both are bounded by route-table
+    configuration at startup.
+
+    Log policy: DEBUG (same rationale as `v1_route_hit_emit`).
+    """
+    logger.debug(
+        "legacy_alias_hit service=%s path=%s successor=%s",
+        service,
+        path,
+        successor,
+    )
+    if not PROMETHEUS_AVAILABLE:
+        return
+    try:
+        LEGACY_ALIAS_HITS_TOTAL.labels(
+            service=service, path=path, successor=successor
+        ).inc()
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("legacy_alias_hit_emit prometheus fanout failed: %s", exc)
+
+
 # ─────────────────────────── /metrics text ───────────────────────────────
 
 
@@ -593,6 +681,7 @@ def metrics_text() -> bytes:
 __all__ = [
     "PROMETHEUS_AVAILABLE",
     "idempotency_emit",
+    "legacy_alias_hit_emit",
     "llm_emit",
     "llm_generate_validate_emit",
     "localization_emit",
@@ -601,4 +690,5 @@ __all__ = [
     "pubsub_ack_emit",
     "pubsub_publish_emit",
     "tts_cache_emit",
+    "v1_route_hit_emit",
 ]

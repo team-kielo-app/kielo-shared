@@ -7,8 +7,6 @@ import time
 from typing import Any, Iterable, Mapping, Sequence
 from urllib.parse import urljoin
 
-import httpx
-
 MODULE_WHISPER = "whisper"
 MODULE_EMBEDDINGS = "embeddings"
 MODULE_TRANSLATION_FI_EN = "translation_fi_en"
@@ -117,9 +115,19 @@ async def fetch_models_health_async(
     headers: Mapping[str, str] | None = None,
     timeout_seconds: float = DEFAULT_HEALTH_TIMEOUT_SECONDS,
 ) -> dict[str, Any]:
-    async with httpx.AsyncClient(
+    # The models service is an internal Kielo peer — propagate the
+    # active language and trace context per ADR-006 §3/§9 so every
+    # health probe is correlated end-to-end. Callers pass the
+    # X-Internal-API-Key via the headers mapping; internal_client_async
+    # handles its own pass-through cleanly.
+    from kielo_shared.http import INTERNAL_API_KEY_HEADER, internal_client_async
+
+    normalized_headers = _normalize_headers(headers)
+    api_key = normalized_headers.pop(INTERNAL_API_KEY_HEADER, None)
+    async with internal_client_async(
+        api_key=api_key,
         timeout=timeout_seconds,
-        headers=_normalize_headers(headers),
+        headers=normalized_headers or None,
     ) as client:
         response = await client.get(build_health_url(base_url))
         payload = response.json()
@@ -140,9 +148,15 @@ def fetch_models_health(
     headers: Mapping[str, str] | None = None,
     timeout_seconds: float = DEFAULT_HEALTH_TIMEOUT_SECONDS,
 ) -> dict[str, Any]:
-    with httpx.Client(
+    # Sync sibling — see fetch_models_health_async for rationale.
+    from kielo_shared.http import INTERNAL_API_KEY_HEADER, internal_client_sync
+
+    normalized_headers = _normalize_headers(headers)
+    api_key = normalized_headers.pop(INTERNAL_API_KEY_HEADER, None)
+    with internal_client_sync(
+        api_key=api_key,
         timeout=timeout_seconds,
-        headers=_normalize_headers(headers),
+        headers=normalized_headers or None,
     ) as client:
         response = client.get(build_health_url(base_url))
         payload = response.json()

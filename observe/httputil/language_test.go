@@ -69,3 +69,65 @@ func TestApplyActiveLanguageQuery_EndToEndOverHTTP(t *testing.T) {
 
 	assert.Equal(t, "sv", observed)
 }
+
+func TestApplyActiveLanguageHeader_StampsFromContext(t *testing.T) {
+	ctx := sharedDB.WithLanguage(context.Background(), "sv")
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://example.test/", nil)
+	require.NoError(t, err)
+
+	ApplyActiveLanguageHeader(req)
+
+	assert.Equal(t, "sv", req.Header.Get(LearningLanguageHeader))
+}
+
+func TestApplyActiveLanguageHeader_OmittedWhenContextHasNoLanguage(t *testing.T) {
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "https://example.test/", nil)
+	require.NoError(t, err)
+
+	ApplyActiveLanguageHeader(req)
+
+	assert.Empty(t, req.Header.Get(LearningLanguageHeader))
+}
+
+func TestApplyActiveLanguageHeader_PreservesExplicitOverride(t *testing.T) {
+	// An upstream caller (admin tooling, cross-language reconciler) may
+	// deliberately pre-set the header to inspect a different language than
+	// the ctx implies. The stamper must not clobber that override.
+	ctx := sharedDB.WithLanguage(context.Background(), "fi")
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://example.test/", nil)
+	require.NoError(t, err)
+	req.Header.Set(LearningLanguageHeader, "sv")
+
+	ApplyActiveLanguageHeader(req)
+
+	assert.Equal(t, "sv", req.Header.Get(LearningLanguageHeader))
+}
+
+func TestApplyActiveLanguageHeader_NilRequestDoesNotPanic(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Fatalf("unexpected panic: %v", r)
+		}
+	}()
+	ApplyActiveLanguageHeader(nil)
+}
+
+func TestApplyActiveLanguageHeader_EndToEndOverHTTP(t *testing.T) {
+	var observed string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		observed = r.Header.Get(LearningLanguageHeader)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	ctx := sharedDB.WithLanguage(context.Background(), "sv")
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, server.URL, nil)
+	require.NoError(t, err)
+	ApplyActiveLanguageHeader(req)
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	resp.Body.Close()
+
+	assert.Equal(t, "sv", observed)
+}

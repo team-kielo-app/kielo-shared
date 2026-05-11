@@ -23,6 +23,7 @@ from kielo_shared.observability.db_trace import attach_query_trace
 from kielo_shared.observability.metrics import (
     PROMETHEUS_AVAILABLE,
     idempotency_emit,
+    legacy_alias_hit_emit,
     llm_emit,
     llm_generate_validate_emit,
     localization_emit,
@@ -31,12 +32,14 @@ from kielo_shared.observability.metrics import (
     pubsub_ack_emit,
     pubsub_publish_emit,
     tts_cache_emit,
+    v1_route_hit_emit,
 )
 
 __all__ = [
     "PROMETHEUS_AVAILABLE",
     "attach_query_trace",
     "idempotency_emit",
+    "legacy_alias_hit_emit",
     "llm_emit",
     "llm_generate_validate_emit",
     "localization_emit",
@@ -45,4 +48,5 @@ __all__ = [
     "pubsub_ack_emit",
     "pubsub_publish_emit",
     "tts_cache_emit",
+    "v1_route_hit_emit",
 ]

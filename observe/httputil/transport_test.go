@@ -122,3 +122,99 @@ func TestTracingTransport_NilBase(t *testing.T) {
 		t.Fatal("should return non-nil transport")
 	}
 }
+
+func TestInternalAuthTransport_StampsKey(t *testing.T) {
+	const key = "s3cret"
+
+	var got string
+	tr := InternalAuthTransport(roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		got = req.Header.Get(InternalAPIKeyHeader)
+		return &http.Response{StatusCode: 200}, nil
+	}), key)
+
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://example.com", nil)
+	resp, err := tr.RoundTrip(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.Body != nil {
+		_ = resp.Body.Close()
+	}
+
+	if got != key {
+		t.Errorf("X-Internal-API-Key on outbound = %q, want %q", got, key)
+	}
+}
+
+func TestInternalAuthTransport_PreservesExplicitKey(t *testing.T) {
+	const baseline = "baseline-key"
+	const override = "override-key"
+
+	var got string
+	tr := InternalAuthTransport(roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		got = req.Header.Get(InternalAPIKeyHeader)
+		return &http.Response{StatusCode: 200}, nil
+	}), baseline)
+
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://example.com", nil)
+	req.Header.Set(InternalAPIKeyHeader, override)
+	resp, err := tr.RoundTrip(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.Body != nil {
+		_ = resp.Body.Close()
+	}
+
+	if got != override {
+		t.Errorf("explicit override discarded: got %q, want %q", got, override)
+	}
+}
+
+func TestInternalAuthTransport_EmptyKeyIsPassthrough(t *testing.T) {
+	var got string
+	tr := InternalAuthTransport(roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		got = req.Header.Get(InternalAPIKeyHeader)
+		return &http.Response{StatusCode: 200}, nil
+	}), "")
+
+	req, _ := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://example.com", nil)
+	resp, _ := tr.RoundTrip(req)
+	if resp.Body != nil {
+		_ = resp.Body.Close()
+	}
+	if got != "" {
+		t.Errorf("empty key should be no-op, got %q on outbound", got)
+	}
+}
+
+func TestNewInternalClient_StampsKeyAndTrace(t *testing.T) {
+	const key = "kkk"
+
+	var capturedKey, capturedTraceparent string
+	// Build the same composition NewInternalClient uses, but with a
+	// terminal roundTripFunc so we don't make a real HTTP call.
+	tr := TracingTransport(InternalAuthTransport(roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		capturedKey = req.Header.Get(InternalAPIKeyHeader)
+		capturedTraceparent = req.Header.Get("Traceparent")
+		return &http.Response{StatusCode: 200}, nil
+	}), key))
+
+	tc := observe.New()
+	ctx := observe.WithContext(context.Background(), tc)
+	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, "http://example.com", nil)
+	resp, err := tr.RoundTrip(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.Body != nil {
+		_ = resp.Body.Close()
+	}
+
+	if capturedKey != key {
+		t.Errorf("X-Internal-API-Key = %q, want %q", capturedKey, key)
+	}
+	if capturedTraceparent == "" {
+		t.Error("Traceparent header should have been stamped by TracingTransport")
+	}
+}

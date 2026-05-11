@@ -22,6 +22,7 @@ const InternalAPIKeyHeader = middleware.InternalAPIKeyHeader
 //
 //   - X-Internal-API-Key set when apiKey is non-empty
 //   - learning_language_code query param stamped from ctx via ApplyActiveLanguageQuery
+//   - X-Kielo-Learning-Language header stamped from ctx via ApplyActiveLanguageHeader
 //   - Content-Type: application/json when body is non-nil (JSON-marshaled)
 //
 // body=nil produces a request with http.NoBody. Otherwise body is
@@ -59,6 +60,7 @@ func PrepareInternalJSONRequest(
 		req.Header.Set("Content-Type", "application/json")
 	}
 	ApplyActiveLanguageQuery(req)
+	ApplyActiveLanguageHeader(req)
 	// Forward the active trace context onto the outbound request so the
 	// downstream service can treat this call as a child span and the
 	// mobile-issued X-Client-Trace-Id flows end-to-end through every

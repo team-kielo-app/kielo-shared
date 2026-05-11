@@ -22,6 +22,18 @@ const (
 	// every internal outbound call.
 	ActiveLanguageQueryParam = "learning_language_code"
 
+	// ActiveLanguageHeader is the canonical service-to-service header
+	// per ADR-006 §3. Stamped on internal outbound HTTP calls by the
+	// shared http client; preferred over the JWT claim because it
+	// reflects the caller's explicit intent for this request rather
+	// than the user's profile default.
+	ActiveLanguageHeader = "X-Kielo-Learning-Language"
+
+	// LegacyActiveLanguageHeader is the pre-ADR-006 name. Kept for one
+	// migration window so older mobile clients and any straggling
+	// internal callers continue to work; remove after M+12.
+	LegacyActiveLanguageHeader = "X-Learning-Language"
+
 	// JWTClaimKey is the standard claim name set by kielo-auth-service
 	// when issuing tokens. The JWT middleware on the receiving service
 	// is responsible for decoding the token and stashing claims on
@@ -35,10 +47,12 @@ const (
 // own JWT claim layout, profile lookup, etc.
 type ActiveLanguageExtractor func(c echo.Context) string
 
-// DefaultExtractor resolves in priority order:
+// DefaultExtractor resolves in priority order per ADR-006 §3:
 //
-//  1. ?learning_language_code query parameter (canonical cross-service)
-//  2. echo.Context.Get(JWTClaimKey) (set by an upstream JWT middleware)
+//  1. ?learning_language_code query parameter (explicit per-call override)
+//  2. X-Kielo-Learning-Language header (canonical service-to-service)
+//  3. X-Learning-Language header (legacy; sunset M+12)
+//  4. echo.Context.Get(JWTClaimKey) (user's profile default)
 //
 // Bad values (failing db.ValidateLanguageIdent) are dropped silently;
 // the chain continues. The middleware itself never short-circuits the
@@ -47,6 +61,16 @@ type ActiveLanguageExtractor func(c echo.Context) string
 // to open a per-language transaction.
 func DefaultExtractor(c echo.Context) string {
 	if v := strings.TrimSpace(c.QueryParam(ActiveLanguageQueryParam)); v != "" {
+		if lang := locale.NormalizeSupportedLearningLanguageCode(v); lang != "" {
+			return lang
+		}
+	}
+	if v := strings.TrimSpace(c.Request().Header.Get(ActiveLanguageHeader)); v != "" {
+		if lang := locale.NormalizeSupportedLearningLanguageCode(v); lang != "" {
+			return lang
+		}
+	}
+	if v := strings.TrimSpace(c.Request().Header.Get(LegacyActiveLanguageHeader)); v != "" {
 		if lang := locale.NormalizeSupportedLearningLanguageCode(v); lang != "" {
 			return lang
 		}

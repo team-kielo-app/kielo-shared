@@ -23,7 +23,10 @@ DEP001 = ["asyncpg", "fastapi", "prometheus_client"]
 # so callers can pass it positionally or by name. Vulture sees the abstract
 # method body (`...`) and flags it unused.
 # `executemany` is the SQLAlchemy event hook signature — fixed by the framework.
-ignore_names = ["ex", "executemany"]
+# `session`, `trace_config_ctx` are aiohttp.TraceConfig hook signature params
+# (see aiohttp_hooks.py); aiohttp invokes hooks positionally so the names are
+# fixed by the framework even though our hook body only uses `params`.
+ignore_names = ["ex", "executemany", "session", "trace_config_ctx"]
 
 [tool.setuptools.dynamic]
 version = {attr = "kielo_shared.__version__"}

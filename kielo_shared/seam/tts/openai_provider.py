@@ -82,7 +82,15 @@ class OpenAITTSProvider:
         client = self._client
         owns = client is None
         if client is None:
-            client = httpx.AsyncClient(timeout=30.0)
+            # Defensive fallback when the caller didn't inject a
+            # hook-wired client (production path does inject; this is
+            # for tests / direct usage). Use the canonical factory so
+            # the trace context still propagates per ADR-006 §3/§9.
+            # Deferred import: avoids importing kielo_shared.http
+            # (which pulls trace + httpx_hooks) into every seam load.
+            from kielo_shared.http import internal_client_async
+
+            client = internal_client_async(api_key=None, timeout=30.0)
 
         started = time.perf_counter()
         try:

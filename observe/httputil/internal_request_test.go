@@ -75,13 +75,38 @@ func TestPrepareInternalJSONRequest_StampsActiveLanguage(t *testing.T) {
 	ctx := sharedDB.WithLanguage(context.Background(), "sv")
 	req, err := PrepareInternalJSONRequest(ctx, http.MethodGet, "https://svc.test/x", "k", nil)
 	require.NoError(t, err)
+	// ADR-006 §3 mandates BOTH the query param (lower precedence) AND the
+	// canonical header so downstream resolvers survive a proxy or LB that
+	// strips one or the other.
 	assert.Equal(t, "sv", req.URL.Query().Get(LearningLanguageQueryParam))
+	assert.Equal(t, "sv", req.Header.Get(LearningLanguageHeader))
 }
 
 func TestPrepareInternalJSONRequest_NoLanguageInCtx(t *testing.T) {
 	req, err := PrepareInternalJSONRequest(context.Background(), http.MethodGet, "https://svc.test/x", "k", nil)
 	require.NoError(t, err)
 	assert.Empty(t, req.URL.Query().Get(LearningLanguageQueryParam))
+	assert.Empty(t, req.Header.Get(LearningLanguageHeader))
+}
+
+func TestPrepareInternalJSONRequest_PreservesExplicitLanguageHeader(t *testing.T) {
+	// PrepareInternalJSONRequest constructs the request internally, so the
+	// only way to pre-stamp the header is via the URL query (which can in
+	// turn be honored by the receiving end). We verify the set-if-missing
+	// semantic indirectly: the query param override must still survive,
+	// matching ApplyActiveLanguageQuery's contract.
+	ctx := sharedDB.WithLanguage(context.Background(), "fi")
+	req, err := PrepareInternalJSONRequest(
+		ctx, http.MethodGet,
+		"https://svc.test/x?learning_language_code=sv",
+		"k", nil,
+	)
+	require.NoError(t, err)
+	assert.Equal(t, "sv", req.URL.Query().Get(LearningLanguageQueryParam),
+		"explicit query-param override must survive ctx stamping")
+	// Header still comes from ctx — the query param is the explicit
+	// override channel; the header is the canonical-from-ctx channel.
+	assert.Equal(t, "fi", req.Header.Get(LearningLanguageHeader))
 }
 
 func TestPrepareInternalJSONRequest_BodyMarshalError(t *testing.T) {

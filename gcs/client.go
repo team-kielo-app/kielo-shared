@@ -19,6 +19,8 @@ import (
 	"cloud.google.com/go/storage"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
+
+	"github.com/team-kielo-app/kielo-shared/observe/httputil"
 )
 
 // ClientInterface defines the interface for GCS operations
@@ -440,7 +442,7 @@ func (c *Client) generateEmulatorUploadURL(
 		req.Header.Set("X-Upload-Content-Type", opts.ContentType)
 	}
 
-	httpClient := &http.Client{Timeout: 10 * time.Second}
+	httpClient := httputil.NewClient(10 * time.Second)
 	resp, err := httpClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("failed to initialize emulator upload session: %w", err)

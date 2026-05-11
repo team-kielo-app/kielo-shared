@@ -106,6 +106,83 @@ func TestActiveLanguage_AllSourcesBadLeavesContextEmpty(t *testing.T) {
 	_ = handler(c)
 }
 
+func TestActiveLanguage_HeaderResolvesWithoutQueryOrJWT(t *testing.T) {
+	c := newRequestRecorder(t, "/x", map[string]string{
+		ActiveLanguageHeader: "fi",
+	})
+
+	handler := ActiveLanguage(nil)(func(c echo.Context) error {
+		got, ok := db.LanguageFromContext(c.Request().Context())
+		if !ok || got != "fi" {
+			t.Errorf("got (%q,%v), want (fi,true) — X-Kielo-Learning-Language should resolve", got, ok)
+		}
+		return nil
+	})
+	_ = handler(c)
+}
+
+func TestActiveLanguage_QueryWinsOverHeader(t *testing.T) {
+	c := newRequestRecorder(t, "/x?learning_language_code=sv", map[string]string{
+		ActiveLanguageHeader: "fi",
+	})
+
+	handler := ActiveLanguage(nil)(func(c echo.Context) error {
+		got, _ := db.LanguageFromContext(c.Request().Context())
+		if got != "sv" {
+			t.Errorf("got %q, want sv — explicit query param must win over header", got)
+		}
+		return nil
+	})
+	_ = handler(c)
+}
+
+func TestActiveLanguage_HeaderWinsOverJWT(t *testing.T) {
+	c := newRequestRecorder(t, "/x", map[string]string{
+		ActiveLanguageHeader: "fi",
+	})
+	c.Set(JWTClaimKey, "sv")
+
+	handler := ActiveLanguage(nil)(func(c echo.Context) error {
+		got, _ := db.LanguageFromContext(c.Request().Context())
+		if got != "fi" {
+			t.Errorf("got %q, want fi — header should win over JWT (per-call > profile default)", got)
+		}
+		return nil
+	})
+	_ = handler(c)
+}
+
+func TestActiveLanguage_LegacyHeaderResolves(t *testing.T) {
+	c := newRequestRecorder(t, "/x", map[string]string{
+		LegacyActiveLanguageHeader: "fi",
+	})
+
+	handler := ActiveLanguage(nil)(func(c echo.Context) error {
+		got, _ := db.LanguageFromContext(c.Request().Context())
+		if got != "fi" {
+			t.Errorf("got %q, want fi — legacy X-Learning-Language should still resolve until M+12 sunset", got)
+		}
+		return nil
+	})
+	_ = handler(c)
+}
+
+func TestActiveLanguage_CanonicalHeaderWinsOverLegacy(t *testing.T) {
+	c := newRequestRecorder(t, "/x", map[string]string{
+		ActiveLanguageHeader:       "fi",
+		LegacyActiveLanguageHeader: "sv",
+	})
+
+	handler := ActiveLanguage(nil)(func(c echo.Context) error {
+		got, _ := db.LanguageFromContext(c.Request().Context())
+		if got != "fi" {
+			t.Errorf("got %q, want fi — canonical header must win over legacy", got)
+		}
+		return nil
+	})
+	_ = handler(c)
+}
+
 func TestActiveLanguage_CustomExtractor(t *testing.T) {
 	c := newRequestRecorder(t, "/x", nil)
 

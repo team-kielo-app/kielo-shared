@@ -9,6 +9,8 @@ import (
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/team-kielo-app/kielo-shared/observe/httputil"
 )
 
 type Client struct {
@@ -29,7 +31,7 @@ type batchResponse struct {
 
 func NewClient(modelsURL, apiKey string, httpClient *http.Client) *Client {
 	if httpClient == nil {
-		httpClient = &http.Client{Timeout: 30 * time.Second}
+		httpClient = httputil.NewClient(30 * time.Second)
 	}
 	return &Client{modelsURL: strings.TrimRight(modelsURL, "/"), apiKey: apiKey, httpClient: httpClient}
 }

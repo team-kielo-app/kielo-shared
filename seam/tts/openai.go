@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/team-kielo-app/kielo-shared/observe/httputil"
 )
 
 // OpenAITTSProvider calls the OpenAI /v1/audio/speech endpoint.
@@ -28,7 +30,7 @@ type OpenAITTSProvider struct {
 // seam doesn't leak transport policy.
 func NewOpenAITTSProvider(apiKey string, client *http.Client) *OpenAITTSProvider {
 	if client == nil {
-		client = &http.Client{Timeout: 30 * time.Second}
+		client = httputil.NewClient(30 * time.Second)
 	}
 	return &OpenAITTSProvider{
 		APIKey:       apiKey,
