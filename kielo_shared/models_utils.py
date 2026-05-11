@@ -247,24 +247,14 @@ def normalize_transcription_payload(
         for item in raw_segments:
             if not isinstance(item, Mapping):
                 continue
-            # Accept neutral keys (``text`` / ``text_primary`` / ``words_array``).
-            # Older payloads with ``text_fi`` / ``words_array_fi`` are tolerated
-            # for backward compat with anything that still emits them.
-            #
+            # Neutral keys only: ``text`` / ``text_primary`` / ``words_array``.
             # Emit BOTH ``text`` (read by kielolearn-engine) and
             # ``text_primary`` (consumed by ingest-processor's
             # ``TranscriptionSegment`` Pydantic model).
             text_primary = str(
-                item.get("text")
-                or item.get("text_primary")
-                or item.get("text_fi")
-                or ""
+                item.get("text") or item.get("text_primary") or ""
             )
-            words_array = (
-                item.get("words_array")
-                if item.get("words_array") is not None
-                else item.get("words_array_fi")
-            ) or []
+            words_array = item.get("words_array") or []
             normalized_segments.append(
                 {
                     "segment_index": int(item.get("segment_index", 0)),
