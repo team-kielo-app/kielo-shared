@@ -75,13 +75,13 @@ func TestPrepareInternalJSONRequest_StampsActiveLanguage(t *testing.T) {
 	ctx := sharedDB.WithLanguage(context.Background(), "sv")
 	req, err := PrepareInternalJSONRequest(ctx, http.MethodGet, "https://svc.test/x", "k", nil)
 	require.NoError(t, err)
-	assert.Equal(t, "sv", req.Header.Get(KieloLearningLanguageHeader))
+	assert.Equal(t, "sv", req.URL.Query().Get(LearningLanguageQueryParam))
 }
 
 func TestPrepareInternalJSONRequest_NoLanguageInCtx(t *testing.T) {
 	req, err := PrepareInternalJSONRequest(context.Background(), http.MethodGet, "https://svc.test/x", "k", nil)
 	require.NoError(t, err)
-	assert.Empty(t, req.Header.Get(KieloLearningLanguageHeader))
+	assert.Empty(t, req.URL.Query().Get(LearningLanguageQueryParam))
 }
 
 func TestPrepareInternalJSONRequest_BodyMarshalError(t *testing.T) {

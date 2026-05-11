@@ -12,51 +12,48 @@ import (
 	sharedDB "github.com/team-kielo-app/kielo-shared/db"
 )
 
-func TestApplyActiveLanguageHeader_StampsFromContext(t *testing.T) {
+func TestApplyActiveLanguageQuery_StampsFromContext(t *testing.T) {
 	ctx := sharedDB.WithLanguage(context.Background(), "sv")
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://example.test/", nil)
 	require.NoError(t, err)
 
-	ApplyActiveLanguageHeader(req)
+	ApplyActiveLanguageQuery(req)
 
-	assert.Equal(t, "sv", req.Header.Get(KieloLearningLanguageHeader))
+	assert.Equal(t, "sv", req.URL.Query().Get(LearningLanguageQueryParam))
 }
 
-func TestApplyActiveLanguageHeader_OmittedWhenContextHasNoLanguage(t *testing.T) {
+func TestApplyActiveLanguageQuery_OmittedWhenContextHasNoLanguage(t *testing.T) {
 	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "https://example.test/", nil)
 	require.NoError(t, err)
 
-	ApplyActiveLanguageHeader(req)
+	ApplyActiveLanguageQuery(req)
 
-	assert.Empty(t, req.Header.Get(KieloLearningLanguageHeader))
-	_, present := req.Header[KieloLearningLanguageHeader]
-	assert.False(t, present, "header should not be set when ctx has no language")
+	assert.Empty(t, req.URL.Query().Get(LearningLanguageQueryParam))
 }
 
-func TestApplyActiveLanguageHeader_PreservesExplicitOverride(t *testing.T) {
+func TestApplyActiveLanguageQuery_PreservesExplicitOverride(t *testing.T) {
 	ctx := sharedDB.WithLanguage(context.Background(), "fi")
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://example.test/", nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://example.test/?learning_language_code=sv", nil)
 	require.NoError(t, err)
-	req.Header.Set(KieloLearningLanguageHeader, "sv")
 
-	ApplyActiveLanguageHeader(req)
+	ApplyActiveLanguageQuery(req)
 
-	assert.Equal(t, "sv", req.Header.Get(KieloLearningLanguageHeader))
+	assert.Equal(t, "sv", req.URL.Query().Get(LearningLanguageQueryParam))
 }
 
-func TestApplyActiveLanguageHeader_NilRequestDoesNotPanic(t *testing.T) {
+func TestApplyActiveLanguageQuery_NilRequestDoesNotPanic(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
 			t.Fatalf("unexpected panic: %v", r)
 		}
 	}()
-	ApplyActiveLanguageHeader(nil)
+	ApplyActiveLanguageQuery(nil)
 }
 
-func TestApplyActiveLanguageHeader_EndToEndOverHTTP(t *testing.T) {
+func TestApplyActiveLanguageQuery_EndToEndOverHTTP(t *testing.T) {
 	var observed string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		observed = r.Header.Get(KieloLearningLanguageHeader)
+		observed = r.URL.Query().Get(LearningLanguageQueryParam)
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
@@ -64,7 +61,7 @@ func TestApplyActiveLanguageHeader_EndToEndOverHTTP(t *testing.T) {
 	ctx := sharedDB.WithLanguage(context.Background(), "sv")
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, server.URL, nil)
 	require.NoError(t, err)
-	ApplyActiveLanguageHeader(req)
+	ApplyActiveLanguageQuery(req)
 
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)

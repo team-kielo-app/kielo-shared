@@ -21,7 +21,7 @@ const InternalAPIKeyHeader = middleware.InternalAPIKeyHeader
 // with the standard internal-call boilerplate already applied:
 //
 //   - X-Internal-API-Key set when apiKey is non-empty
-//   - X-Kielo-Learning-Language stamped from ctx via ApplyActiveLanguageHeader
+//   - learning_language_code query param stamped from ctx via ApplyActiveLanguageQuery
 //   - Content-Type: application/json when body is non-nil (JSON-marshaled)
 //
 // body=nil produces a request with http.NoBody. Otherwise body is
@@ -29,7 +29,7 @@ const InternalAPIKeyHeader = middleware.InternalAPIKeyHeader
 // for status-code checks, response decoding, and resp.Body.Close().
 //
 // Replaces the verbatim 8-line block — NewRequestWithContext + apiKey-set
-// + ApplyActiveLanguageHeader (+ Content-Type when body) — that lived in
+// + ApplyActiveLanguageQuery (+ Content-Type when body) — that lived in
 // every internal client method (~30 callsites across kielo-cms,
 // kielo-content-service, kielo-mobile-bff, kielo-user-service).
 func PrepareInternalJSONRequest(
@@ -58,7 +58,7 @@ func PrepareInternalJSONRequest(
 	if hasBody {
 		req.Header.Set("Content-Type", "application/json")
 	}
-	ApplyActiveLanguageHeader(req)
+	ApplyActiveLanguageQuery(req)
 	// Forward the active trace context onto the outbound request so the
 	// downstream service can treat this call as a child span and the
 	// mobile-issued X-Client-Trace-Id flows end-to-end through every

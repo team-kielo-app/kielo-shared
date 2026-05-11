@@ -16,21 +16,10 @@ import (
 )
 
 const (
-	// ActiveLanguageHeader is the kielo-canonical override header.
-	// Tooling and tests use this. Production traffic typically
-	// resolves the language from the JWT claim or — for the mobile
-	// app via mobile-bff — from MobileLanguageHeader.
-	ActiveLanguageHeader = "X-Kielo-Learning-Language"
-
-	// MobileLanguageHeader is the existing contract used by the mobile
-	// app's RTK baseQuery (kielo-app/src/store/applyLanguageHeaders.ts).
-	// Recognized for compatibility — drop only when every mobile client
-	// has migrated. Lowercase canonical form per HTTP convention.
-	MobileLanguageHeader = "X-Learning-Language"
-
-	// ActiveLanguageQueryParam is the query-string fallback. mobile-bff
-	// translates MobileLanguageHeader to this when proxying to downstream
-	// services that don't propagate headers.
+	// ActiveLanguageQueryParam is the canonical query-string parameter
+	// that carries the active learning language across cross-service
+	// HTTP hops. Stamped by sharedhttputil.ApplyActiveLanguageQuery on
+	// every internal outbound call.
 	ActiveLanguageQueryParam = "learning_language_code"
 
 	// JWTClaimKey is the standard claim name set by kielo-auth-service
@@ -48,10 +37,8 @@ type ActiveLanguageExtractor func(c echo.Context) string
 
 // DefaultExtractor resolves in priority order:
 //
-//  1. X-Kielo-Learning-Language header (kielo-canonical)
-//  2. X-Learning-Language header (mobile app contract via mobile-bff)
-//  3. ?learning_language_code query parameter
-//  4. echo.Context.Get(JWTClaimKey) (set by an upstream JWT middleware)
+//  1. ?learning_language_code query parameter (canonical cross-service)
+//  2. echo.Context.Get(JWTClaimKey) (set by an upstream JWT middleware)
 //
 // Bad values (failing db.ValidateLanguageIdent) are dropped silently;
 // the chain continues. The middleware itself never short-circuits the
@@ -59,13 +46,6 @@ type ActiveLanguageExtractor func(c echo.Context) string
 // which case repository code returns ErrNoActiveLanguage when it tries
 // to open a per-language transaction.
 func DefaultExtractor(c echo.Context) string {
-	for _, header := range []string{ActiveLanguageHeader, MobileLanguageHeader} {
-		if v := strings.TrimSpace(c.Request().Header.Get(header)); v != "" {
-			if lang := locale.NormalizeSupportedLearningLanguageCode(v); lang != "" {
-				return lang
-			}
-		}
-	}
 	if v := strings.TrimSpace(c.QueryParam(ActiveLanguageQueryParam)); v != "" {
 		if lang := locale.NormalizeSupportedLearningLanguageCode(v); lang != "" {
 			return lang
