@@ -147,6 +147,59 @@ func DecodeUpstreamResponse(resp *http.Response, into any, service, method, url 
 	return nil
 }
 
+// DecodeUpstreamEnvelope is the v3-aware sibling of DecodeUpstreamResponse.
+// It expects success responses to carry the canonical ADR-004 §4 / ADR-006 §5
+// `{"data": …}` envelope (emitted by every v3 group via
+// SingletonEnvelopeWrapper) and decodes the `data` payload into `into`.
+//
+// Use this for inter-service calls that target a `/api/v3/...` endpoint
+// on a peer that mounts MountV3Defaults. Internal routes (`/internal/...`)
+// emit raw bodies and should keep using DecodeUpstreamResponse.
+//
+// Error handling matches DecodeUpstreamResponse — non-OK responses become
+// *UpstreamError with the raw body preserved (the peer's error envelope is
+// passed through verbatim, never re-wrapped).
+func DecodeUpstreamEnvelope(resp *http.Response, into any, service, method, url string, okCodes ...int) error {
+	defer resp.Body.Close()
+
+	if len(okCodes) == 0 {
+		okCodes = []int{http.StatusOK, http.StatusCreated, http.StatusNoContent}
+	}
+	ok := false
+	for _, code := range okCodes {
+		if resp.StatusCode == code {
+			ok = true
+			break
+		}
+	}
+	if !ok {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+		return &UpstreamError{
+			StatusCode: resp.StatusCode,
+			Body:       strings.TrimSpace(string(body)),
+			Service:    service,
+			Method:     method,
+			URL:        url,
+		}
+	}
+	if into == nil || resp.StatusCode == http.StatusNoContent {
+		return nil
+	}
+	var envelope struct {
+		Data json.RawMessage `json:"data"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&envelope); err != nil {
+		return fmt.Errorf("decode %s envelope: %w", service, err)
+	}
+	if len(envelope.Data) == 0 {
+		return fmt.Errorf("decode %s envelope: missing data field", service)
+	}
+	if err := json.Unmarshal(envelope.Data, into); err != nil {
+		return fmt.Errorf("decode %s envelope payload: %w", service, err)
+	}
+	return nil
+}
+
 // EchoErrorFromUpstream maps a peer-call error to an *echo.HTTPError
 // that preserves the upstream contract:
 //
