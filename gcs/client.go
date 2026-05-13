@@ -217,7 +217,12 @@ func (c *Client) UploadBlob(ctx context.Context, sourceFile, bucketName, objectN
 
 	if _, err = io.Copy(wc, f); err != nil {
 		l.Error("Failed to copy source file to GCS writer", "error", err)
-		_ = wc.CloseWithError(err) //nolint:staticcheck
+		// Per GCS SDK deprecation of Writer.CloseWithError, the canonical
+		// way to abort an in-flight upload is to cancel the context
+		// passed to NewWriter. The deferred cancel() above (from
+		// context.WithTimeout) handles the cleanup on the writer's
+		// background goroutine.
+		cancel()
 		return fmt.Errorf("io.Copy to GCS writer for %s: %w", objectName, err)
 	}
 
