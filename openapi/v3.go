@@ -69,6 +69,7 @@ type routeEntry struct {
 	requestBody     any   // value of struct type (zero); nil if no body
 	responseBody    any   // zero value of response struct
 	untypedResponse bool  // true if route returns JSON but the schema is upstream-owned
+	binaryResponse  bool  // true if route streams binary (application/octet-stream)
 	errorCodes      []int // additional non-2xx HTTP codes documented
 }
 
@@ -151,6 +152,16 @@ type Route struct {
 	// would be churn or duplication.
 	UntypedResponse bool
 
+	// BinaryResponse marks routes that stream binary bodies (file
+	// downloads, video streams, audio TTS). When true (and Response is
+	// nil), the spec emits "200: application/octet-stream" with
+	// `schema: {type: string, format: binary}` so @hey-api/openapi-ts
+	// generates a SDK fn that returns a Blob/ArrayBuffer instead of
+	// trying to JSON.parse the body. Prefer this over UntypedResponse
+	// for endpoints that c.Stream() or http.ServeContent() so the
+	// generated client doesn't crash on non-JSON bytes.
+	BinaryResponse bool
+
 	// ErrorCodes are HTTP codes (besides 200/201/204 implied by the
 	// method) that the handler can return. The canonical error envelope
 	// is auto-documented for each.
@@ -225,6 +236,7 @@ func (w *Wrapper) register(method, path string, h echo.HandlerFunc, route Route,
 		requestBody:     route.RequestBody,
 		responseBody:    route.Response,
 		untypedResponse: route.UntypedResponse,
+		binaryResponse:  route.BinaryResponse,
 		errorCodes:      route.ErrorCodes,
 	})
 	return er
@@ -372,6 +384,20 @@ func (r *Registry) operationDoc(rt routeEntry) map[string]any {
 			"content": map[string]any{
 				"application/json": map[string]any{
 					"schema": map[string]any{"$ref": schemaRef(rt.responseBody)},
+				},
+			},
+		}
+	case rt.binaryResponse:
+		// Streaming binary route (file download, video stream, audio TTS).
+		// @hey-api/openapi-ts emits a `Blob` response type for
+		// `application/octet-stream` + `format: binary`, so the
+		// generated SDK fn returns a Blob the caller can hand to
+		// URL.createObjectURL or pipe to FileSaver.
+		resp["200"] = map[string]any{
+			"description": "Binary stream",
+			"content": map[string]any{
+				"application/octet-stream": map[string]any{
+					"schema": map[string]any{"type": "string", "format": "binary"},
 				},
 			},
 		}
