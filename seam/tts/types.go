@@ -69,13 +69,13 @@ type Result struct {
 type ErrorClass string
 
 const (
-	ErrorClassUnknown      ErrorClass = "unknown"
-	ErrorClassTimeout      ErrorClass = "timeout"
-	ErrorClassConnection   ErrorClass = "connection"
-	ErrorClassClientError  ErrorClass = "http_4xx"
-	ErrorClassServerError  ErrorClass = "http_5xx"
-	ErrorClassReadBody     ErrorClass = "read_body"
-	ErrorClassMarshal      ErrorClass = "marshal"
+	ErrorClassUnknown       ErrorClass = "unknown"
+	ErrorClassTimeout       ErrorClass = "timeout"
+	ErrorClassConnection    ErrorClass = "connection"
+	ErrorClassClientError   ErrorClass = "http_4xx"
+	ErrorClassServerError   ErrorClass = "http_5xx"
+	ErrorClassReadBody      ErrorClass = "read_body"
+	ErrorClassMarshal       ErrorClass = "marshal"
 	ErrorClassEmptyResponse ErrorClass = "empty_response"
 )
 

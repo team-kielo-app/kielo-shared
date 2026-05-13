@@ -61,12 +61,12 @@ var PubSubPublishLatencySeconds = promauto.NewHistogramVec(
 //     subscriber).
 //   - topic: source topic.
 //   - outcome: "ack" | "nack" | "deadletter" | "drop"
-//     - ack: consumer accepted, ack-ed normally.
-//     - nack: consumer rejected, will be redelivered (transient error).
-//     - deadletter: redelivery exhausted, message routed to DLQ.
-//     - drop: consumer accepted (HTTP 2xx) but intentionally discarded —
-//       e.g. the Phase X behavioral-event handler that drops
-//       missing-language events with a 204+log to avoid loop.
+//   - ack: consumer accepted, ack-ed normally.
+//   - nack: consumer rejected, will be redelivered (transient error).
+//   - deadletter: redelivery exhausted, message routed to DLQ.
+//   - drop: consumer accepted (HTTP 2xx) but intentionally discarded —
+//     e.g. the Phase X behavioral-event handler that drops
+//     missing-language events with a 204+log to avoid loop.
 var PubSubAckTotal = promauto.NewCounterVec(
 	prometheus.CounterOpts{
 		Name: "kielo_pubsub_ack_total",
