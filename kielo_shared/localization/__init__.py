@@ -56,6 +56,20 @@ from kielo_shared.localization.routing import (
     VietnameseFastPathDecorator,
     VietnameseLookup,
 )
+from kielo_shared.localization.seam import (
+    Cache,
+    CountingMetrics,
+    MapOverrideStore,
+    Metrics,
+    NoopCache,
+    NoopMetrics,
+    NoopOverrideStore,
+    OverrideStore,
+    Seam,
+    SeamConfig,
+    SourceRef,
+    source_version_from_text,
+)
 from kielo_shared.localization.types import (
     TranslationItem,
     TranslationResult,
@@ -63,17 +77,28 @@ from kielo_shared.localization.types import (
 )
 
 __all__ = [
+    "Cache",
     "CircuitBreaker",
     "CorrelationDecorator",
+    "CountingMetrics",
     "FallbackDecorator",
     "GeminiProvider",
     "LocalizationProvider",
     "LocalizationRegistry",
+    "MapOverrideStore",
+    "Metrics",
     "MetricsDecorator",
+    "NoopCache",
+    "NoopMetrics",
+    "NoopOverrideStore",
     "OpenAIProvider",
+    "OverrideStore",
     "RedisAsyncClient",
     "RedisCacheDecorator",
     "RoutingDecorator",
+    "Seam",
+    "SeamConfig",
+    "SourceRef",
     "TIER_A_LOCALE",
     "TranslationItem",
     "TranslationResult",
@@ -84,4 +109,5 @@ __all__ = [
     "build_registry_from_env",
     "get_default_registry",
     "reset_default_registry",
+    "source_version_from_text",
 ]
