@@ -501,7 +501,15 @@ func structSchema(t reflect.Type, r *Registry) any {
 			}
 		}
 		props[name] = schema
-		if !contains(opts, "omitempty") {
+		// Pointer fields are nullable AND not required: a nil pointer
+		// marshals as JSON `null`, and callers don't have to send the
+		// field at all (the Go side decodes a missing field as nil).
+		// Without this, `*string` fields without `omitempty` were
+		// emitted as required string, which forced TS consumers to
+		// invent placeholder values for fields the server treats as
+		// optional (e.g. ConvoCreateVoiceAgentRequest.gender).
+		isPointer := f.Type.Kind() == reflect.Ptr
+		if !contains(opts, "omitempty") && !isPointer {
 			required = append(required, name)
 		}
 	}
@@ -520,6 +528,16 @@ func fieldSchema(t reflect.Type, r *Registry) any {
 	for t.Kind() == reflect.Ptr {
 		t = t.Elem()
 	}
+	// Special-case well-known stdlib + ecosystem types BEFORE the generic
+	// Kind switch. Without this, reflect sees their underlying
+	// representation (e.g. uuid.UUID == [16]byte → array<int>;
+	// time.Time == struct{} with unexported fields → empty object) which
+	// completely disagrees with their JSON wire format. Every UUID/
+	// timestamp field in /api/v3 was previously mistyped, forcing every
+	// TS consumer to defensively cast around the broken contract.
+	if s := wireSchemaForNamedType(t); s != nil {
+		return s
+	}
 	switch t.Kind() {
 	case reflect.String:
 		return map[string]any{"type": "string"}
@@ -533,7 +551,22 @@ func fieldSchema(t reflect.Type, r *Registry) any {
 	case reflect.Slice, reflect.Array:
 		return map[string]any{"type": "array", "items": fieldSchema(t.Elem(), r)}
 	case reflect.Map:
+		// For `map[string]<X>` with concrete X, emit additionalProperties
+		// as the X-schema. For `map[string]any` / `map[string]interface{}`,
+		// emit a free-form additionalProperties so consumers see the value
+		// as the JSON "any-value" type (Record<string, unknown>) rather
+		// than getting an extra Record<string, Record<string, unknown>>
+		// nesting from the default Interface handler.
+		if t.Elem().Kind() == reflect.Interface {
+			return map[string]any{"type": "object", "additionalProperties": true}
+		}
 		return map[string]any{"type": "object", "additionalProperties": fieldSchema(t.Elem(), r)}
+	case reflect.Interface:
+		// Interface{} field — caller wants "any JSON value" at this slot.
+		// Empty schema is the OAS-canonical way to say "no constraint";
+		// hey-api emits `unknown` for that, which is exactly what the
+		// caller of a map[string]any / any field needs.
+		return map[string]any{}
 	case reflect.Struct:
 		// Register a sub-schema and reference it.
 		if t.Name() != "" {
@@ -547,6 +580,45 @@ func fieldSchema(t reflect.Type, r *Registry) any {
 	default:
 		return map[string]any{"type": "object"}
 	}
+}
+
+// wireSchemaForNamedType maps Go types whose JSON wire format does NOT
+// match their reflected structure to the correct OpenAPI schema.
+//
+// Add a new entry here when a Go type:
+//   - implements a custom MarshalJSON that emits a primitive (string,
+//     number, ...) while its reflected Kind is Struct/Array/Map, OR
+//   - is a struct with no exported fields but a meaningful wire format
+//     (e.g. time.Time renders to RFC 3339 via MarshalJSON, not "{}").
+//
+// Returns nil when the type does not need special handling — the caller
+// then falls through to the generic Kind switch.
+func wireSchemaForNamedType(t reflect.Type) map[string]any {
+	// reflect.Type identity check via PkgPath + Name. t.String() collapses
+	// to the same value for vendored copies, which is what we want.
+	pkg := t.PkgPath()
+	name := t.Name()
+	if pkg == "" || name == "" {
+		return nil
+	}
+	key := pkg + "." + name
+	switch key {
+	// Canonical UUIDs serialize as quoted strings via uuid.UUID.MarshalJSON
+	// even though they're backed by [16]byte.
+	case "github.com/google/uuid.UUID":
+		return map[string]any{"type": "string", "format": "uuid"}
+	// time.Time.MarshalJSON emits RFC 3339; the struct has only unexported
+	// fields so the default reflection renders {}.
+	case "time.Time":
+		return map[string]any{"type": "string", "format": "date-time"}
+	// json.RawMessage is []byte but MarshalJSON passes through arbitrary
+	// JSON. The most accurate spec is "any JSON value"; per OpenAPI 3.1
+	// that's an empty schema. Use a minimal `{}` so codegen produces an
+	// `unknown` (TS) / `any` (Go) rather than `Array<number>`.
+	case "encoding/json.RawMessage":
+		return map[string]any{}
+	}
+	return nil
 }
 
 // applyKieloTag parses the `kielo:"..."` struct tag and merges its

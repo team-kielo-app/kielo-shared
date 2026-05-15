@@ -9,7 +9,12 @@ import ssl
 from typing import Any, Callable, Union
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
-from sqlalchemy import event
+# sqlalchemy is imported lazily inside register_search_path_listener and
+# register_asyncpg_disconnect_handler. The bulk of this module (the URL
+# helpers + the per-request active-language contextvar accessors) has no
+# DB dependency, so services that only want `get_active_language()`
+# (e.g. kielotv-studio-toolbox, which imports it transitively through
+# kielo_shared.httpx_hooks) no longer need to install sqlalchemy.
 
 from kielo_shared.locale_constants import SUPPORTED_LEARNING_LANGUAGES
 
@@ -379,6 +384,8 @@ def register_search_path_listener(
     :func:`sqlalchemy.ext.asyncio.create_async_engine` or
     :func:`sqlalchemy.create_engine`.
     """
+    from sqlalchemy import event  # lazy: keep db_utils import sqlalchemy-free
+
     is_callable = callable(search_path)
     static_normalized: str | None = None
     if not is_callable:
@@ -456,6 +463,8 @@ def register_asyncpg_disconnect_handler(engine: Any) -> None:
 
     Call once per async engine, after :func:`create_async_engine`.
     """
+    from sqlalchemy import event  # lazy: keep db_utils import sqlalchemy-free
+
     try:
         import asyncpg
     except ImportError:
