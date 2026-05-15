@@ -14,6 +14,35 @@ type CursorPage[T any] struct {
 	NextPageKey string `json:"next_page_key,omitempty"`
 }
 
+// NewCursorPage builds a CursorPage[T] from a slice and a possibly-nil
+// next-page cursor. It exists so that handlers translating legacy
+// `{<thing>, next_page_key *string}` paginated bodies into the canonical
+// `{items, next_page_key string}` envelope share ONE adapter — instead
+// of each handler hand-rolling the nil-check + nil-slice defense.
+//
+// The nil-slice defense matters: encoding/json renders `nil` slices as
+// `null`, which JS clients then choke on when they call `.map`. We
+// normalize to an empty array so the canonical wire shape is
+// `{"items": [], ...}` regardless of upstream nil-ness.
+//
+// Usage:
+//
+//	resp := h.service.FindArticles(ctx, opts)  // *PaginatedArticleVersionsResponse
+//	return c.JSON(http.StatusOK, pagination.NewCursorPage(resp.Articles, resp.NextPageKey))
+func NewCursorPage[T any](items []T, nextPageKey *string) CursorPage[T] {
+	if items == nil {
+		items = []T{}
+	}
+	key := ""
+	if nextPageKey != nil {
+		key = *nextPageKey
+	}
+	return CursorPage[T]{
+		Items:       items,
+		NextPageKey: key,
+	}
+}
+
 // EncodeOffsetCursor returns an opaque b64 cursor encoding an integer offset.
 // Use for offset-based stable iteration when the underlying query is offset-driven.
 // Returns an empty string when offset <= 0 (no further pages / at start).

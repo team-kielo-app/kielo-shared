@@ -69,3 +69,36 @@ func TestCursorPage_JSONShape_OmitsEmptyKey(t *testing.T) {
 	require.NoError(t, err)
 	assert.JSONEq(t, `{"items":["a"]}`, string(b))
 }
+
+func TestNewCursorPage_NormalizesNilSlice(t *testing.T) {
+	// Handlers commonly hand us a nil `[]Article` when the upstream
+	// query returned no rows. `null` would crash JS clients on `.map`;
+	// the helper must emit `"items": []`.
+	page := NewCursorPage[string](nil, nil)
+	b, err := json.Marshal(page)
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"items":[]}`, string(b))
+}
+
+func TestNewCursorPage_NilNextPageKey(t *testing.T) {
+	page := NewCursorPage([]string{"a"}, nil)
+	assert.Equal(t, "", page.NextPageKey)
+}
+
+func TestNewCursorPage_NonNilNextPageKey(t *testing.T) {
+	key := "cursor-abc"
+	page := NewCursorPage([]string{"a"}, &key)
+	assert.Equal(t, "cursor-abc", page.NextPageKey)
+}
+
+func TestNewCursorPage_EmptyStringNextPageKey(t *testing.T) {
+	// Some upstreams hand back `*string{""}` instead of `nil` to mean
+	// "no more pages". The helper preserves that as-is — the field's
+	// `omitempty` tag is what strips it on the wire.
+	empty := ""
+	page := NewCursorPage([]string{"a"}, &empty)
+	assert.Equal(t, "", page.NextPageKey)
+	b, err := json.Marshal(page)
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"items":["a"]}`, string(b))
+}
