@@ -166,7 +166,7 @@ func (r *MapRegistry) ResolveTemplate(ctx context.Context, key Key, supportLocal
 	if !strings.Contains(text, "{{") {
 		return text
 	}
-	return applyTemplate(text, params)
+	return ApplyTemplate(text, params)
 }
 
 // SupportedLocales implements Registry.

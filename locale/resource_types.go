@@ -43,6 +43,12 @@ const (
 	ResourceTypeNotificationsBody  = "notifications.body"
 	ResourceTypeEmailSubject       = "email.subject"
 	ResourceTypeEmailBody          = "email.body"
+
+	// UI strings resolved through the supportregistry seam
+	// (kielo-shared/locale/supportregistry) — ADR-008 Phase 5.
+	// resource_id is the supportregistry.Key string verbatim; source_version
+	// is sha256(english_seed)[:16] computed at registry-build time.
+	ResourceTypeUIString = "ui_string"
 )
 
 // allResourceTypes is the authoritative set of valid resource_type
@@ -67,6 +73,7 @@ var allResourceTypes = map[string]struct{}{
 	ResourceTypeNotificationsBody:         {},
 	ResourceTypeEmailSubject:              {},
 	ResourceTypeEmailBody:                 {},
+	ResourceTypeUIString:                  {},
 }
 
 // IsValidResourceType returns true if rt is a recognized resource_type.

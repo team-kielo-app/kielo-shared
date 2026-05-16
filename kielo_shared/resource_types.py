@@ -48,6 +48,12 @@ NOTIFICATIONS_BODY = "notifications.body"
 EMAIL_SUBJECT = "email.subject"
 EMAIL_BODY = "email.body"
 
+# UI strings resolved through the supportregistry seam — ADR-008 Phase 5.
+# resource_id is the supportregistry key string verbatim;
+# source_version is sha256(english_seed)[:16] computed at
+# registry-build time.
+UI_STRING = "ui_string"
+
 # Authoritative set used by `is_valid_resource_type`. Update when
 # constants above change.
 ALL_RESOURCE_TYPES: FrozenSet[str] = frozenset(
@@ -71,6 +77,7 @@ ALL_RESOURCE_TYPES: FrozenSet[str] = frozenset(
         NOTIFICATIONS_BODY,
         EMAIL_SUBJECT,
         EMAIL_BODY,
+        UI_STRING,
     }
 )
 
