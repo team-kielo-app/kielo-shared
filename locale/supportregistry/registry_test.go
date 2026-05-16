@@ -142,3 +142,40 @@ func TestMapRegistry_ResolveSafeWithoutRegistration(t *testing.T) {
 	got := r.Resolve(context.Background(), "ui.anything", "vi")
 	assert.Equal(t, "ui.anything", got)
 }
+
+func TestMaterializeByLocale_ReturnsAllSupportedLocales(t *testing.T) {
+	r := New([]string{"en", "vi", "fi"})
+	r.Set("ui.subject.welcome", "en", "Welcome!")
+	r.Set("ui.subject.welcome", "vi", "Chào mừng!")
+	r.Set("ui.subject.welcome", "fi", "Tervetuloa!")
+
+	got := MaterializeByLocale(r, "ui.subject.welcome")
+	assert.Equal(t, map[string]string{
+		"en": "Welcome!",
+		"vi": "Chào mừng!",
+		"fi": "Tervetuloa!",
+	}, got)
+}
+
+func TestMaterializeByLocale_FillsMissingLocalesWithEnglishFallback(t *testing.T) {
+	r := New([]string{"en", "vi", "fi"})
+	r.Set("ui.subject.welcome", "en", "Welcome!")
+	r.Set("ui.subject.welcome", "vi", "Chào mừng!")
+	// fi intentionally not seeded.
+
+	got := MaterializeByLocale(r, "ui.subject.welcome")
+	assert.Equal(t, "Welcome!", got["fi"], "missing fi falls back to English")
+	assert.Equal(t, "Chào mừng!", got["vi"])
+	assert.Equal(t, "Welcome!", got["en"])
+}
+
+func TestMaterializeByLocale_OmitsCompletelyMissingKey(t *testing.T) {
+	r := New([]string{"en", "vi"})
+	// Don't register the key at all.
+	got := MaterializeByLocale(r, "ui.subject.does_not_exist")
+	// Contract: when even English is missing, the map is empty rather
+	// than carrying "ui.subject.does_not_exist" as each locale's text.
+	// A downstream consumer that has its own English fallback handles
+	// this cleanly; storing the literal key would be a UX bug.
+	assert.Empty(t, got)
+}

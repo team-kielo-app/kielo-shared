@@ -205,3 +205,31 @@ func (r *MapRegistry) CoverageReport() map[string]CoverageStats {
 func normalize(locale string) string {
 	return strings.ToLower(strings.TrimSpace(locale))
 }
+
+// MaterializeByLocale returns a {locale → text} map for a single
+// Registry key across every supported locale. Useful when a caller
+// must hand a map[locale]string to a downstream API that doesn't
+// itself talk to the Registry (the kielo-communications-service
+// emailer's EmailOptions.SubjectByLocale is the motivating case).
+//
+// Locales that don't have a seed for the key fall back to the English
+// seed in the returned map — so the caller gets a fully-populated
+// per-locale map regardless of seed coverage gaps. If even English is
+// missing the locale entry is omitted from the result rather than
+// stored with the key string verbatim.
+//
+// This is a static-snapshot view; calling MaterializeByLocale once at
+// service startup is the expected pattern, NOT per-request.
+func MaterializeByLocale(r Registry, key Key) map[string]string {
+	out := make(map[string]string, len(r.SupportedLocales()))
+	for _, locale := range r.SupportedLocales() {
+		got := r.Resolve(context.Background(), key, locale)
+		if got == string(key) {
+			// Registry returned key verbatim → no seed at all (not
+			// even English). Skip rather than emit "ui.x.y" as text.
+			continue
+		}
+		out[locale] = got
+	}
+	return out
+}
