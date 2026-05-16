@@ -52,7 +52,7 @@ EMAIL_BODY = "email.body"
 # resource_id is the supportregistry key string verbatim;
 # source_version is sha256(english_seed)[:16] computed at
 # registry-build time.
-UI_STRING = "ui_string"
+UI_STRING = "ui.string"
 
 # Authoritative set used by `is_valid_resource_type`. Update when
 # constants above change.

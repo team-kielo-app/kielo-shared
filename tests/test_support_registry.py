@@ -169,3 +169,38 @@ def test_materialize_by_locale_omits_missing_key():
     # Contract: when even English is missing, the map is empty rather
     # than carrying "ui.subject.does_not_exist" as each locale's text.
     assert got == {}
+
+
+# ---------------------------------------------------------------------------
+# Async surface (ADR-008 Phase 5)
+# ---------------------------------------------------------------------------
+#
+# MapRegistry's aresolve / aresolve_template are thin shims over the sync
+# path. They exist so the Protocol surface is uniform across MapRegistry
+# and DynamicRegistry (which uses the async path for the DB probe). These
+# tests pin the contract that aresolve produces the same output as resolve
+# for every input — if a future refactor breaks parity, callers that
+# `await registry.aresolve(...)` would silently see different values than
+# callers that call `registry.resolve(...)` against the same MapRegistry.
+
+
+@pytest.mark.asyncio
+async def test_aresolve_parity_with_resolve():
+    r = _new("en", "vi", "fi")
+    r.set("ui.greeting", "en", "Hello")
+    r.set("ui.greeting", "vi", "Xin chào")
+
+    assert await r.aresolve("ui.greeting", "vi") == r.resolve("ui.greeting", "vi")
+    assert await r.aresolve("ui.greeting", "fi") == r.resolve("ui.greeting", "fi")
+    assert await r.aresolve("ui.unknown", "vi") == r.resolve("ui.unknown", "vi")
+
+
+@pytest.mark.asyncio
+async def test_aresolve_template_parity_with_resolve_template():
+    r = _new("en", "vi")
+    r.set("ui.welcome", "en", "Welcome {name}")
+    r.set("ui.welcome", "vi", "Chào {name}")
+
+    sync_text = r.resolve_template("ui.welcome", "vi", name="Khanh")
+    async_text = await r.aresolve_template("ui.welcome", "vi", name="Khanh")
+    assert sync_text == async_text == "Chào Khanh"

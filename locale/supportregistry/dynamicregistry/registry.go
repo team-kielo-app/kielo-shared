@@ -6,7 +6,7 @@
 // Phase 5 section. Two-line summary:
 //
 //   - Every Resolve probes the override layer first (Redis cache → DB).
-//     If a row exists for (resource_type='ui_string', resource_id=key,
+//     If a row exists for (resource_type='ui.string', resource_id=key,
 //     source_version=sha256(en_seed)[:16], language_code=requested),
 //     that value wins. Otherwise the seed's Resolve is returned.
 //   - Degrade-to-seed on every error path. The seed Registry is the
@@ -175,7 +175,7 @@ func WithResourceType(rt string) Option {
 //  1. Compute source_version from the seed's English value for this key.
 //     If the seed has no English seed at all, skip the override layer
 //     entirely (registry returns string(key) anyway; no point probing
-//     a "ui_string"-row for a non-existent key).
+//     a "ui.string"-row for a non-existent key).
 //  2. Cache: Get(cacheKey). Positive hit → return. Negative cache hit
 //     → skip DB, fall through to seed.
 //  3. DB probe: same SQL as overridepgx.Store.Lookup. On hit, cache +
@@ -185,7 +185,8 @@ func (r *Registry) Resolve(ctx context.Context, key supportregistry.Key, support
 	sv, sourceText, hasSourceVersion := r.sourceVersionFor(ctx, key)
 	if !hasSourceVersion {
 		// Seed has no English seed for this key — overrides can't
-		// exist for a key that doesn't exist. Skip the override layer.
+		// exist for a "ui.string" row for a non-existent key. Skip
+		// the override layer.
 		return r.seed.Resolve(ctx, key, supportLocale)
 	}
 

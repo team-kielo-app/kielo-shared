@@ -16,7 +16,7 @@ See docs/architecture/adr-008-support-locale-adapter.md for the full
 design rationale. The Go and Python APIs are intentionally parallel so
 the same key naming convention works on both sides (and future
 DynamicRegistry implementations can share the resource_type
-``ui_string`` taxonomy in dynamic_translations).
+``ui.string`` taxonomy in dynamic_translations).
 
 Two-line summary:
 
@@ -83,11 +83,35 @@ class SupportRegistry(Protocol):
       3. ``resolve_template`` applies str.format-style substitution after
          resolve. Templates that fail to format return the literal
          resolved string (best-effort degrade).
+
+    Async paths (Phase 5 DynamicRegistry):
+
+      4. ``aresolve`` is the async counterpart. For pure in-memory
+         implementations (MapRegistry) it just calls ``resolve``. For
+         DB-backed implementations (DynamicRegistry) it awaits the
+         override probe + falls back to the seed on miss. Callers in
+         async contexts should prefer ``aresolve`` over ``resolve``
+         when an override-capable registry might be wired.
+      5. ``aresolve_template`` is the async counterpart of
+         ``resolve_template``. Same template-handling contract.
+
+    The async surface is additive — every SupportRegistry MUST
+    implement both sync and async methods. Pure in-memory
+    implementations can trivially make ``aresolve`` an ``async def``
+    that just returns ``self.resolve(...)``; the small overhead is
+    acceptable because in-memory registries are usually wrapped by
+    a DynamicRegistry in production paths.
     """
 
     def resolve(self, key: str, support_locale: str) -> str: ...
 
     def resolve_template(
+        self, key: str, support_locale: str, /, **params: object
+    ) -> str: ...
+
+    async def aresolve(self, key: str, support_locale: str) -> str: ...
+
+    async def aresolve_template(
         self, key: str, support_locale: str, /, **params: object
     ) -> str: ...
 
@@ -190,6 +214,25 @@ class MapRegistry:
                 key, support_locale, exc,
             )
             return text
+
+    async def aresolve(self, key: str, support_locale: str) -> str:
+        """Async counterpart of ``resolve``. For MapRegistry this is a
+        thin shim that just calls the sync path — there's nothing to
+        await on a pure in-memory dict lookup.
+
+        Exists so MapRegistry satisfies the SupportRegistry Protocol's
+        full surface, which DynamicRegistry uses as its contract. Any
+        async caller that holds a generic ``SupportRegistry`` reference
+        can await ``aresolve`` regardless of whether the concrete
+        instance is MapRegistry or DynamicRegistry."""
+        return self.resolve(key, support_locale)
+
+    async def aresolve_template(
+        self, key: str, support_locale: str, /, **params: object
+    ) -> str:
+        """Async counterpart of ``resolve_template``. Same rationale
+        as ``aresolve`` — thin shim over the sync path."""
+        return self.resolve_template(key, support_locale, **params)
 
     def supported_locales(self) -> list[str]:
         return list(self._supported)

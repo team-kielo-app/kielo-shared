@@ -48,7 +48,7 @@ const (
 	// (kielo-shared/locale/supportregistry) — ADR-008 Phase 5.
 	// resource_id is the supportregistry.Key string verbatim; source_version
 	// is sha256(english_seed)[:16] computed at registry-build time.
-	ResourceTypeUIString = "ui_string"
+	ResourceTypeUIString = "ui.string"
 )
 
 // allResourceTypes is the authoritative set of valid resource_type
