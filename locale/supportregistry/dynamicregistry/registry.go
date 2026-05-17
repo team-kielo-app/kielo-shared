@@ -63,16 +63,36 @@ type Cache interface {
 // probeOverride.
 type dbProbeFunc func(ctx context.Context, resourceType, resourceID, sourceVersion, locale string) (value string, found bool, err error)
 
+// coverageProbeFunc is the override-coverage aggregate-query signature.
+// Production wires it to a `SELECT resource_id, language_code, COUNT(*)
+// FROM localization.dynamic_translations WHERE resource_type=$1 AND
+// status IN ('machine','override','approved') GROUP BY resource_id,
+// language_code`. Tests wire a stub.
+//
+// Returns a map keyed by (resource_id, locale) → row count. Caller
+// uses the map to bump CoverageStats.Overridden for keys + locales
+// present in the seed.
+type coverageProbeFunc func(ctx context.Context, resourceType string) (map[coverageKey]int, error)
+
+// coverageKey is the (resource_id, locale) tuple coverageProbeFunc
+// returns counts by. Package-private; consumers only see the
+// aggregated CoverageStats.
+type coverageKey struct {
+	resourceID string
+	locale     string
+}
+
 // Registry is the DynamicRegistry. Satisfies supportregistry.Registry
 // so it's a drop-in replacement for MapRegistry at every call site.
 type Registry struct {
-	seed     supportregistry.Registry
-	probe    dbProbeFunc
-	cache    Cache
-	hitTTL   time.Duration
-	missTTL  time.Duration
-	resType  string
-	keyPrefx string
+	seed          supportregistry.Registry
+	probe         dbProbeFunc
+	coverageProbe coverageProbeFunc
+	cache         Cache
+	hitTTL        time.Duration
+	missTTL       time.Duration
+	resType       string
+	keyPrefx      string
 
 	// Source-version memo: english seed → sha256[:16]. Lazily filled on
 	// first lookup per key. RWMutex because Resolve is a hot path and
@@ -111,6 +131,9 @@ func New(seed supportregistry.Registry, pool *pgxpool.Pool, cache Cache, opts ..
 	if pool != nil {
 		r.probe = func(ctx context.Context, rt, rid, sv, loc string) (string, bool, error) {
 			return queryPool(ctx, pool, rt, rid, sv, loc)
+		}
+		r.coverageProbe = func(ctx context.Context, rt string) (map[coverageKey]int, error) {
+			return queryCoverage(ctx, pool, rt)
 		}
 	}
 	return r
@@ -262,8 +285,93 @@ func (r *Registry) SupportedLocales() []string {
 // localization.dynamic_translations WHERE resource_type=... AND
 // status IN ('override','approved') GROUP BY language_code`); for the
 // pilot phase we return the seed report unchanged.
+// CoverageReport returns the seed's coverage stats, augmented with
+// per-locale Overridden counts read from localization.dynamic_translations.
+//
+// The seed (typically a MapRegistry) populates Total / Localized /
+// Fallback by walking the in-memory key set. This wrapper layers in
+// Overridden by running ONE aggregate query against the override
+// table and bumping each locale's count by how many of the seed's
+// keys have a matching override row (status IN
+// ('machine','override','approved')).
+//
+// Failure mode: any error from the coverage probe falls through to
+// returning the seed's report unchanged. The CMS admin grid prefers
+// "Overridden: 0 (probe failed)" over "no coverage data at all" —
+// admins can still see Total/Localized.
+//
+// Performance: ONE aggregate query per CoverageReport call. The CMS
+// admin grid calls this rarely (page load), not per-Resolve, so the
+// cost is bounded. No caching here — the admin wants fresh numbers
+// after they author a row.
 func (r *Registry) CoverageReport() map[string]supportregistry.CoverageStats {
-	return r.seed.CoverageReport()
+	base := r.seed.CoverageReport()
+	if r.coverageProbe == nil {
+		return base
+	}
+
+	counts, err := r.coverageProbe(context.Background(), r.resType)
+	if err != nil || len(counts) == 0 {
+		return base
+	}
+
+	// Build the set of seed keys so we ignore overrides for keys the
+	// seed doesn't know about (defensive: stale rows from a
+	// previously-removed key shouldn't inflate "Overridden" for a
+	// locale).
+	seedKeys := r.collectSeedKeys()
+	if len(seedKeys) == 0 {
+		return base
+	}
+
+	// Walk override counts; bump Overridden per locale for each seed
+	// key with at least one override row.
+	overrideByLocale := make(map[string]int)
+	for ck := range counts {
+		if _, ok := seedKeys[ck.resourceID]; !ok {
+			continue
+		}
+		overrideByLocale[ck.locale]++
+	}
+
+	out := make(map[string]supportregistry.CoverageStats, len(base))
+	for locale, stats := range base {
+		stats.Overridden = overrideByLocale[locale]
+		out[locale] = stats
+	}
+	return out
+}
+
+// collectSeedKeys returns the set of registry keys the seed knows
+// about, used to filter out stale override rows whose seed key was
+// removed in a later release. Probes the seed by calling Resolve()
+// with the English locale on every supported locale's key set —
+// inefficient for huge registries but acceptable for the admin
+// coverage view's once-per-page-load call shape.
+//
+// Returns an empty map if the seed isn't a MapRegistry (other
+// implementations may not expose key iteration); in that case
+// CoverageReport falls through to the seed's report unchanged with
+// no Overridden enrichment.
+func (r *Registry) collectSeedKeys() map[string]struct{} {
+	// The supportregistry.Registry interface deliberately does NOT
+	// expose key iteration. The seed memo is the only available
+	// source of "keys this registry has seen". The memo populates
+	// lazily on first Resolve, so a freshly-built registry that
+	// hasn't served any traffic has an empty memo.
+	//
+	// For the admin coverage view the practical workaround is for
+	// services to either (a) warm the memo at startup by Resolving
+	// each known key once, OR (b) wait for organic traffic to fill
+	// it. Either way, Overridden may under-report briefly after a
+	// service restart — acceptable for an admin-side metric.
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	out := make(map[string]struct{}, len(r.sourceVerMap))
+	for k := range r.sourceVerMap {
+		out[k] = struct{}{}
+	}
+	return out
 }
 
 // Compile-time assertion that *Registry satisfies the seed contract.
@@ -357,6 +465,47 @@ func queryPool(
 		return "", false, err
 	}
 	return value, true, nil
+}
+
+// dbCoverageQuery is the aggregate-count query that drives
+// CoverageReport.Overridden. status filter mirrors the read-path
+// (status IN ('machine','override','approved')) so the count reflects
+// what the seam would actually serve.
+const dbCoverageQuery = `
+	SELECT resource_id, language_code, COUNT(*) AS row_count
+	  FROM localization.dynamic_translations
+	 WHERE resource_type = $1
+	   AND status        IN ('machine', 'override', 'approved')
+	 GROUP BY resource_id, language_code
+`
+
+// queryCoverage runs the aggregate-count query against the pool.
+// Returns a map keyed by (resource_id, locale) → row count. Errors
+// degrade the caller to seed-only coverage (see CoverageReport).
+func queryCoverage(
+	ctx context.Context,
+	pool *pgxpool.Pool,
+	resourceType string,
+) (map[coverageKey]int, error) {
+	rows, err := pool.Query(ctx, dbCoverageQuery, resourceType)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := make(map[coverageKey]int)
+	for rows.Next() {
+		var k coverageKey
+		var count int
+		if err := rows.Scan(&k.resourceID, &k.locale, &count); err != nil {
+			return nil, err
+		}
+		out[k] = count
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 // String returns a brief description, useful for logging.

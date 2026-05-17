@@ -448,3 +448,119 @@ func TestRegistry_StringDescription(t *testing.T) {
 	assert.Contains(t, s, "no-pool")
 	assert.Contains(t, s, "no-cache")
 }
+
+// ============================================================================
+// CoverageReport.Overridden — DB-augmented per-locale counts
+// ============================================================================
+
+// stubCoverageProbe is a controllable coverageProbeFunc for tests.
+type stubCoverageProbe struct {
+	counts map[coverageKey]int
+	err    error
+	calls  int
+}
+
+func (s *stubCoverageProbe) probe(_ context.Context, _ string) (map[coverageKey]int, error) {
+	s.calls++
+	if s.err != nil {
+		return nil, s.err
+	}
+	return s.counts, nil
+}
+
+// warmKey forces a key into the source-version memo so collectSeedKeys
+// will see it. Real production paths warm via Resolve traffic; tests
+// short-circuit by calling sourceVersionFor directly. The returned
+// triple is intentionally ignored — this is a memo-warmer, not a
+// reader.
+func warmKey(r *Registry, key supportregistry.Key) {
+	//nolint:dogsled // memo-warmer; the triple is intentionally discarded
+	_, _, _ = r.sourceVersionFor(context.Background(), key)
+}
+
+func TestCoverageReport_NoProbeReturnsSeedReportUnchanged(t *testing.T) {
+	seed := buildSeed(t)
+	r := New(seed, nil, nil) // pool nil → no coverageProbe wired
+	got := r.CoverageReport()
+	want := seed.CoverageReport()
+	assert.Equal(t, want, got,
+		"CoverageReport without a coverageProbe must pass the seed's report through")
+}
+
+func TestCoverageReport_OverriddenCountsBumpPerLocale(t *testing.T) {
+	seed := buildSeed(t)
+	r := newWithProbe(seed, nil)
+	warmKey(r, "ui.greeting")
+	warmKey(r, "ui.farewell")
+
+	// Two override rows for vi, one for sv.
+	stub := &stubCoverageProbe{
+		counts: map[coverageKey]int{
+			{resourceID: "ui.greeting", locale: "vi"}: 1,
+			{resourceID: "ui.farewell", locale: "vi"}: 1,
+			{resourceID: "ui.greeting", locale: "sv"}: 1,
+		},
+	}
+	r.coverageProbe = stub.probe
+
+	got := r.CoverageReport()
+	require.Equal(t, 1, stub.calls, "exactly one aggregate query per CoverageReport call")
+	assert.Equal(t, 2, got["vi"].Overridden, "vi should have 2 overridden keys")
+	assert.Equal(t, 1, got["sv"].Overridden, "sv should have 1 overridden key")
+	// en stays at 0 — Overridden tracks per-locale rows, and the
+	// English seed IS the source-of-truth (no override possible).
+	assert.Equal(t, 0, got["en"].Overridden, "en is the canonical source; Overridden stays 0")
+}
+
+func TestCoverageReport_IgnoresOverrideRowsForKeysNotInSeed(t *testing.T) {
+	// Defensive: if a previous release had a key 'ui.deprecated' that
+	// was removed in this release, override rows in the DB for that
+	// key shouldn't inflate the per-locale Overridden count — those
+	// rows are stale and the seam won't serve them anyway.
+	seed := buildSeed(t)
+	r := newWithProbe(seed, nil)
+	warmKey(r, "ui.greeting")
+
+	stub := &stubCoverageProbe{
+		counts: map[coverageKey]int{
+			{resourceID: "ui.greeting", locale: "vi"}:   1, // in seed
+			{resourceID: "ui.deprecated", locale: "vi"}: 1, // NOT in seed → ignored
+		},
+	}
+	r.coverageProbe = stub.probe
+
+	got := r.CoverageReport()
+	assert.Equal(t, 1, got["vi"].Overridden,
+		"ui.deprecated has no seed entry; its override row must NOT count")
+}
+
+func TestCoverageReport_ProbeErrorDegradesToSeedReport(t *testing.T) {
+	seed := buildSeed(t)
+	r := newWithProbe(seed, nil)
+	warmKey(r, "ui.greeting")
+
+	stub := &stubCoverageProbe{err: errors.New("db down")}
+	r.coverageProbe = stub.probe
+
+	got := r.CoverageReport()
+	want := seed.CoverageReport()
+	assert.Equal(t, want, got,
+		"probe error must fall through to seed's report; admin still sees Total/Localized/Fallback")
+}
+
+func TestCoverageReport_EmptyCountsReturnsSeedReport(t *testing.T) {
+	// No override rows exist for this resource_type yet (fresh
+	// install, empty table). Should be the seed report unchanged
+	// (Overridden = 0 everywhere).
+	seed := buildSeed(t)
+	r := newWithProbe(seed, nil)
+	warmKey(r, "ui.greeting")
+
+	stub := &stubCoverageProbe{counts: map[coverageKey]int{}}
+	r.coverageProbe = stub.probe
+
+	got := r.CoverageReport()
+	for locale, stats := range got {
+		assert.Equalf(t, 0, stats.Overridden, "%s should have 0 overridden", locale)
+	}
+}
