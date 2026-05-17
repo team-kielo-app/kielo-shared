@@ -24,9 +24,11 @@ import (
 //  3. nothing — falls through to cache + provider chain.
 //
 // Stale rows (stored source_version != requested) are filtered server-side
-// by the WHERE clause. The seam never sees them. A separate background
-// task (out of scope here) reaps stale rows by flipping their status to
-// 'pending_review' so admin-ui's audit queue surfaces them.
+// by the WHERE clause. The seam never sees them. The Reaper (reaper.go)
+// is the periodic background job that flips stale rows to
+// status='pending_review' so admin-ui's audit queue surfaces them; it
+// runs out-of-band on the caller's scheduler (Cloud Scheduler, k8s
+// CronJob, in-process ticker — wiring is the caller's choice).
 type Store struct {
 	pool *pgxpool.Pool
 }
