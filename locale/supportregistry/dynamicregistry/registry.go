@@ -278,15 +278,8 @@ func (r *Registry) SupportedLocales() []string {
 
 // CoverageReport implements supportregistry.Registry.
 //
-// Starts from the seed's CoverageReport (which already populates Total,
-// Localized, Fallback). DynamicRegistry should additionally fill in
-// Overridden by scanning the DB for matching rows. That scan is a
-// follow-up (would do `SELECT language_code, COUNT(*) FROM
-// localization.dynamic_translations WHERE resource_type=... AND
-// status IN ('override','approved') GROUP BY language_code`); for the
-// pilot phase we return the seed report unchanged.
-// CoverageReport returns the seed's coverage stats, augmented with
-// per-locale Overridden counts read from localization.dynamic_translations.
+// Returns the seed's coverage stats, augmented with per-locale
+// Overridden counts read from localization.dynamic_translations.
 //
 // The seed (typically a MapRegistry) populates Total / Localized /
 // Fallback by walking the in-memory key set. This wrapper layers in

@@ -360,7 +360,11 @@ def test_supported_locales_pass_through_to_seed():
     assert sorted(r.supported_locales()) == ["en", "sv", "vi"]
 
 
-def test_coverage_report_pass_through_to_seed():
+def test_sync_coverage_report_passes_through_to_seed():
+    # The sync surface intentionally bypasses the override layer
+    # (mirror of the sync resolve/resolve_template path); admin
+    # callers that need the DB-augmented numbers must await
+    # acoverage_report() instead.
     seed = _build_seed()
     r = DynamicRegistry(seed=seed)
     assert r.coverage_report() == seed.coverage_report()
@@ -478,3 +482,160 @@ async def test_async_redis_cache_set_swallows_error():
     # Must not raise.
     await cache.set("k", "v", ttl_seconds=60)
     await cache.set_negative("k", ttl_seconds=30)
+
+
+# ---------------------------------------------------------------------------
+# acoverage_report — DB-augmented per-locale Overridden counts
+# ---------------------------------------------------------------------------
+#
+# Mirrors the Go CoverageReport tests in
+# kielo-shared/locale/supportregistry/dynamicregistry/registry_test.go.
+# Every Go assertion has a Python equivalent so behavior stays parallel.
+
+
+class StubCoverageProbe:
+    """Controllable coverage_probe for acoverage_report tests."""
+
+    def __init__(self) -> None:
+        self.counts: dict[tuple[str, str], int] = {}
+        self.error: Optional[Exception] = None
+        self.calls = 0
+
+    async def probe(
+        self, resource_type: str
+    ) -> dict[tuple[str, str], int]:
+        self.calls += 1
+        if self.error is not None:
+            raise self.error
+        return dict(self.counts)
+
+
+async def _warm_key(r: DynamicRegistry, key: str) -> None:
+    """Force `key` into the source-version memo so acoverage_report's
+    seed-key filter sees it. Mirrors the Go warmKey helper — real
+    production traffic warms the memo via aresolve; tests short-circuit
+    by computing the source_version directly through the internal API.
+    """
+    # The internal _source_version_for is the canonical memo-warmer;
+    # calling aresolve(key, "en") would also work but adds an extra
+    # path that isn't needed for memo seeding.
+    r._source_version_for(key)
+
+
+@pytest.mark.asyncio
+async def test_acoverage_report_no_probe_returns_seed_report_unchanged():
+    seed = _build_seed()
+    r = DynamicRegistry(seed=seed)  # pool=None → no coverage_probe wired
+    got = await r.acoverage_report()
+    assert got == seed.coverage_report(), (
+        "acoverage_report without a coverage_probe must pass the seed's report through"
+    )
+
+
+@pytest.mark.asyncio
+async def test_acoverage_report_overridden_counts_bump_per_locale():
+    seed = _build_seed()
+    r = DynamicRegistry(seed=seed)
+    await _warm_key(r, "ui.greeting")
+    await _warm_key(r, "ui.farewell")
+
+    # Two override rows for vi, one for sv. Same shape as the Go test.
+    stub = StubCoverageProbe()
+    stub.counts = {
+        ("ui.greeting", "vi"): 1,
+        ("ui.farewell", "vi"): 1,
+        ("ui.greeting", "sv"): 1,
+    }
+    r._coverage_probe = stub.probe  # type: ignore[assignment]
+
+    got = await r.acoverage_report()
+    assert stub.calls == 1, "exactly one aggregate query per acoverage_report call"
+    assert got["vi"].overridden == 2, "vi should have 2 overridden keys"
+    assert got["sv"].overridden == 1, "sv should have 1 overridden key"
+    # English is the canonical source-of-truth for overrides; the
+    # registry never serves an en override (see aresolve's
+    # FALLBACK_LOCALE shortcut), so the count stays 0 by construction.
+    assert got["en"].overridden == 0, "en is the canonical source; overridden stays 0"
+
+
+@pytest.mark.asyncio
+async def test_acoverage_report_ignores_override_rows_for_keys_not_in_seed():
+    # Defensive: if a previous release had a key 'ui.deprecated' that
+    # was removed in this release, override rows in the DB for that
+    # key shouldn't inflate the per-locale Overridden count — those
+    # rows are stale and the seam won't serve them anyway.
+    seed = _build_seed()
+    r = DynamicRegistry(seed=seed)
+    await _warm_key(r, "ui.greeting")
+
+    stub = StubCoverageProbe()
+    stub.counts = {
+        ("ui.greeting", "vi"): 1,    # in seed → counted
+        ("ui.deprecated", "vi"): 1,  # NOT in seed → ignored
+    }
+    r._coverage_probe = stub.probe  # type: ignore[assignment]
+
+    got = await r.acoverage_report()
+    assert got["vi"].overridden == 1, (
+        "ui.deprecated has no seed entry; its override row must NOT count"
+    )
+
+
+@pytest.mark.asyncio
+async def test_acoverage_report_probe_error_degrades_to_seed_report():
+    seed = _build_seed()
+    r = DynamicRegistry(seed=seed)
+    await _warm_key(r, "ui.greeting")
+
+    stub = StubCoverageProbe()
+    stub.error = RuntimeError("simulated DB failure")
+    r._coverage_probe = stub.probe  # type: ignore[assignment]
+
+    got = await r.acoverage_report()
+    # Failure mode: returns the seed report unchanged. The admin grid
+    # prefers "Overridden: 0 (probe failed)" over "no data at all".
+    assert got == seed.coverage_report()
+
+
+@pytest.mark.asyncio
+async def test_acoverage_report_empty_memo_skips_probe_filter():
+    # A freshly-constructed registry that hasn't served any aresolve
+    # traffic has an empty source_version_memo. The probe still runs
+    # (one aggregate query), but the seed-key filter rejects every
+    # row, so all per-locale Overridden counts stay 0. Mirrors the Go
+    # registry.collectSeedKeys "empty memo → seed report" branch.
+    seed = _build_seed()
+    r = DynamicRegistry(seed=seed)
+    # Deliberately do NOT warm any key.
+
+    stub = StubCoverageProbe()
+    stub.counts = {("ui.greeting", "vi"): 1}
+    r._coverage_probe = stub.probe  # type: ignore[assignment]
+
+    got = await r.acoverage_report()
+    # Returns the seed's report unchanged because the memo is empty
+    # and we skip the augmentation step entirely.
+    assert got == seed.coverage_report()
+
+
+@pytest.mark.asyncio
+async def test_acoverage_report_does_not_mutate_seed_stats():
+    # The seed's CoverageStats objects may be cached internally;
+    # acoverage_report must build fresh dataclasses rather than
+    # mutating shared state. Pinned by checking the seed's
+    # coverage_report() returns identical values BEFORE and AFTER
+    # the async call.
+    seed = _build_seed()
+    seed_before = seed.coverage_report()
+
+    r = DynamicRegistry(seed=seed)
+    await _warm_key(r, "ui.greeting")
+    stub = StubCoverageProbe()
+    stub.counts = {("ui.greeting", "vi"): 1}
+    r._coverage_probe = stub.probe  # type: ignore[assignment]
+
+    _ = await r.acoverage_report()
+    seed_after = seed.coverage_report()
+    assert seed_before == seed_after, (
+        "acoverage_report must not mutate the seed's CoverageStats objects"
+    )

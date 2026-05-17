@@ -392,14 +392,10 @@ func TestSupportedLocales_PassThroughToSeed(t *testing.T) {
 	assert.ElementsMatch(t, []string{"en", "vi", "sv"}, r.SupportedLocales())
 }
 
-func TestCoverageReport_PassThroughToSeed(t *testing.T) {
-	// Phase 5 pilot returns the seed's CoverageReport unchanged.
-	// Filling in CoverageStats.Overridden from the DB is a follow-up.
-	seed := buildSeed(t)
-	r := New(seed, nil, nil)
-	cov := r.CoverageReport()
-	assert.Equal(t, seed.CoverageReport(), cov)
-}
+// TestCoverageReport_PassThroughToSeed was superseded by
+// TestCoverageReport_NoProbeReturnsSeedReportUnchanged below — the
+// pilot-phase pass-through behavior is now reachable only via "pool
+// nil" (no coverageProbe wired), which the newer test pins explicitly.
 
 func TestNewWithCustomTTLs(t *testing.T) {
 	seed := buildSeed(t)
