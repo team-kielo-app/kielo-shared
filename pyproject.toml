@@ -16,7 +16,20 @@ dependencies = [
 [tool.deptry]
 
 [tool.deptry.per_rule_ignores]
-DEP001 = ["asyncpg", "fastapi", "prometheus_client"]
+# Consumer-provided runtime deps: kielo-shared exposes opt-in hooks /
+# middleware / seam providers that only activate when the consumer's
+# own pyproject installs the underlying library. Declaring them as
+# required deps here would force every consumer to install the full
+# union (aiohttp + starlette + google-genai + livekit-plugins-deepgram).
+DEP001 = [
+    "aiohttp",
+    "asyncpg",
+    "fastapi",
+    "google",
+    "livekit",
+    "prometheus_client",
+    "starlette",
+]
 
 [tool.vulture]
 # `ex` is the redis-py kwarg for TTL — Protocol abstract methods declare it

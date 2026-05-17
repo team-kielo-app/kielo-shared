@@ -15,7 +15,8 @@ import (
 // Label set is intentionally identical to the Python side:
 //   - provider: version-stamped provider id (e.g. "gemini:gemini-3.1-flash-lite-preview").
 //   - task: caller-pinned canonical tag (e.g. "convo_hint").
-//   - cache_policy: matches Python `LLMRequest.cache_policy` ("none" | "read_write" | "read_only"). Go callers without a cache layer pass "none".
+//   - cache_policy: matches Python `LLMRequest.cache_policy` ("none" |
+//     "read_write" | "read_only"). Go callers without a cache layer pass "none".
 //   - cached: "true" | "false". No cache layer in Go yet → "false".
 //   - error: ErrorClass on failure ("timeout" | "http_5xx" | …) OR empty on success.
 //
@@ -25,7 +26,9 @@ import (
 var LLMCallsTotal = promauto.NewCounterVec(
 	prometheus.CounterOpts{
 		Name: "kielo_llm_calls_total",
-		Help: "LLM provider call count by provider/task/cache state. Detects provider regressions before user complaints. Shared family with the Python kielo_shared seam.",
+		Help: "LLM provider call count by provider/task/cache state. " +
+			"Detects provider regressions before user complaints. " +
+			"Shared family with the Python kielo_shared seam.",
 	},
 	[]string{"provider", "task", "cache_policy", "cached", "error"},
 )

@@ -23,7 +23,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from prometheus_client import REGISTRY, Counter, CollectorRegistry
+from prometheus_client import REGISTRY, Counter
 from prometheus_client.registry import CollectorRegistry as _RegistryType
 
 

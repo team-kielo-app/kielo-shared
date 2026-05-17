@@ -67,32 +67,7 @@ func (p *GeminiJSONProvider) Generate(ctx context.Context, req Request) (*Result
 		model = p.DefaultModel
 	}
 
-	generationConfig := map[string]any{}
-	if req.ResponseSchema != nil {
-		generationConfig["responseMimeType"] = "application/json"
-		generationConfig["responseSchema"] = req.ResponseSchema
-	} else if req.ResponseMimeType != "" {
-		generationConfig["responseMimeType"] = req.ResponseMimeType
-	}
-	if req.Temperature != nil {
-		generationConfig["temperature"] = *req.Temperature
-	}
-
-	payload := map[string]any{
-		"contents": []map[string]any{
-			{"parts": []map[string]any{{"text": req.Prompt}}},
-		},
-	}
-	if req.SystemPrompt != "" {
-		payload["system_instruction"] = map[string]any{
-			"parts": []map[string]any{{"text": req.SystemPrompt}},
-		}
-	}
-	if len(generationConfig) > 0 {
-		payload["generationConfig"] = generationConfig
-	}
-
-	body, err := json.Marshal(payload)
+	body, err := json.Marshal(buildGeminiPayload(req))
 	if err != nil {
 		return nil, &Error{Class: ErrorClassMarshal, Err: err}
 	}
@@ -128,6 +103,51 @@ func (p *GeminiJSONProvider) Generate(ctx context.Context, req Request) (*Result
 		}
 	}
 
+	respBytes, readErr := io.ReadAll(resp.Body)
+	if readErr != nil {
+		return nil, &Error{Class: ErrorClassReadBody, Err: readErr}
+	}
+	rawText, decodeErr := decodeGeminiResponse(respBytes)
+	if decodeErr != nil {
+		return nil, decodeErr
+	}
+
+	return &Result{
+		RawText:   rawText,
+		Provider:  p.ProviderID(req),
+		LatencyMs: time.Since(started).Milliseconds(),
+	}, nil
+}
+
+func buildGeminiPayload(req Request) map[string]any {
+	generationConfig := map[string]any{}
+	if req.ResponseSchema != nil {
+		generationConfig["responseMimeType"] = "application/json"
+		generationConfig["responseSchema"] = req.ResponseSchema
+	} else if req.ResponseMimeType != "" {
+		generationConfig["responseMimeType"] = req.ResponseMimeType
+	}
+	if req.Temperature != nil {
+		generationConfig["temperature"] = *req.Temperature
+	}
+
+	payload := map[string]any{
+		"contents": []map[string]any{
+			{"parts": []map[string]any{{"text": req.Prompt}}},
+		},
+	}
+	if req.SystemPrompt != "" {
+		payload["system_instruction"] = map[string]any{
+			"parts": []map[string]any{{"text": req.SystemPrompt}},
+		}
+	}
+	if len(generationConfig) > 0 {
+		payload["generationConfig"] = generationConfig
+	}
+	return payload
+}
+
+func decodeGeminiResponse(respBytes []byte) (string, error) {
 	var decoded struct {
 		Candidates []struct {
 			Content struct {
@@ -137,27 +157,17 @@ func (p *GeminiJSONProvider) Generate(ctx context.Context, req Request) (*Result
 			} `json:"content"`
 		} `json:"candidates"`
 	}
-	respBytes, readErr := io.ReadAll(resp.Body)
-	if readErr != nil {
-		return nil, &Error{Class: ErrorClassReadBody, Err: readErr}
-	}
 	if err := json.Unmarshal(respBytes, &decoded); err != nil {
-		return nil, &Error{Class: ErrorClassDecode, Err: err}
+		return "", &Error{Class: ErrorClassDecode, Err: err}
 	}
 	if len(decoded.Candidates) == 0 || len(decoded.Candidates[0].Content.Parts) == 0 {
-		return nil, &Error{Class: ErrorClassMissingPayload, Err: errors.New("gemini response had no candidates or parts")}
+		return "", &Error{Class: ErrorClassMissingPayload, Err: errors.New("gemini response had no candidates or parts")}
 	}
-
 	rawText := decoded.Candidates[0].Content.Parts[0].Text
 	if rawText == "" {
-		return nil, &Error{Class: ErrorClassEmptyResponse, Err: errors.New("gemini returned empty text")}
+		return "", &Error{Class: ErrorClassEmptyResponse, Err: errors.New("gemini returned empty text")}
 	}
-
-	return &Result{
-		RawText:   rawText,
-		Provider:  p.ProviderID(req),
-		LatencyMs: time.Since(started).Milliseconds(),
-	}, nil
+	return rawText, nil
 }
 
 // classifyTransportError mirrors the TTS seam's classifier so both

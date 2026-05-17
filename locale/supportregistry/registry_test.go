@@ -84,7 +84,7 @@ func TestMapRegistry_TemplateMissingKeyDoesNotPanic(t *testing.T) {
 	// substitution string depends on Go's text/template default
 	// (`<no value>` when params is nil; "" when params is a typed map
 	// with `missingkey=zero`). What matters is non-crash and a
-	// recognisable output, not the exact bytes.
+	// recognizable output, not the exact bytes.
 	out := r.ResolveTemplate(context.Background(), "ui.welcome", "en", nil)
 	assert.Contains(t, out, "Hello,")
 }

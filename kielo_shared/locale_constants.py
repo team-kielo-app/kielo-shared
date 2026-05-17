@@ -115,11 +115,33 @@ def normalize_supported_learning_language_code(code: str | None) -> str:
 
 
 def require_supported_learning_language_code(code: str | None) -> str:
-    """Normalize a learning language code or fail instead of defaulting."""
+    """Resolve a supported learning language, falling back to the active ctx.
+
+    Post-M5 cutover, the schema name (klearn_<lang> / cms_<lang>) is the
+    sole source of truth for the active learning language. Per-row /
+    per-request ``learning_language_code`` arguments are best-effort hints
+    that may be empty when the caller is already running inside an
+    ``active_language_scope(...)``. In that case, fall through to the
+    contextvar set by middleware / scope helpers rather than raising.
+
+    Callers without the active-language ctx (e.g. CLI tools, batch
+    processors) see ``get_active_language()`` return ``None`` and fall
+    straight through to the original raise behavior — backwards-compatible
+    with every pre-cutover caller.
+
+    Raises ``ValueError`` only when neither the explicit argument nor the
+    active-language ctx resolves to a supported value.
+    """
     normalized = normalize_supported_learning_language_code(code)
-    if not normalized:
-        raise ValueError("learning_language_code is required and must be one of: fi, sv")
-    return normalized
+    if normalized:
+        return normalized
+    # Lazy import to avoid a circular dep with kielo_shared at module init.
+    from kielo_shared.db_utils import get_active_language
+
+    fallback = normalize_supported_learning_language_code(get_active_language())
+    if fallback:
+        return fallback
+    raise ValueError("learning_language_code is required and must be one of: fi, sv")
 
 
 def normalize_source_locale(code: str | None) -> str:

@@ -151,6 +151,31 @@ func IsSupportedSupportLanguage(code string) bool {
 	return ok
 }
 
+// AllSupportLocales returns the platform's full set of support-locale
+// codes (the keyset of languageDisplayNames), sorted lexicographically.
+//
+// Use as the seed-locale list for supportregistry.New(...) when the
+// registry is meant to cover every locale the platform officially
+// supports. Domain-curated subsets (e.g. comms-service's "we only have
+// email templates for {en, fi, sv, vi}") should keep their hand-written
+// slice — adding a new platform locale doesn't automatically mean
+// authoring new emails for it.
+//
+// Adding a new locale = adding one entry to languageDisplayNames above.
+// Every caller of AllSupportLocales picks it up automatically.
+func AllSupportLocales() []string {
+	codes := make([]string, 0, len(languageDisplayNames))
+	for code := range languageDisplayNames {
+		codes = append(codes, code)
+	}
+	for i := 1; i < len(codes); i++ {
+		for j := i; j > 0 && codes[j-1] > codes[j]; j-- {
+			codes[j-1], codes[j] = codes[j], codes[j-1]
+		}
+	}
+	return codes
+}
+
 // DisplayName returns the English display name for any locale-like input
 // ("vi", "vi-VN", "vn" — all produce "Vietnamese"). Falls back to the
 // supplied fallback (or the normalized code itself when fallback is empty)
