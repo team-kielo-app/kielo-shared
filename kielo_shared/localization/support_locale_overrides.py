@@ -101,8 +101,18 @@ _PREFETCH_QUERY = """
       FROM localization.dynamic_translations
      WHERE resource_type  = :resource_type
        AND language_code  = :language_code
-       AND status        IN ('override', 'approved')
+       AND status        IN ('machine', 'override', 'approved')
 """
+# IN-clause includes 'machine' so on-demand auto-translated rows
+# (written by the autotranslate callback in
+# SupportLocaleOverridesMiddleware) become visible on the next request
+# WITHOUT requiring admin review. Admin review is still available
+# (status='approved'/'override' for explicit accept/edit), but the
+# default ladder is: first request returns English + queues auto-
+# translate → next request returns auto-translated text → admin can
+# tighten via override at any time. Mirrors the user-visible behavior
+# of article.title/scenario.title which also serve status='machine'
+# rows directly.
 
 
 async def prefetch_overrides_for_locale(
@@ -231,9 +241,134 @@ def get_override(key: str, english_source: str, lang: str) -> Optional[str]:
     return override_text
 
 
+# =============================================================================
+# Missing-key tracking for on-demand auto-translation (ADR-008 Phase 5.5)
+# =============================================================================
+#
+# When a sync localizer hits a key + locale that has neither a seed
+# translation nor a prefetched override, it falls through to the
+# English source. To make non-English locales fill in automatically
+# (matching the on-demand pattern used by article.title /
+# scenario.title), the localizer also calls `register_missing` to
+# record the (resource_id, english_source, locale) triple in this
+# request-scoped ContextVar.
+#
+# After the handler returns, the middleware drains the set and fires a
+# background autotranslate task (caller-supplied callback) that calls
+# the LLM seam for each missing item and writes status='auto' rows to
+# `localization.dynamic_translations`. The next request that hits the
+# same key+locale finds the row in the prefetch and returns it
+# immediately — no English fallback after the first miss.
+#
+# Why ContextVar rather than a process-global set: a process-global
+# would (a) leak state across requests in concurrent FastAPI workers
+# and (b) require explicit locking. ContextVar is per-task by ASGI
+# convention, so concurrent requests naturally get separate sets.
+#
+# Dedupe within a request is handled by the `set` type. Cross-request
+# dedupe is handled at the seam layer (its single-flight + cache) and
+# at the DB layer (`INSERT ... ON CONFLICT DO NOTHING` semantics on
+# the unique-by-key constraint).
+
+# (resource_id, english_source, locale) triples.
+#
+# IMPORTANT: the ContextVar stores a MUTABLE set object — register_missing
+# mutates it in place. This is intentional because Starlette's
+# BaseHTTPMiddleware spawns the endpoint in a separate anyio task; any
+# ContextVar.set() done inside the endpoint task does NOT propagate
+# back to the middleware's task scope (that's how contextvar isolation
+# works). But the set object the contextvar points to IS shared — both
+# tasks see the same set instance because the middleware established
+# it at request entry. Mutating in place is the supported way to share
+# state across the middleware/endpoint boundary.
+_missing_cv: contextvars.ContextVar[set[tuple[str, str, str]]] = (
+    contextvars.ContextVar("ui_string_missing", default=set())
+)
+
+
+def init_missing_set_for_request() -> set[tuple[str, str, str]]:
+    """Bind a fresh mutable set to the contextvar for this request.
+    Called by the middleware at request entry. Returns the bound set
+    so the caller can stash a reference if needed.
+    """
+    fresh: set[tuple[str, str, str]] = set()
+    _missing_cv.set(fresh)
+    return fresh
+
+
+def register_missing(resource_id: str, english_source: str, lang: str) -> None:
+    """Record that a sync localizer hit (resource_id, lang) with no
+    seed and no prefetched override. The middleware drains this set
+    post-response and fires the autotranslate callback.
+
+    Skipped silently when:
+      * `lang` is empty or `en` (English IS the canonical source;
+        nothing to auto-translate).
+      * The current contextvar locale doesn't match `lang` (the
+        prefetch was scoped to a different locale; firing translate
+        for this would create an orphaned row).
+
+    Template-placeholder strings (`text` containing `{`) are also
+    skipped — LLM-translating templates without breaking `{}` semantics
+    is fragile and only worth ~6 strings; admin manual authoring is
+    the right path for those.
+
+    Mutates the set in place — see the _missing_cv definition comment
+    for why.
+    """
+    english_source = (english_source or "").strip()
+    resource_id = (resource_id or "").strip()
+    if not lang or lang == "en" or not english_source or not resource_id:
+        return
+    # Skip templates — see docstring.
+    if "{" in english_source:
+        return
+    # Only register for the locale this request's prefetch is scoped
+    # to. Cross-locale auto-translate from a single request would be
+    # surprising (and the prefetch wouldn't pick up the new row on
+    # the next request to a different locale anyway).
+    locale, _ = _overrides_cv.get()
+    if locale and locale != lang:
+        return
+
+    current = _missing_cv.get()
+    # If we somehow hit the shared default (caller didn't go through
+    # the middleware), promote to a private set so we don't leak across
+    # threads.
+    if current is _MODULE_DEFAULT_MISSING_SET:
+        current = set()
+        _missing_cv.set(current)
+    current.add((resource_id, english_source, lang))
+
+
+def consume_missing() -> set[tuple[str, str, str]]:
+    """Read the current missing set and reset to empty (in place). Called
+    by the middleware after `call_next` returns so the background task
+    gets the keys this request hit.
+
+    Mutates in place so the shared set object stays valid; the
+    middleware-issued task captures the snapshot returned here.
+    """
+    current = _missing_cv.get()
+    if not current:
+        return set()
+    snapshot = set(current)
+    current.clear()
+    return snapshot
+
+
+# Module-level sentinel used by register_missing to detect the
+# uninitialized default. Defined AFTER the helpers because it's
+# referenced inside register_missing's lazy-init branch.
+_MODULE_DEFAULT_MISSING_SET: set[tuple[str, str, str]] = _missing_cv.get()
+
+
 __all__ = [
     "prefetch_overrides_for_locale",
     "set_overrides_for_request",
     "clear_overrides",
     "get_override",
+    "register_missing",
+    "consume_missing",
+    "init_missing_set_for_request",
 ]

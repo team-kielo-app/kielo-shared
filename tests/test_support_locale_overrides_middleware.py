@@ -12,10 +12,12 @@ Covers the wire-up contract:
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 from contextlib import asynccontextmanager
 from typing import Any
 
+import pytest
 from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.responses import JSONResponse
@@ -218,3 +220,163 @@ def test_middleware_does_not_leak_overrides_between_requests():
     # returns None regardless of what the caller passes for `lang`
     # because the prefetched-locale mismatch guard fires.
     assert second.json() == {"override": None}
+
+
+# ---------------------------------------------------------------------------
+# Autotranslate callback wire-up
+# ---------------------------------------------------------------------------
+
+
+def _build_app_with_autotranslate(
+    session: _StubSession,
+    *,
+    resolve_locale,
+    autotranslate_callback,
+) -> Starlette:
+    """Variant of _build_app that registers the autotranslate callback.
+    The endpoint calls `register_missing` to simulate a sync localizer
+    hitting a seed-miss."""
+    from kielo_shared.localization.support_locale_overrides import register_missing
+
+    async def trigger(request: Request) -> JSONResponse:
+        # Caller passes ?missing=key1,key2 to simulate N register_missing calls.
+        raw = request.query_params.get("missing", "")
+        lang = request.query_params.get("lang", "")
+        for key in (k for k in raw.split(",") if k):
+            register_missing(f"ui.engine_string.{key}", key, lang)
+        return JSONResponse({"ok": True})
+
+    app = Starlette(routes=[Route("/trigger", endpoint=trigger)])
+    app.add_middleware(
+        SupportLocaleOverridesMiddleware,
+        session_factory=_factory_for(session),
+        resolve_locale=resolve_locale,
+        autotranslate_callback=autotranslate_callback,
+    )
+    return app
+
+
+async def _drive_async(app, path: str, headers: dict[str, str] | None = None):
+    """Drive a single request through the app using httpx.AsyncClient
+    so the test, the middleware, and the background `asyncio.create_task`
+    share one event loop. Required for any test that awaits state
+    populated by the middleware's post-response background task.
+
+    After the request returns we yield with sleep(0) so the loop has a
+    chance to run any newly-scheduled `asyncio.create_task`s before
+    the test resumes — Starlette's BaseHTTPMiddleware uses anyio
+    task-groups that don't share scheduling with bare create_task,
+    and httpx returns synchronously the moment the response is
+    received."""
+    import httpx
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app),
+        base_url="http://testserver",
+    ) as client:
+        resp = await client.get(path, headers=headers or {})
+    # Yield once so any pending background task gets a slice.
+    await asyncio.sleep(0)
+    return resp
+
+
+@pytest.mark.asyncio
+async def test_middleware_invokes_autotranslate_callback_with_missing_items():
+    session = _StubSession(rows=[])  # no existing rows for vi
+    captured: dict[str, object] = {"items": None, "locale": None}
+    callback_done = asyncio.Event()
+
+    async def callback(items, locale):
+        captured["items"] = set(items)
+        captured["locale"] = locale
+        callback_done.set()
+
+    app = _build_app_with_autotranslate(
+        session,
+        resolve_locale=lambda req: req.headers.get("x-locale", ""),
+        autotranslate_callback=callback,
+    )
+
+    resp = await _drive_async(
+        app,
+        "/trigger?missing=Learn,Reinforce&lang=vi",
+        headers={"x-locale": "vi"},
+    )
+    assert resp.status_code == 200
+
+    # Background task fires after response; wait briefly.
+    await asyncio.wait_for(callback_done.wait(), timeout=2.0)
+
+    assert captured["locale"] == "vi"
+    assert captured["items"] == {
+        ("ui.engine_string.Learn", "Learn", "vi"),
+        ("ui.engine_string.Reinforce", "Reinforce", "vi"),
+    }
+
+
+@pytest.mark.asyncio
+async def test_middleware_does_not_fire_callback_for_english_request():
+    """English requests neither prefetch nor trigger autotranslate.
+    English IS the canonical source; no overrides to fetch, no
+    auto-translation to do."""
+    session = _StubSession(rows=[])
+    callback_calls = 0
+
+    async def callback(_items, _locale):
+        nonlocal callback_calls
+        callback_calls += 1
+
+    app = _build_app_with_autotranslate(
+        session,
+        resolve_locale=lambda _req: "en",
+        autotranslate_callback=callback,
+    )
+    await _drive_async(app, "/trigger?missing=Learn&lang=en")
+    # Brief sleep to let any rogue background task land.
+    await asyncio.sleep(0.05)
+    assert callback_calls == 0
+
+
+@pytest.mark.asyncio
+async def test_middleware_skips_callback_when_no_missing_items():
+    """No register_missing calls in the request → no callback fired,
+    even with a non-English locale."""
+    session = _StubSession(rows=[])
+    callback_calls = 0
+
+    async def callback(_items, _locale):
+        nonlocal callback_calls
+        callback_calls += 1
+
+    app = _build_app_with_autotranslate(
+        session,
+        resolve_locale=lambda _req: "vi",
+        autotranslate_callback=callback,
+    )
+    # No ?missing= → endpoint records no missing keys.
+    await _drive_async(app, "/trigger?missing=&lang=vi")
+    await asyncio.sleep(0.05)
+    assert callback_calls == 0
+
+
+@pytest.mark.asyncio
+async def test_middleware_swallows_callback_errors():
+    """Background callback raising MUST NOT propagate. Already-sent
+    response stays valid; logs capture the failure."""
+    session = _StubSession(rows=[])
+    callback_done = asyncio.Event()
+
+    async def failing_callback(_items, _locale):
+        try:
+            raise RuntimeError("LLM seam down")
+        finally:
+            callback_done.set()
+
+    app = _build_app_with_autotranslate(
+        session,
+        resolve_locale=lambda _req: "vi",
+        autotranslate_callback=failing_callback,
+    )
+    resp = await _drive_async(app, "/trigger?missing=Learn&lang=vi")
+    # Response succeeded despite background callback failure.
+    assert resp.status_code == 200
+    await asyncio.wait_for(callback_done.wait(), timeout=2.0)

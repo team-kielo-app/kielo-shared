@@ -16,8 +16,10 @@ import pytest
 
 from kielo_shared.localization.support_locale_overrides import (
     clear_overrides,
+    consume_missing,
     get_override,
     prefetch_overrides_for_locale,
+    register_missing,
     set_overrides_for_request,
 )
 
@@ -242,3 +244,100 @@ async def test_prefetch_accepts_custom_resource_type():
         "resource_type": "notifications.body",
         "language_code": "vi",
     }
+
+
+# ---------------------------------------------------------------------------
+# register_missing / consume_missing — auto-translate plumbing
+# ---------------------------------------------------------------------------
+
+
+def test_register_missing_records_triple():
+    set_overrides_for_request("vi", {})  # scope a locale for the request
+    register_missing(_key("Learn"), "Learn", "vi")
+    got = consume_missing()
+    assert got == {(_key("Learn"), "Learn", "vi")}
+
+
+def test_register_missing_dedupes_within_request():
+    set_overrides_for_request("vi", {})
+    register_missing(_key("Learn"), "Learn", "vi")
+    register_missing(_key("Learn"), "Learn", "vi")
+    register_missing(_key("Learn"), "Learn", "vi")
+    assert consume_missing() == {(_key("Learn"), "Learn", "vi")}
+
+
+def test_register_missing_collects_multiple_keys():
+    set_overrides_for_request("vi", {})
+    register_missing(_key("Learn"), "Learn", "vi")
+    register_missing(_key("Reinforce"), "Reinforce", "vi")
+    register_missing(_key("Master"), "Master", "vi")
+    assert consume_missing() == {
+        (_key("Learn"), "Learn", "vi"),
+        (_key("Reinforce"), "Reinforce", "vi"),
+        (_key("Master"), "Master", "vi"),
+    }
+
+
+def test_register_missing_skips_english_locale():
+    set_overrides_for_request("en", {})
+    register_missing(_key("Learn"), "Learn", "en")
+    assert consume_missing() == set()
+
+
+def test_register_missing_skips_empty_locale():
+    set_overrides_for_request("", {})
+    register_missing(_key("Learn"), "Learn", "")
+    assert consume_missing() == set()
+
+
+def test_register_missing_skips_empty_english_source():
+    set_overrides_for_request("vi", {})
+    register_missing(_key("blank"), "", "vi")
+    register_missing(_key("blank"), "   ", "vi")
+    assert consume_missing() == set()
+
+
+def test_register_missing_skips_template_strings():
+    """LLM-translating template placeholders ({}) without breaking
+    semantics is fragile. Skip for first pass — admin manual authoring
+    is the right path for the ~6 templated strings."""
+    set_overrides_for_request("vi", {})
+    register_missing(_key("Practice {}"), "Practice {}", "vi")
+    register_missing(_key("Hello {name}"), "Hello {name}", "vi")
+    assert consume_missing() == set()
+
+
+def test_register_missing_skips_when_locale_mismatch():
+    """Prefetched for vi, caller asks to register for sv → skipped.
+    Auto-translate would fire for sv but the next request likely
+    targets the prefetched vi locale, so the auto'd sv row would be
+    orphaned until a sv request happens to come."""
+    set_overrides_for_request("vi", {})
+    register_missing(_key("Learn"), "Learn", "sv")
+    assert consume_missing() == set()
+
+
+def test_register_missing_works_without_prefetched_locale():
+    """When no overrides contextvar was set (e.g. a request the
+    middleware didn't process), register_missing still records the
+    triple because there's no prefetched locale to conflict with."""
+    clear_overrides()  # ensure default empty state
+    register_missing(_key("Learn"), "Learn", "vi")
+    assert consume_missing() == {(_key("Learn"), "Learn", "vi")}
+
+
+def test_consume_missing_resets_to_empty():
+    set_overrides_for_request("vi", {})
+    register_missing(_key("Learn"), "Learn", "vi")
+    consume_missing()
+    # Second consume returns empty — the previous call drained the set.
+    assert consume_missing() == set()
+
+
+def test_consume_missing_returns_mutable_set():
+    set_overrides_for_request("vi", {})
+    register_missing(_key("Learn"), "Learn", "vi")
+    got = consume_missing()
+    # Callers can mutate without surprising the next request's state.
+    got.add((_key("Other"), "Other", "vi"))
+    assert consume_missing() == set()
