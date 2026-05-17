@@ -180,36 +180,13 @@ func GrammarConceptOverrideFor(value, supportLocale string) string {
 	return got
 }
 
-// DictionaryGlossOverride is the legacy VI-only wrapper around
-// GlossOverrideFor. New callers must use GlossOverrideFor with the
-// user's support locale.
-//
-// Deprecated: hard-codes the VI support locale; bypasses ADR-008
-// supportregistry resolution. Migrate to GlossOverrideFor.
-func DictionaryGlossOverride(value string) string {
-	return GlossOverrideFor(value, "vi")
-}
-
-// GrammarConceptFallback is the legacy VI-only wrapper around
-// GrammarConceptOverrideFor. New callers must use
-// GrammarConceptOverrideFor with the user's support locale.
-//
-// Deprecated: hard-codes the VI support locale; bypasses ADR-008
-// supportregistry resolution. Migrate to GrammarConceptOverrideFor.
-func GrammarConceptFallback(value string) string {
-	return GrammarConceptOverrideFor(value, "vi")
-}
-
-// DictionaryTermOverride returns a Vietnamese translation for a common
-// Finnish pronoun/term (e.g. "minä" → "tôi"), or "" if no override
-// exists.
-//
-// Deprecated: hard-codes the VI support locale. Use
-// TermOverrideFor(term, supportLocale) instead, which routes through
-// the supportregistry via the Finnish-pronoun → English-canonical map.
-func DictionaryTermOverride(term string) string {
-	return termOverrides[strings.ToLower(strings.TrimSpace(term))]
-}
+// DictionaryGlossOverride / GrammarConceptFallback / DictionaryTermOverride
+// were the VI-hardcoded wrappers around the ADR-008 supportregistry
+// helpers. Removed 2026-05-17 once every production caller had
+// migrated to GlossOverrideFor / GrammarConceptOverrideFor /
+// TermOverrideFor (which take the user's support locale instead of
+// pinning it to "vi"). Test coverage moved to the *_For variants;
+// see vietnamese_test.go for the new pinning shape.
 
 // TermOverrideFor returns the support-locale translation for a Finnish
 // pronoun / common term (e.g. for term="minä", supportLocale="vi"

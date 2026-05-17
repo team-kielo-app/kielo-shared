@@ -14,67 +14,24 @@ import (
 // reading view gets a lower-quality gloss or, worse, nothing at all
 // when the translator rate-limits.
 //
+// 2026-05-17 cleanup: the legacy `DictionaryGlossOverride` /
+// `GrammarConceptFallback` / `DictionaryTermOverride` shims were
+// deleted (zero non-test callers remained). The per-locale variants
+// `GlossOverrideFor(value, locale)` / `GrammarConceptOverrideFor` /
+// `TermOverrideFor` are the canonical API and are tested below.
+//
 // The contract each function exports:
-//   - DictionaryGlossOverride: case-insensitive, trims whitespace,
-//     returns "" on miss.
-//   - DictionaryTermOverride: same contract, different table.
-//   - KnownLemmaOverride: same contract, canonicalizes pronoun lemmas
-//     that morphology APIs may not handle correctly.
-//   - GrammarConceptFallback: case-SENSITIVE, trims whitespace only.
+//   - GlossOverrideFor: case-insensitive, trims whitespace,
+//     returns "" on miss. Per-locale (vi seeded; other locales
+//     fall back to the English seed).
+//   - TermOverrideFor: same contract, different table.
+//   - KnownLemmaOverride: case-insensitive, trims whitespace,
+//     canonicalizes pronoun lemmas that morphology APIs may not
+//     handle correctly. Locale-agnostic — the lemma IS the canonical
+//     value.
+//   - GrammarConceptOverrideFor: case-SENSITIVE, trims whitespace only.
 //     This divergence is intentional: grammar concept names are
 //     canonical tokens (e.g. "Genetiivi (-n)"), not free text.
-
-func TestDictionaryGlossOverride_ReturnsCanonicalTranslation(t *testing.T) {
-	assert.Equal(t, "tôi", DictionaryGlossOverride("I"))
-	assert.Equal(t, "tôi", DictionaryGlossOverride("me"))
-	assert.Equal(t, "bạn", DictionaryGlossOverride("you"))
-	assert.Equal(t, "anh ấy/cô ấy", DictionaryGlossOverride("he/she"))
-	assert.Equal(t, "cửa hàng, tiệm", DictionaryGlossOverride("shop, store"))
-}
-
-func TestDictionaryGlossOverride_CaseInsensitive(t *testing.T) {
-	// Callers upstream sometimes lowercase, sometimes don't. The
-	// override must match regardless so we don't miss "I" vs "i"
-	// or "TRAIN" vs "train".
-	assert.Equal(t, "tôi", DictionaryGlossOverride("i"))
-	assert.Equal(t, "tàu hỏa", DictionaryGlossOverride("TRAIN"))
-	assert.Equal(t, "họ", DictionaryGlossOverride("They"))
-}
-
-func TestDictionaryGlossOverride_TrimsWhitespace(t *testing.T) {
-	// Translator input often has trailing whitespace from JSON parsing.
-	assert.Equal(t, "tôi", DictionaryGlossOverride("  I  "))
-	assert.Equal(t, "họ", DictionaryGlossOverride("\tthey\n"))
-}
-
-func TestDictionaryGlossOverride_EmptyOrMissing(t *testing.T) {
-	assert.Equal(t, "", DictionaryGlossOverride(""))
-	assert.Equal(t, "", DictionaryGlossOverride("   "))
-	assert.Equal(t, "", DictionaryGlossOverride("xyz not a gloss"))
-}
-
-func TestDictionaryTermOverride_HandlesFinnishPronouns(t *testing.T) {
-	assert.Equal(t, "tôi", DictionaryTermOverride("minä"))
-	assert.Equal(t, "bạn", DictionaryTermOverride("sinä"))
-	assert.Equal(t, "anh ấy/cô ấy", DictionaryTermOverride("hän"))
-	assert.Equal(t, "nó", DictionaryTermOverride("se"))
-	assert.Equal(t, "chúng tôi/chúng ta", DictionaryTermOverride("me"))
-	assert.Equal(t, "các bạn/quý vị", DictionaryTermOverride("te"))
-	assert.Equal(t, "họ", DictionaryTermOverride("he"))
-}
-
-func TestDictionaryTermOverride_CaseInsensitiveAndTrimmed(t *testing.T) {
-	// Finnish pronouns with diacritics pass through ToLower correctly
-	// (Go's strings.ToLower is unicode-aware).
-	assert.Equal(t, "tôi", DictionaryTermOverride("MINÄ"))
-	assert.Equal(t, "bạn", DictionaryTermOverride(" Sinä "))
-}
-
-func TestDictionaryTermOverride_MissingReturnsEmpty(t *testing.T) {
-	assert.Equal(t, "", DictionaryTermOverride(""))
-	assert.Equal(t, "", DictionaryTermOverride("  "))
-	assert.Equal(t, "", DictionaryTermOverride("talo")) // "house", not an override
-}
 
 func TestKnownLemmaOverride_CanonicalizesPronounLemmas(t *testing.T) {
 	// Morphology APIs sometimes return "minä" as its own lemma and
@@ -98,49 +55,13 @@ func TestKnownLemmaOverride_MissingReturnsEmpty(t *testing.T) {
 	assert.Equal(t, "", KnownLemmaOverride(""))
 }
 
-func TestGrammarConceptFallback_MapsCanonicalNames(t *testing.T) {
-	// Both Finnish (native) and English (canonical) names are
-	// supported — callers may pass either depending on where the
-	// concept label originated.
-	assert.Equal(t, "cách sở hữu", GrammarConceptFallback("Genetiivi (-n)"))
-	assert.Equal(t, "cách sở hữu", GrammarConceptFallback("Genitive Case"))
-	assert.Equal(t, "thì hiện tại", GrammarConceptFallback("Preesens"))
-	assert.Equal(t, "thì hiện tại", GrammarConceptFallback("Present Tense"))
-	assert.Equal(t, "thức mệnh lệnh", GrammarConceptFallback("Imperatiivi"))
-}
-
-func TestGrammarConceptFallback_IsCaseSensitive(t *testing.T) {
-	// UNLIKE the other three functions, GrammarConceptFallback is
-	// case-sensitive by design. Concept names are canonical tokens
-	// (e.g. "Preesens" is a Finnish proper noun for the tense), not
-	// free text, so lowercase variants should NOT match — they
-	// likely indicate the caller passed a generic word rather than
-	// a concept label.
-	assert.Equal(t, "", GrammarConceptFallback("preesens"))
-	assert.Equal(t, "", GrammarConceptFallback("PRESENT TENSE"))
-	assert.Equal(t, "", GrammarConceptFallback("genetiivi (-n)"))
-}
-
-func TestGrammarConceptFallback_TrimsWhitespace(t *testing.T) {
-	// TrimSpace applies (line 30 of vietnamese.go). Leading/trailing
-	// whitespace from table data or JSON parsing is benign.
-	assert.Equal(t, "thì hiện tại", GrammarConceptFallback("  Preesens  "))
-	assert.Equal(t, "thì quá khứ", GrammarConceptFallback("\tImperfekti\n"))
-}
-
-func TestGrammarConceptFallback_MissingReturnsEmpty(t *testing.T) {
-	assert.Equal(t, "", GrammarConceptFallback(""))
-	assert.Equal(t, "", GrammarConceptFallback("Not a real concept"))
-}
-
 // ----------------------------------------------------------------------------
-// ADR-008 supportregistry variants: GlossOverrideFor / GrammarConceptOverrideFor
+// ADR-008 supportregistry variants: GlossOverrideFor / GrammarConceptOverrideFor / TermOverrideFor
 // ----------------------------------------------------------------------------
 //
-// These tests pin the per-locale resolution contract that the new
-// variants must satisfy. The legacy wrappers above are now thin
-// "supportLocale = vi" shims around these — if the variants behave
-// correctly for vi the legacy tests above continue passing.
+// These tests pin the per-locale resolution contract. The legacy
+// VI-hardcoded wrappers were removed 2026-05-17; the *OverrideFor
+// variants are the canonical API.
 
 func TestGlossOverrideFor_ResolvesViWhenLocaleIsVi(t *testing.T) {
 	assert.Equal(t, "tôi", GlossOverrideFor("I", "vi"))
@@ -269,13 +190,13 @@ func TestTermOverrideFor_FiPronounsHaveCorrespondingGlossSeeds(t *testing.T) {
 	}
 }
 
-func TestTermOverrideFor_MatchesLegacyDictionaryTermOverrideForVi(t *testing.T) {
-	// No-regression invariant: for every entry in termOverrides, the
-	// new TermOverrideFor(fi, "vi") MUST produce the same string as
-	// the legacy DictionaryTermOverride(fi). If this fails, the
-	// migration silently changed VI output.
+func TestTermOverrideFor_TableInvariant_EveryFiKeyResolvesToItsViValue(t *testing.T) {
+	// Invariant: every entry in termOverrides MUST resolve via
+	// TermOverrideFor(fi, "vi") to that same value. If this fails,
+	// the supportregistry lookup is silently diverging from the
+	// hand-curated table.
 	for fi, expectedVi := range termOverrides {
 		got := TermOverrideFor(fi, "vi")
-		assert.Equal(t, expectedVi, got, "FI pronoun %q: legacy=%q new=%q", fi, expectedVi, got)
+		assert.Equal(t, expectedVi, got, "FI pronoun %q: table=%q registry=%q", fi, expectedVi, got)
 	}
 }
