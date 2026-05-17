@@ -16,8 +16,12 @@ from kielo_shared.middleware.legacy_alias import (
     DeprecationMiddleware,
     LegacyAliasMiddleware,
 )
+from kielo_shared.middleware.support_locale_overrides import (
+    SupportLocaleOverridesMiddleware,
+)
 
 __all__ = [
     "DeprecationMiddleware",
     "LegacyAliasMiddleware",
+    "SupportLocaleOverridesMiddleware",
 ]
