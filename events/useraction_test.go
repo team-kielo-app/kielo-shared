@@ -7,6 +7,8 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -256,4 +258,98 @@ func TestHTTPEmitter_RoundTripFuncCompiles(t *testing.T) {
 		return &http.Response{StatusCode: 200, Body: io.NopCloser(bytes.NewReader(nil))}, nil
 	})
 	_ = rt
+}
+
+// contractUserActionEnvelopePath returns the repo-relative path to
+// the shared ADR-011 envelope fixture. Both this Go test and (when
+// the Python emitter lands) the kielolearn-engine / kielo-events
+// Python consumer tests load the SAME file — a divergence on either
+// side trips its own test rather than silently 422-ing in production.
+func contractUserActionEnvelopePath(t *testing.T, name string) string {
+	t.Helper()
+	p, err := filepath.Abs(filepath.Join("..", "..", "tests", "contract", "fixtures", name))
+	require.NoError(t, err)
+	require.FileExists(t, p, "ADR-011 contract fixture missing: %s", name)
+	return p
+}
+
+func TestUserActionEnvelope_MatchesPrimaryFixture(t *testing.T) {
+	// Pin the Go canonical marshaling of a primary (non-derived)
+	// ADR-011 envelope against the shared fixture. Cross-language
+	// drift on the wire format would be caught here on the Go side.
+	envelope := UserActionEnvelope{
+		EventID:       "01HXY3F4Q5ABCDE0123456789Z",
+		EventType:     "article.read",
+		TS:            time.Date(2026, 5, 19, 7, 0, 50, 0, time.UTC),
+		SchemaVersion: 1,
+		Props: map[string]any{
+			"article_version_id": "22222222-2222-2222-2222-222222222222",
+			"read_seconds":       240,
+			"completion_pct":     100,
+		},
+		Context: map[string]any{
+			"app_version":            "1.4.5",
+			"learning_language_code": "fi",
+			"support_language_code":  "vi",
+		},
+	}
+	got, err := json.Marshal(envelope)
+	require.NoError(t, err)
+
+	want, err := os.ReadFile(contractUserActionEnvelopePath(t, "useraction_envelope.golden.json"))
+	require.NoError(t, err)
+
+	// JSONEq tolerates key ordering — Go sorts map keys
+	// alphabetically while the fixture groups them semantically.
+	assert.JSONEq(t, string(want), string(got),
+		"UserActionEnvelope output diverged from the shared contract fixture; "+
+			"if intentional, update tests/contract/fixtures/useraction_envelope.golden.json "+
+			"AND any Python consumers that decode this shape (kielo-events test fixtures, "+
+			"kielolearn-engine pydantic).")
+}
+
+func TestUserActionEnvelope_MatchesDerivedFixture(t *testing.T) {
+	// Pin the derived-envelope shape (streak.advanced fired by the
+	// user-service consumer as a side-effect of article.read). The
+	// `derived_from` field MUST appear on the wire; omitempty drops
+	// it for primary events but surfaces it here.
+	envelope := UserActionEnvelope{
+		EventID:       "01HXY3F4Q5DERIVED0000000Z0",
+		EventType:     "streak.advanced",
+		TS:            time.Date(2026, 5, 19, 7, 0, 51, 0, time.UTC),
+		SchemaVersion: 1,
+		Props: map[string]any{
+			"from": 3,
+			"to":   4,
+		},
+		DerivedFrom: "01HXY3F4Q5ABCDE0123456789Z",
+	}
+	got, err := json.Marshal(envelope)
+	require.NoError(t, err)
+
+	want, err := os.ReadFile(contractUserActionEnvelopePath(t, "useraction_envelope_derived.golden.json"))
+	require.NoError(t, err)
+	assert.JSONEq(t, string(want), string(got),
+		"derived UserActionEnvelope output diverged from the shared contract fixture")
+}
+
+func TestUserActionEnvelope_OmitsDerivedFromForPrimary(t *testing.T) {
+	// Defense in depth: a primary envelope (DerivedFrom == "") MUST
+	// NOT serialize a `derived_from` key — the spine's V066
+	// derived_from CHAR(26) FK rejects empty-string values, and the
+	// downstream consumer's "skip derived events" filter relies on
+	// the field being absent (or null) for primaries.
+	envelope := UserActionEnvelope{
+		EventID:   "01HXY3F4Q5ABCDE0123456789Z",
+		EventType: "article.read",
+		TS:        time.Date(2026, 5, 19, 7, 0, 50, 0, time.UTC),
+		Props:     map[string]any{"article_version_id": "x", "read_seconds": 1, "completion_pct": 1},
+	}
+	got, err := json.Marshal(envelope)
+	require.NoError(t, err)
+
+	var parsed map[string]any
+	require.NoError(t, json.Unmarshal(got, &parsed))
+	_, present := parsed["derived_from"]
+	assert.False(t, present, "primary envelope MUST NOT serialize derived_from (omitempty)")
 }
