@@ -40,7 +40,7 @@ func NewGeminiJSONProvider(apiKey string, client *http.Client) *GeminiJSONProvid
 		APIKey:       apiKey,
 		HTTPClient:   client,
 		Endpoint:     "https://generativelanguage.googleapis.com/v1beta/models",
-		DefaultModel: "gemini-3.1-flash-lite-preview",
+		DefaultModel: "gemini-3.1-flash-lite",
 	}
 }
 

@@ -19,7 +19,7 @@ Caller shape::
     provider = with_metrics(GeminiSDKProvider(api_key=k))
     result = await provider.generate(Request(
         prompt="...",
-        model="gemini-3.1-flash-lite-preview",
+        model="gemini-3.1-flash-lite",
         response_mime_type="application/json",
         task="convo_hint_engine",
     ))

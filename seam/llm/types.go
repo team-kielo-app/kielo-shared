@@ -31,7 +31,7 @@ type Request struct {
 	// prompt strategy.
 	Prompt string
 	// Model is the provider-specific model id (e.g. for Gemini
-	// "gemini-3.1-flash-lite-preview"). Empty ⇒ provider default.
+	// "gemini-3.1-flash-lite"). Empty ⇒ provider default.
 	Model string
 	// ResponseSchema is an optional JSON Schema; providers that
 	// support structured output (Gemini's responseSchema, OpenAI's
@@ -69,7 +69,7 @@ type Result struct {
 	// it's the natural-language reply.
 	RawText string
 	// Provider is the version-stamped provider id round-tripped
-	// onto metric labels (e.g. "gemini:gemini-3.1-flash-lite-preview").
+	// onto metric labels (e.g. "gemini:gemini-3.1-flash-lite").
 	Provider string
 	// LatencyMs is the wall-clock provider-call duration. Caller
 	// already gets latency via the metrics decorator's histogram —

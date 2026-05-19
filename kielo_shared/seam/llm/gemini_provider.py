@@ -18,7 +18,7 @@ from kielo_shared.seam.llm.types import (
 )
 
 
-_DEFAULT_MODEL = "gemini-3.1-flash-lite-preview"
+_DEFAULT_MODEL = "gemini-3.1-flash-lite"
 
 
 class GeminiSDKProvider:
