@@ -168,9 +168,26 @@ func (c *Client) Upsert(ctx context.Context, req UpsertRequest) (*UpsertResponse
 // {"scenario.title", "scenario.description"}). ResourceIDs
 // constrains the resource_id column (UUID strings or arbitrary
 // TEXT keys depending on the resource type).
+//
+// ResourceIDPrefix supports the kielotv access pattern where the
+// resource_id is a composite like `<videoID>.<cueIdx>`. The
+// caller passes the prefix (`<videoID>.`) so the service does a
+// LIKE scan rather than the client having to know the cue IDs
+// upfront. Empty prefix is ignored; if both ResourceIDs and
+// ResourceIDPrefix are supplied, the row must satisfy BOTH.
+//
+// LanguageCode is optional; empty means "all languages" (the
+// convo scenario path needs every locale so the consumer can
+// pick at render time).
+//
+// At least one of ResourceIDs or ResourceIDPrefix MUST be set —
+// the service rejects (400) otherwise to prevent accidental
+// full-table scans.
 type FetchRequest struct {
-	ResourceTypes []string `json:"resource_types"`
-	ResourceIDs   []string `json:"resource_ids"`
+	ResourceTypes    []string `json:"resource_types"`
+	ResourceIDs      []string `json:"resource_ids,omitempty"`
+	ResourceIDPrefix string   `json:"resource_id_prefix,omitempty"`
+	LanguageCode     string   `json:"language_code,omitempty"`
 }
 
 // FetchResponse is the {items: [...]} list returned by the
