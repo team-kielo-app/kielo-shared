@@ -31,6 +31,13 @@ type UserActionEnvelope struct {
 	SchemaVersion int16          `json:"schema_version"`
 	Props         map[string]any `json:"props"`
 	Context       map[string]any `json:"context,omitempty"`
+	// DerivedFrom points at the primary event_id when this envelope
+	// is a server-emitted side-effect (per ADR-011 §D5). Omitted for
+	// primary events. Subscribers MUST filter `derived_from != null`
+	// from re-ingestion paths to prevent the spine from looping.
+	// The spine's V066 schema persists this as a CHAR(26) FK to the
+	// same events.user_actions table.
+	DerivedFrom string `json:"derived_from,omitempty"`
 }
 
 // UserActionEmitter is the narrow interface emitter sites take.
