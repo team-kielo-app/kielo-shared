@@ -250,3 +250,180 @@ func (c *Client) statusErr(resp *http.Response, op string) error {
 	}
 	return fmt.Errorf("dynclient: %s returned %d: %s", op, resp.StatusCode, bodyStr)
 }
+
+// ============================================================================
+// Admin write surface (ADR-012 §D2.6 Phase 2 cutover, 2026-05-19).
+// Used by kielo-cms's localization admin handler to retire its
+// direct SQL writes against localization.* tables.
+// ============================================================================
+
+// Language mirrors kielo-localization models.Language.
+type Language struct {
+	Code       string    `json:"code"`
+	Name       string    `json:"name"`
+	NativeName *string   `json:"native_name,omitempty"`
+	Flag       *string   `json:"flag,omitempty"`
+	Direction  string    `json:"direction"`
+	IsDefault  bool      `json:"is_default"`
+	IsActive   bool      `json:"is_active"`
+	FallbackTo *string   `json:"fallback_to,omitempty"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
+}
+
+// Namespace mirrors kielo-localization models.Namespace.
+type Namespace struct {
+	ID          uuid.UUID `json:"id"`
+	Name        string    `json:"name"`
+	Description *string   `json:"description,omitempty"`
+	Platform    *string   `json:"platform,omitempty"`
+	IsActive    bool      `json:"is_active"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+// CreateLanguageRequest matches kielo-localization's wire shape.
+type CreateLanguageRequest struct {
+	Code       string  `json:"code"`
+	Name       string  `json:"name"`
+	NativeName *string `json:"native_name,omitempty"`
+	Flag       *string `json:"flag,omitempty"`
+	Direction  string  `json:"direction"`
+	IsDefault  bool    `json:"is_default"`
+	IsActive   bool    `json:"is_active"`
+	FallbackTo *string `json:"fallback_to,omitempty"`
+}
+
+// UpdateLanguageRequest matches kielo-localization's PATCH body.
+type UpdateLanguageRequest struct {
+	Name       string  `json:"name"`
+	NativeName *string `json:"native_name,omitempty"`
+	Flag       *string `json:"flag,omitempty"`
+	Direction  string  `json:"direction"`
+	IsDefault  bool    `json:"is_default"`
+	IsActive   bool    `json:"is_active"`
+	FallbackTo *string `json:"fallback_to,omitempty"`
+}
+
+// CreateNamespaceRequest matches kielo-localization's POST body.
+type CreateNamespaceRequest struct {
+	Name        string  `json:"name"`
+	Description *string `json:"description,omitempty"`
+	Platform    *string `json:"platform,omitempty"`
+	IsActive    bool    `json:"is_active"`
+}
+
+// UpdateNamespaceRequest matches kielo-localization's PATCH body.
+type UpdateNamespaceRequest struct {
+	Name        string  `json:"name"`
+	Description *string `json:"description,omitempty"`
+	Platform    *string `json:"platform,omitempty"`
+	IsActive    bool    `json:"is_active"`
+}
+
+// CreateLanguage POSTs to /languages. 409 (already exists) is
+// returned as a wrapped DynClientError with status 409.
+func (c *Client) CreateLanguage(ctx context.Context, req CreateLanguageRequest) (*Language, error) {
+	var out Language
+	if err := c.doJSON(ctx, http.MethodPost, "/internal/api/v3/localization/languages", req, &out, http.StatusCreated); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// UpdateLanguage PATCHes to /languages/:code. 404 is wrapped.
+func (c *Client) UpdateLanguage(ctx context.Context, code string, req UpdateLanguageRequest) (*Language, error) {
+	if code == "" {
+		return nil, fmt.Errorf("dynclient: code required")
+	}
+	var out Language
+	if err := c.doJSON(ctx, http.MethodPatch, "/internal/api/v3/localization/languages/"+code, req, &out, http.StatusOK); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// CreateNamespace POSTs to /namespaces.
+func (c *Client) CreateNamespace(ctx context.Context, req CreateNamespaceRequest) (*Namespace, error) {
+	var out Namespace
+	if err := c.doJSON(ctx, http.MethodPost, "/internal/api/v3/localization/namespaces", req, &out, http.StatusCreated); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// UpdateNamespace PATCHes to /namespaces/:id. 404 is wrapped.
+func (c *Client) UpdateNamespace(ctx context.Context, id uuid.UUID, req UpdateNamespaceRequest) (*Namespace, error) {
+	if id == uuid.Nil {
+		return nil, fmt.Errorf("dynclient: id required")
+	}
+	var out Namespace
+	if err := c.doJSON(ctx, http.MethodPatch, "/internal/api/v3/localization/namespaces/"+id.String(), req, &out, http.StatusOK); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// DynClientHTTPError carries the upstream status code so callers
+// can map 404 / 409 / 400 to caller-side sentinels (e.g.
+// "language already exists" => 409). Embeds the body prefix for
+// log debug.
+type DynClientHTTPError struct {
+	Op     string
+	Status int
+	Body   string
+}
+
+func (e *DynClientHTTPError) Error() string {
+	if e.Body == "" {
+		return fmt.Sprintf("dynclient: %s returned %d", e.Op, e.Status)
+	}
+	return fmt.Sprintf("dynclient: %s returned %d: %s", e.Op, e.Status, e.Body)
+}
+
+// doJSON is the shared request helper used by the admin CRUD
+// methods. POST/PATCH a JSON body, expect a specific success
+// status, decode into out. Non-success returns a
+// *DynClientHTTPError that callers can errors.As to inspect.
+func (c *Client) doJSON(
+	ctx context.Context,
+	method, path string,
+	body any,
+	out any,
+	expectStatus int,
+) error {
+	if c == nil {
+		return fmt.Errorf("dynclient: nil client")
+	}
+	raw, err := json.Marshal(body)
+	if err != nil {
+		return fmt.Errorf("marshal request: %w", err)
+	}
+	req, err := http.NewRequestWithContext(ctx, method, c.baseURL+path, bytes.NewReader(raw))
+	if err != nil {
+		return fmt.Errorf("build request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if c.apiKey != "" {
+		req.Header.Set("X-Internal-API-Key", c.apiKey)
+	}
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("%s %s: %w", method, path, err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != expectStatus {
+		respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
+		return &DynClientHTTPError{
+			Op:     method + " " + path,
+			Status: resp.StatusCode,
+			Body:   strings.TrimSpace(string(respBody)),
+		}
+	}
+	if out != nil {
+		if err := json.NewDecoder(resp.Body).Decode(out); err != nil {
+			return fmt.Errorf("decode response: %w", err)
+		}
+	}
+	return nil
+}
