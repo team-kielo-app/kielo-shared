@@ -395,15 +395,22 @@ func (c *Client) doJSON(
 	if c == nil {
 		return fmt.Errorf("dynclient: nil client")
 	}
-	raw, err := json.Marshal(body)
-	if err != nil {
-		return fmt.Errorf("marshal request: %w", err)
+	var reqBody io.Reader = http.NoBody
+	hasBody := body != nil
+	if hasBody {
+		raw, err := json.Marshal(body)
+		if err != nil {
+			return fmt.Errorf("marshal request: %w", err)
+		}
+		reqBody = bytes.NewReader(raw)
 	}
-	req, err := http.NewRequestWithContext(ctx, method, c.baseURL+path, bytes.NewReader(raw))
+	req, err := http.NewRequestWithContext(ctx, method, c.baseURL+path, reqBody)
 	if err != nil {
 		return fmt.Errorf("build request: %w", err)
 	}
-	req.Header.Set("Content-Type", "application/json")
+	if hasBody {
+		req.Header.Set("Content-Type", "application/json")
+	}
 	if c.apiKey != "" {
 		req.Header.Set("X-Internal-API-Key", c.apiKey)
 	}
@@ -427,3 +434,234 @@ func (c *Client) doJSON(
 	}
 	return nil
 }
+
+// ============================================================================
+// Translation keys, translations, bundles, audit_log, dynamic-status
+// (ADR-012 §D2.6 Phase 2 cutover full admin slice).
+// ============================================================================
+
+// TranslationKeyPlaceholder mirrors models.TranslationKeyPlaceholder.
+type TranslationKeyPlaceholder struct {
+	Name    string `json:"name"`
+	Type    string `json:"type"`
+	Example string `json:"example"`
+}
+
+// TranslationKey mirrors models.TranslationKey.
+type TranslationKey struct {
+	ID                   uuid.UUID                   `json:"id"`
+	NamespaceID          uuid.UUID                   `json:"namespace_id"`
+	Key                  string                      `json:"key"`
+	Description          *string                     `json:"description,omitempty"`
+	SourceText           string                      `json:"source_text"`
+	Placeholders         []TranslationKeyPlaceholder `json:"placeholders,omitempty"`
+	MaxLength            *int                        `json:"max_length,omitempty"`
+	ContextScreenshotURL *string                     `json:"context_screenshot_url,omitempty"`
+	Tags                 []string                    `json:"tags,omitempty"`
+	CreatedBy            *uuid.UUID                  `json:"created_by,omitempty"`
+	CreatedAt            time.Time                   `json:"created_at"`
+	UpdatedAt            time.Time                   `json:"updated_at"`
+}
+
+// Translation mirrors models.Translation.
+type Translation struct {
+	ID               uuid.UUID  `json:"id"`
+	KeyID            uuid.UUID  `json:"key_id"`
+	LanguageCode     string     `json:"language_code"`
+	Value            string     `json:"value"`
+	Status           string     `json:"status"`
+	QualityScore     *float64   `json:"quality_score,omitempty"`
+	TranslatorSource *string    `json:"translator_source,omitempty"`
+	ReviewedBy       *uuid.UUID `json:"reviewed_by,omitempty"`
+	ReviewedAt       *time.Time `json:"reviewed_at,omitempty"`
+	CreatedBy        *uuid.UUID `json:"created_by,omitempty"`
+	CreatedAt        time.Time  `json:"created_at"`
+	UpdatedAt        time.Time  `json:"updated_at"`
+}
+
+// TranslationBundle mirrors models.TranslationBundle.
+type TranslationBundle struct {
+	ID           uuid.UUID         `json:"id"`
+	NamespaceID  *uuid.UUID        `json:"namespace_id,omitempty"`
+	LanguageCode string            `json:"language_code"`
+	Bundle       map[string]string `json:"bundle"`
+	Version      int               `json:"version"`
+	Checksum     string            `json:"checksum"`
+	GeneratedAt  time.Time         `json:"generated_at"`
+}
+
+// CreateTranslationKeyRequest matches the kielo-localization
+// handler shape.
+type CreateTranslationKeyRequest struct {
+	NamespaceID          uuid.UUID                   `json:"namespace_id"`
+	Key                  string                      `json:"key"`
+	Description          *string                     `json:"description,omitempty"`
+	SourceText           string                      `json:"source_text"`
+	Placeholders         []TranslationKeyPlaceholder `json:"placeholders,omitempty"`
+	MaxLength            *int                        `json:"max_length,omitempty"`
+	ContextScreenshotURL *string                     `json:"context_screenshot_url,omitempty"`
+	Tags                 []string                    `json:"tags,omitempty"`
+	CreatedBy            *uuid.UUID                  `json:"created_by,omitempty"`
+}
+
+// UpdateTranslationKeyRequest matches PATCH /keys/:id body.
+type UpdateTranslationKeyRequest struct {
+	Description          *string                     `json:"description,omitempty"`
+	SourceText           *string                     `json:"source_text,omitempty"`
+	Placeholders         []TranslationKeyPlaceholder `json:"placeholders,omitempty"`
+	MaxLength            *int                        `json:"max_length,omitempty"`
+	ContextScreenshotURL *string                     `json:"context_screenshot_url,omitempty"`
+	Tags                 []string                    `json:"tags,omitempty"`
+}
+
+// BulkCreateTranslationKeysRequest matches POST /keys/bulk body.
+type BulkCreateTranslationKeysRequest struct {
+	Keys      []CreateTranslationKeyRequest `json:"keys"`
+	CreatedBy *uuid.UUID                    `json:"created_by,omitempty"`
+}
+
+// BulkCreateTranslationKeysResponse wraps the returned rows.
+type BulkCreateTranslationKeysResponse struct {
+	Items []TranslationKey `json:"items"`
+}
+
+// BulkUpdateKeySourceTextRequest matches PATCH /keys/bulk/source.
+type BulkUpdateKeySourceTextRequest struct {
+	Updates map[uuid.UUID]string `json:"updates"`
+}
+
+// CreateOrUpdateTranslationRequest matches POST /translations.
+type CreateOrUpdateTranslationRequest struct {
+	KeyID            uuid.UUID  `json:"key_id"`
+	LanguageCode     string     `json:"language_code"`
+	Value            string     `json:"value"`
+	Status           *string    `json:"status,omitempty"`
+	TranslatorSource *string    `json:"translator_source,omitempty"`
+	QualityScore     *float64   `json:"quality_score,omitempty"`
+	CreatedBy        *uuid.UUID `json:"created_by,omitempty"`
+}
+
+// BulkUpsertTranslationsItem matches the items in POST /translations/bulk.
+type BulkUpsertTranslationsItem struct {
+	KeyID            uuid.UUID `json:"key_id"`
+	LanguageCode     string    `json:"language_code"`
+	Value            string    `json:"value"`
+	Status           string    `json:"status,omitempty"`
+	TranslatorSource string    `json:"translator_source,omitempty"`
+}
+
+// BulkUpsertTranslationsRequest matches POST /translations/bulk.
+type BulkUpsertTranslationsRequest struct {
+	Items     []BulkUpsertTranslationsItem `json:"items"`
+	CreatedBy *uuid.UUID                   `json:"created_by,omitempty"`
+}
+
+// SetTranslationStatusRequest matches PATCH /translations/:id/status.
+type SetTranslationStatusRequest struct {
+	Status     string     `json:"status"`
+	ReviewedBy *uuid.UUID `json:"reviewed_by,omitempty"`
+}
+
+// CreateAuditLogRequest matches POST /audit. OldValue / NewValue
+// are typed as `any` so callers can pass arbitrary diff shapes —
+// the kielo-localization side stores them as opaque jsonb.
+type CreateAuditLogRequest struct {
+	EntityType  string     `json:"entity_type"`
+	EntityID    uuid.UUID  `json:"entity_id"`
+	Action      string     `json:"action"`
+	OldValue    any        `json:"old_value,omitempty"`
+	NewValue    any        `json:"new_value,omitempty"`
+	PerformedBy *uuid.UUID `json:"performed_by,omitempty"`
+	IPAddress   *string    `json:"ip_address,omitempty"`
+	UserAgent   *string    `json:"user_agent,omitempty"`
+}
+
+// SetDynamicTranslationStatusRequest matches PATCH /dynamic/:id/status.
+type SetDynamicTranslationStatusRequest struct {
+	Status       string    `json:"status"`
+	ReviewedBy   uuid.UUID `json:"reviewed_by,omitempty"`
+	OverrideText string    `json:"override_text,omitempty"`
+}
+
+// CreateTranslationKey POSTs to /keys.
+func (c *Client) CreateTranslationKey(ctx context.Context, req CreateTranslationKeyRequest) (*TranslationKey, error) {
+	var out TranslationKey
+	if err := c.doJSON(ctx, http.MethodPost, "/internal/api/v3/localization/keys", req, &out, http.StatusCreated); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// UpdateTranslationKey PATCHes /keys/:id.
+func (c *Client) UpdateTranslationKey(ctx context.Context, id uuid.UUID, req UpdateTranslationKeyRequest) error {
+	return c.doJSON(ctx, http.MethodPatch, "/internal/api/v3/localization/keys/"+id.String(), req, nil, http.StatusNoContent)
+}
+
+// DeleteTranslationKey DELETEs /keys/:id.
+func (c *Client) DeleteTranslationKey(ctx context.Context, id uuid.UUID) error {
+	return c.doJSON(ctx, http.MethodDelete, "/internal/api/v3/localization/keys/"+id.String(), nil, nil, http.StatusNoContent)
+}
+
+// BulkCreateTranslationKeys POSTs to /keys/bulk.
+func (c *Client) BulkCreateTranslationKeys(ctx context.Context, req BulkCreateTranslationKeysRequest) (*BulkCreateTranslationKeysResponse, error) {
+	var out BulkCreateTranslationKeysResponse
+	if err := c.doJSON(ctx, http.MethodPost, "/internal/api/v3/localization/keys/bulk", req, &out, http.StatusCreated); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// BulkUpdateKeySourceText PATCHes /keys/bulk/source.
+func (c *Client) BulkUpdateKeySourceText(ctx context.Context, req BulkUpdateKeySourceTextRequest) error {
+	return c.doJSON(ctx, http.MethodPatch, "/internal/api/v3/localization/keys/bulk/source", req, nil, http.StatusNoContent)
+}
+
+// CreateOrUpdateTranslation POSTs to /translations.
+func (c *Client) CreateOrUpdateTranslation(ctx context.Context, req CreateOrUpdateTranslationRequest) (*Translation, error) {
+	var out Translation
+	if err := c.doJSON(ctx, http.MethodPost, "/internal/api/v3/localization/translations", req, &out, http.StatusOK); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// BulkUpsertTranslations POSTs to /translations/bulk.
+func (c *Client) BulkUpsertTranslations(ctx context.Context, req BulkUpsertTranslationsRequest) error {
+	return c.doJSON(ctx, http.MethodPost, "/internal/api/v3/localization/translations/bulk", req, nil, http.StatusNoContent)
+}
+
+// SetTranslationStatus PATCHes /translations/:id/status.
+func (c *Client) SetTranslationStatus(ctx context.Context, id uuid.UUID, req SetTranslationStatusRequest) error {
+	return c.doJSON(ctx, http.MethodPatch, "/internal/api/v3/localization/translations/"+id.String()+"/status", req, nil, http.StatusNoContent)
+}
+
+// GenerateBundle POSTs to /bundles/:namespace_id/:lang/generate.
+func (c *Client) GenerateBundle(ctx context.Context, namespaceID uuid.UUID, languageCode string) (*TranslationBundle, error) {
+	var out TranslationBundle
+	if err := c.doJSON(ctx, http.MethodPost, "/internal/api/v3/localization/bundles/"+namespaceID.String()+"/"+languageCode+"/generate", struct{}{}, &out, http.StatusOK); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// CreateAuditLog POSTs to /audit.
+func (c *Client) CreateAuditLog(ctx context.Context, req CreateAuditLogRequest) error {
+	return c.doJSON(ctx, http.MethodPost, "/internal/api/v3/localization/audit", req, nil, http.StatusNoContent)
+}
+
+// SetDynamicTranslationStatus PATCHes /dynamic/:id/status.
+// Returns the updated row so callers can scope cache
+// invalidation by resource_type.
+func (c *Client) SetDynamicTranslationStatus(ctx context.Context, id uuid.UUID, req SetDynamicTranslationStatusRequest) (*DynamicTranslation, error) {
+	var out DynamicTranslation
+	if err := c.doJSON(ctx, http.MethodPatch, "/internal/api/v3/localization/dynamic/"+id.String()+"/status", req, &out, http.StatusOK); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// doJSONWithDelete is a tiny aux so DELETE with no body doesn't
+// marshal a "null" payload — net/http and the service handle it
+// fine, but emitting `null` as the body is unusual.
+// (kept inline within doJSON; this aux note explains the
+// nil-body branch.)
