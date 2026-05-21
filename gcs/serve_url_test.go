@@ -142,3 +142,84 @@ func TestIsStorageAPIPath_RejectsUnrelatedPaths(t *testing.T) {
 	assert.False(t, IsStorageAPIPath(""))
 	assert.False(t, IsStorageAPIPath("/storage/v2/b/foo"), "v2 must not match v1")
 }
+
+// JoinServeBaseAndObjectPath was promoted from `kielo-shared/media`'s
+// unexported `joinServeBaseAndVariantPath` in 2026-05-21 so non-media
+// callers (ambient audio resolver, localization bundle URL builder)
+// could reuse the same shape-aware join logic instead of hand-rolling
+// `fmt.Sprintf("https://...")`. The tests below are direct ports of
+// the original tests with the function name updated.
+
+func TestJoinServeBaseAndObjectPath_DirectURLJoinsWithSlash(t *testing.T) {
+	// Direct / CDN URLs end in "/". The object path is appended
+	// with leading-slash normalization so "img.jpg", "/img.jpg",
+	// and " img.jpg " all produce the same result.
+	base := "https://cdn.example.com/assets/"
+	assert.Equal(t, "https://cdn.example.com/assets/img.jpg",
+		JoinServeBaseAndObjectPath(base, "img.jpg"))
+	assert.Equal(t, "https://cdn.example.com/assets/img.jpg",
+		JoinServeBaseAndObjectPath(base, "/img.jpg"))
+	assert.Equal(t, "https://cdn.example.com/assets/img.jpg",
+		JoinServeBaseAndObjectPath(base, "  img.jpg  "))
+}
+
+func TestJoinServeBaseAndObjectPath_DirectURLWithoutTrailingSlash(t *testing.T) {
+	// Defensive: if base doesn't end with "/" and isn't a storage API
+	// path, the function returns base unchanged. This is a "fail
+	// obviously" design — the caller sees a wrong URL and fixes their
+	// base rather than the function silently recovering and masking
+	// the bug.
+	base := "https://cdn.example.com/assets"
+	got := JoinServeBaseAndObjectPath(base, "img.jpg")
+	assert.Equal(t, base, got)
+}
+
+func TestJoinServeBaseAndObjectPath_GCSAPIURLRebuilds(t *testing.T) {
+	// For a GCS storage API URL (.../storage/v1/b/<bucket>/o/<prefix>/),
+	// the join must re-encode the full object path with ?alt=media so
+	// the URL is directly fetchable. Without ?alt=media the API
+	// returns JSON metadata, not the bytes.
+	base := "http://gcs-emu:4443/storage/v1/b/my-bucket/o/media/"
+	got := JoinServeBaseAndObjectPath(base, "thumb.jpg")
+	assert.Contains(t, got, "/storage/v1/b/my-bucket/o/")
+	assert.Contains(t, got, "?alt=media")
+	// The prefix "media/" and the object "thumb.jpg" concatenate.
+	// The "/" separator is URL-encoded to %2F (since it's part of
+	// the object path now, not the URL path).
+	assert.Contains(t, got, "media%2Fthumb.jpg")
+}
+
+func TestJoinServeBaseAndObjectPath_GCSAPINestedObjectPath(t *testing.T) {
+	// Some objects are emitted under nested paths like
+	// "preview/thumb.jpg". The final URL must preserve the nesting
+	// (encoded) rather than losing the segment.
+	base := "http://gcs-emu:4443/storage/v1/b/bucket/o/articles/"
+	got := JoinServeBaseAndObjectPath(base, "preview/thumb.jpg")
+	assert.Contains(t, got, "articles%2Fpreview%2Fthumb.jpg")
+}
+
+func TestJoinServeBaseAndObjectPath_BaseWithQueryReturnsUnchanged(t *testing.T) {
+	// Defensive: if the base already has a query string (unusual —
+	// shouldn't happen from BuildServeBaseURL but could arrive from
+	// manual construction), the function refuses to append to it.
+	// This prevents producing malformed URLs like
+	// "cdn.example.com/?token=x/img.jpg".
+	base := "https://cdn.example.com/assets/?token=abc"
+	got := JoinServeBaseAndObjectPath(base, "img.jpg")
+	assert.Equal(t, base, got)
+}
+
+func TestJoinServeBaseAndObjectPath_EmptyInputs(t *testing.T) {
+	assert.Equal(t, "", JoinServeBaseAndObjectPath("", "img.jpg"))
+	// Empty object path → return base as-is.
+	assert.Equal(t, "https://cdn.example.com/assets/",
+		JoinServeBaseAndObjectPath("https://cdn.example.com/assets/", ""))
+	assert.Equal(t, "https://cdn.example.com/assets/",
+		JoinServeBaseAndObjectPath("https://cdn.example.com/assets/", "   "))
+}
+
+func TestJoinServeBaseAndObjectPath_WhitespaceBase(t *testing.T) {
+	// Whitespace-only base treated as empty.
+	assert.Equal(t, "",
+		JoinServeBaseAndObjectPath("   ", "img.jpg"))
+}

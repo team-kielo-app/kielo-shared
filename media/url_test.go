@@ -10,10 +10,11 @@ import (
 
 // Tests for media URL construction. Every service that returns a
 // media asset to a client goes through PreferredVariantURL →
-// joinServeBaseAndVariantPath to produce the actual URL. The join
-// logic has two branches (CDN/direct vs GCS API) that must each
-// produce a fetchable URL for the client — a regression here breaks
-// every thumbnail, audio clip, and video in the app.
+// gcs.JoinServeBaseAndObjectPath to produce the actual URL. The
+// join logic (two branches: CDN/direct vs GCS API) is unit-tested
+// directly in kielo-shared/gcs/serve_url_test.go — this file
+// covers the media-layer composition on top of it (variant
+// selection, JSONB parsing).
 
 func TestVariantsFromJSON_EmptyInputReturnsNil(t *testing.T) {
 	// An empty or nil JSONB payload → nil map, no error. Callers
@@ -107,89 +108,6 @@ func TestPreferredVariantURL_GuardsEmptyBaseAndVariants(t *testing.T) {
 	assert.Equal(t, "", PreferredVariantURL("", map[string]Variant{"a": {Path: "x.jpg"}}, "a"))
 	assert.Equal(t, "", PreferredVariantURL("https://cdn/", nil, "a"))
 	assert.Equal(t, "", PreferredVariantURL("https://cdn/", map[string]Variant{}, "a"))
-}
-
-func TestJoinServeBaseAndVariantPath_DirectURLJoinsWithSlash(t *testing.T) {
-	// Direct / CDN URLs end in "/". The variant path is appended
-	// with leading-slash normalization so "img.jpg", "/img.jpg",
-	// and " img.jpg " all produce the same result.
-	base := "https://cdn.example.com/assets/"
-	assert.Equal(t, "https://cdn.example.com/assets/img.jpg",
-		joinServeBaseAndVariantPath(base, "img.jpg"))
-	assert.Equal(t, "https://cdn.example.com/assets/img.jpg",
-		joinServeBaseAndVariantPath(base, "/img.jpg"))
-	assert.Equal(t, "https://cdn.example.com/assets/img.jpg",
-		joinServeBaseAndVariantPath(base, "  img.jpg  "))
-}
-
-func TestJoinServeBaseAndVariantPath_DirectURLWithoutTrailingSlash(t *testing.T) {
-	// Defensive: if base doesn't end with "/" (caller bug, normally
-	// not expected), the function WILL emit "/" before the variant
-	// to avoid broken URLs like "cdn.example.com/assetsimg.jpg".
-	// This is the explicit behavior the function falls back to for
-	// non-storage-API URLs that DON'T end in "/".
-	// Actually re-reading the code — if path doesn't end in "/" and
-	// isn't a storage API path, it returns base unchanged (line 138).
-	// Pin that behavior so a refactor doesn't accidentally change it.
-	base := "https://cdn.example.com/assets"
-	got := joinServeBaseAndVariantPath(base, "img.jpg")
-	// The function returns `base` unchanged when path doesn't end in
-	// "/" — callers are expected to pass a slash-terminated base.
-	// This is a "fail obviously" design: the caller sees a wrong URL
-	// and fixes their base rather than the function silently
-	// recovering and masking the bug.
-	assert.Equal(t, base, got)
-}
-
-func TestJoinServeBaseAndVariantPath_GCSAPIURLRebuilds(t *testing.T) {
-	// For a GCS storage API URL (.../storage/v1/b/<bucket>/o/<prefix>/),
-	// the join must re-encode the full object path with ?alt=media so
-	// the URL is directly fetchable. Without ?alt=media the API
-	// returns JSON metadata, not the bytes.
-	base := "http://gcs-emu:4443/storage/v1/b/my-bucket/o/media/"
-	got := joinServeBaseAndVariantPath(base, "thumb.jpg")
-	assert.Contains(t, got, "/storage/v1/b/my-bucket/o/")
-	assert.Contains(t, got, "?alt=media")
-	// The prefix "media/" and the variant "thumb.jpg" concatenate.
-	// The "/" separator is URL-encoded to %2F (since it's part of
-	// the object path now, not the URL path).
-	assert.Contains(t, got, "media%2Fthumb.jpg")
-}
-
-func TestJoinServeBaseAndVariantPath_GCSAPINestedVariantPath(t *testing.T) {
-	// Some variants are emitted under nested paths like
-	// "preview/thumb.jpg". The final URL must preserve the nesting
-	// (encoded) rather than losing the segment.
-	base := "http://gcs-emu:4443/storage/v1/b/bucket/o/articles/"
-	got := joinServeBaseAndVariantPath(base, "preview/thumb.jpg")
-	assert.Contains(t, got, "articles%2Fpreview%2Fthumb.jpg")
-}
-
-func TestJoinServeBaseAndVariantPath_BaseWithQueryReturnsUnchanged(t *testing.T) {
-	// Defensive: if the base already has a query string (unusual —
-	// shouldn't happen from ServeBaseURL but could arrive from
-	// manual construction), the function refuses to append to it.
-	// This prevents producing malformed URLs like
-	// "cdn.example.com/?token=x/img.jpg".
-	base := "https://cdn.example.com/assets/?token=abc"
-	got := joinServeBaseAndVariantPath(base, "img.jpg")
-	assert.Equal(t, base, got)
-}
-
-func TestJoinServeBaseAndVariantPath_EmptyInputs(t *testing.T) {
-	assert.Equal(t, "", joinServeBaseAndVariantPath("", "img.jpg"))
-	// Empty variant path → return base as-is (caller sees the base,
-	// not a malformed "base+'/'"  URL).
-	assert.Equal(t, "https://cdn.example.com/assets/",
-		joinServeBaseAndVariantPath("https://cdn.example.com/assets/", ""))
-	assert.Equal(t, "https://cdn.example.com/assets/",
-		joinServeBaseAndVariantPath("https://cdn.example.com/assets/", "   "))
-}
-
-func TestJoinServeBaseAndVariantPath_WhitespaceBase(t *testing.T) {
-	// Whitespace-only base treated as empty.
-	assert.Equal(t, "",
-		joinServeBaseAndVariantPath("   ", "img.jpg"))
 }
 
 func TestServeBaseURL_DelegatesToGCSHelper(t *testing.T) {
