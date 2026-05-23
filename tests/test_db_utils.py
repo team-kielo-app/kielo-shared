@@ -370,3 +370,84 @@ def test_register_search_path_listener_callable_validates_resolver_output():
     sa_conn = MagicMock()
     with pytest.raises(ValueError, match="Invalid search_path identifier"):
         by_event["begin"][1](sa_conn)
+
+
+# ---------------------------------------------------------------------------
+# check_per_language_schemas_present (added 2026-05-23 for cleanup #2).
+# Verifies the diagnostic check that engine startup runs to surface
+# "per-language migrations didn't run" as an actionable error instead
+# of a downstream NotNullViolationError.
+# ---------------------------------------------------------------------------
+@pytest.mark.asyncio
+async def test_check_per_language_schemas_present_all_present():
+    """When every expected schema exists, returns (True, [])."""
+    from unittest.mock import AsyncMock, MagicMock
+
+    # Mock the async engine.connect() -> async-context-manager returning a conn.
+    fake_result = MagicMock()
+    fake_result.fetchall.return_value = [
+        ("klearn_fi",), ("klearn_sv",), ("cms_fi",), ("cms_sv",),
+    ]
+
+    fake_conn = MagicMock()
+    fake_conn.execute = AsyncMock(return_value=fake_result)
+
+    fake_conn_ctx = MagicMock()
+    fake_conn_ctx.__aenter__ = AsyncMock(return_value=fake_conn)
+    fake_conn_ctx.__aexit__ = AsyncMock(return_value=None)
+
+    fake_engine = MagicMock()
+    fake_engine.connect = MagicMock(return_value=fake_conn_ctx)
+
+    ok, missing = await db_utils.check_per_language_schemas_present(fake_engine)
+    assert ok is True
+    assert missing == []
+
+
+@pytest.mark.asyncio
+async def test_check_per_language_schemas_present_some_missing():
+    """When schemas are missing, returns (False, sorted-list-of-missing)."""
+    from unittest.mock import AsyncMock, MagicMock
+
+    fake_result = MagicMock()
+    # Only fi schemas present; sv schemas missing.
+    fake_result.fetchall.return_value = [("klearn_fi",), ("cms_fi",)]
+
+    fake_conn = MagicMock()
+    fake_conn.execute = AsyncMock(return_value=fake_result)
+
+    fake_conn_ctx = MagicMock()
+    fake_conn_ctx.__aenter__ = AsyncMock(return_value=fake_conn)
+    fake_conn_ctx.__aexit__ = AsyncMock(return_value=None)
+
+    fake_engine = MagicMock()
+    fake_engine.connect = MagicMock(return_value=fake_conn_ctx)
+
+    ok, missing = await db_utils.check_per_language_schemas_present(fake_engine)
+    assert ok is False
+    assert missing == ["cms_sv", "klearn_sv"]
+
+
+@pytest.mark.asyncio
+async def test_check_per_language_schemas_present_custom_languages():
+    """Custom `languages` arg controls which prefix×lang combos are required."""
+    from unittest.mock import AsyncMock, MagicMock
+
+    fake_result = MagicMock()
+    fake_result.fetchall.return_value = [("klearn_de",), ("cms_de",)]
+
+    fake_conn = MagicMock()
+    fake_conn.execute = AsyncMock(return_value=fake_result)
+
+    fake_conn_ctx = MagicMock()
+    fake_conn_ctx.__aenter__ = AsyncMock(return_value=fake_conn)
+    fake_conn_ctx.__aexit__ = AsyncMock(return_value=None)
+
+    fake_engine = MagicMock()
+    fake_engine.connect = MagicMock(return_value=fake_conn_ctx)
+
+    ok, missing = await db_utils.check_per_language_schemas_present(
+        fake_engine, languages=["de"]
+    )
+    assert ok is True
+    assert missing == []

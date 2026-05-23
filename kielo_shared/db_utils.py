@@ -6,7 +6,7 @@ import contextvars
 import os
 import re
 import ssl
-from typing import Any, Callable, Union
+from typing import Any, Callable, Iterable, Union
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 # sqlalchemy is imported lazily inside register_search_path_listener and
@@ -299,6 +299,73 @@ def require_active_language() -> str:
     if not language:
         raise RuntimeError("active learning language is required")
     return language
+
+
+async def check_per_language_schemas_present(
+    engine: Any,
+    *,
+    languages: Iterable[str] | None = None,
+    required_prefixes: Iterable[str] = ("klearn", "cms"),
+) -> tuple[bool, list[str]]:
+    """Verify per-language schemas exist for each configured language.
+
+    Returns ``(ok, missing)`` where ``missing`` is a list of schema names
+    that should exist but don't (e.g. ``["klearn_sv", "cms_sv"]``). The
+    boolean ``ok`` is ``True`` iff ``missing`` is empty.
+
+    Why this matters: the search_path resolver built by
+    :func:`make_per_language_search_path` silently falls back to the
+    legacy ``klearn``/``cms`` schemas when per-language schemas don't
+    exist. That fallback was designed for the M3-era dual-write window
+    when each table independently graduated, but post-M5 the model code
+    assumes per-language tables exist (column ``learning_language_code``
+    has been dropped from them). When per-language schemas are missing,
+    writes silently land in the legacy tables where the column is still
+    ``NOT NULL`` — producing confusing ``NotNullViolationError``s that
+    look like application bugs but are actually configuration errors.
+
+    Call this from service startup (typically in the FastAPI ``lifespan``
+    handler) so the configuration error surfaces immediately at boot
+    with a clear message, instead of waiting for the first write to
+    a per-language partitioned table.
+
+    ``languages`` defaults to :data:`SUPPORTED_LEARNING_LANGUAGES`
+    (``{'fi', 'sv'}``). ``required_prefixes`` defaults to
+    ``("klearn", "cms")`` — the two schema families partitioned per
+    language. The check assembles ``f"{prefix}_{lang}"`` for the Cartesian
+    product and confirms each exists in ``pg_namespace``.
+
+    Returns the (ok, missing) tuple rather than raising so callers can
+    decide whether the missing schemas are fatal (e.g. fail engine
+    startup) or just a warning (e.g. a worker that operates only on
+    legacy ``_shared`` data and doesn't need per-language).
+    """
+    from sqlalchemy import text  # local import: kielo_shared has no top-level sqlalchemy dep
+
+    if languages is None:
+        # Late import to avoid a module-init cycle (locale_constants
+        # imports nothing from db_utils, but inserting the import at
+        # module top puts a runtime dep on locale_constants for every
+        # importer of db_utils).
+        from kielo_shared.locale_constants import SUPPORTED_LEARNING_LANGUAGES
+        languages = SUPPORTED_LEARNING_LANGUAGES
+
+    expected: list[str] = []
+    for prefix in required_prefixes:
+        for lang in languages:
+            expected.append(f"{prefix}_{lang}")
+
+    async with engine.connect() as conn:
+        result = await conn.execute(
+            text(
+                "SELECT nspname FROM pg_namespace WHERE nspname = ANY(:names)"
+            ),
+            {"names": expected},
+        )
+        present = {row[0] for row in result.fetchall()}
+
+    missing = sorted(name for name in expected if name not in present)
+    return (not missing, missing)
 
 
 def make_per_language_search_path(
