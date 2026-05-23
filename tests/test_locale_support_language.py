@@ -181,3 +181,31 @@ def test_resolve_support_language_normalizes_locale_alias(client: TestClient):
 )
 def test_is_supported_support_language(code, expected):
     assert is_supported_support_language(code) is expected
+
+
+# ---------------------------------------------------------------------------
+# FastAPI dependency wrapper. Distinct test surface so a regression in the
+# Depends() integration surfaces separately from a resolver bug.
+# ---------------------------------------------------------------------------
+
+
+def test_get_support_language_dependency_resolves_through_depends():
+    """The Depends() wrapper must produce identical output to calling
+    resolve_support_language_stateless directly. Exercise the FastAPI
+    dependency-injection path end-to-end via TestClient."""
+    from fastapi import Depends, FastAPI
+    from kielo_shared.locale.fastapi import get_support_language
+
+    app = FastAPI()
+
+    @app.get("/y")
+    async def _read(support_language_code: str = Depends(get_support_language)) -> dict:
+        return {"resolved": support_language_code}
+
+    c = TestClient(app)
+    # Explicit query wins.
+    assert c.get("/y?support_language_code=fi").json() == {"resolved": "fi"}
+    # Accept-Language as fallback.
+    assert c.get("/y", headers={"Accept-Language": "vi"}).json() == {"resolved": "vi"}
+    # No signal → tier A.
+    assert c.get("/y").json() == {"resolved": TIER_A_SUPPORT_LOCALE}
