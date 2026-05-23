@@ -24,10 +24,19 @@ from __future__ import annotations
 
 import logging
 import re
+import threading
 from typing import Any
 
 
 logger = logging.getLogger(__name__)
+
+# Per-(service, resolver) lock used to gate the WARN-once log emitted by
+# `per_language_search_path_fallback_emit`. Process-local; survives the
+# lifetime of the worker. Falling-back background workers stay at DEBUG;
+# the WARN is reserved for request-path resolvers (`expected_fallback=False`)
+# where a single fallback occurrence already signals a regression.
+_PER_LANGUAGE_FALLBACK_WARN_SEEN: set[tuple[str, str]] = set()
+_PER_LANGUAGE_FALLBACK_WARN_LOCK = threading.Lock()
 
 
 try:
@@ -252,6 +261,31 @@ if PROMETHEUS_AVAILABLE:
         "Hit count for v3 legacy-alias routes that forward to a canonical "
         "v3 successor. Drives the alias sunset burn-down dashboard.",
         labelnames=("service", "path", "successor"),
+    )
+
+    # Per-language search_path fallback counter. Fires when
+    # `kielo_shared.db_utils.make_per_language_search_path` resolves a
+    # transaction's search_path with no active language on the context
+    # AND a static fallback path is configured. The fallback is the
+    # documented contract for background workers operating on shared /
+    # legacy schemas; on request-path resolvers (engine sessions, content-
+    # service repos) any non-zero rate is a regression in upstream
+    # language propagation. Used together with the WARN-once log emitted
+    # by `per_language_search_path_fallback_emit` when
+    # `expected_fallback=False` to surface unexpected fallbacks.
+    #
+    # Labels:
+    #   * service — short service name pinned per process
+    #     ("kielolearn-engine", "kielo-ingest-processor", ...). Bounded.
+    #   * resolver — caller-pinned tag of the resolver call site
+    #     ("session", "data_hygiene", "deduplicate_concepts", ...). Bounded
+    #     by the resolver-construction sites (5 today). The label is
+    #     the same vocabulary as the Go-side `callsite` label so
+    #     dashboards can join Python + Go uniformly.
+    PER_LANGUAGE_SEARCH_PATH_FALLBACK_TOTAL = Counter(
+        "kielo_per_language_search_path_fallback_total",
+        "search_path resolutions that fell back to a static path because no active language was set on context.",
+        labelnames=("service", "resolver"),
     )
 
 
@@ -638,6 +672,70 @@ def v1_route_hit_emit(*, service: str, method: str, path: str) -> None:
         logger.debug("v1_route_hit_emit prometheus fanout failed: %s", exc)
 
 
+def per_language_search_path_fallback_emit(
+    *,
+    service: str,
+    resolver: str,
+    expected_fallback: bool = False,
+) -> None:
+    """Record one search_path fallback event from
+    :func:`kielo_shared.db_utils.make_per_language_search_path`.
+
+    Always increments :data:`PER_LANGUAGE_SEARCH_PATH_FALLBACK_TOTAL`
+    (when prometheus_client is importable). Log policy:
+
+    * ``expected_fallback=False`` — WARN on the FIRST occurrence per
+      ``(service, resolver)`` pair, DEBUG thereafter. Used by request-
+      path resolvers (engine session, content-service repos) where a
+      fallback occurrence already signals an upstream regression: the
+      first WARN catches a human's eye, the metric carries the ongoing
+      rate.
+    * ``expected_fallback=True`` — DEBUG always. Used by background
+      workers (data hygiene, embedding backfills, deduplication) where
+      fallback IS the documented contract; the WARN would be noise.
+
+    Either way, the metric is the durable signal — alert off
+    ``rate(kielo_per_language_search_path_fallback_total{service="kielolearn-engine"}[5m]) > 0``
+    for request-path services, and use the per-resolver split to
+    investigate which call site is leaking.
+    """
+    if expected_fallback:
+        logger.debug(
+            "per_language_search_path_fallback service=%s resolver=%s expected=true",
+            service, resolver,
+        )
+    else:
+        key = (service, resolver)
+        first_occurrence = False
+        with _PER_LANGUAGE_FALLBACK_WARN_LOCK:
+            if key not in _PER_LANGUAGE_FALLBACK_WARN_SEEN:
+                _PER_LANGUAGE_FALLBACK_WARN_SEEN.add(key)
+                first_occurrence = True
+        if first_occurrence:
+            logger.warning(
+                "per_language_search_path_fallback service=%s resolver=%s "
+                "(no active language; using static fallback — request-path "
+                "resolvers should always have a language scoped by middleware)",
+                service, resolver,
+            )
+        else:
+            logger.debug(
+                "per_language_search_path_fallback service=%s resolver=%s expected=false",
+                service, resolver,
+            )
+    if not PROMETHEUS_AVAILABLE:
+        return
+    try:
+        PER_LANGUAGE_SEARCH_PATH_FALLBACK_TOTAL.labels(
+            service=service, resolver=resolver
+        ).inc()
+    except Exception as exc:  # noqa: BLE001
+        logger.debug(
+            "per_language_search_path_fallback_emit prometheus fanout failed: %s",
+            exc,
+        )
+
+
 def legacy_alias_hit_emit(
     *, service: str, path: str, successor: str
 ) -> None:
@@ -686,6 +784,7 @@ __all__ = [
     "llm_generate_validate_emit",
     "localization_emit",
     "metrics_text",
+    "per_language_search_path_fallback_emit",
     "prewarm_emit",
     "pubsub_ack_emit",
     "pubsub_publish_emit",

@@ -5,6 +5,9 @@ import (
 	"errors"
 	"strings"
 	"testing"
+
+	"github.com/prometheus/client_golang/prometheus/testutil"
+	"github.com/team-kielo-app/kielo-shared/observe/metrics"
 )
 
 func TestValidateLanguageIdent_AcceptsISOCodes(t *testing.T) {
@@ -227,5 +230,88 @@ func TestIssueRaw_ValidatesPath(t *testing.T) {
 	}
 	if len(exec.queries) != 0 {
 		t.Errorf("expected no SQL to be issued on invalid path; got %v", exec.queries)
+	}
+}
+
+// ─────────────── per-language fallback observability ─────────────────
+
+func TestWithFallbackCallsite_RoundTrip(t *testing.T) {
+	ctx := context.Background()
+	if got := FallbackCallsiteFromContext(ctx); got != "" {
+		t.Errorf("empty ctx should not have a callsite; got %q", got)
+	}
+	ctx = WithFallbackCallsite(ctx, "kielotv.list_brands")
+	if got := FallbackCallsiteFromContext(ctx); got != "kielotv.list_brands" {
+		t.Errorf("FallbackCallsiteFromContext = %q, want %q", got, "kielotv.list_brands")
+	}
+	// Empty callsite is a no-op (returns the same ctx).
+	if WithFallbackCallsite(ctx, "") != ctx {
+		t.Error("WithFallbackCallsite(ctx, \"\") should return ctx unchanged")
+	}
+}
+
+func TestFallbackCallsiteFromContext_NilSafe(t *testing.T) {
+	// Defensive: callers may pass a nil ctx in tests. Don't panic.
+	//nolint:staticcheck // intentionally testing nil-safety
+	if got := FallbackCallsiteFromContext(nil); got != "" {
+		t.Errorf("nil ctx should yield \"\"; got %q", got)
+	}
+}
+
+func TestApplySearchPathToTx_EmitsFallbackMetric(t *testing.T) {
+	metrics.ResetPerLanguageSearchPathFallbackState()
+	t.Cleanup(metrics.ResetPerLanguageSearchPathFallbackState)
+	metrics.SetServiceName("test-svc")
+
+	exec := &fakeExec{}
+	ctx := WithFallbackCallsite(context.Background(), "test_repo.read")
+	if err := ApplySearchPathToTx(ctx, exec.Exec); err != nil {
+		t.Fatalf("ApplySearchPathToTx: %v", err)
+	}
+	if got := testutil.ToFloat64(
+		metrics.PerLanguageSearchPathFallbackTotal.WithLabelValues("test-svc", "test_repo.read"),
+	); got != 1 {
+		t.Errorf("fallback counter = %v, want 1", got)
+	}
+	if len(exec.queries) != 0 {
+		t.Errorf("fallback path must not issue SQL; got %v", exec.queries)
+	}
+}
+
+func TestApplySearchPathToTx_NoMetricWhenLanguageSet(t *testing.T) {
+	metrics.ResetPerLanguageSearchPathFallbackState()
+	t.Cleanup(metrics.ResetPerLanguageSearchPathFallbackState)
+	metrics.SetServiceName("test-svc")
+
+	exec := &fakeExec{}
+	ctx := WithLanguage(context.Background(), "sv")
+	ctx = WithFallbackCallsite(ctx, "test_repo.read")
+	if err := ApplySearchPathToTx(ctx, exec.Exec); err != nil {
+		t.Fatalf("ApplySearchPathToTx: %v", err)
+	}
+	if got := testutil.ToFloat64(
+		metrics.PerLanguageSearchPathFallbackTotal.WithLabelValues("test-svc", "test_repo.read"),
+	); got != 0 {
+		t.Errorf("non-fallback path must not increment counter; got %v", got)
+	}
+	if len(exec.queries) != 1 {
+		t.Fatalf("expected SET LOCAL search_path; got %v", exec.queries)
+	}
+}
+
+func TestApplySearchPathToTx_FallbackDefaultsToUnknownCallsite(t *testing.T) {
+	metrics.ResetPerLanguageSearchPathFallbackState()
+	t.Cleanup(metrics.ResetPerLanguageSearchPathFallbackState)
+	metrics.SetServiceName("test-svc")
+
+	exec := &fakeExec{}
+	// Ctx has no WithFallbackCallsite call → callsite label = "unknown".
+	if err := ApplySearchPathToTx(context.Background(), exec.Exec); err != nil {
+		t.Fatalf("ApplySearchPathToTx: %v", err)
+	}
+	if got := testutil.ToFloat64(
+		metrics.PerLanguageSearchPathFallbackTotal.WithLabelValues("test-svc", "unknown"),
+	); got != 1 {
+		t.Errorf("callsite-less fallback should land on \"unknown\"; got count %v", got)
 	}
 }

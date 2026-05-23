@@ -27,6 +27,8 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/team-kielo-app/kielo-shared/observe/metrics"
 )
 
 var _ = errors.Is // ensure errors is used for ApplySearchPathToTx
@@ -60,9 +62,47 @@ var searchPathIdentRe = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 
 type ctxKey struct{}
 
+// fallbackCallsiteCtxKey carries the per-call-site label used by the
+// per-language search_path fallback metric. Separate key type so a
+// language ctx value can't be misread as a callsite (and vice versa).
+type fallbackCallsiteCtxKey struct{}
+
 var supportedLearningLanguageIdents = map[string]struct{}{
 	"fi": {},
 	"sv": {},
+}
+
+// WithFallbackCallsite attaches a per-call-site tag to ctx, surfaced as
+// the `callsite` label on PerLanguageSearchPathFallbackTotal when this
+// transaction takes the silent-fallback path (no active language on ctx).
+// Optional — call sites that don't set it land in the metric with
+// callsite="unknown".
+//
+// Typical use: a repository wrapper method that knows it's the
+// canonical entry point for a domain feature:
+//
+//	func (r *KielotvRepo) ListBrands(ctx context.Context) ([]Brand, error) {
+//	    ctx = db.WithFallbackCallsite(ctx, "kielotv.list_brands")
+//	    // ... pgxsearchpath.WithReadTx(ctx, ...) ...
+//	}
+func WithFallbackCallsite(ctx context.Context, callsite string) context.Context {
+	if callsite == "" {
+		return ctx
+	}
+	return context.WithValue(ctx, fallbackCallsiteCtxKey{}, callsite)
+}
+
+// FallbackCallsiteFromContext returns the per-call-site tag attached by
+// WithFallbackCallsite, or "" if none. The emit helper substitutes
+// "unknown" for "" so the metric still exports.
+func FallbackCallsiteFromContext(ctx context.Context) string {
+	if ctx == nil {
+		return ""
+	}
+	if v, ok := ctx.Value(fallbackCallsiteCtxKey{}).(string); ok {
+		return v
+	}
+	return ""
 }
 
 // WithLanguage attaches a validated language code to ctx. Returns the
@@ -239,12 +279,20 @@ func ApplySearchPathToTx(
 	exec func(ctx context.Context, query string) error,
 ) error {
 	if _, ok := LanguageFromContext(ctx); !ok {
+		metrics.PerLanguageSearchPathFallbackEmit(
+			FallbackCallsiteFromContext(ctx),
+			false,
+		)
 		return nil
 	}
 	if err := IssueSearchPathForContext(
 		ctx, DefaultPerLanguageSearchPathTemplate, exec,
 	); err != nil {
 		if errors.Is(err, ErrNoActiveLanguage) {
+			metrics.PerLanguageSearchPathFallbackEmit(
+				FallbackCallsiteFromContext(ctx),
+				false,
+			)
 			return nil
 		}
 		return fmt.Errorf("kielo-shared/db: ApplySearchPathToTx: %w", err)
@@ -321,7 +369,14 @@ func BeginTxWithSearchPath(
 	// search_path (no SET issued). Repository methods that NEED per-
 	// language scoping should treat ErrNoActiveLanguage as a programmer
 	// error in their caller — the middleware should always have set it.
+	// Emit observability so the rate of fallbacks is queryable; the
+	// first occurrence per (service, callsite) WARNs to catch a human's
+	// eye, subsequent ones fall to DEBUG.
 	if _, ok := LanguageFromContext(ctx); !ok {
+		metrics.PerLanguageSearchPathFallbackEmit(
+			FallbackCallsiteFromContext(ctx),
+			false,
+		)
 		return tx, nil
 	}
 

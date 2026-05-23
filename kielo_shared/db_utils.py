@@ -371,6 +371,10 @@ async def check_per_language_schemas_present(
 def make_per_language_search_path(
     template: str = DEFAULT_PER_LANGUAGE_SEARCH_PATH_TEMPLATE,
     fallback: str | None = None,
+    *,
+    service: str | None = None,
+    resolver_name: str | None = None,
+    expected_fallback: bool = False,
 ) -> SearchPathResolver:
     """Build a resolver suitable for :func:`register_search_path_listener`.
 
@@ -389,12 +393,37 @@ def make_per_language_search_path(
     The resolver's output is validated by ``_validate_search_path_idents``
     inside the begin listener, so a malformed template fails the
     transaction rather than the DB.
+
+    Observability (when both ``service`` and ``resolver_name`` are set):
+    each time the fallback branch fires, the resolver emits to
+    :data:`kielo_shared.observability.metrics.PER_LANGUAGE_SEARCH_PATH_FALLBACK_TOTAL`
+    so dashboards can alert on unexpected fallback rates. ``expected_fallback``
+    governs log level: ``True`` (background workers — fallback is the
+    documented contract) → DEBUG; ``False`` (request-path resolvers — any
+    fallback signals an upstream regression) → WARN on the first occurrence
+    per ``(service, resolver_name)``, DEBUG thereafter. Pre-existing
+    callers that omit ``service``/``resolver_name`` get no observability
+    fanout (preserves backward compat for tests that exercise the
+    resolver in isolation).
     """
+    observable = service is not None and resolver_name is not None
 
     def resolver() -> str:
         lang = _active_language.get()
         if lang is None:
             if fallback is not None:
+                if observable:
+                    # Local import: kielo_shared.observability has no
+                    # top-level dep on db_utils, and db_utils stays
+                    # importable without prometheus_client installed.
+                    from kielo_shared.observability.metrics import (
+                        per_language_search_path_fallback_emit,
+                    )
+                    per_language_search_path_fallback_emit(
+                        service=service,  # type: ignore[arg-type]
+                        resolver=resolver_name,  # type: ignore[arg-type]
+                        expected_fallback=expected_fallback,
+                    )
                 return fallback
             raise RuntimeError(
                 "Active language is not set on this context. Either set it via "

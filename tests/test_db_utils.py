@@ -451,3 +451,181 @@ async def test_check_per_language_schemas_present_custom_languages():
     )
     assert ok is True
     assert missing == []
+
+
+# ─────────────── per-language fallback observability ────────────────────
+
+
+@pytest.fixture
+def _reset_per_language_fallback_warn_state():
+    """Clear the module-level WARN-once memo + counter samples so each test
+    sees a clean state. The memo is process-local; without resetting,
+    test ordering would determine whether a WARN fires."""
+    from kielo_shared.observability import metrics as metrics_mod
+
+    metrics_mod._PER_LANGUAGE_FALLBACK_WARN_SEEN.clear()
+    if metrics_mod.PROMETHEUS_AVAILABLE:
+        metrics_mod.PER_LANGUAGE_SEARCH_PATH_FALLBACK_TOTAL.clear()
+    yield
+    metrics_mod._PER_LANGUAGE_FALLBACK_WARN_SEEN.clear()
+    if metrics_mod.PROMETHEUS_AVAILABLE:
+        metrics_mod.PER_LANGUAGE_SEARCH_PATH_FALLBACK_TOTAL.clear()
+
+
+def test_make_per_language_search_path_emits_metric_on_fallback(
+    _reset_per_language_fallback_warn_state,
+):
+    """When ``service`` + ``resolver_name`` are set, every fallback hit
+    increments the prometheus counter for that (service, resolver) key."""
+    pytest.importorskip("prometheus_client")
+    from kielo_shared.observability.metrics import (
+        PER_LANGUAGE_SEARCH_PATH_FALLBACK_TOTAL,
+    )
+
+    resolver = db_utils.make_per_language_search_path(
+        fallback="_shared, public",
+        service="test-svc",
+        resolver_name="test_site",
+    )
+    # Sample is created lazily on first .labels() call; assert post-call.
+    resolver()
+    resolver()
+    resolver()
+    sample = PER_LANGUAGE_SEARCH_PATH_FALLBACK_TOTAL.labels(
+        service="test-svc", resolver="test_site"
+    )
+    assert sample._value.get() == 3
+
+
+def test_make_per_language_search_path_skips_metric_when_language_set(
+    _reset_per_language_fallback_warn_state,
+):
+    """The metric is only incremented on the fallback path; when an active
+    language IS set, the resolver returns the per-language path with no
+    fanout."""
+    pytest.importorskip("prometheus_client")
+    from kielo_shared.observability.metrics import (
+        PER_LANGUAGE_SEARCH_PATH_FALLBACK_TOTAL,
+    )
+
+    resolver = db_utils.make_per_language_search_path(
+        fallback="_shared, public",
+        service="test-svc",
+        resolver_name="test_site",
+    )
+    token = db_utils.set_active_language("fi")
+    try:
+        assert "klearn_fi" in resolver()
+    finally:
+        db_utils.reset_active_language(token)
+    # No sample created — labels() would create a zero sample, so we
+    # check the family has no children for our key.
+    samples = list(
+        PER_LANGUAGE_SEARCH_PATH_FALLBACK_TOTAL.collect()[0].samples
+    )
+    assert not any(
+        s.labels.get("service") == "test-svc"
+        and s.labels.get("resolver") == "test_site"
+        and s.value > 0
+        for s in samples
+    )
+
+
+def test_make_per_language_search_path_warn_once_when_unexpected(
+    caplog,
+    _reset_per_language_fallback_warn_state,
+):
+    """``expected_fallback=False`` emits WARN on the FIRST fallback per
+    (service, resolver) pair, then DEBUG. The counter still increments
+    every time so the ongoing rate is queryable."""
+    import logging
+
+    resolver = db_utils.make_per_language_search_path(
+        fallback="_shared, public",
+        service="test-svc",
+        resolver_name="unexpected_site",
+        expected_fallback=False,
+    )
+
+    caplog.set_level(
+        logging.DEBUG, logger="kielo_shared.observability.metrics"
+    )
+    resolver()
+    resolver()
+    resolver()
+
+    warn_records = [
+        r for r in caplog.records
+        if r.levelno == logging.WARNING
+        and "per_language_search_path_fallback" in r.message
+        and "unexpected_site" in r.message
+    ]
+    debug_records = [
+        r for r in caplog.records
+        if r.levelno == logging.DEBUG
+        and "per_language_search_path_fallback" in r.message
+        and "unexpected_site" in r.message
+    ]
+    assert len(warn_records) == 1
+    assert len(debug_records) == 2
+
+
+def test_make_per_language_search_path_debug_only_when_expected(
+    caplog,
+    _reset_per_language_fallback_warn_state,
+):
+    """``expected_fallback=True`` (background workers) keeps the log at
+    DEBUG every time — fallback IS the documented contract; WARN would
+    be noise. Counter increments unchanged."""
+    import logging
+
+    resolver = db_utils.make_per_language_search_path(
+        fallback="_shared, public",
+        service="test-svc",
+        resolver_name="expected_site",
+        expected_fallback=True,
+    )
+
+    caplog.set_level(
+        logging.DEBUG, logger="kielo_shared.observability.metrics"
+    )
+    resolver()
+    resolver()
+
+    warn_records = [
+        r for r in caplog.records
+        if r.levelno == logging.WARNING
+        and "per_language_search_path_fallback" in r.message
+    ]
+    debug_records = [
+        r for r in caplog.records
+        if r.levelno == logging.DEBUG
+        and "per_language_search_path_fallback" in r.message
+        and "expected_site" in r.message
+    ]
+    assert warn_records == []
+    assert len(debug_records) == 2
+
+
+def test_make_per_language_search_path_no_observability_without_labels(
+    caplog,
+    _reset_per_language_fallback_warn_state,
+):
+    """Backward compat: callers that don't pass ``service``/``resolver_name``
+    get the original silent-fallback behavior (no counter, no log).
+    Verifies the observability path is gated on opt-in so existing tests
+    that exercise the resolver in isolation aren't disturbed."""
+    import logging
+
+    resolver = db_utils.make_per_language_search_path(fallback="_shared, public")
+    caplog.set_level(
+        logging.DEBUG, logger="kielo_shared.observability.metrics"
+    )
+    resolver()
+    resolver()
+
+    relevant = [
+        r for r in caplog.records
+        if "per_language_search_path_fallback" in r.message
+    ]
+    assert relevant == []
