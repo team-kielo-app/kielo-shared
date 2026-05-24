@@ -215,6 +215,36 @@ class GrammarCapability:
 
 
 @dataclass(frozen=True)
+class PhraseFrameSpec:
+    """Single phrase-frame template tuple. Phase 12 slice 12.
+
+    Mirrors kielo-shared/locale/PhraseFrameSpec (Go). Read by
+    kielolearn-engine's dictionary_enrichment to build rule-based
+    fill-in-the-blank phrase frames when no LLM result is available.
+
+    frame_text contains "___" (literal frame).
+    example_text contains "{term}" — interpolated with the actual term.
+    example_translation contains "{gloss}" — interpolated with the
+    English gloss.
+    """
+
+    frame_text: str = ""
+    example_text: str = ""
+    example_translation: str = ""
+
+
+@dataclass(frozen=True)
+class PhraseFrameTemplates:
+    """Per-language POS-bucketed phrase-frame templates.
+    Phase 12 slice 12."""
+
+    verb: PhraseFrameSpec = field(default_factory=PhraseFrameSpec)
+    adj: PhraseFrameSpec = field(default_factory=PhraseFrameSpec)
+    adv: PhraseFrameSpec = field(default_factory=PhraseFrameSpec)
+    default: PhraseFrameSpec = field(default_factory=PhraseFrameSpec)
+
+
+@dataclass(frozen=True)
 class PromptCapability:
     """Per-language LLM-prompt fragments + scenario seed phrases."""
 
@@ -290,6 +320,11 @@ class PromptCapability:
     wrapping_up: str = ""
     """Per-language phrase the agent emits when approaching the
     session time limit. Phase 12 slice 9."""
+
+    phrase_frame_templates: PhraseFrameTemplates = field(default_factory=PhraseFrameTemplates)
+    """Per-language POS-bucketed phrase-frame templates used by
+    kielolearn-engine's dictionary enrichment to build rule-based
+    fill-in-the-blank phrase frames. Phase 12 slice 12."""
 
 
 @dataclass(frozen=True)
@@ -448,6 +483,28 @@ _CAPABILITIES: dict[str, Capability] = {
             try_saying_template="Kokeile vaikka: '{hint}' (Try saying: '{hint}')",
             no_hint_fallback="Ei hätää! Voit sanoa ihan mitä vain. (No worries, say anything!)",
             wrapping_up="Meillä on vielä hetki aikaa. Jatketaan rauhassa!",
+            phrase_frame_templates=PhraseFrameTemplates(
+                verb=PhraseFrameSpec(
+                    frame_text="Haluan ___.",
+                    example_text="Haluan {term}.",
+                    example_translation="I want to {gloss}.",
+                ),
+                adj=PhraseFrameSpec(
+                    frame_text="Se on ___.",
+                    example_text="Se on {term}.",
+                    example_translation="It is {gloss}.",
+                ),
+                adv=PhraseFrameSpec(
+                    frame_text="Tein sen ___.",
+                    example_text="Tein sen {term}.",
+                    example_translation="I did it {gloss}.",
+                ),
+                default=PhraseFrameSpec(
+                    frame_text="Tämä on ___.",
+                    example_text="Tämä on {term}.",
+                    example_translation="This is {gloss}.",
+                ),
+            ),
         ),
     ),
     "sv": Capability(
@@ -557,6 +614,28 @@ _CAPABILITIES: dict[str, Capability] = {
             try_saying_template="Försök säga: '{hint}' (Try saying: '{hint}')",
             no_hint_fallback="Ingen fara! Du kan säga vad som helst. (No worries, say anything!)",
             wrapping_up="Vi har en stund kvar. Vi fortsätter i lugn takt!",
+            phrase_frame_templates=PhraseFrameTemplates(
+                verb=PhraseFrameSpec(
+                    frame_text="Jag vill ___.",
+                    example_text="Jag vill {term}.",
+                    example_translation="I want to {gloss}.",
+                ),
+                adj=PhraseFrameSpec(
+                    frame_text="Det är ___.",
+                    example_text="Det är {term}.",
+                    example_translation="It is {gloss}.",
+                ),
+                adv=PhraseFrameSpec(
+                    frame_text="Jag gjorde det ___.",
+                    example_text="Jag gjorde det {term}.",
+                    example_translation="I did it {gloss}.",
+                ),
+                default=PhraseFrameSpec(
+                    frame_text="Det här är ___.",
+                    example_text="Det här är {term}.",
+                    example_translation="This is {gloss}.",
+                ),
+            ),
         ),
     ),
 }
@@ -606,6 +685,8 @@ __all__ = [
     "GrammarCapability",
     "SeedVocabularyCapability",
     "PromptCapability",
+    "PhraseFrameSpec",
+    "PhraseFrameTemplates",
     "lookup_capability",
     "supported_capabilities",
 ]

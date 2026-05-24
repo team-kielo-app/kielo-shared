@@ -192,6 +192,33 @@ type GrammarCapability struct {
 	NonNativeTermIssueCode string
 }
 
+// PhraseFrameSpec is a single phrase-frame template tuple. Phase 12
+// slice 12 — populated for each POS bucket per learning language and
+// read by kielolearn-engine's dictionary_enrichment to build phrase-
+// frame exercise data when no LLM result is available.
+//
+// FrameText is the literal phrase frame containing "___" (e.g.
+// "Haluan ___." for Finnish verbs).
+// ExampleText contains "{term}" — replaced with the actual term at
+// render time (e.g. "Haluan {term}." → "Haluan koira.").
+// ExampleTranslation contains "{gloss}" — replaced with the English
+// gloss at render time (e.g. "I want to {gloss}." → "I want to dog.").
+type PhraseFrameSpec struct {
+	FrameText          string
+	ExampleText        string
+	ExampleTranslation string
+}
+
+// PhraseFrameTemplates is the per-language set of phrase-frame
+// templates keyed by canonical POS bucket ("verb", "adj", "adv",
+// "default"). Phase 12 slice 12.
+type PhraseFrameTemplates struct {
+	Verb    PhraseFrameSpec
+	Adj     PhraseFrameSpec
+	Adv     PhraseFrameSpec
+	Default PhraseFrameSpec
+}
+
 // PromptCapability covers per-language LLM-prompt fragments + scenario
 // seed phrases used by kielo-convo and kielo-cms. Populated from §B.11
 // and partially §B.10.
@@ -262,6 +289,13 @@ type PromptCapability struct {
 	// WrappingUp is the per-language phrase the agent emits when
 	// approaching the session time limit.
 	WrappingUp string
+	// PhraseFrameTemplates is the per-language POS-bucketed phrase-
+	// frame templates used by kielolearn-engine's dictionary
+	// enrichment when building rule-based fill-in-the-blank phrase
+	// frames. Phase 12 slice 12 — drains the inline templates dict
+	// from services/dictionary_enrichment.py. Empty fields = no
+	// templates available for that bucket.
+	PhraseFrameTemplates PhraseFrameTemplates
 }
 
 // Capability is the top-level per-language record.
@@ -413,6 +447,28 @@ var capabilities = map[string]*Capability{
 			TrySayingTemplate: "Kokeile vaikka: '{hint}' (Try saying: '{hint}')",
 			NoHintFallback:    "Ei hätää! Voit sanoa ihan mitä vain. (No worries, say anything!)",
 			WrappingUp:        "Meillä on vielä hetki aikaa. Jatketaan rauhassa!",
+			PhraseFrameTemplates: PhraseFrameTemplates{
+				Verb: PhraseFrameSpec{
+					FrameText:          "Haluan ___.",
+					ExampleText:        "Haluan {term}.",
+					ExampleTranslation: "I want to {gloss}.",
+				},
+				Adj: PhraseFrameSpec{
+					FrameText:          "Se on ___.",
+					ExampleText:        "Se on {term}.",
+					ExampleTranslation: "It is {gloss}.",
+				},
+				Adv: PhraseFrameSpec{
+					FrameText:          "Tein sen ___.",
+					ExampleText:        "Tein sen {term}.",
+					ExampleTranslation: "I did it {gloss}.",
+				},
+				Default: PhraseFrameSpec{
+					FrameText:          "Tämä on ___.",
+					ExampleText:        "Tämä on {term}.",
+					ExampleTranslation: "This is {gloss}.",
+				},
+			},
 		},
 	},
 	"sv": {
@@ -515,6 +571,28 @@ var capabilities = map[string]*Capability{
 			TrySayingTemplate: "Försök säga: '{hint}' (Try saying: '{hint}')",
 			NoHintFallback:    "Ingen fara! Du kan säga vad som helst. (No worries, say anything!)",
 			WrappingUp:        "Vi har en stund kvar. Vi fortsätter i lugn takt!",
+			PhraseFrameTemplates: PhraseFrameTemplates{
+				Verb: PhraseFrameSpec{
+					FrameText:          "Jag vill ___.",
+					ExampleText:        "Jag vill {term}.",
+					ExampleTranslation: "I want to {gloss}.",
+				},
+				Adj: PhraseFrameSpec{
+					FrameText:          "Det är ___.",
+					ExampleText:        "Det är {term}.",
+					ExampleTranslation: "It is {gloss}.",
+				},
+				Adv: PhraseFrameSpec{
+					FrameText:          "Jag gjorde det ___.",
+					ExampleText:        "Jag gjorde det {term}.",
+					ExampleTranslation: "I did it {gloss}.",
+				},
+				Default: PhraseFrameSpec{
+					FrameText:          "Det här är ___.",
+					ExampleText:        "Det här är {term}.",
+					ExampleTranslation: "This is {gloss}.",
+				},
+			},
 		},
 	},
 }
