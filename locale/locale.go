@@ -7,10 +7,23 @@ import "strings"
 // explanations, etc.
 const TierASupportLocale = "en"
 
-// LegacyDefaultLearningLanguage is the default learning language for legacy
-// data where learning_language_code is NULL or missing. Finnish is the
-// original/default learning language of the platform.
-const LegacyDefaultLearningLanguage = "fi"
+// Phase 10C: LegacyDefaultLearningLanguage const was DELETED in the
+// "eliminate silent fi fallback" sweep across the monorepo. Every
+// previous call site has been either:
+//   - converted to error-return on empty input (resolver-side strict
+//     gates: requireLearningLanguageCode, CmsLangTable, resolveKTVWorkflowLanguage,
+//     resolveGenerateScenarioLearningLanguage, callMorphologyAPI),
+//   - replaced with bare "fi" literal where the intent IS specifically
+//     Finnish (e.g. finnishOnlyTranslationFallbacks gate in
+//     ktv_workflow_handler.go, fi-only default source URL in
+//     ktv_vocabulary_importer.go),
+//   - or replaced with empty-output (display helpers like ktv_locale.go
+//     LanguageNameForPrompt where empty makes the misshaped caller
+//     visible in the rendered output).
+//
+// Adding a new "default learning language" notion back should require
+// explicit ADR + grep audit; the previous indirection let drift
+// accumulate silently.
 
 var supportedLearningLanguages = map[string]struct{}{
 	"fi": {},
