@@ -22,9 +22,15 @@ Why FastAPI-shaped vs Starlette-shaped:
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
-from starlette.requests import Request
+if TYPE_CHECKING:
+    # starlette is an OPTIONAL runtime dep — only services that handle
+    # HTTP requests via FastAPI/Starlette need it. `Request` is used
+    # purely as a type annotation here, so we resolve it lazily so
+    # non-HTTP consumers (e.g. the kielo-convo livekit-agents worker)
+    # can import this module without pip-installing starlette.
+    from starlette.requests import Request
 
 from kielo_shared.db_utils import get_active_language
 from kielo_shared.locale_constants import (
