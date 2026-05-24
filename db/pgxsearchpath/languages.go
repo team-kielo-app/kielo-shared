@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
+	sharedDB "github.com/team-kielo-app/kielo-shared/db"
 	"github.com/team-kielo-app/kielo-shared/locale"
 )
 
@@ -23,7 +24,16 @@ import (
 // global `localization` schema, not under any per-language prefix, so
 // fanout-style callers don't need an active language on ctx to discover
 // what languages exist.
+//
+// Tagged with WithExpectedFallback because hitting the silent-fallback
+// path IS the documented contract here: the query is global, has no
+// per-language scope to attach. Without this tag the
+// kielo_per_language_search_path_fallback_total metric would WARN-once
+// on first call from every service that runs a periodic fan-out
+// worker (cms cleanup, cms KTV polling, etc.), false-flagging an
+// intentional design as a bug.
 func ListActiveLearningLanguageCodes(ctx context.Context, db TxBeginner) ([]string, error) {
+	ctx = sharedDB.WithExpectedFallback(ctx, "pgxsearchpath.list_active_languages")
 	const sql = `
 		SELECT code
 		FROM localization.languages

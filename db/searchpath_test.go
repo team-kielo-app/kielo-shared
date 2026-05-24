@@ -315,3 +315,65 @@ func TestApplySearchPathToTx_FallbackDefaultsToUnknownCallsite(t *testing.T) {
 		t.Errorf("callsite-less fallback should land on \"unknown\"; got count %v", got)
 	}
 }
+
+func TestWithExpectedFallback_RoundTrip(t *testing.T) {
+	ctx := context.Background()
+	if got := FallbackTagFromContext(ctx); got != (FallbackTag{}) {
+		t.Errorf("empty ctx should not have a tag; got %+v", got)
+	}
+	ctx = WithExpectedFallback(ctx, "pgxsearchpath.list_active_languages")
+	tag := FallbackTagFromContext(ctx)
+	if tag.Callsite != "pgxsearchpath.list_active_languages" {
+		t.Errorf("Callsite = %q, want %q", tag.Callsite, "pgxsearchpath.list_active_languages")
+	}
+	if !tag.Expected {
+		t.Error("WithExpectedFallback must set Expected=true")
+	}
+	// Back-compat: FallbackCallsiteFromContext still works.
+	if got := FallbackCallsiteFromContext(ctx); got != "pgxsearchpath.list_active_languages" {
+		t.Errorf("FallbackCallsiteFromContext = %q, want %q", got, "pgxsearchpath.list_active_languages")
+	}
+	// Empty callsite is a no-op.
+	if WithExpectedFallback(ctx, "") != ctx {
+		t.Error(`WithExpectedFallback(ctx, "") should return ctx unchanged`)
+	}
+}
+
+func TestWithFallbackCallsite_DefaultsToUnexpected(t *testing.T) {
+	ctx := WithFallbackCallsite(context.Background(), "request_path.repo_read")
+	tag := FallbackTagFromContext(ctx)
+	if tag.Callsite != "request_path.repo_read" {
+		t.Errorf("Callsite = %q, want %q", tag.Callsite, "request_path.repo_read")
+	}
+	if tag.Expected {
+		t.Error("WithFallbackCallsite must set Expected=false (request-path is unexpected)")
+	}
+}
+
+func TestApplySearchPathToTx_ExpectedFallback_StillCountsMetric(t *testing.T) {
+	// Expected fallback paths increment the metric (so dashboards see
+	// the rate) but suppress the WARN log (handled by the emit helper
+	// itself — the log-level decision lives in metrics package; this
+	// test asserts the counter contract from the db package side).
+	metrics.ResetPerLanguageSearchPathFallbackState()
+	t.Cleanup(metrics.ResetPerLanguageSearchPathFallbackState)
+	metrics.SetServiceName("test-svc")
+
+	exec := &fakeExec{}
+	ctx := WithExpectedFallback(context.Background(), "pgxsearchpath.list_active_languages")
+	if err := ApplySearchPathToTx(ctx, exec.Exec); err != nil {
+		t.Fatalf("ApplySearchPathToTx: %v", err)
+	}
+	if got := testutil.ToFloat64(
+		metrics.PerLanguageSearchPathFallbackTotal.WithLabelValues("test-svc", "pgxsearchpath.list_active_languages"),
+	); got != 1 {
+		t.Errorf("expected-fallback path must still increment counter; got %v", got)
+	}
+}
+
+func TestFallbackTagFromContext_NilSafe(t *testing.T) {
+	//nolint:staticcheck // intentionally testing nil-safety
+	if got := FallbackTagFromContext(nil); got != (FallbackTag{}) {
+		t.Errorf("nil ctx should yield zero FallbackTag; got %+v", got)
+	}
+}

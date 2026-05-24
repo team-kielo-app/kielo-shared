@@ -62,21 +62,42 @@ var searchPathIdentRe = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 
 type ctxKey struct{}
 
-// fallbackCallsiteCtxKey carries the per-call-site label used by the
-// per-language search_path fallback metric. Separate key type so a
-// language ctx value can't be misread as a callsite (and vice versa).
-type fallbackCallsiteCtxKey struct{}
+// fallbackTagCtxKey carries the per-call-site fallback tag (label +
+// expected-or-not bit) used by the per-language search_path fallback
+// metric. Separate key type so a language ctx value can't be misread as
+// a callsite (and vice versa).
+type fallbackTagCtxKey struct{}
+
+// FallbackTag describes a context's expectation about hitting the
+// per-language search_path silent-fallback path.
+//
+//   - Callsite: stable per-call-site identifier (e.g.
+//     "kielotv.list_brands", "pgxsearchpath.list_active_languages").
+//     Bounded vocabulary.
+//   - Expected: when true, hitting the fallback is the documented
+//     contract for this call site — typically a global / cross-language
+//     query (localization.languages, audit log writes). The metric still
+//     records the rate so dashboards can spot anomalies, but the WARN
+//     log is suppressed (it would be noise on a sustained-by-design
+//     fallback). When false (the default), the first occurrence per
+//     (service, callsite) WARNs so cold-start regressions catch a
+//     human's eye.
+type FallbackTag struct {
+	Callsite string
+	Expected bool
+}
 
 var supportedLearningLanguageIdents = map[string]struct{}{
 	"fi": {},
 	"sv": {},
 }
 
-// WithFallbackCallsite attaches a per-call-site tag to ctx, surfaced as
-// the `callsite` label on PerLanguageSearchPathFallbackTotal when this
-// transaction takes the silent-fallback path (no active language on ctx).
-// Optional — call sites that don't set it land in the metric with
-// callsite="unknown".
+// WithFallbackCallsite attaches a per-call-site tag to ctx for a path
+// where hitting the silent fallback is UNEXPECTED — request-path
+// repository calls that should always run under a language scope set by
+// middleware. First occurrence per (service, callsite) WARNs; subsequent
+// hits fall to DEBUG. The metric counter increments every time so the
+// rate is alertable.
 //
 // Typical use: a repository wrapper method that knows it's the
 // canonical entry point for a domain feature:
@@ -85,24 +106,68 @@ var supportedLearningLanguageIdents = map[string]struct{}{
 //	    ctx = db.WithFallbackCallsite(ctx, "kielotv.list_brands")
 //	    // ... pgxsearchpath.WithReadTx(ctx, ...) ...
 //	}
+//
+// Empty `callsite` is a no-op (returns ctx unchanged) so callers can
+// pass-through without conditionals.
 func WithFallbackCallsite(ctx context.Context, callsite string) context.Context {
 	if callsite == "" {
 		return ctx
 	}
-	return context.WithValue(ctx, fallbackCallsiteCtxKey{}, callsite)
+	return context.WithValue(ctx, fallbackTagCtxKey{}, FallbackTag{
+		Callsite: callsite,
+		Expected: false,
+	})
 }
 
-// FallbackCallsiteFromContext returns the per-call-site tag attached by
-// WithFallbackCallsite, or "" if none. The emit helper substitutes
-// "unknown" for "" so the metric still exports.
-func FallbackCallsiteFromContext(ctx context.Context) string {
-	if ctx == nil {
-		return ""
+// WithExpectedFallback attaches a per-call-site tag for a path where
+// hitting the silent fallback IS the documented contract — global /
+// cross-language queries (e.g. listing all active languages from
+// localization.languages, writing audit logs, cleanup workers
+// operating on _shared data). The metric still increments so anomalies
+// are visible, but no WARN log fires (would be noise on a
+// sustained-by-design fallback).
+//
+// Use this from packages that intentionally read global tables, NOT
+// from request-path repos that should have language scope. If you're
+// not sure, use WithFallbackCallsite — the WARN-once is the better
+// default until you've confirmed the call site really is global.
+//
+//	func ListActiveLanguageCodes(ctx context.Context, db TxBeginner) {
+//	    ctx = db.WithExpectedFallback(ctx, "pgxsearchpath.list_active_languages")
+//	    // ... WithReadTx(ctx, ...) ...
+//	}
+func WithExpectedFallback(ctx context.Context, callsite string) context.Context {
+	if callsite == "" {
+		return ctx
 	}
-	if v, ok := ctx.Value(fallbackCallsiteCtxKey{}).(string); ok {
+	return context.WithValue(ctx, fallbackTagCtxKey{}, FallbackTag{
+		Callsite: callsite,
+		Expected: true,
+	})
+}
+
+// FallbackTagFromContext returns the FallbackTag attached by
+// WithFallbackCallsite / WithExpectedFallback, or a zero FallbackTag if
+// none. The emit helper substitutes "unknown" for empty Callsite so
+// the metric still exports.
+func FallbackTagFromContext(ctx context.Context) FallbackTag {
+	if ctx == nil {
+		return FallbackTag{}
+	}
+	if v, ok := ctx.Value(fallbackTagCtxKey{}).(FallbackTag); ok {
 		return v
 	}
-	return ""
+	return FallbackTag{}
+}
+
+// FallbackCallsiteFromContext is the back-compat shim. Returns just the
+// Callsite string from the attached FallbackTag (empty if none).
+// Prefer FallbackTagFromContext for new code that wants the Expected
+// bit too.
+//
+// Deprecated: use FallbackTagFromContext.
+func FallbackCallsiteFromContext(ctx context.Context) string {
+	return FallbackTagFromContext(ctx).Callsite
 }
 
 // WithLanguage attaches a validated language code to ctx. Returns the
@@ -279,20 +344,16 @@ func ApplySearchPathToTx(
 	exec func(ctx context.Context, query string) error,
 ) error {
 	if _, ok := LanguageFromContext(ctx); !ok {
-		metrics.PerLanguageSearchPathFallbackEmit(
-			FallbackCallsiteFromContext(ctx),
-			false,
-		)
+		tag := FallbackTagFromContext(ctx)
+		metrics.PerLanguageSearchPathFallbackEmit(tag.Callsite, tag.Expected)
 		return nil
 	}
 	if err := IssueSearchPathForContext(
 		ctx, DefaultPerLanguageSearchPathTemplate, exec,
 	); err != nil {
 		if errors.Is(err, ErrNoActiveLanguage) {
-			metrics.PerLanguageSearchPathFallbackEmit(
-				FallbackCallsiteFromContext(ctx),
-				false,
-			)
+			tag := FallbackTagFromContext(ctx)
+			metrics.PerLanguageSearchPathFallbackEmit(tag.Callsite, tag.Expected)
 			return nil
 		}
 		return fmt.Errorf("kielo-shared/db: ApplySearchPathToTx: %w", err)
@@ -373,10 +434,8 @@ func BeginTxWithSearchPath(
 	// first occurrence per (service, callsite) WARNs to catch a human's
 	// eye, subsequent ones fall to DEBUG.
 	if _, ok := LanguageFromContext(ctx); !ok {
-		metrics.PerLanguageSearchPathFallbackEmit(
-			FallbackCallsiteFromContext(ctx),
-			false,
-		)
+		tag := FallbackTagFromContext(ctx)
+		metrics.PerLanguageSearchPathFallbackEmit(tag.Callsite, tag.Expected)
 		return tx, nil
 	}
 
