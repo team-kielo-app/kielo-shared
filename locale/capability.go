@@ -227,6 +227,14 @@ type PromptCapability struct {
 	// in scenario prompts. Empty strings = no example available.
 	BookingQuestion string
 	BookingAnswer   string
+	// HintComplexitySimple is the per-language example for simple
+	// (A1-level) hint complexity, as a slash-separated list of
+	// short phrases used in LLM prompts. Phase 12 slice 10.
+	// e.g. for fi: `"Kiitos!" / "Haluan kahvin." / "Kyllä."`.
+	HintComplexitySimple string
+	// HintComplexityChallenge is the per-language example for
+	// challenging (B1+) hint complexity. Phase 12 slice 10.
+	HintComplexityChallenge string
 }
 
 // Capability is the top-level per-language record.
@@ -346,13 +354,15 @@ var capabilities = map[string]*Capability{
 				"tervetuloa": "welcome",
 				"anteeksi":   "sorry / excuse me",
 			},
-			NeverSayWords:     []string{"kielimalli", "tekoäly"},
-			TerminationPhrase: "Näkemiin",
-			ThankEndPhrase:    "Kiitos käynnistä, näkemiin!",
-			EncourageWords:    []string{"Hyvä!", "Hienosti!"},
-			AckWords:          []string{"Joo!", "Aivan!", "Hyvä!", "Juuri niin!"},
-			BookingQuestion:   "Onko teillä varausta?",
-			BookingAnswer:     "Ei hätää, voin tehdä varauksen nyt.",
+			NeverSayWords:           []string{"kielimalli", "tekoäly"},
+			TerminationPhrase:       "Näkemiin",
+			ThankEndPhrase:          "Kiitos käynnistä, näkemiin!",
+			EncourageWords:          []string{"Hyvä!", "Hienosti!"},
+			AckWords:                []string{"Joo!", "Aivan!", "Hyvä!", "Juuri niin!"},
+			BookingQuestion:         "Onko teillä varausta?",
+			BookingAnswer:           "Ei hätää, voin tehdä varauksen nyt.",
+			HintComplexitySimple:    `"Kiitos!" / "Haluan kahvin." / "Kyllä."`,
+			HintComplexityChallenge: `"Voisinko saada yhden cappuccinon ja pienen pullan, kiitos?" / "Haluaisin varata ajan huomiselle, jos mahdollista."`,
 		},
 	},
 	"sv": {
@@ -422,13 +432,15 @@ var capabilities = map[string]*Capability{
 			ScenarioHintNeed:         "Jag behöver...",
 			PoliteExamples:           "tack, ursäkta, hej",
 			OfflineTranslationFallbacks: map[string]string{}, // no Swedish offline dictionary yet
-			NeverSayWords:               []string{"språkmodell", "ai"},
-			TerminationPhrase:           "Hej då",
-			ThankEndPhrase:              "Tack för besöket, hej då!",
-			EncourageWords:              []string{"Bra!", "Snyggt!"},
-			AckWords:                    []string{"Ja!", "Precis!", "Bra!", "Just det!"},
-			BookingQuestion:             "Har ni en bokning?",
-			BookingAnswer:               "Inga problem, jag kan boka åt er nu.",
+			NeverSayWords:           []string{"språkmodell", "ai"},
+			TerminationPhrase:       "Hej då",
+			ThankEndPhrase:          "Tack för besöket, hej då!",
+			EncourageWords:          []string{"Bra!", "Snyggt!"},
+			AckWords:                []string{"Ja!", "Precis!", "Bra!", "Just det!"},
+			BookingQuestion:         "Har ni en bokning?",
+			BookingAnswer:           "Inga problem, jag kan boka åt er nu.",
+			HintComplexitySimple:    `"Tack!" / "Jag vill ha kaffe." / "Ja."`,
+			HintComplexityChallenge: `"Skulle jag kunna få en cappuccino och en liten bulle, tack?" / "Jag skulle vilja boka en tid till imorgon, om möjligt."`,
 		},
 	},
 }

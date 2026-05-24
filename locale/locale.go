@@ -149,6 +149,40 @@ var languageDisplayNames = map[string]string{
 	"zh": "Chinese",
 }
 
+// languageFlags maps Kielo's canonical base language codes to their
+// emoji flag glyphs (for mobile-UI display). Phase 12 slice 10:
+// formerly duplicated in kielo-mobile-bff. Add new flags here so
+// no service has to maintain its own copy.
+//
+// NOTE: emoji flags map to COUNTRIES, not languages — the mapping
+// below uses the most-associated country for each language
+// (Arabic → Saudi Arabia, English → UK, Portuguese → Portugal, etc.).
+// Subset of languageDisplayNames; a language without a flag here
+// returns empty from LanguageFlag.
+var languageFlags = map[string]string{
+	"ar": "🇸🇦",
+	"de": "🇩🇪",
+	"en": "🇬🇧",
+	"es": "🇪🇸",
+	"fi": "🇫🇮",
+	"fr": "🇫🇷",
+	"ja": "🇯🇵",
+	"pt": "🇵🇹",
+	"ru": "🇷🇺",
+	"sv": "🇸🇪",
+	"vi": "🇻🇳",
+}
+
+// LanguageFlag returns the emoji flag glyph for the given locale code,
+// or "" if no flag is registered. Phase 12 slice 10.
+func LanguageFlag(code string) string {
+	normalized := NormalizeLocaleCode(code)
+	if normalized == "" {
+		return ""
+	}
+	return languageFlags[normalized]
+}
+
 // IsSupportedSupportLanguage reports whether code is one of the platform's
 // recognized UI / support-language codes. Use this to gate user input on
 // /me/device-preferences and similar endpoints — a code outside this set

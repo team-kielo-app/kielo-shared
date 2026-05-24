@@ -254,6 +254,15 @@ class PromptCapability:
     booking_answer: str = ""
     """Per-language scripted answer paired with booking_question."""
 
+    hint_complexity_simple: str = ""
+    """Per-language slash-separated example for simple (A1) hint
+    complexity. e.g. '"Kiitos!" / "Haluan kahvin." / "Kyllä."' for fi.
+    Phase 12 slice 10."""
+
+    hint_complexity_challenge: str = ""
+    """Per-language slash-separated example for challenge (B1+) hint
+    complexity. Phase 12 slice 10."""
+
 
 @dataclass(frozen=True)
 class Capability:
@@ -383,6 +392,11 @@ _CAPABILITIES: dict[str, Capability] = {
             ack_words=("Joo!", "Aivan!", "Hyvä!", "Juuri niin!"),
             booking_question="Onko teillä varausta?",
             booking_answer="Ei hätää, voin tehdä varauksen nyt.",
+            hint_complexity_simple='"Kiitos!" / "Haluan kahvin." / "Kyllä."',
+            hint_complexity_challenge=(
+                '"Voisinko saada yhden cappuccinon ja pienen pullan, kiitos?" / '
+                '"Haluaisin varata ajan huomiselle, jos mahdollista."'
+            ),
         ),
     ),
     "sv": Capability(
@@ -463,6 +477,11 @@ _CAPABILITIES: dict[str, Capability] = {
             ack_words=("Ja!", "Precis!", "Bra!", "Just det!"),
             booking_question="Har ni en bokning?",
             booking_answer="Inga problem, jag kan boka åt er nu.",
+            hint_complexity_simple='"Tack!" / "Jag vill ha kaffe." / "Ja."',
+            hint_complexity_challenge=(
+                '"Skulle jag kunna få en cappuccino och en liten bulle, tack?" / '
+                '"Jag skulle vilja boka en tid till imorgon, om möjligt."'
+            ),
         ),
     ),
 }
