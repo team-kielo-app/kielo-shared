@@ -45,8 +45,7 @@ included so logs are debuggable.
 from __future__ import annotations
 
 import logging
-import uuid
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from typing import List, Optional
 
 import httpx

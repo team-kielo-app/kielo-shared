@@ -45,7 +45,9 @@ import (
 var PerLanguageSearchPathFallbackTotal = promauto.NewCounterVec(
 	prometheus.CounterOpts{
 		Name: "kielo_per_language_search_path_fallback_total",
-		Help: "SET LOCAL search_path resolutions that fell back to the connection-level static path because no active language was on the request context.",
+		Help: "SET LOCAL search_path resolutions that fell back to the " +
+			"connection-level static path because no active language was " +
+			"on the request context.",
 	},
 	[]string{"service", "callsite"},
 )

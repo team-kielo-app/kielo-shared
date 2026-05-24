@@ -603,7 +603,10 @@ func (c *Client) DeleteTranslationKey(ctx context.Context, id uuid.UUID) error {
 }
 
 // BulkCreateTranslationKeys POSTs to /keys/bulk.
-func (c *Client) BulkCreateTranslationKeys(ctx context.Context, req BulkCreateTranslationKeysRequest) (*BulkCreateTranslationKeysResponse, error) {
+func (c *Client) BulkCreateTranslationKeys(
+	ctx context.Context,
+	req BulkCreateTranslationKeysRequest,
+) (*BulkCreateTranslationKeysResponse, error) {
 	var out BulkCreateTranslationKeysResponse
 	if err := c.doJSON(ctx, http.MethodPost, "/internal/api/v3/localization/keys/bulk", req, &out, http.StatusCreated); err != nil {
 		return nil, err
@@ -636,9 +639,14 @@ func (c *Client) SetTranslationStatus(ctx context.Context, id uuid.UUID, req Set
 }
 
 // GenerateBundle POSTs to /bundles/:namespace_id/:lang/generate.
-func (c *Client) GenerateBundle(ctx context.Context, namespaceID uuid.UUID, languageCode string) (*TranslationBundle, error) {
+func (c *Client) GenerateBundle(
+	ctx context.Context,
+	namespaceID uuid.UUID,
+	languageCode string,
+) (*TranslationBundle, error) {
 	var out TranslationBundle
-	if err := c.doJSON(ctx, http.MethodPost, "/internal/api/v3/localization/bundles/"+namespaceID.String()+"/"+languageCode+"/generate", struct{}{}, &out, http.StatusOK); err != nil {
+	path := "/internal/api/v3/localization/bundles/" + namespaceID.String() + "/" + languageCode + "/generate"
+	if err := c.doJSON(ctx, http.MethodPost, path, struct{}{}, &out, http.StatusOK); err != nil {
 		return nil, err
 	}
 	return &out, nil
@@ -652,9 +660,14 @@ func (c *Client) CreateAuditLog(ctx context.Context, req CreateAuditLogRequest) 
 // SetDynamicTranslationStatus PATCHes /dynamic/:id/status.
 // Returns the updated row so callers can scope cache
 // invalidation by resource_type.
-func (c *Client) SetDynamicTranslationStatus(ctx context.Context, id uuid.UUID, req SetDynamicTranslationStatusRequest) (*DynamicTranslation, error) {
+func (c *Client) SetDynamicTranslationStatus(
+	ctx context.Context,
+	id uuid.UUID,
+	req SetDynamicTranslationStatusRequest,
+) (*DynamicTranslation, error) {
 	var out DynamicTranslation
-	if err := c.doJSON(ctx, http.MethodPatch, "/internal/api/v3/localization/dynamic/"+id.String()+"/status", req, &out, http.StatusOK); err != nil {
+	path := "/internal/api/v3/localization/dynamic/" + id.String() + "/status"
+	if err := c.doJSON(ctx, http.MethodPatch, path, req, &out, http.StatusOK); err != nil {
 		return nil, err
 	}
 	return &out, nil

@@ -50,6 +50,9 @@ from typing import Any, Awaitable, Callable, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
     # google.cloud.pubsub_v1 has a hefty import; only typed-import it.
+    # Used in PullHandler / process_pull_message string annotations
+    # below — vulture is told via tool.vulture.ignore_names that
+    # `Message` is legitimately referenced via forward refs.
     from google.cloud.pubsub_v1.subscriber.message import Message
 else:
     Message = Any  # runtime type-erasure; the helper works on duck-typed messages

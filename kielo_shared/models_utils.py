@@ -7,6 +7,8 @@ import time
 from typing import Any, Iterable, Mapping, Sequence
 from urllib.parse import urljoin
 
+import httpx
+
 MODULE_WHISPER = "whisper"
 MODULE_EMBEDDINGS = "embeddings"
 MODULE_TRANSLATION_FI_EN = "translation_fi_en"

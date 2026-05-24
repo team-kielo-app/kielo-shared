@@ -39,7 +39,10 @@ DEP001 = [
 # `session`, `trace_config_ctx` are aiohttp.TraceConfig hook signature params
 # (see aiohttp_hooks.py); aiohttp invokes hooks positionally so the names are
 # fixed by the framework even though our hook body only uses `params`.
-ignore_names = ["ex", "executemany", "session", "trace_config_ctx"]
+# `Message` is the google.cloud.pubsub_v1 Message class — imported under
+# `if TYPE_CHECKING:` for string annotations in pubsub_consumer.py;
+# vulture's static walk doesn't follow forward refs so flags it unused.
+ignore_names = ["ex", "executemany", "session", "trace_config_ctx", "Message"]
 
 [tool.setuptools.dynamic]
 version = {attr = "kielo_shared.__version__"}
