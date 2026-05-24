@@ -307,4 +307,39 @@ func TestRequireActiveLanguage_ErrorMessageIncludesExtractedValue(t *testing.T) 
 	}
 }
 
+func TestRequireActiveLanguageWithOptions_NoBypassRejectsInternalAPIKey(t *testing.T) {
+	// When AllowInternalAPIKeyBypass=false, even the X-Internal-API-Key
+	// header doesn't grant a free pass. Use this variant on route groups
+	// that already authenticate via the internal API key (klearnAPI in
+	// kielo-user-service is the canonical example) — otherwise the
+	// carveout would degenerate to 100%-bypass.
+	c := newRequestRecorder(t, "/x", map[string]string{
+		"X-Internal-API-Key": "test-key",
+	})
+
+	called := false
+	chain := ActiveLanguage(nil)(
+		RequireActiveLanguageWithOptions(nil, RequireActiveLanguageOptions{
+			AllowInternalAPIKeyBypass: false,
+		})(func(_ echo.Context) error {
+			called = true
+			return nil
+		}),
+	)
+	err := chain(c)
+	if err == nil {
+		t.Fatal("expected 400 error, got nil")
+	}
+	httpErr, ok := err.(*echo.HTTPError)
+	if !ok {
+		t.Fatalf("expected *echo.HTTPError, got %T", err)
+	}
+	if httpErr.Code != http.StatusBadRequest {
+		t.Errorf("got code %d, want %d", httpErr.Code, http.StatusBadRequest)
+	}
+	if called {
+		t.Error("handler MUST NOT be invoked even with X-Internal-API-Key when bypass disabled")
+	}
+}
+
 // `contains` helper is shared from errors_test.go in the same package.

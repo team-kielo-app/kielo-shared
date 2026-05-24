@@ -113,6 +113,16 @@ func ActiveLanguage(extract ActiveLanguageExtractor) echo.MiddlewareFunc {
 	}
 }
 
+// RequireActiveLanguageOptions configures RequireActiveLanguage.
+type RequireActiveLanguageOptions struct {
+	// AllowInternalAPIKeyBypass: when true (default), requests with
+	// X-Internal-API-Key are allowed through without a language. Set
+	// to false on route groups that ALREADY require the internal API
+	// key as their auth mechanism — in that case the carveout would
+	// degenerate to 100%-bypass and the gate would be useless.
+	AllowInternalAPIKeyBypass bool
+}
+
 // RequireActiveLanguage returns Echo middleware that 400s a request when
 // no valid learning language is resolved from the extractor chain. Use
 // this on route groups that touch per-language tables (klearn_<lang>,
@@ -129,12 +139,27 @@ func ActiveLanguage(extract ActiveLanguageExtractor) echo.MiddlewareFunc {
 // the same route group. The extractor passed here MUST be the same one
 // passed to ActiveLanguage so the resolution chain is consistent.
 //
-// Admin / internal carve-out: callers can bypass this gate by setting
-// the X-Internal-API-Key header. Admin tools that legitimately fan out
-// across languages (cross-language listings, audit scripts, etc.) opt
-// in via the header. End-user requests don't carry the header so the
-// gate still applies.
+// Default behavior includes the admin / internal carve-out: callers
+// can bypass this gate by setting X-Internal-API-Key. Admin tools that
+// legitimately fan out across languages (cross-language listings, audit
+// scripts, etc.) opt in via the header. End-user requests don't carry
+// the header so the gate still applies. Use RequireActiveLanguageWithOptions
+// to disable the carveout on route groups already authenticated by the
+// internal API key.
 func RequireActiveLanguage(extract ActiveLanguageExtractor) echo.MiddlewareFunc {
+	return RequireActiveLanguageWithOptions(extract, RequireActiveLanguageOptions{
+		AllowInternalAPIKeyBypass: true,
+	})
+}
+
+// RequireActiveLanguageWithOptions is RequireActiveLanguage with explicit
+// option control. Use this when the route group's auth mechanism
+// already gates on the internal API key, where AllowInternalAPIKeyBypass=false
+// is the correct setting (otherwise the gate becomes a 100%-bypass).
+func RequireActiveLanguageWithOptions(
+	extract ActiveLanguageExtractor,
+	opts RequireActiveLanguageOptions,
+) echo.MiddlewareFunc {
 	if extract == nil {
 		extract = DefaultExtractor
 	}
@@ -144,8 +169,8 @@ func RequireActiveLanguage(extract ActiveLanguageExtractor) echo.MiddlewareFunc 
 				// ActiveLanguage middleware already set a valid language.
 				return next(c)
 			}
-			// Admin / service-to-service carve-out.
-			if c.Request().Header.Get("X-Internal-API-Key") != "" {
+			if opts.AllowInternalAPIKeyBypass &&
+				c.Request().Header.Get("X-Internal-API-Key") != "" {
 				return next(c)
 			}
 			// Re-run the extractor to surface WHY no language was
