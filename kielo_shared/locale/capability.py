@@ -76,6 +76,11 @@ class MorphologyCapability:
     ("rejoin_swedish_definites",) to repair LLM-emitted split
     definite suffixes ("tester na" → "testerna")."""
 
+    has_base_word_lookup: bool = False
+    """True if the dictionary feature should consult
+    klearn.base_words via GetBaseWordByTerm before falling through
+    to the generic morphology pipeline. Phase 12 slice 7."""
+
 
 @dataclass(frozen=True)
 class DisplayCapability:
@@ -102,6 +107,12 @@ class DisplayCapability:
 
     daily_challenge_theme_name: str = ""
     """Per-language "Daily Life" / equivalent theme label."""
+
+    default_ktv_vocabulary_source_url: str = ""
+    """Curated default URL the KTV vocabulary importer uses when
+    no req.SourceURL and no manual words list are supplied. Empty
+    string means "no default — caller must provide an explicit
+    source URL." Phase 12 slice 7."""
 
 
 @dataclass(frozen=True)
@@ -248,6 +259,7 @@ _CAPABILITIES: dict[str, Capability] = {
             capital_scene="Helsinki tram stop on a bright weekday morning.",
             native_script_hashtags=("#suomi", "#suomenkieli"),
             daily_challenge_theme_name="Arki",
+            default_ktv_vocabulary_source_url="https://uusikielemme.fi/finnish-vocabulary",
         ),
         morphology=MorphologyCapability(
             primary_backend="voikko",
@@ -265,6 +277,7 @@ _CAPABILITIES: dict[str, Capability] = {
                 "allative",
             ),
             post_llm_cleanup_passes=(),  # see Go counterpart for rationale
+            has_base_word_lookup=True,
         ),
         tts=TTSCapability(
             # Phase 10B slice 3: pronunciation prose moved into the
@@ -343,6 +356,7 @@ _CAPABILITIES: dict[str, Capability] = {
             capital_scene="Stockholm subway platform on a bright weekday morning.",
             native_script_hashtags=("#svenska",),
             daily_challenge_theme_name="Vardag",
+            default_ktv_vocabulary_source_url="",
         ),
         morphology=MorphologyCapability(
             primary_backend="swedish_morphology",
@@ -351,6 +365,7 @@ _CAPABILITIES: dict[str, Capability] = {
             spacy_pipeline="sv_core_news_sm",
             exclusive_cases=(),  # none unique to Swedish
             post_llm_cleanup_passes=("rejoin_swedish_definites",),
+            has_base_word_lookup=False,
         ),
         tts=TTSCapability(
             # Phase 10B slice 3: see fi entry.

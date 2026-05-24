@@ -59,6 +59,12 @@ type MorphologyCapability struct {
 	// {"rejoin_swedish_definites"} to repair LLM-emitted split
 	// definite suffixes ("tester na" → "testerna").
 	PostLLMCleanupPasses []string
+	// HasBaseWordLookup: true if the dictionary feature should
+	// consult klearn.base_words via GetBaseWordByTerm before
+	// falling through to the generic morphology pipeline. Phase 12
+	// slice 7. Currently fi-only — sv's morphology stack handles
+	// lemma lookup directly without a klearn round-trip.
+	HasBaseWordLookup bool
 }
 
 // DisplayCapability covers human-readable labels for prompts, UI, and
@@ -80,6 +86,13 @@ type DisplayCapability struct {
 	// DailyChallengeThemeName is the per-language "Daily Life" /
 	// equivalent theme label.
 	DailyChallengeThemeName string
+	// DefaultKtvVocabularySourceURL is the curated default URL the
+	// KTV vocabulary importer uses when no req.SourceURL is supplied
+	// AND no manual words list is supplied. Empty string means "no
+	// default — caller must provide an explicit source URL." Phase
+	// 12 slice 7: previously hard-coded as a Finnish-only constant
+	// in kielo-cms/internal/services/ktv_vocabulary_importer.go.
+	DefaultKtvVocabularySourceURL string
 }
 
 // TTSCapability covers per-language gpt-4o-mini-tts configuration.
@@ -229,10 +242,12 @@ var capabilities = map[string]*Capability{
 			DisplayNameEn:           "Finnish",
 			CountryContext:          "Finland",
 			CapitalScene:            "Helsinki tram stop on a bright weekday morning.",
-			NativeScriptHashtags:    []string{"#suomi", "#suomenkieli"},
-			DailyChallengeThemeName: "Arki",
+			NativeScriptHashtags:          []string{"#suomi", "#suomenkieli"},
+			DailyChallengeThemeName:       "Arki",
+			DefaultKtvVocabularySourceURL: "https://uusikielemme.fi/finnish-vocabulary",
 		},
 		Morphology: MorphologyCapability{
+			HasBaseWordLookup:    true,
 			PrimaryBackend:       "voikko",
 			LocalFallbackModule:  "", // no offline fallback for fi
 			HasParadigmGenerator: true,
@@ -314,10 +329,12 @@ var capabilities = map[string]*Capability{
 			DisplayNameEn:           "Swedish",
 			CountryContext:          "Sweden",
 			CapitalScene:            "Stockholm subway platform on a bright weekday morning.",
-			NativeScriptHashtags:    []string{"#svenska"},
-			DailyChallengeThemeName: "Vardag",
+			NativeScriptHashtags:          []string{"#svenska"},
+			DailyChallengeThemeName:       "Vardag",
+			DefaultKtvVocabularySourceURL: "",
 		},
 		Morphology: MorphologyCapability{
+			HasBaseWordLookup:    false,
 			PrimaryBackend:       "swedish_morphology",
 			LocalFallbackModule:  "swedish_morphology",
 			HasParadigmGenerator: true,
