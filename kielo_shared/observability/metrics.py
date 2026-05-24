@@ -263,6 +263,35 @@ if PROMETHEUS_AVAILABLE:
         labelnames=("service", "path", "successor"),
     )
 
+    # Non-fatal side-effect failure counter. Use from any handler that
+    # has a primary path (a write the caller depends on) and a set of
+    # auxiliary side effects (achievement award, telemetry write,
+    # cache invalidation, downstream RPC) where each side effect
+    # failure is logged but NOT propagated to the caller. Pre-2026-
+    # 05-23 the codebase had ~30 of these in behavioral_event_service,
+    # session_state_service, etc. — each one logged at WARN with no
+    # counter, so dashboards couldn't alert when the rate climbed.
+    #
+    # Labels:
+    #   * service  — short service name pinned per process
+    #     ("kielolearn-engine", "kielo-cms", ...). Bounded by process count.
+    #   * kind     — caller-pinned tag of the specific side effect
+    #     ("behavioral_event.achievement", "session_persist.checkpoint",
+    #      "cache_invalidate.kielotv_recommendations", ...). Bounded by
+    #     the set of call sites; the dot-delimited shape keeps
+    #     dashboard regexes simple.
+    #
+    # Alert recipe:
+    #   rate(kielo_side_effect_failed_total{service="kielolearn-engine"}[5m]) > 1
+    #   → some side-effect chain is consistently broken; drill in by
+    #     the `kind` label to find which one.
+    SIDE_EFFECT_FAILED_TOTAL = Counter(
+        "kielo_side_effect_failed_total",
+        "Non-fatal side-effect failures by service/kind. Counts handler "
+        "branches that log + swallow a failure instead of propagating.",
+        labelnames=("service", "kind"),
+    )
+
     # Per-language search_path fallback counter. Fires when
     # `kielo_shared.db_utils.make_per_language_search_path` resolves a
     # transaction's search_path with no active language on the context
@@ -672,6 +701,41 @@ def v1_route_hit_emit(*, service: str, method: str, path: str) -> None:
         logger.debug("v1_route_hit_emit prometheus fanout failed: %s", exc)
 
 
+def side_effect_failed_emit(
+    *,
+    service: str,
+    kind: str,
+    exc: BaseException | None = None,
+) -> None:
+    """Record one non-fatal side-effect failure.
+
+    Always increments :data:`SIDE_EFFECT_FAILED_TOTAL{service, kind}`
+    (when prometheus_client is importable). The caller has already
+    logged at WARN/ERROR with the exception detail; this helper is
+    metric-only so dashboards can alert on the rate even when the
+    log line is buried in high-traffic services.
+
+    `exc` is optional and currently unused by the metric (cardinality
+    would explode if we added an `error_class` label). It's accepted
+    in the signature for future expansion (per-class drill-down via
+    log correlation) and so callers don't have to restructure their
+    catch blocks.
+    """
+    if not PROMETHEUS_AVAILABLE:
+        return
+    try:
+        SIDE_EFFECT_FAILED_TOTAL.labels(service=service, kind=kind).inc()
+    except Exception as fanout_exc:  # noqa: BLE001
+        logger.debug(
+            "side_effect_failed_emit prometheus fanout failed: %s",
+            fanout_exc,
+        )
+    # exc is consumed for type-narrowing only; the caller is responsible
+    # for logging it. This keeps emitter semantics consistent with the
+    # other *_emit helpers in this module.
+    del exc
+
+
 def per_language_search_path_fallback_emit(
     *,
     service: str,
@@ -788,6 +852,7 @@ __all__ = [
     "prewarm_emit",
     "pubsub_ack_emit",
     "pubsub_publish_emit",
+    "side_effect_failed_emit",
     "tts_cache_emit",
     "v1_route_hit_emit",
 ]

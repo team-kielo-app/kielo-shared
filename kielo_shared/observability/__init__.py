@@ -19,6 +19,10 @@ change for downstream dashboards — coordinate before merging.
 """
 from __future__ import annotations
 
+from kielo_shared.observability.background_tasks import (
+    spawn_background_task,
+    spawn_background_task_lazy,
+)
 from kielo_shared.observability.db_trace import attach_query_trace
 from kielo_shared.observability.metrics import (
     PROMETHEUS_AVAILABLE,
@@ -32,6 +36,7 @@ from kielo_shared.observability.metrics import (
     prewarm_emit,
     pubsub_ack_emit,
     pubsub_publish_emit,
+    side_effect_failed_emit,
     tts_cache_emit,
     v1_route_hit_emit,
 )
@@ -49,6 +54,9 @@ __all__ = [
     "prewarm_emit",
     "pubsub_ack_emit",
     "pubsub_publish_emit",
+    "side_effect_failed_emit",
+    "spawn_background_task",
+    "spawn_background_task_lazy",
     "tts_cache_emit",
     "v1_route_hit_emit",
 ]
