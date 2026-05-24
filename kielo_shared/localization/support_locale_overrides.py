@@ -228,9 +228,9 @@ def get_override(key: str, english_source: str, lang: str) -> Optional[str]:
     if hit is None:
         return None
 
-    stored_sv, override_text = hit
-    expected_sv = hashlib.sha256(english_source.encode("utf-8")).hexdigest()[:16]
-    if stored_sv != expected_sv:
+    stored_sig, override_text = hit
+    expected_sig = hashlib.sha256(english_source.encode("utf-8")).hexdigest()[:16]
+    if stored_sig != expected_sig:
         # Stale override — English source has been edited since the
         # override was authored. Don't apply; fall through to the new
         # English seed (or whatever the localizer's fallback chain
