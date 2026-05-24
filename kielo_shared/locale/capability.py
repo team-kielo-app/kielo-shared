@@ -184,6 +184,14 @@ class GrammarCapability:
     JSON-array-shaped example string for batch LLM prompts (e.g. for
     fi case: '"nominative", "genitive", "partitive"')."""
 
+    non_native_term_issue_code: str = ""
+    """Audit-issue identifier emitted by the grammar-quality reviewer
+    when a "term" field in a grammar concept doesn't match the
+    expected learning language. Phase 12 slice 6: drains a latent
+    bug in kielo-ingest-processor/maintenance/grammar_quality.py
+    where every audit row was labelled "possible_non_finnish_term"
+    regardless of the actual learning language."""
+
 
 @dataclass(frozen=True)
 class PromptCapability:
@@ -291,6 +299,7 @@ _CAPABILITIES: dict[str, Capability] = {
             case_examples={
                 "case": '"nominative", "genitive", "partitive"',
             },
+            non_native_term_issue_code="possible_non_finnish_term",
         ),
         seed_vocab=SeedVocabularyCapability(
             starter_pronouns={
@@ -373,6 +382,7 @@ _CAPABILITIES: dict[str, Capability] = {
             case_examples={
                 "case": '"definite", "indefinite", "genitive"',
             },
+            non_native_term_issue_code="possible_non_swedish_term",
         ),
         seed_vocab=SeedVocabularyCapability(
             starter_pronouns={

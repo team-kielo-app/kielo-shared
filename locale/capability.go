@@ -154,6 +154,17 @@ type GrammarCapability struct {
 	// to a JSON-array-shaped example string used in batch LLM prompts
 	// (e.g. for fi case: `"nominative", "genitive", "partitive"`).
 	CaseExamples map[string]string
+	// NonNativeTermIssueCode is the audit-issue identifier emitted by
+	// the grammar-quality reviewer when a "term" field in a grammar
+	// concept doesn't match the expected learning language (e.g. a
+	// supposedly-Finnish term that lingua detects as English).
+	// Phase 12 slice 6: previously hard-coded as
+	// "possible_non_finnish_term" everywhere in
+	// kielo-ingest-processor/maintenance/grammar_quality.py — a
+	// latent bug that mis-labelled Swedish-language audit findings
+	// with the Finnish issue code. Adding a new authored learning
+	// language now requires only setting this field.
+	NonNativeTermIssueCode string
 }
 
 // PromptCapability covers per-language LLM-prompt fragments + scenario
@@ -258,6 +269,7 @@ var capabilities = map[string]*Capability{
 			CaseExamples: map[string]string{
 				"case": `"nominative", "genitive", "partitive"`,
 			},
+			NonNativeTermIssueCode: "possible_non_finnish_term",
 		},
 		SeedVocab: SeedVocabularyCapability{
 			StarterPronouns: map[string]string{
@@ -339,6 +351,7 @@ var capabilities = map[string]*Capability{
 			CaseExamples: map[string]string{
 				"case": `"definite", "indefinite", "genitive"`,
 			},
+			NonNativeTermIssueCode: "possible_non_swedish_term",
 		},
 		SeedVocab: SeedVocabularyCapability{
 			StarterPronouns: map[string]string{
