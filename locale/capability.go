@@ -119,6 +119,25 @@ type CaptionCapability struct {
 	SceneDefault  string
 }
 
+// SeedVocabularyCapability covers per-language foundational vocabulary
+// seeds: starter pronouns, the verb "to be", etc. Used by beginner-
+// bootstrap session generation, language detection, STT confidence
+// gates. Populated from scoping §B.8.
+//
+// Slice 5 of the Phase 10B migration: currently carries only the
+// starter pronouns + "to be" word for beginner bootstrap. Future
+// slices may add common_words, termination_phrases,
+// detection_hint_tokens, etc. from the §B.8 inventory.
+type SeedVocabularyCapability struct {
+	// StarterPronouns maps a semantic slot ("i", "you", "be") to the
+	// canonical word for that slot in this language. Used by
+	// _build_static_beginner_bootstrap_session in the engine.
+	// Required keys today: "i", "you", "be". Adding a new slot
+	// requires extending both fi + sv entries in this registry
+	// AND every caller that reads from it.
+	StarterPronouns map[string]string
+}
+
 // GrammarCapability covers per-language LLM-prompt grammar fragments
 // + grammar-terminology hints used by the ingest pipeline + engine.
 // Populated from scoping §B.9 + §B.11. Read primarily by the ingest
@@ -178,6 +197,9 @@ type Capability struct {
 	// Grammar covers per-language LLM-prompt grammar fragments +
 	// distinguishing-feature description.
 	Grammar GrammarCapability
+	// SeedVocab covers per-language foundational vocabulary seeds
+	// (starter pronouns, beginner bootstrap words).
+	SeedVocab SeedVocabularyCapability
 	// Prompts covers per-language LLM prompt fragments.
 	Prompts PromptCapability
 }
@@ -235,6 +257,13 @@ var capabilities = map[string]*Capability{
 				"essive/translative cases.",
 			CaseExamples: map[string]string{
 				"case": `"nominative", "genitive", "partitive"`,
+			},
+		},
+		SeedVocab: SeedVocabularyCapability{
+			StarterPronouns: map[string]string{
+				"i":   "minä",
+				"you": "sinä",
+				"be":  "olla",
 			},
 		},
 		Prompts: PromptCapability{
@@ -311,9 +340,16 @@ var capabilities = map[string]*Capability{
 				"case": `"definite", "indefinite", "genitive"`,
 			},
 		},
+		SeedVocab: SeedVocabularyCapability{
+			StarterPronouns: map[string]string{
+				"i":   "jag",
+				"you": "du",
+				"be":  "vara",
+			},
+		},
 		Prompts: PromptCapability{
-			// Phase 10B slice 3: mirrors the source-of-truth strings
-			// from kielo-convo go_orchestrator scenarioPromptExamples.
+			// Phase 10B slice 3: mirrors source-of-truth strings from
+			// kielo-convo go_orchestrator scenarioPromptExamples.
 			ScenarioGreetMessage:     "Hej! Vad kan jag hjälpa dig med?",
 			ScenarioGreetTranslation: "Hello! What can I help you with?",
 			ScenarioAskMessage:       "Vad letar du efter?",

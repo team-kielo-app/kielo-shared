@@ -145,6 +145,25 @@ class CaptionCapability:
 
 
 @dataclass(frozen=True)
+class SeedVocabularyCapability:
+    """Per-language foundational vocabulary seeds.
+
+    Populated from scoping §B.8. Currently carries only the starter
+    pronouns + "be" word for beginner-bootstrap session generation;
+    future slices may add common_words, termination_phrases,
+    detection_hint_tokens, etc.
+
+    Mirrors kielo-shared/locale/SeedVocabularyCapability (Go).
+    """
+
+    starter_pronouns: Mapping[str, str] = field(default_factory=dict)
+    """Maps a semantic slot ("i", "you", "be") to the canonical word
+    for that slot in this language. Read by the engine's
+    _build_static_beginner_bootstrap_session. Required keys today:
+    "i", "you", "be"."""
+
+
+@dataclass(frozen=True)
 class GrammarCapability:
     """Per-language LLM-prompt grammar fragments + grammar-terminology hints.
 
@@ -198,6 +217,7 @@ class Capability:
     stt: STTCapability
     caption: CaptionCapability
     grammar: GrammarCapability
+    seed_vocab: SeedVocabularyCapability
     prompts: PromptCapability
 
 
@@ -270,6 +290,13 @@ _CAPABILITIES: dict[str, Capability] = {
             ),
             case_examples={
                 "case": '"nominative", "genitive", "partitive"',
+            },
+        ),
+        seed_vocab=SeedVocabularyCapability(
+            starter_pronouns={
+                "i": "minä",
+                "you": "sinä",
+                "be": "olla",
             },
         ),
         prompts=PromptCapability(
@@ -347,6 +374,13 @@ _CAPABILITIES: dict[str, Capability] = {
                 "case": '"definite", "indefinite", "genitive"',
             },
         ),
+        seed_vocab=SeedVocabularyCapability(
+            starter_pronouns={
+                "i": "jag",
+                "you": "du",
+                "be": "vara",
+            },
+        ),
         prompts=PromptCapability(
             # Phase 10B slice 3: mirrors source-of-truth strings from
             # kielo-convo go_orchestrator scenarioPromptExamples.
@@ -407,6 +441,7 @@ __all__ = [
     "STTCapability",
     "CaptionCapability",
     "GrammarCapability",
+    "SeedVocabularyCapability",
     "PromptCapability",
     "lookup_capability",
     "supported_capabilities",
