@@ -7,6 +7,7 @@
 package middleware
 
 import (
+	"net/http"
 	"strings"
 
 	"github.com/labstack/echo/v4"
@@ -108,6 +109,57 @@ func ActiveLanguage(extract ActiveLanguageExtractor) echo.MiddlewareFunc {
 			ctx := db.WithLanguage(req.Context(), lang)
 			c.SetRequest(req.WithContext(ctx))
 			return next(c)
+		}
+	}
+}
+
+// RequireActiveLanguage returns Echo middleware that 400s a request when
+// no valid learning language is resolved from the extractor chain. Use
+// this on route groups that touch per-language tables (klearn_<lang>,
+// cms_<lang>); without it the search_path resolver silently falls back
+// to the legacy schema and the request returns wrong (or empty) data.
+//
+// Phase 10C: the kielolearn-engine Python middleware has its own strict
+// dependency (require_active_learning_language); this Go variant
+// provides the same guarantee for Echo-based services (kielo-cms,
+// kielo-user-service, etc.) at the route-group level rather than per-
+// handler.
+//
+// Ordering: register **after** ActiveLanguage (which populates ctx) on
+// the same route group. The extractor passed here MUST be the same one
+// passed to ActiveLanguage so the resolution chain is consistent.
+//
+// Admin / internal carve-out: callers can bypass this gate by setting
+// the X-Internal-API-Key header. Admin tools that legitimately fan out
+// across languages (cross-language listings, audit scripts, etc.) opt
+// in via the header. End-user requests don't carry the header so the
+// gate still applies.
+func RequireActiveLanguage(extract ActiveLanguageExtractor) echo.MiddlewareFunc {
+	if extract == nil {
+		extract = DefaultExtractor
+	}
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			if _, ok := db.LanguageFromContext(c.Request().Context()); ok {
+				// ActiveLanguage middleware already set a valid language.
+				return next(c)
+			}
+			// Admin / service-to-service carve-out.
+			if c.Request().Header.Get("X-Internal-API-Key") != "" {
+				return next(c)
+			}
+			// Re-run the extractor to surface WHY no language was
+			// attached (helps with audit-log readability — the response
+			// body identifies the misshaped request without forcing the
+			// caller to grep logs).
+			raw := extract(c)
+			return echo.NewHTTPError(
+				http.StatusBadRequest,
+				"learning_language_code is required for this route; "+
+					"supply via X-Kielo-Learning-Language header, "+
+					"learning_language_code query param, or JWT claim "+
+					"(extractor produced: "+raw+")",
+			)
 		}
 	}
 }
