@@ -52,6 +52,13 @@ type MorphologyCapability struct {
 	// (Finnish: partitive, essive, inessive, etc.; Swedish: none).
 	// Used to gate per-language paradigm-form helpers.
 	ExclusiveCases []string
+	// PostLLMCleanupPasses names post-LLM cleanup passes to apply
+	// after simplification / translation steps. Each name resolves to
+	// a function in the kielo-ingest-processor at runtime. Empty
+	// slice = no language-specific cleanup. Example: Swedish uses
+	// {"rejoin_swedish_definites"} to repair LLM-emitted split
+	// definite suffixes ("tester na" → "testerna").
+	PostLLMCleanupPasses []string
 }
 
 // DisplayCapability covers human-readable labels for prompts, UI, and
@@ -198,6 +205,7 @@ var capabilities = map[string]*Capability{
 			HasParadigmGenerator: true,
 			SpacyPipeline:        "fi_core_news_sm",
 			ExclusiveCases:       []string{"partitive", "essive", "inessive", "elative", "illative", "adessive", "ablative", "allative"},
+			PostLLMCleanupPasses: []string{}, // none currently — pronoun-repair runs inline in exercise_quality_gate, not as a registry-driven post-LLM pass
 		},
 		TTS: TTSCapability{
 			// Phase 10B slice 3: pronunciation prose moved into the
@@ -274,6 +282,7 @@ var capabilities = map[string]*Capability{
 			HasParadigmGenerator: true,
 			SpacyPipeline:        "sv_core_news_sm",
 			ExclusiveCases:       []string{}, // none unique to Swedish
+			PostLLMCleanupPasses: []string{"rejoin_swedish_definites"},
 		},
 		TTS: TTSCapability{
 			// Phase 10B slice 3: see fi entry.

@@ -68,6 +68,14 @@ class MorphologyCapability:
     language paradigm-form helpers (e.g. Finnish partitive/essive
     extractors)."""
 
+    post_llm_cleanup_passes: tuple[str, ...] = ()
+    """Names of post-LLM cleanup passes to apply after simplification
+    / translation steps. Each name resolves to a function in the
+    kielo-ingest-processor at runtime. Empty tuple = no language-
+    specific cleanup. Example: Swedish uses
+    ("rejoin_swedish_definites",) to repair LLM-emitted split
+    definite suffixes ("tester na" → "testerna")."""
+
 
 @dataclass(frozen=True)
 class DisplayCapability:
@@ -228,6 +236,7 @@ _CAPABILITIES: dict[str, Capability] = {
                 "ablative",
                 "allative",
             ),
+            post_llm_cleanup_passes=(),  # see Go counterpart for rationale
         ),
         tts=TTSCapability(
             # Phase 10B slice 3: pronunciation prose moved into the
@@ -305,6 +314,7 @@ _CAPABILITIES: dict[str, Capability] = {
             has_paradigm_generator=True,
             spacy_pipeline="sv_core_news_sm",
             exclusive_cases=(),  # none unique to Swedish
+            post_llm_cleanup_passes=("rejoin_swedish_definites",),
         ),
         tts=TTSCapability(
             # Phase 10B slice 3: see fi entry.
