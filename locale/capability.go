@@ -202,6 +202,31 @@ type PromptCapability struct {
 	// OfflineTranslationFallbacks is the Finnish-only offline
 	// translation dictionary from kielo-cms (G7). Empty for sv.
 	OfflineTranslationFallbacks map[string]string
+	// Phase 12 slice 9: convo agent prompt-table fields.
+	// NeverSayWords is the per-language set of words the LLM must
+	// not emit (e.g. "kielimalli", "tekoäly" for Finnish — terms
+	// that would break immersion). Read by
+	// kielo-convo/python_agent/prompts/compiler.py.
+	NeverSayWords []string
+	// TerminationPhrase is the per-language goodbye phrase the LLM
+	// uses to signal session end. e.g. "Näkemiin" for fi.
+	TerminationPhrase string
+	// ThankEndPhrase is the per-language session-closure phrase
+	// combining a thank-you with the termination. e.g.
+	// "Kiitos käynnistä, näkemiin!" for fi.
+	ThankEndPhrase string
+	// EncourageWords is the per-language list of short encourage
+	// interjections the LLM peppers into responses. e.g. ["Hyvä!",
+	// "Hienosti!"] for fi.
+	EncourageWords []string
+	// AckWords is the per-language list of short acknowledgement
+	// interjections. e.g. ["Joo!", "Aivan!"] for fi.
+	AckWords []string
+	// BookingQuestion + BookingAnswer is the per-language scripted
+	// "have you got a reservation?" pair used as a few-shot example
+	// in scenario prompts. Empty strings = no example available.
+	BookingQuestion string
+	BookingAnswer   string
 }
 
 // Capability is the top-level per-language record.
@@ -321,6 +346,13 @@ var capabilities = map[string]*Capability{
 				"tervetuloa": "welcome",
 				"anteeksi":   "sorry / excuse me",
 			},
+			NeverSayWords:     []string{"kielimalli", "tekoäly"},
+			TerminationPhrase: "Näkemiin",
+			ThankEndPhrase:    "Kiitos käynnistä, näkemiin!",
+			EncourageWords:    []string{"Hyvä!", "Hienosti!"},
+			AckWords:          []string{"Joo!", "Aivan!", "Hyvä!", "Juuri niin!"},
+			BookingQuestion:   "Onko teillä varausta?",
+			BookingAnswer:     "Ei hätää, voin tehdä varauksen nyt.",
 		},
 	},
 	"sv": {
@@ -390,6 +422,13 @@ var capabilities = map[string]*Capability{
 			ScenarioHintNeed:         "Jag behöver...",
 			PoliteExamples:           "tack, ursäkta, hej",
 			OfflineTranslationFallbacks: map[string]string{}, // no Swedish offline dictionary yet
+			NeverSayWords:               []string{"språkmodell", "ai"},
+			TerminationPhrase:           "Hej då",
+			ThankEndPhrase:              "Tack för besöket, hej då!",
+			EncourageWords:              []string{"Bra!", "Snyggt!"},
+			AckWords:                    []string{"Ja!", "Precis!", "Bra!", "Just det!"},
+			BookingQuestion:             "Har ni en bokning?",
+			BookingAnswer:               "Inga problem, jag kan boka åt er nu.",
 		},
 	},
 }

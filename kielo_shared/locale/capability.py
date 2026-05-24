@@ -224,6 +224,36 @@ class PromptCapability:
     """Finnish-only offline translation dictionary from kielo-cms (G7).
     Empty for sv."""
 
+    # Phase 12 slice 9: convo agent prompt-table fields.
+    never_say_words: tuple[str, ...] = ()
+    """Per-language set of words the LLM must not emit (e.g.
+    "kielimalli", "tekoäly" for Finnish). Read by
+    kielo-convo/python_agent/prompts/compiler.py."""
+
+    termination_phrase: str = ""
+    """Per-language goodbye phrase the LLM uses to signal session
+    end (e.g. "Näkemiin" for fi)."""
+
+    thank_end_phrase: str = ""
+    """Per-language session-closure phrase combining a thank-you
+    with the termination (e.g. "Kiitos käynnistä, näkemiin!" for fi)."""
+
+    encourage_words: tuple[str, ...] = ()
+    """Per-language list of short encourage interjections the LLM
+    peppers into responses (e.g. ("Hyvä!", "Hienosti!") for fi)."""
+
+    ack_words: tuple[str, ...] = ()
+    """Per-language list of short acknowledgement interjections
+    (e.g. ("Joo!", "Aivan!") for fi)."""
+
+    booking_question: str = ""
+    """Per-language scripted "have you got a reservation?" question
+    used as a few-shot example in scenario prompts. Empty = no
+    example available for this language."""
+
+    booking_answer: str = ""
+    """Per-language scripted answer paired with booking_question."""
+
 
 @dataclass(frozen=True)
 class Capability:
@@ -346,6 +376,13 @@ _CAPABILITIES: dict[str, Capability] = {
                 "tervetuloa": "welcome",
                 "anteeksi": "sorry / excuse me",
             },
+            never_say_words=("kielimalli", "tekoäly"),
+            termination_phrase="Näkemiin",
+            thank_end_phrase="Kiitos käynnistä, näkemiin!",
+            encourage_words=("Hyvä!", "Hienosti!"),
+            ack_words=("Joo!", "Aivan!", "Hyvä!", "Juuri niin!"),
+            booking_question="Onko teillä varausta?",
+            booking_answer="Ei hätää, voin tehdä varauksen nyt.",
         ),
     ),
     "sv": Capability(
@@ -419,6 +456,13 @@ _CAPABILITIES: dict[str, Capability] = {
             scenario_hint_need="Jag behöver...",
             polite_examples="tack, ursäkta, hej",
             offline_translation_fallbacks={},  # no Swedish offline dictionary yet
+            never_say_words=("språkmodell", "ai"),
+            termination_phrase="Hej då",
+            thank_end_phrase="Tack för besöket, hej då!",
+            encourage_words=("Bra!", "Snyggt!"),
+            ack_words=("Ja!", "Precis!", "Bra!", "Just det!"),
+            booking_question="Har ni en bokning?",
+            booking_answer="Inga problem, jag kan boka åt er nu.",
         ),
     ),
 }
