@@ -173,6 +173,16 @@ class SeedVocabularyCapability:
     _build_static_beginner_bootstrap_session. Required keys today:
     "i", "you", "be"."""
 
+    common_words: tuple[str, ...] = ()
+    """Per-language set of common function words used by the voice
+    pipeline to disambiguate ambiguous STT outputs. Phase 12 slice 9."""
+
+    termination_phrases: tuple[str, ...] = ()
+    """Per-language set of phrases indicating the user wants to end
+    the session. The English-language termination set is shared
+    globally and added on top by the voice pipeline.
+    Phase 12 slice 9."""
+
 
 @dataclass(frozen=True)
 class GrammarCapability:
@@ -262,6 +272,24 @@ class PromptCapability:
     hint_complexity_challenge: str = ""
     """Per-language slash-separated example for challenge (B1+) hint
     complexity. Phase 12 slice 10."""
+
+    nudge_openers: Mapping[str, Sequence[str]] = field(default_factory=dict)
+    """Per-language map keyed by session phase ("early", "mid",
+    "late") returning a list of opening phrases the agent uses to
+    nudge the user mid-session. Phase 12 slice 9."""
+
+    try_saying_template: str = ""
+    """Per-language template the agent uses to suggest a phrase.
+    Must contain "{hint}". e.g. for fi:
+    "Kokeile vaikka: '{hint}' (Try saying: '{hint}')". Phase 12 slice 9."""
+
+    no_hint_fallback: str = ""
+    """Per-language fallback the agent emits when it has no concrete
+    hint to offer. Phase 12 slice 9."""
+
+    wrapping_up: str = ""
+    """Per-language phrase the agent emits when approaching the
+    session time limit. Phase 12 slice 9."""
 
 
 @dataclass(frozen=True)
@@ -359,6 +387,12 @@ _CAPABILITIES: dict[str, Capability] = {
                 "you": "sinä",
                 "be": "olla",
             },
+            common_words=(
+                "ja", "on", "se", "ei", "en", "niin", "tai", "ole", "olen", "minä", "sinä",
+            ),
+            termination_phrases=(
+                "hyvästi", "näkemiin", "kiitos ja hei", "kiitos, hei", "lopetetaan",
+            ),
         ),
         prompts=PromptCapability(
             # Phase 10B slice 3: mirrors source-of-truth strings from
@@ -397,6 +431,23 @@ _CAPABILITIES: dict[str, Capability] = {
                 '"Voisinko saada yhden cappuccinon ja pienen pullan, kiitos?" / '
                 '"Haluaisin varata ajan huomiselle, jos mahdollista."'
             ),
+            nudge_openers={
+                "early": (
+                    "Hyvä alku! Haluatko jatkaa suomeksi?",
+                    "Jatketaan rauhassa. Voit vastata lyhyesti.",
+                ),
+                "mid": (
+                    "Hyvin menee! Kerro vielä yhdellä lauseella.",
+                    "Hienosti! Mitä haluaisit sanoa seuraavaksi?",
+                ),
+                "late": (
+                    "Juuri näin, jatketaan vielä hetki.",
+                    "Olet hyvässä vauhdissa. Kokeile vielä yksi vastaus.",
+                ),
+            },
+            try_saying_template="Kokeile vaikka: '{hint}' (Try saying: '{hint}')",
+            no_hint_fallback="Ei hätää! Voit sanoa ihan mitä vain. (No worries, say anything!)",
+            wrapping_up="Meillä on vielä hetki aikaa. Jatketaan rauhassa!",
         ),
     ),
     "sv": Capability(
@@ -456,6 +507,13 @@ _CAPABILITIES: dict[str, Capability] = {
                 "you": "du",
                 "be": "vara",
             },
+            common_words=(
+                "och", "är", "jag", "du", "vi", "det", "en", "ett", "har", "inte",
+                "som", "på", "av", "för", "med", "men", "eller", "om", "när", "var",
+            ),
+            termination_phrases=(
+                "hej då", "adjö", "tack och hej", "vi ses", "hejdå",
+            ),
         ),
         prompts=PromptCapability(
             # Phase 10B slice 3: mirrors source-of-truth strings from
@@ -482,6 +540,23 @@ _CAPABILITIES: dict[str, Capability] = {
                 '"Skulle jag kunna få en cappuccino och en liten bulle, tack?" / '
                 '"Jag skulle vilja boka en tid till imorgon, om möjligt."'
             ),
+            nudge_openers={
+                "early": (
+                    "Bra start! Vill du fortsätta på svenska?",
+                    "Vi tar det lugnt. Du kan svara kort.",
+                ),
+                "mid": (
+                    "Det går bra! Säg en mening till.",
+                    "Snyggt! Vad vill du säga härnäst?",
+                ),
+                "late": (
+                    "Precis så, vi fortsätter en stund till.",
+                    "Du är på rätt väg. Försök med ett svar till.",
+                ),
+            },
+            try_saying_template="Försök säga: '{hint}' (Try saying: '{hint}')",
+            no_hint_fallback="Ingen fara! Du kan säga vad som helst. (No worries, say anything!)",
+            wrapping_up="Vi har en stund kvar. Vi fortsätter i lugn takt!",
         ),
     ),
 }

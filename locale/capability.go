@@ -149,6 +149,18 @@ type SeedVocabularyCapability struct {
 	// requires extending both fi + sv entries in this registry
 	// AND every caller that reads from it.
 	StarterPronouns map[string]string
+	// Phase 12 slice 9 (continued): voice-pipeline STT seed words.
+	// CommonWords is the per-language set of common function words
+	// used by the voice pipeline to disambiguate ambiguous STT
+	// outputs (e.g. "ja", "on", "se" for Finnish; "och", "är", "jag"
+	// for Swedish).
+	CommonWords []string
+	// TerminationPhrases is the per-language set of phrases that
+	// indicate the user wants to end the session (e.g. "hyvästi",
+	// "näkemiin" for fi; "hej då", "adjö" for sv). The English-language
+	// termination set is shared globally and added on top by the
+	// voice pipeline.
+	TerminationPhrases []string
 }
 
 // GrammarCapability covers per-language LLM-prompt grammar fragments
@@ -235,6 +247,21 @@ type PromptCapability struct {
 	// HintComplexityChallenge is the per-language example for
 	// challenging (B1+) hint complexity. Phase 12 slice 10.
 	HintComplexityChallenge string
+	// Phase 12 slice 9 (continued): convo session-lifecycle nudges.
+	// NudgeOpeners is a map keyed by session phase ("early", "mid",
+	// "late") returning a list of opening phrases the agent uses
+	// to nudge the user mid-session. Empty map = no nudges configured.
+	NudgeOpeners map[string][]string
+	// TrySayingTemplate is the per-language template the agent uses
+	// to suggest a phrase. Must contain "{hint}". e.g. for fi:
+	// "Kokeile vaikka: '{hint}' (Try saying: '{hint}')".
+	TrySayingTemplate string
+	// NoHintFallback is the per-language fallback the agent emits
+	// when it has no concrete hint to offer.
+	NoHintFallback string
+	// WrappingUp is the per-language phrase the agent emits when
+	// approaching the session time limit.
+	WrappingUp string
 }
 
 // Capability is the top-level per-language record.
@@ -325,6 +352,12 @@ var capabilities = map[string]*Capability{
 				"you": "sinä",
 				"be":  "olla",
 			},
+			CommonWords: []string{
+				"ja", "on", "se", "ei", "en", "niin", "tai", "ole", "olen", "minä", "sinä",
+			},
+			TerminationPhrases: []string{
+				"hyvästi", "näkemiin", "kiitos ja hei", "kiitos, hei", "lopetetaan",
+			},
 		},
 		Prompts: PromptCapability{
 			// Phase 10B slice 3: mirrors the source-of-truth strings
@@ -363,6 +396,23 @@ var capabilities = map[string]*Capability{
 			BookingAnswer:           "Ei hätää, voin tehdä varauksen nyt.",
 			HintComplexitySimple:    `"Kiitos!" / "Haluan kahvin." / "Kyllä."`,
 			HintComplexityChallenge: `"Voisinko saada yhden cappuccinon ja pienen pullan, kiitos?" / "Haluaisin varata ajan huomiselle, jos mahdollista."`,
+			NudgeOpeners: map[string][]string{
+				"early": {
+					"Hyvä alku! Haluatko jatkaa suomeksi?",
+					"Jatketaan rauhassa. Voit vastata lyhyesti.",
+				},
+				"mid": {
+					"Hyvin menee! Kerro vielä yhdellä lauseella.",
+					"Hienosti! Mitä haluaisit sanoa seuraavaksi?",
+				},
+				"late": {
+					"Juuri näin, jatketaan vielä hetki.",
+					"Olet hyvässä vauhdissa. Kokeile vielä yksi vastaus.",
+				},
+			},
+			TrySayingTemplate: "Kokeile vaikka: '{hint}' (Try saying: '{hint}')",
+			NoHintFallback:    "Ei hätää! Voit sanoa ihan mitä vain. (No worries, say anything!)",
+			WrappingUp:        "Meillä on vielä hetki aikaa. Jatketaan rauhassa!",
 		},
 	},
 	"sv": {
@@ -418,6 +468,13 @@ var capabilities = map[string]*Capability{
 				"you": "du",
 				"be":  "vara",
 			},
+			CommonWords: []string{
+				"och", "är", "jag", "du", "vi", "det", "en", "ett", "har", "inte",
+				"som", "på", "av", "för", "med", "men", "eller", "om", "när", "var",
+			},
+			TerminationPhrases: []string{
+				"hej då", "adjö", "tack och hej", "vi ses", "hejdå",
+			},
 		},
 		Prompts: PromptCapability{
 			// Phase 10B slice 3: mirrors source-of-truth strings from
@@ -441,6 +498,23 @@ var capabilities = map[string]*Capability{
 			BookingAnswer:           "Inga problem, jag kan boka åt er nu.",
 			HintComplexitySimple:    `"Tack!" / "Jag vill ha kaffe." / "Ja."`,
 			HintComplexityChallenge: `"Skulle jag kunna få en cappuccino och en liten bulle, tack?" / "Jag skulle vilja boka en tid till imorgon, om möjligt."`,
+			NudgeOpeners: map[string][]string{
+				"early": {
+					"Bra start! Vill du fortsätta på svenska?",
+					"Vi tar det lugnt. Du kan svara kort.",
+				},
+				"mid": {
+					"Det går bra! Säg en mening till.",
+					"Snyggt! Vad vill du säga härnäst?",
+				},
+				"late": {
+					"Precis så, vi fortsätter en stund till.",
+					"Du är på rätt väg. Försök med ett svar till.",
+				},
+			},
+			TrySayingTemplate: "Försök säga: '{hint}' (Try saying: '{hint}')",
+			NoHintFallback:    "Ingen fara! Du kan säga vad som helst. (No worries, say anything!)",
+			WrappingUp:        "Vi har en stund kvar. Vi fortsätter i lugn takt!",
 		},
 	},
 }
