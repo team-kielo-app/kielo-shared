@@ -230,11 +230,17 @@ _CAPABILITIES: dict[str, Capability] = {
             ),
         ),
         tts=TTSCapability(
-            # Pronunciation prose currently sourced from
-            # settings.OPENAI_TTS_FI_INSTRUCTIONS at runtime;
-            # registry slot holds the empty default. Slice 3 of the
-            # migration plan will move env-loading into here.
-            pronunciation_instructions=None,
+            # Phase 10B slice 3: pronunciation prose moved into the
+            # registry. Engine's tts_service.py prefers the env override
+            # (settings.OPENAI_TTS_FI_INSTRUCTIONS) when set, falling
+            # back to this default; python_agent's _build_tts_instructions
+            # reads this directly.
+            pronunciation_instructions=(
+                "Pronounce Finnish naturally with native Finnish phonetics: "
+                "double consonants and long vowels held distinctly, stress on "
+                "the first syllable of each word, clear ä/ö/y vowels (not "
+                "anglicised). Use a warm, friendly, conversational tone."
+            ),
             preferred_voice_id=None,
         ),
         stt=STTCapability(
@@ -258,14 +264,17 @@ _CAPABILITIES: dict[str, Capability] = {
             },
         ),
         prompts=PromptCapability(
-            scenario_greet_message="Moi! Mitä kuuluu?",
-            scenario_greet_translation="Hi! How are you?",
-            scenario_ask_message="Voitko auttaa minua?",
-            scenario_ask_translation="Can you help me?",
-            scenario_hint_would_like="[I would like... in Finnish]",
-            scenario_hint_help="[Can you help me... in Finnish]",
-            scenario_hint_looking_for="[I'm looking for... in Finnish]",
-            scenario_hint_need="[I need... in Finnish]",
+            # Phase 10B slice 3: mirrors source-of-truth strings from
+            # kielo-convo go_orchestrator scenarioPromptExamples that
+            # the registry replaces.
+            scenario_greet_message="Terve! Voinko auttaa?",
+            scenario_greet_translation="Hello! Can I help?",
+            scenario_ask_message="Mitä etsit?",
+            scenario_ask_translation="What are you looking for?",
+            scenario_hint_would_like="Haluaisin...",
+            scenario_hint_help="Voisitko auttaa minua?",
+            scenario_hint_looking_for="Etsin...",
+            scenario_hint_need="Tarvitsen...",
             polite_examples="kiitos, anteeksi, hei",
             offline_translation_fallbacks={
                 "moi": "hi (casual greeting)",
@@ -298,7 +307,13 @@ _CAPABILITIES: dict[str, Capability] = {
             exclusive_cases=(),  # none unique to Swedish
         ),
         tts=TTSCapability(
-            pronunciation_instructions=None,
+            # Phase 10B slice 3: see fi entry.
+            pronunciation_instructions=(
+                "Pronounce Swedish naturally with native Swedish phonetics: "
+                "the pitch-accent system (acute and grave) honored, å/ä/ö "
+                "as distinct vowels (not anglicised), sj-/tj- sounds soft. "
+                "Use a warm, friendly, conversational tone."
+            ),
             preferred_voice_id=None,
         ),
         stt=STTCapability(
@@ -323,14 +338,16 @@ _CAPABILITIES: dict[str, Capability] = {
             },
         ),
         prompts=PromptCapability(
-            scenario_greet_message="Hej! Hur mår du?",
-            scenario_greet_translation="Hi! How are you?",
-            scenario_ask_message="Kan du hjälpa mig?",
-            scenario_ask_translation="Can you help me?",
-            scenario_hint_would_like="[I would like... in Swedish]",
-            scenario_hint_help="[Can you help me... in Swedish]",
-            scenario_hint_looking_for="[I'm looking for... in Swedish]",
-            scenario_hint_need="[I need... in Swedish]",
+            # Phase 10B slice 3: mirrors source-of-truth strings from
+            # kielo-convo go_orchestrator scenarioPromptExamples.
+            scenario_greet_message="Hej! Vad kan jag hjälpa dig med?",
+            scenario_greet_translation="Hello! What can I help you with?",
+            scenario_ask_message="Vad letar du efter?",
+            scenario_ask_translation="What are you looking for?",
+            scenario_hint_would_like="Jag skulle vilja...",
+            scenario_hint_help="Kan du hjälpa mig?",
+            scenario_hint_looking_for="Jag letar efter...",
+            scenario_hint_need="Jag behöver...",
             polite_examples="tack, ursäkta, hej",
             offline_translation_fallbacks={},  # no Swedish offline dictionary yet
         ),

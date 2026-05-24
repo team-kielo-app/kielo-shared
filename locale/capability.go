@@ -200,12 +200,16 @@ var capabilities = map[string]*Capability{
 			ExclusiveCases:       []string{"partitive", "essive", "inessive", "elative", "illative", "adessive", "ablative", "allative"},
 		},
 		TTS: TTSCapability{
-			// Pronunciation prose is sourced from env at runtime
-			// (settings.OPENAI_TTS_FI_INSTRUCTIONS); registry holds
-			// the empty default. Slice 3 of the migration plan will
-			// move env-loading into here.
-			PronunciationInstructions: "",
-			PreferredVoiceID:          "",
+			// Phase 10B slice 3: pronunciation prose moved into the
+			// registry. The engine's tts_service.py prefers the env
+			// override (settings.OPENAI_TTS_FI_INSTRUCTIONS) when
+			// set, falling back to this default; python_agent's
+			// _build_tts_instructions reads this directly.
+			PronunciationInstructions: "Pronounce Finnish naturally with native Finnish phonetics: " +
+				"double consonants and long vowels held distinctly, stress on " +
+				"the first syllable of each word, clear ä/ö/y vowels (not " +
+				"anglicised). Use a warm, friendly, conversational tone.",
+			PreferredVoiceID: "",
 		},
 		STT: STTCapability{
 			WhisperLanguageTag: "fi",
@@ -226,14 +230,20 @@ var capabilities = map[string]*Capability{
 			},
 		},
 		Prompts: PromptCapability{
-			ScenarioGreetMessage:     "Moi! Mitä kuuluu?",
-			ScenarioGreetTranslation: "Hi! How are you?",
-			ScenarioAskMessage:       "Voitko auttaa minua?",
-			ScenarioAskTranslation:   "Can you help me?",
-			ScenarioHintWouldLike:    "[I would like... in Finnish]",
-			ScenarioHintHelp:         "[Can you help me... in Finnish]",
-			ScenarioHintLookingFor:   "[I'm looking for... in Finnish]",
-			ScenarioHintNeed:         "[I need... in Finnish]",
+			// Phase 10B slice 3: mirrors the source-of-truth strings
+			// from kielo-convo go_orchestrator scenarioPromptExamples
+			// switch statement that this registry replaces. The
+			// hint-* fields are Finnish phrases used as concrete
+			// LLM-prompt examples (not the bracketed-English
+			// placeholders the legacy fallback branch produced).
+			ScenarioGreetMessage:     "Terve! Voinko auttaa?",
+			ScenarioGreetTranslation: "Hello! Can I help?",
+			ScenarioAskMessage:       "Mitä etsit?",
+			ScenarioAskTranslation:   "What are you looking for?",
+			ScenarioHintWouldLike:    "Haluaisin...",
+			ScenarioHintHelp:         "Voisitko auttaa minua?",
+			ScenarioHintLookingFor:   "Etsin...",
+			ScenarioHintNeed:         "Tarvitsen...",
 			PoliteExamples:           "kiitos, anteeksi, hei",
 			OfflineTranslationFallbacks: map[string]string{
 				"moi":        "hi (casual greeting)",
@@ -266,10 +276,12 @@ var capabilities = map[string]*Capability{
 			ExclusiveCases:       []string{}, // none unique to Swedish
 		},
 		TTS: TTSCapability{
-			// Pronunciation prose is sourced from env at runtime
-			// (settings.OPENAI_TTS_SV_INSTRUCTIONS).
-			PronunciationInstructions: "",
-			PreferredVoiceID:          "",
+			// Phase 10B slice 3: see fi entry.
+			PronunciationInstructions: "Pronounce Swedish naturally with native Swedish phonetics: " +
+				"the pitch-accent system (acute and grave) honored, å/ä/ö " +
+				"as distinct vowels (not anglicised), sj-/tj- sounds soft. " +
+				"Use a warm, friendly, conversational tone.",
+			PreferredVoiceID: "",
 		},
 		STT: STTCapability{
 			WhisperLanguageTag: "sv",
@@ -291,15 +303,17 @@ var capabilities = map[string]*Capability{
 			},
 		},
 		Prompts: PromptCapability{
-			ScenarioGreetMessage:     "Hej! Hur mår du?",
-			ScenarioGreetTranslation:    "Hi! How are you?",
-			ScenarioAskMessage:          "Kan du hjälpa mig?",
-			ScenarioAskTranslation:      "Can you help me?",
-			ScenarioHintWouldLike:       "[I would like... in Swedish]",
-			ScenarioHintHelp:            "[Can you help me... in Swedish]",
-			ScenarioHintLookingFor:      "[I'm looking for... in Swedish]",
-			ScenarioHintNeed:            "[I need... in Swedish]",
-			PoliteExamples:              "tack, ursäkta, hej",
+			// Phase 10B slice 3: mirrors the source-of-truth strings
+			// from kielo-convo go_orchestrator scenarioPromptExamples.
+			ScenarioGreetMessage:     "Hej! Vad kan jag hjälpa dig med?",
+			ScenarioGreetTranslation: "Hello! What can I help you with?",
+			ScenarioAskMessage:       "Vad letar du efter?",
+			ScenarioAskTranslation:   "What are you looking for?",
+			ScenarioHintWouldLike:    "Jag skulle vilja...",
+			ScenarioHintHelp:         "Kan du hjälpa mig?",
+			ScenarioHintLookingFor:   "Jag letar efter...",
+			ScenarioHintNeed:         "Jag behöver...",
+			PoliteExamples:           "tack, ursäkta, hej",
 			OfflineTranslationFallbacks: map[string]string{}, // no Swedish offline dictionary yet
 		},
 	},
