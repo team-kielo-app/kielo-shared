@@ -2,6 +2,7 @@ package pubsubutil
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -154,4 +155,92 @@ func TestWithLanguageFromAttributes_PassthroughOnUnsupportedLearningLanguage(t *
 	ctx := WithLanguageFromAttributes(context.Background(), map[string]string{"learning_language_code": "vi"})
 	_, ok := sharedDB.LanguageFromContext(ctx)
 	assert.False(t, ok, "localization-only language must not be applied as active learning language")
+}
+
+// ----- Phase 10C strict variants -----
+
+func TestEventAttributesStrict_RejectsCtxWithoutLanguage(t *testing.T) {
+	_, err := EventAttributesStrict(context.Background(), "content.article.submitted.v1")
+	assert.ErrorIs(t, err, ErrLanguageRequired)
+}
+
+func TestEventAttributesStrict_RejectsCtxWithInvalidLanguage(t *testing.T) {
+	// sharedDB.WithLanguage already rejects malformed idents, so the ctx
+	// passed in has no language attached. The strict variant must surface
+	// that as ErrLanguageRequired rather than producing a half-formed
+	// attribute map.
+	ctx := sharedDB.WithLanguage(context.Background(), "../etc/passwd")
+	_, err := EventAttributesStrict(ctx, "content.article.submitted.v1")
+	assert.ErrorIs(t, err, ErrLanguageRequired)
+}
+
+func TestEventAttributesStrict_HappyPath(t *testing.T) {
+	ctx := sharedDB.WithLanguage(context.Background(), "sv")
+	got, err := EventAttributesStrict(ctx, "content.article.submitted.v1")
+	assert.NoError(t, err)
+	assert.Equal(t, "content.article.submitted.v1", got["event_type"])
+	assert.Equal(t, "sv", got["learning_language_code"])
+}
+
+func TestEventAttributesStrict_StampsTrace(t *testing.T) {
+	tc := observe.New()
+	ctx := observe.WithContext(context.Background(), tc)
+	ctx = sharedDB.WithLanguage(ctx, "fi")
+	got, err := EventAttributesStrict(ctx, "content.article.submitted.v1")
+	assert.NoError(t, err)
+	assert.Equal(t, tc.TraceID, got["trace_id"])
+}
+
+func TestEventAttributesStrict_AllowsEmptyEventType(t *testing.T) {
+	// Some publishers don't carry an event_type discriminator (legacy
+	// job queue Enqueue path). The strict variant only enforces the
+	// language attribute; event_type stays optional.
+	ctx := sharedDB.WithLanguage(context.Background(), "fi")
+	got, err := EventAttributesStrict(ctx, "")
+	assert.NoError(t, err)
+	assert.Equal(t, "fi", got["learning_language_code"])
+	_, hasEventType := got["event_type"]
+	assert.False(t, hasEventType)
+}
+
+func TestWithLanguageFromAttributesStrict_RejectsMissingAttribute(t *testing.T) {
+	_, err := WithLanguageFromAttributesStrict(context.Background(), map[string]string{
+		"event_type": "content.article.submitted.v1",
+	})
+	assert.ErrorIs(t, err, ErrLanguageRequired)
+}
+
+func TestWithLanguageFromAttributesStrict_RejectsEmptyAttribute(t *testing.T) {
+	_, err := WithLanguageFromAttributesStrict(context.Background(), map[string]string{
+		"event_type":             "content.article.submitted.v1",
+		"learning_language_code": "",
+	})
+	assert.ErrorIs(t, err, ErrLanguageRequired)
+}
+
+func TestWithLanguageFromAttributesStrict_RejectsNilAttributes(t *testing.T) {
+	_, err := WithLanguageFromAttributesStrict(context.Background(), nil)
+	assert.ErrorIs(t, err, ErrLanguageRequired)
+}
+
+func TestWithLanguageFromAttributesStrict_HappyPath(t *testing.T) {
+	ctx, err := WithLanguageFromAttributesStrict(context.Background(), map[string]string{
+		"event_type":             "content.article.submitted.v1",
+		"learning_language_code": "sv",
+	})
+	assert.NoError(t, err)
+	lang, ok := sharedDB.LanguageFromContext(ctx)
+	assert.True(t, ok)
+	assert.Equal(t, "sv", lang)
+}
+
+func TestErrLanguageRequired_IsStable(t *testing.T) {
+	// Sentinel value comparison across packages must work via errors.Is.
+	err := errors.New("wrapped: " + ErrLanguageRequired.Error())
+	assert.False(t, errors.Is(err, ErrLanguageRequired),
+		"plain string wrap shouldn't satisfy errors.Is")
+
+	_, strictErr := EventAttributesStrict(context.Background(), "x")
+	assert.True(t, errors.Is(strictErr, ErrLanguageRequired),
+		"fmt.Errorf with %%w should satisfy errors.Is")
 }
