@@ -112,6 +112,24 @@ type CaptionCapability struct {
 	SceneDefault  string
 }
 
+// GrammarCapability covers per-language LLM-prompt grammar fragments
+// + grammar-terminology hints used by the ingest pipeline + engine.
+// Populated from scoping §B.9 + §B.11. Read primarily by the ingest
+// processor's _llm_handlers.py and kielolearn-engine's dictionary
+// enrichment.
+type GrammarCapability struct {
+	// LanguageFeaturesDescription is the short prose description of
+	// the language's distinguishing features (e.g. agglutination,
+	// vowel harmony for Finnish; V2 word order, en/ett gender for
+	// Swedish), injected into LLM prompts so the model knows what
+	// kind of language it's processing.
+	LanguageFeaturesDescription string
+	// CaseExamples maps a grammar-feature axis ("case", "tense", etc.)
+	// to a JSON-array-shaped example string used in batch LLM prompts
+	// (e.g. for fi case: `"nominative", "genitive", "partitive"`).
+	CaseExamples map[string]string
+}
+
 // PromptCapability covers per-language LLM-prompt fragments + scenario
 // seed phrases used by kielo-convo and kielo-cms. Populated from §B.11
 // and partially §B.10.
@@ -150,6 +168,9 @@ type Capability struct {
 	STT STTCapability
 	// Caption covers KTV / social caption decoration.
 	Caption CaptionCapability
+	// Grammar covers per-language LLM-prompt grammar fragments +
+	// distinguishing-feature description.
+	Grammar GrammarCapability
 	// Prompts covers per-language LLM prompt fragments.
 	Prompts PromptCapability
 }
@@ -194,6 +215,15 @@ var capabilities = map[string]*Capability{
 			SceneGreeting: "Helsinki tram stop on a bright weekday morning.",
 			SceneVerb:     "Office break room before the first meeting.",
 			SceneDefault:  "Kitchen at home before heading out for the day.",
+		},
+		Grammar: GrammarCapability{
+			LanguageFeaturesDescription: "agglutination, vowel harmony, " +
+				"15 grammatical cases, no grammatical gender, " +
+				"consonant gradation (kpt rules), partitive case, " +
+				"essive/translative cases.",
+			CaseExamples: map[string]string{
+				"case": `"nominative", "genitive", "partitive"`,
+			},
 		},
 		Prompts: PromptCapability{
 			ScenarioGreetMessage:     "Moi! Mitä kuuluu?",
@@ -250,8 +280,18 @@ var capabilities = map[string]*Capability{
 			SceneVerb:     "Office break room before the first meeting.",
 			SceneDefault:  "Kitchen at home before heading out for the day.",
 		},
+		Grammar: GrammarCapability{
+			LanguageFeaturesDescription: "V2 word order, two genders " +
+				"(en/ett — common vs neuter), definite article via " +
+				"suffix (-en/-et/-na), no case marking on nouns, " +
+				"verb conjugation primarily for tense (no person/" +
+				"number agreement).",
+			CaseExamples: map[string]string{
+				"case": `"definite", "indefinite", "genitive"`,
+			},
+		},
 		Prompts: PromptCapability{
-			ScenarioGreetMessage:        "Hej! Hur mår du?",
+			ScenarioGreetMessage:     "Hej! Hur mår du?",
 			ScenarioGreetTranslation:    "Hi! How are you?",
 			ScenarioAskMessage:          "Kan du hjälpa mig?",
 			ScenarioAskTranslation:      "Can you help me?",

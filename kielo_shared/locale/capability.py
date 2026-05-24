@@ -137,6 +137,28 @@ class CaptionCapability:
 
 
 @dataclass(frozen=True)
+class GrammarCapability:
+    """Per-language LLM-prompt grammar fragments + grammar-terminology hints.
+
+    Populated from scoping §B.9 + §B.11. Read primarily by the ingest
+    processor's _llm_handlers.py and kielolearn-engine's dictionary
+    enrichment.
+
+    Mirrors kielo-shared/locale/GrammarCapability (Go).
+    """
+
+    language_features_description: str = ""
+    """Short prose description of the language's distinguishing features
+    (e.g. agglutination, vowel harmony for Finnish). Injected into LLM
+    prompts so the model knows what kind of language it's processing."""
+
+    case_examples: Mapping[str, str] = field(default_factory=dict)
+    """Maps a grammar-feature axis ("case", "tense", etc.) to a
+    JSON-array-shaped example string for batch LLM prompts (e.g. for
+    fi case: '"nominative", "genitive", "partitive"')."""
+
+
+@dataclass(frozen=True)
 class PromptCapability:
     """Per-language LLM-prompt fragments + scenario seed phrases."""
 
@@ -167,6 +189,7 @@ class Capability:
     tts: TTSCapability
     stt: STTCapability
     caption: CaptionCapability
+    grammar: GrammarCapability
     prompts: PromptCapability
 
 
@@ -223,6 +246,17 @@ _CAPABILITIES: dict[str, Capability] = {
             scene_verb="Office break room before the first meeting.",
             scene_default="Kitchen at home before heading out for the day.",
         ),
+        grammar=GrammarCapability(
+            language_features_description=(
+                "agglutination, vowel harmony, "
+                "15 grammatical cases, no grammatical gender, "
+                "consonant gradation (kpt rules), partitive case, "
+                "essive/translative cases."
+            ),
+            case_examples={
+                "case": '"nominative", "genitive", "partitive"',
+            },
+        ),
         prompts=PromptCapability(
             scenario_greet_message="Moi! Mitä kuuluu?",
             scenario_greet_translation="Hi! How are you?",
@@ -275,6 +309,18 @@ _CAPABILITIES: dict[str, Capability] = {
             scene_greeting="Stockholm subway platform on a bright weekday morning.",
             scene_verb="Office break room before the first meeting.",
             scene_default="Kitchen at home before heading out for the day.",
+        ),
+        grammar=GrammarCapability(
+            language_features_description=(
+                "V2 word order, two genders "
+                "(en/ett — common vs neuter), definite article via "
+                "suffix (-en/-et/-na), no case marking on nouns, "
+                "verb conjugation primarily for tense (no person/"
+                "number agreement)."
+            ),
+            case_examples={
+                "case": '"definite", "indefinite", "genitive"',
+            },
         ),
         prompts=PromptCapability(
             scenario_greet_message="Hej! Hur mår du?",
@@ -333,6 +379,7 @@ __all__ = [
     "TTSCapability",
     "STTCapability",
     "CaptionCapability",
+    "GrammarCapability",
     "PromptCapability",
     "lookup_capability",
     "supported_capabilities",
