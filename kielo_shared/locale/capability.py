@@ -561,38 +561,46 @@ _CAPABILITIES: dict[str, Capability] = {
             case_examples={
                 "case": '"definite", "indefinite", "genitive"',
             },
-            # Phase 13 slice 13C: Swedish quality-gate parity. See
-            # capability.go for the rationale on mapping Swedish
-            # inflection markers to the suffix-rule shape.
+            # Phase 13 slice 13C+13F: Swedish quality-gate. See
+            # capability.go for the SAG (Svenska Akademiens grammatik)
+            # cross-reference notes. Rules are conservative —
+            # wrong_suffixes lists ONLY items unambiguously wrong;
+            # ambiguous suffixes (e.g. -er which is both indef.pl.3rd
+            # and def.sg.5th-decl-neuter) are omitted to avoid false
+            # positives. Native-speaker review still recommended
+            # before tightening to hard-fail on Swedish content.
             case_rules={
                 "bestämd form": CaseRuleSpec(
                     canonical_suffixes=("-en", "-et", "-na"),
-                    wrong_suffixes=("-s",),
+                    wrong_suffixes=("-s",),  # -s is unambiguously genitive
                     category_keywords=("noun", "definiteness"),
                     safe_time_explanation=(
                         "Swedish definite form is marked by suffixed articles "
-                        "(-en/-et for singular, -na/-en/-a for plural). The -s suffix marks the "
+                        "(-en/-et for singular, -na for plural). The -s suffix marks the "
                         "genitive case, NOT definite form."
                     ),
                 ),
                 "obestämd form": CaseRuleSpec(
-                    canonical_suffixes=(),  # indefinite uses ARTICLE, no suffix
-                    wrong_suffixes=("-en", "-et", "-na"),
+                    canonical_suffixes=(),  # indefinite SINGULAR uses ARTICLE, no suffix
+                    # Only definite-singular-neuter -et is unambiguously
+                    # wrong. Plural -er is ambiguous (also indef.pl.3rd-decl).
+                    wrong_suffixes=("-et",),
                     category_keywords=("noun", "definiteness"),
                     safe_time_explanation=(
-                        "Swedish indefinite form takes the article 'en' (common gender) "
-                        "or 'ett' (neuter) BEFORE the noun. Suffixes -en/-et/-na on the noun mark "
-                        "the DEFINITE form, not the indefinite."
+                        "Swedish indefinite form (singular) takes the article 'en' "
+                        "(common gender) or 'ett' (neuter) BEFORE the noun, with no suffix. "
+                        "The -et suffix on the noun marks the DEFINITE singular form of a "
+                        "neuter noun, not the indefinite."
                     ),
                 ),
                 "genitiv": CaseRuleSpec(
                     canonical_suffixes=("-s",),
-                    wrong_suffixes=("-en", "-et", "-na"),
+                    wrong_suffixes=("-en", "-et", "-na"),  # def-form suffixes ≠ genitive
                     category_keywords=("noun", "case"),
                     safe_time_explanation=(
                         "Swedish genitive case is formed by adding -s to the noun "
-                        "(e.g. 'flickans bok' = 'the girl's book'). It is NOT marked by the "
-                        "definite-form suffixes -en/-et/-na."
+                        "(e.g. 'flickans bok' = 'the girl's book', 'barns leksak' = 'a child's toy'). "
+                        "It is NOT marked by the definite-form suffixes -en/-et/-na."
                     ),
                 ),
             },

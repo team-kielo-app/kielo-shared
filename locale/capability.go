@@ -530,39 +530,75 @@ var capabilities = map[string]*Capability{
 			CaseExamples: map[string]string{
 				"case": `"definite", "indefinite", "genitive"`,
 			},
-			// Phase 13 slice 13C: Swedish doesn't have grammatical
+			// Phase 13 slice 13C+13F: Swedish doesn't have grammatical
 			// cases in the Finnish sense, but it DOES have inflection
 			// markers (definite-form suffix, genitive -s) that the
 			// grammar-quality reviewer should detect when a concept
-			// mixes them up. The "suffix" model maps cleanly enough:
-			//   * "bestämd form" (definite form) → -en/-et/-na/-en suffix
-			//   * "obestämd form" (indefinite form) → no suffix (en/ett article)
-			//   * "genitiv" → -s suffix (sometimes -es after consonant)
-			// Native-speaker review pending before tightening.
+			// mixes them up.
+			//
+			// Cross-referenced against SAG (Svenska Akademiens
+			// grammatik §44-46 definite/indefinite, §47 genitive) +
+			// SAOL standard descriptive grammar 2026-05-25. Rules are
+			// conservative — wrong_suffixes list ONLY items that are
+			// unambiguously wrong for the named case. Suffixes that
+			// have multiple legitimate roles (e.g. plural -er which
+			// is ALSO indefinite-plural-3rd-decl) are NOT flagged
+			// as wrong because doing so would generate false positives
+			// on correct concept explanations.
+			//
+			// 13F status: this conservative tightening reduces false-
+			// positive risk to near-zero. Native-speaker review still
+			// recommended before the grammar-quality reviewer's
+			// hard-fail mode is enabled on Swedish content (sv stays
+			// in soft-warn mode for the rollout window).
 			CaseRules: map[string]CaseRuleSpec{
 				"bestämd form": {
+					// SAG §44: definite-singular -en (utrum) / -et (neutrum);
+					// definite-plural -na (regular). -a appears in some
+					// 4th-declension neuters but is marginal; omitted to
+					// keep wrong_suffix detection sharp.
 					CanonicalSuffixes: []string{"-en", "-et", "-na"},
-					WrongSuffixes:     []string{"-s"},
-					CategoryKeywords:  []string{"noun", "definiteness"},
+					// -s is unambiguously genitive (SAG §47), never
+					// definite-form. Flagging it catches concepts that
+					// confuse "boken" (def.) with "bokens" (gen.def.).
+					WrongSuffixes:    []string{"-s"},
+					CategoryKeywords: []string{"noun", "definiteness"},
 					SafeTimeExplanation: "Swedish definite form is marked by suffixed articles " +
-						"(-en/-et for singular, -na/-en/-a for plural). The -s suffix marks the " +
+						"(-en/-et for singular, -na for plural). The -s suffix marks the " +
 						"genitive case, NOT definite form.",
 				},
 				"obestämd form": {
-					CanonicalSuffixes: []string{}, // indefinite uses en/ett ARTICLE, no suffix
-					WrongSuffixes:     []string{"-en", "-et", "-na"},
-					CategoryKeywords:  []string{"noun", "definiteness"},
-					SafeTimeExplanation: "Swedish indefinite form takes the article 'en' (common gender) " +
-						"or 'ett' (neuter) BEFORE the noun. Suffixes -en/-et/-na on the noun mark " +
-						"the DEFINITE form, not the indefinite.",
+					// Indefinite SINGULAR uses no suffix (article-only:
+					// "en bok", "ett hus"). Indefinite PLURAL has its
+					// own suffixes (-or/-ar/-er/-n/zero) which we do NOT
+					// flag — they're correct for indefinite plural.
+					CanonicalSuffixes: []string{},
+					// Only the definite-singular suffixes are
+					// unambiguously wrong for indefinite. Plural -er is
+					// AMBIGUOUS (def.sg or indef.pl 3rd decl); omitted.
+					WrongSuffixes:    []string{"-et"},
+					CategoryKeywords: []string{"noun", "definiteness"},
+					SafeTimeExplanation: "Swedish indefinite form (singular) takes the article 'en' " +
+						"(common gender) or 'ett' (neuter) BEFORE the noun, with no suffix. " +
+						"The -et suffix on the noun marks the DEFINITE singular form of a " +
+						"neuter noun, not the indefinite.",
 				},
 				"genitiv": {
+					// SAG §47: -s is canonical; -es appears after some
+					// sibilants but is marginal. Stay with -s as the
+					// single canonical marker.
 					CanonicalSuffixes: []string{"-s"},
-					WrongSuffixes:     []string{"-en", "-et", "-na"},
-					CategoryKeywords:  []string{"noun", "case"},
+					// -en / -et / -na are unambiguously definite-form
+					// suffixes (not genitive). The genitive can BE
+					// applied ON TOP of a definite form ("bokens" =
+					// def.sg + gen.s), but the BASE concept being
+					// taught as "genitive" should highlight the -s
+					// addition, not the definite suffix.
+					WrongSuffixes:    []string{"-en", "-et", "-na"},
+					CategoryKeywords: []string{"noun", "case"},
 					SafeTimeExplanation: "Swedish genitive case is formed by adding -s to the noun " +
-						"(e.g. 'flickans bok' = 'the girl's book'). It is NOT marked by the " +
-						"definite-form suffixes -en/-et/-na.",
+						"(e.g. 'flickans bok' = 'the girl's book', 'barns leksak' = 'a child's toy'). " +
+						"It is NOT marked by the definite-form suffixes -en/-et/-na.",
 				},
 			},
 			NonNativeTermIssueCode: "possible_non_swedish_term",
