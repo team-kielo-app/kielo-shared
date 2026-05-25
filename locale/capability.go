@@ -194,7 +194,7 @@ type GrammarCapability struct {
 	// Phase 12 slice 6: previously hard-coded as
 	// "possible_non_finnish_term" everywhere in
 	// kielo-ingest-processor/maintenance/grammar_quality.py — a
-	// latent bug that mis-labelled Swedish-language audit findings
+	// latent bug that mis-labeled Swedish-language audit findings
 	// with the Finnish issue code. Adding a new authored learning
 	// language now requires only setting this field.
 	NonNativeTermIssueCode string
@@ -373,10 +373,13 @@ var capabilities = map[string]*Capability{
 			DefaultKtvVocabularySourceURL: "https://uusikielemme.fi/finnish-vocabulary",
 		},
 		Morphology: MorphologyCapability{
-			HasBaseWordLookup:    true,
-			SpacyPipeline:        "fi_core_news_sm",
-			ExclusiveCases:       []string{"partitive", "essive", "inessive", "elative", "illative", "adessive", "ablative", "allative"},
-			PostLLMCleanupPasses: []string{}, // none currently — pronoun-repair runs inline in exercise_quality_gate, not as a registry-driven post-LLM pass
+			HasBaseWordLookup: true,
+			SpacyPipeline:     "fi_core_news_sm",
+			ExclusiveCases:    []string{"partitive", "essive", "inessive", "elative", "illative", "adessive", "ablative", "allative"},
+			// none currently — pronoun-repair runs inline in
+			// exercise_quality_gate, not as a registry-driven
+			// post-LLM pass.
+			PostLLMCleanupPasses: []string{},
 		},
 		TTS: TTSCapability{
 			// Phase 10B slice 3: pronunciation prose moved into the
@@ -387,7 +390,7 @@ var capabilities = map[string]*Capability{
 			PronunciationInstructions: "Pronounce Finnish naturally with native Finnish phonetics: " +
 				"double consonants and long vowels held distinctly, stress on " +
 				"the first syllable of each word, clear ä/ö/y vowels (not " +
-				"anglicised). Use a warm, friendly, conversational tone.",
+				"anglicized). Use a warm, friendly, conversational tone.",
 		},
 		STT: STTCapability{},
 		Caption: CaptionCapability{
@@ -433,6 +436,10 @@ var capabilities = map[string]*Capability{
 				"hyvästi", "näkemiin", "kiitos ja hei", "kiitos, hei", "lopetetaan",
 			},
 		},
+		//nolint:dupl // Per-language Prompts blocks share schema by
+		// design — they're parallel data tables, not duplicated
+		// logic. dupl can't distinguish "data shape parity" from
+		// "code duplication"; suppression is intentional here.
 		Prompts: PromptCapability{
 			// Phase 10B slice 3: mirrors the source-of-truth strings
 			// from kielo-convo go_orchestrator scenarioPromptExamples
@@ -457,7 +464,8 @@ var capabilities = map[string]*Capability{
 			BookingQuestion:          "Onko teillä varausta?",
 			BookingAnswer:            "Ei hätää, voin tehdä varauksen nyt.",
 			HintComplexitySimple:     `"Kiitos!" / "Haluan kahvin." / "Kyllä."`,
-			HintComplexityChallenge:  `"Voisinko saada yhden cappuccinon ja pienen pullan, kiitos?" / "Haluaisin varata ajan huomiselle, jos mahdollista."`,
+			HintComplexityChallenge: `"Voisinko saada yhden cappuccinon ja pienen pullan, kiitos?"` +
+				` / "Haluaisin varata ajan huomiselle, jos mahdollista."`,
 			NudgeOpeners: map[string][]string{
 				"early": {
 					"Hyvä alku! Haluatko jatkaa suomeksi?",
@@ -517,7 +525,7 @@ var capabilities = map[string]*Capability{
 			// Phase 10B slice 3: see fi entry.
 			PronunciationInstructions: "Pronounce Swedish naturally with native Swedish phonetics: " +
 				"the pitch-accent system (acute and grave) honored, å/ä/ö " +
-				"as distinct vowels (not anglicised), sj-/tj- sounds soft. " +
+				"as distinct vowels (not anglicized), sj-/tj- sounds soft. " +
 				"Use a warm, friendly, conversational tone.",
 		},
 		STT: STTCapability{},
@@ -617,6 +625,8 @@ var capabilities = map[string]*Capability{
 				"hej då", "adjö", "tack och hej", "vi ses", "hejdå",
 			},
 		},
+		//nolint:dupl // See fi-entry Prompts comment — schema parity
+		// across language entries is the intent.
 		Prompts: PromptCapability{
 			// Phase 10B slice 3: mirrors source-of-truth strings from
 			// kielo-convo go_orchestrator scenarioPromptExamples.
@@ -637,7 +647,8 @@ var capabilities = map[string]*Capability{
 			BookingQuestion:          "Har ni en bokning?",
 			BookingAnswer:            "Inga problem, jag kan boka åt er nu.",
 			HintComplexitySimple:     `"Tack!" / "Jag vill ha kaffe." / "Ja."`,
-			HintComplexityChallenge:  `"Skulle jag kunna få en cappuccino och en liten bulle, tack?" / "Jag skulle vilja boka en tid till imorgon, om möjligt."`,
+			HintComplexityChallenge: `"Skulle jag kunna få en cappuccino och en liten bulle, tack?"` +
+				` / "Jag skulle vilja boka en tid till imorgon, om möjligt."`,
 			NudgeOpeners: map[string][]string{
 				"early": {
 					"Bra start! Vill du fortsätta på svenska?",
