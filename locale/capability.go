@@ -174,6 +174,19 @@ type GrammarCapability struct {
 	// to a JSON-array-shaped example string used in batch LLM prompts
 	// (e.g. for fi case: `"nominative", "genitive", "partitive"`).
 	CaseExamples map[string]string
+	// CaseRules is a per-language map keyed by case-name term
+	// (case-folded) to that case's suffix-rule + category metadata.
+	// Read by kielo-ingest-processor/maintenance/grammar_quality.py's
+	// _find_case_rule to detect suffix-mismatch / category-mismatch
+	// issues in grammar concept explanations.
+	//
+	// Phase 13 slice 13C: Swedish quality-gate parity. Finnish has
+	// CASE_RULES with adessiivi/essiivi entries; Swedish historically
+	// had no equivalent (latent quality bug — bad case-ending in
+	// Swedish content slipped through audits). Both languages now
+	// have CaseRules populated; the term-matching is case-folded
+	// against the term field of grammar concepts.
+	CaseRules map[string]CaseRuleSpec
 	// NonNativeTermIssueCode is the audit-issue identifier emitted by
 	// the grammar-quality reviewer when a "term" field in a grammar
 	// concept doesn't match the expected learning language (e.g. a
@@ -185,6 +198,30 @@ type GrammarCapability struct {
 	// with the Finnish issue code. Adding a new authored learning
 	// language now requires only setting this field.
 	NonNativeTermIssueCode string
+}
+
+// CaseRuleSpec is a single per-case quality-rule entry. Phase 13
+// slice 13C — populated for each case-name term in a language and
+// read by the grammar-quality audit to detect suffix-mismatch and
+// category-mismatch issues in concept explanations.
+type CaseRuleSpec struct {
+	// CanonicalSuffixes lists suffixes that SHOULD appear in a
+	// correct explanation for this case (e.g. fi adessive: ["-lla/-llä"]).
+	CanonicalSuffixes []string
+	// WrongSuffixes lists suffixes that, if present in the
+	// explanation, indicate the concept is mixing this case with
+	// another (e.g. fi adessive concept mentioning "-na/-nä" is
+	// wrong because "-na/-nä" is the essive suffix).
+	WrongSuffixes []string
+	// CategoryKeywords lists keywords that must appear in the
+	// concept's category field for this rule to NOT flag a
+	// category-mismatch issue.
+	CategoryKeywords []string
+	// SafeTimeExplanation is the prose used by the deterministic
+	// patch path when fixing a misexplained case. May be empty if
+	// the case has no time-related ambiguity (only fi adessive +
+	// essive have this for now).
+	SafeTimeExplanation string
 }
 
 // PhraseFrameSpec is a single phrase-frame template tuple. Phase 12
@@ -362,6 +399,25 @@ var capabilities = map[string]*Capability{
 			CaseExamples: map[string]string{
 				"case": `"nominative", "genitive", "partitive"`,
 			},
+			CaseRules: map[string]CaseRuleSpec{
+				"adessiivi": {
+					CanonicalSuffixes: []string{"-lla/-llä"},
+					WrongSuffixes:     []string{"-na/-nä"},
+					CategoryKeywords:  []string{"case", "locative", "local"},
+					SafeTimeExplanation: "The Adessive case (-lla/-llä) is used for broader time periods and settings, " +
+						"such as seasons, weeks, months, or general 'during/in' time frames. " +
+						"Specific weekdays, dates, and holidays usually use the Essive case (-na/-nä) instead.",
+				},
+				"essiivi": {
+					CanonicalSuffixes: []string{"-na/-nä"},
+					WrongSuffixes:     []string{"-lla/-llä"},
+					CategoryKeywords:  []string{"case", "role", "state"},
+					SafeTimeExplanation: "The Essive case (-na/-nä) marks a temporary role or state and is also used " +
+						"for specific weekdays, dates, and holidays. Broader time periods such as " +
+						"seasons or months typically use other cases like the Adessive (-lla/-llä) " +
+						"or Inessive (-ssa/-ssä), depending on the expression.",
+				},
+			},
 			NonNativeTermIssueCode: "possible_non_finnish_term",
 		},
 		SeedVocab: SeedVocabularyCapability{
@@ -473,6 +529,41 @@ var capabilities = map[string]*Capability{
 		Grammar: GrammarCapability{
 			CaseExamples: map[string]string{
 				"case": `"definite", "indefinite", "genitive"`,
+			},
+			// Phase 13 slice 13C: Swedish doesn't have grammatical
+			// cases in the Finnish sense, but it DOES have inflection
+			// markers (definite-form suffix, genitive -s) that the
+			// grammar-quality reviewer should detect when a concept
+			// mixes them up. The "suffix" model maps cleanly enough:
+			//   * "bestämd form" (definite form) → -en/-et/-na/-en suffix
+			//   * "obestämd form" (indefinite form) → no suffix (en/ett article)
+			//   * "genitiv" → -s suffix (sometimes -es after consonant)
+			// Native-speaker review pending before tightening.
+			CaseRules: map[string]CaseRuleSpec{
+				"bestämd form": {
+					CanonicalSuffixes: []string{"-en", "-et", "-na"},
+					WrongSuffixes:     []string{"-s"},
+					CategoryKeywords:  []string{"noun", "definiteness"},
+					SafeTimeExplanation: "Swedish definite form is marked by suffixed articles " +
+						"(-en/-et for singular, -na/-en/-a for plural). The -s suffix marks the " +
+						"genitive case, NOT definite form.",
+				},
+				"obestämd form": {
+					CanonicalSuffixes: []string{}, // indefinite uses en/ett ARTICLE, no suffix
+					WrongSuffixes:     []string{"-en", "-et", "-na"},
+					CategoryKeywords:  []string{"noun", "definiteness"},
+					SafeTimeExplanation: "Swedish indefinite form takes the article 'en' (common gender) " +
+						"or 'ett' (neuter) BEFORE the noun. Suffixes -en/-et/-na on the noun mark " +
+						"the DEFINITE form, not the indefinite.",
+				},
+				"genitiv": {
+					CanonicalSuffixes: []string{"-s"},
+					WrongSuffixes:     []string{"-en", "-et", "-na"},
+					CategoryKeywords:  []string{"noun", "case"},
+					SafeTimeExplanation: "Swedish genitive case is formed by adding -s to the noun " +
+						"(e.g. 'flickans bok' = 'the girl's book'). It is NOT marked by the " +
+						"definite-form suffixes -en/-et/-na.",
+				},
 			},
 			NonNativeTermIssueCode: "possible_non_swedish_term",
 		},

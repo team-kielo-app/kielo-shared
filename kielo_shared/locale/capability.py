@@ -178,6 +178,32 @@ class SeedVocabularyCapability:
 
 
 @dataclass(frozen=True)
+class CaseRuleSpec:
+    """Single per-case quality-rule entry. Phase 13 slice 13C.
+
+    Mirrors kielo-shared/locale/CaseRuleSpec (Go). Read by
+    kielo-ingest-processor/maintenance/grammar_quality.py's
+    _find_case_rule to detect suffix-mismatch and category-mismatch
+    issues in grammar concept explanations.
+    """
+
+    canonical_suffixes: tuple[str, ...] = ()
+    """Suffixes that SHOULD appear in a correct explanation for this case."""
+
+    wrong_suffixes: tuple[str, ...] = ()
+    """Suffixes that, if present, indicate the concept is mixing
+    this case with another."""
+
+    category_keywords: tuple[str, ...] = ()
+    """Keywords that must appear in the concept's category field for
+    this rule to NOT flag a category-mismatch issue."""
+
+    safe_time_explanation: str = ""
+    """Prose used by the deterministic patch path when fixing a
+    misexplained case."""
+
+
+@dataclass(frozen=True)
 class GrammarCapability:
     """Per-language LLM-prompt grammar fragments + grammar-terminology hints.
 
@@ -199,6 +225,10 @@ class GrammarCapability:
     """Maps a grammar-feature axis ("case", "tense", etc.) to a
     JSON-array-shaped example string for batch LLM prompts (e.g. for
     fi case: '"nominative", "genitive", "partitive"')."""
+
+    case_rules: Mapping[str, CaseRuleSpec] = field(default_factory=dict)
+    """Per-language map keyed by case-name term (case-folded) to that
+    case's suffix-rule + category metadata. Phase 13 slice 13C."""
 
     non_native_term_issue_code: str = ""
     """Audit-issue identifier emitted by the grammar-quality reviewer
@@ -394,6 +424,29 @@ _CAPABILITIES: dict[str, Capability] = {
             case_examples={
                 "case": '"nominative", "genitive", "partitive"',
             },
+            case_rules={
+                "adessiivi": CaseRuleSpec(
+                    canonical_suffixes=("-lla/-llä",),
+                    wrong_suffixes=("-na/-nä",),
+                    category_keywords=("case", "locative", "local"),
+                    safe_time_explanation=(
+                        "The Adessive case (-lla/-llä) is used for broader time periods and settings, "
+                        "such as seasons, weeks, months, or general 'during/in' time frames. "
+                        "Specific weekdays, dates, and holidays usually use the Essive case (-na/-nä) instead."
+                    ),
+                ),
+                "essiivi": CaseRuleSpec(
+                    canonical_suffixes=("-na/-nä",),
+                    wrong_suffixes=("-lla/-llä",),
+                    category_keywords=("case", "role", "state"),
+                    safe_time_explanation=(
+                        "The Essive case (-na/-nä) marks a temporary role or state and is also used "
+                        "for specific weekdays, dates, and holidays. Broader time periods such as "
+                        "seasons or months typically use other cases like the Adessive (-lla/-llä) "
+                        "or Inessive (-ssa/-ssä), depending on the expression."
+                    ),
+                ),
+            },
             non_native_term_issue_code="possible_non_finnish_term",
         ),
         seed_vocab=SeedVocabularyCapability(
@@ -507,6 +560,41 @@ _CAPABILITIES: dict[str, Capability] = {
         grammar=GrammarCapability(
             case_examples={
                 "case": '"definite", "indefinite", "genitive"',
+            },
+            # Phase 13 slice 13C: Swedish quality-gate parity. See
+            # capability.go for the rationale on mapping Swedish
+            # inflection markers to the suffix-rule shape.
+            case_rules={
+                "bestämd form": CaseRuleSpec(
+                    canonical_suffixes=("-en", "-et", "-na"),
+                    wrong_suffixes=("-s",),
+                    category_keywords=("noun", "definiteness"),
+                    safe_time_explanation=(
+                        "Swedish definite form is marked by suffixed articles "
+                        "(-en/-et for singular, -na/-en/-a for plural). The -s suffix marks the "
+                        "genitive case, NOT definite form."
+                    ),
+                ),
+                "obestämd form": CaseRuleSpec(
+                    canonical_suffixes=(),  # indefinite uses ARTICLE, no suffix
+                    wrong_suffixes=("-en", "-et", "-na"),
+                    category_keywords=("noun", "definiteness"),
+                    safe_time_explanation=(
+                        "Swedish indefinite form takes the article 'en' (common gender) "
+                        "or 'ett' (neuter) BEFORE the noun. Suffixes -en/-et/-na on the noun mark "
+                        "the DEFINITE form, not the indefinite."
+                    ),
+                ),
+                "genitiv": CaseRuleSpec(
+                    canonical_suffixes=("-s",),
+                    wrong_suffixes=("-en", "-et", "-na"),
+                    category_keywords=("noun", "case"),
+                    safe_time_explanation=(
+                        "Swedish genitive case is formed by adding -s to the noun "
+                        "(e.g. 'flickans bok' = 'the girl's book'). It is NOT marked by the "
+                        "definite-form suffixes -en/-et/-na."
+                    ),
+                ),
             },
             non_native_term_issue_code="possible_non_swedish_term",
         ),
@@ -634,6 +722,7 @@ __all__ = [
     "STTCapability",
     "CaptionCapability",
     "GrammarCapability",
+    "CaseRuleSpec",
     "SeedVocabularyCapability",
     "PromptCapability",
     "PhraseFrameSpec",
