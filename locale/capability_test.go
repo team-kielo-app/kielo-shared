@@ -13,23 +13,18 @@ func TestLookupCapability_HappyPath(t *testing.T) {
 	assert.Equal(t, "fi", fi.Code)
 	assert.Equal(t, "Finnish", fi.Display.DisplayNameEn)
 	assert.Equal(t, "Finland", fi.Display.CountryContext)
-	assert.Equal(t, "voikko", fi.Morphology.PrimaryBackend)
-	assert.True(t, fi.Morphology.HasParadigmGenerator)
 	assert.Equal(t, "fi_core_news_sm", fi.Morphology.SpacyPipeline)
 	assert.Contains(t, fi.Morphology.ExclusiveCases, "partitive")
-	assert.Equal(t, "fi", fi.STT.WhisperLanguageTag)
-	assert.NotEmpty(t, fi.Prompts.OfflineTranslationFallbacks)
+	assert.True(t, fi.Morphology.HasBaseWordLookup)
 
 	sv, ok := LookupCapability("sv")
 	assert.True(t, ok)
 	assert.NotNil(t, sv)
 	assert.Equal(t, "sv", sv.Code)
 	assert.Equal(t, "Swedish", sv.Display.DisplayNameEn)
-	assert.Equal(t, "swedish_morphology", sv.Morphology.PrimaryBackend)
-	assert.Equal(t, "swedish_morphology", sv.Morphology.LocalFallbackModule)
 	assert.Empty(t, sv.Morphology.ExclusiveCases)
-	assert.Empty(t, sv.Prompts.OfflineTranslationFallbacks,
-		"sv has no offline translation fallback dict yet")
+	assert.False(t, sv.Morphology.HasBaseWordLookup)
+	assert.Equal(t, []string{"rejoin_swedish_definites"}, sv.Morphology.PostLLMCleanupPasses)
 }
 
 func TestLookupCapability_NormalizesAliases(t *testing.T) {
@@ -108,19 +103,36 @@ func TestCapability_DisplayNameMatchesSharedDisplayName(t *testing.T) {
 }
 
 func TestCapability_AllFieldsAreNonEmptyForRequiredSlots(t *testing.T) {
-	// Required-slot policy from the scoping report §C.3:
+	// Required-slot policy (post-2026-05-25 registry coverage audit):
+	// only fields with at least one production consumer remain in the
+	// required set. Fields without consumers (PrimaryBackend,
+	// HasParadigmGenerator, LocalFallbackModule, CapitalScene,
+	// DailyChallengeThemeName, PreferredVoiceID, WhisperLanguageTag,
+	// DeepgramSupported, LanguageFeaturesDescription,
+	// OfflineTranslationFallbacks) were deleted from the schema —
+	// see the REMOVED-* comments in capability.go.
+	//
+	// Required-slot policy from the scoping report §C.3 (pruned):
 	//   - Code: required
-	//   - Display.DisplayNameEn: required
-	//   - Morphology.PrimaryBackend: required
-	//   - Morphology.HasParadigmGenerator: required (boolean, always set)
-	//   - STT.WhisperLanguageTag: required
+	//   - Display.DisplayNameEn: required (consumed by ktv_locale,
+	//     admin_handler, voiceagent, nlp_utils, etc.)
+	//   - Display.CountryContext: required for LLM scenario prompts
+	//   - Morphology.SpacyPipeline: required (kielo-models NLP service)
+	//   - Caption.SceneGreeting / SceneVerb / SceneDefault: required
+	//     (kielo-cms ktv_locale.go)
 	for _, entry := range SupportedCapabilities() {
 		assert.NotEmpty(t, entry.Code, "Code is required")
 		assert.NotEmpty(t, entry.Display.DisplayNameEn,
 			"Display.DisplayNameEn is required for %q", entry.Code)
-		assert.NotEmpty(t, entry.Morphology.PrimaryBackend,
-			"Morphology.PrimaryBackend is required for %q", entry.Code)
-		assert.NotEmpty(t, entry.STT.WhisperLanguageTag,
-			"STT.WhisperLanguageTag is required for %q", entry.Code)
+		assert.NotEmpty(t, entry.Display.CountryContext,
+			"Display.CountryContext is required for %q", entry.Code)
+		assert.NotEmpty(t, entry.Morphology.SpacyPipeline,
+			"Morphology.SpacyPipeline is required for %q", entry.Code)
+		assert.NotEmpty(t, entry.Caption.SceneGreeting,
+			"Caption.SceneGreeting is required for %q", entry.Code)
+		assert.NotEmpty(t, entry.Caption.SceneVerb,
+			"Caption.SceneVerb is required for %q", entry.Code)
+		assert.NotEmpty(t, entry.Caption.SceneDefault,
+			"Caption.SceneDefault is required for %q", entry.Code)
 	}
 }

@@ -35,16 +35,6 @@ package locale
 // language and which optional features it supports. Populated from the
 // scoping report §B.1.
 type MorphologyCapability struct {
-	// PrimaryBackend names the kielo-models morphology backend that
-	// serves this language. One of "voikko", "omorfi",
-	// "swedish_morphology", or "spacy_only". Required.
-	PrimaryBackend string
-	// LocalFallbackModule names a Python module the engine can import
-	// for offline / models-unreachable fallback. "" if none.
-	LocalFallbackModule string
-	// HasParadigmGenerator: true if the backend can emit a full
-	// declension/conjugation paradigm. Required.
-	HasParadigmGenerator bool
 	// SpacyPipeline names the spaCy pipeline (e.g. "fi_core_news_sm",
 	// "sv_core_news_sm"). "" if no spaCy support.
 	SpacyPipeline string
@@ -65,6 +55,16 @@ type MorphologyCapability struct {
 	// slice 7. Currently fi-only — sv's morphology stack handles
 	// lemma lookup directly without a klearn round-trip.
 	HasBaseWordLookup bool
+	// REMOVED 2026-05-25 (registry coverage audit, Phase 12 cleanup):
+	//   * PrimaryBackend — no production consumer; morphology dispatch
+	//     happens inside kielo-models with no registry lookup.
+	//   * LocalFallbackModule — no production consumer; the engine's
+	//     LanguageAdapter.local_morphology_provider() (slice 4b) is the
+	//     actual dispatch mechanism.
+	//   * HasParadigmGenerator — populated true for both fi+sv but
+	//     never queried.
+	// Field names retained in this comment so future audits can confirm
+	// they were intentionally deleted, not accidentally lost.
 }
 
 // DisplayCapability covers human-readable labels for prompts, UI, and
@@ -76,16 +76,10 @@ type DisplayCapability struct {
 	// CountryContext is the country most associated with this language
 	// (e.g. "Finland" / "Sweden") for LLM scenario prompts.
 	CountryContext string
-	// CapitalScene is a short cultural-backdrop sentence used as the
-	// default simplified-prompt scene.
-	CapitalScene string
 	// NativeScriptHashtags is the curated set of native-script
 	// hashtags appended to KTV captions (e.g. ["#suomi","#suomenkieli"]
 	// for fi, ["#svenska"] for sv).
 	NativeScriptHashtags []string
-	// DailyChallengeThemeName is the per-language "Daily Life" /
-	// equivalent theme label.
-	DailyChallengeThemeName string
 	// DefaultKtvVocabularySourceURL is the curated default URL the
 	// KTV vocabulary importer uses when no req.SourceURL is supplied
 	// AND no manual words list is supplied. Empty string means "no
@@ -93,6 +87,13 @@ type DisplayCapability struct {
 	// 12 slice 7: previously hard-coded as a Finnish-only constant
 	// in kielo-cms/internal/services/ktv_vocabulary_importer.go.
 	DefaultKtvVocabularySourceURL string
+	// REMOVED 2026-05-25 (registry coverage audit, Phase 12 cleanup):
+	//   * CapitalScene — duplicated by Caption.SceneGreeting (which
+	//     IS consumed by ktv_locale.go); identical strings, kept
+	//     accidentally during slice 1.
+	//   * DailyChallengeThemeName — populated for both fi+sv but
+	//     never queried. The actual theme dispatch goes through
+	//     modules/themes.DEFAULT_THEMES.localized_name() per slice 6.
 }
 
 // TTSCapability covers per-language gpt-4o-mini-tts configuration.
@@ -102,21 +103,21 @@ type TTSCapability struct {
 	// `instructions` parameter to nudge the model toward correct
 	// pronunciation. "" leaves the default English-trained behavior.
 	PronunciationInstructions string
-	// PreferredVoiceID lets the registry pin a non-default voice when
-	// the platform supports it. "" means use the platform default.
-	PreferredVoiceID string
+	// REMOVED 2026-05-25 (registry coverage audit, Phase 12 cleanup):
+	//   * PreferredVoiceID — always populated as "" for both fi+sv;
+	//     no consumer ever read it.
 }
 
 // STTCapability covers per-language Whisper / Deepgram configuration.
-// Populated from §B.5.
+// Currently EMPTY after Phase 12 cleanup. Re-add fields when a real
+// consumer materializes.
+//
+// REMOVED 2026-05-25 (registry coverage audit, Phase 12 cleanup):
+//   - WhisperLanguageTag — populated as the language code itself
+//     for both fi+sv; Whisper integration in kielolearn-engine
+//     hard-codes the language elsewhere.
+//   - DeepgramSupported — populated true for both; never queried.
 type STTCapability struct {
-	// WhisperLanguageTag is the language tag passed to Whisper at
-	// transcription time. Usually identical to the code, but explicit
-	// so we don't assume.
-	WhisperLanguageTag string
-	// DeepgramSupported: true if the language can be used with the
-	// Deepgram voice-agent provider.
-	DeepgramSupported bool
 }
 
 // CaptionCapability covers per-language KTV / social caption decoration.
@@ -169,12 +170,6 @@ type SeedVocabularyCapability struct {
 // processor's _llm_handlers.py and kielolearn-engine's dictionary
 // enrichment.
 type GrammarCapability struct {
-	// LanguageFeaturesDescription is the short prose description of
-	// the language's distinguishing features (e.g. agglutination,
-	// vowel harmony for Finnish; V2 word order, en/ett gender for
-	// Swedish), injected into LLM prompts so the model knows what
-	// kind of language it's processing.
-	LanguageFeaturesDescription string
 	// CaseExamples maps a grammar-feature axis ("case", "tense", etc.)
 	// to a JSON-array-shaped example string used in batch LLM prompts
 	// (e.g. for fi case: `"nominative", "genitive", "partitive"`).
@@ -238,9 +233,11 @@ type PromptCapability struct {
 	// PoliteExamples is the comma-separated "polite phrase" list for
 	// the A1 LLM prompt (G18). e.g. "kiitos, anteeksi, hei".
 	PoliteExamples string
-	// OfflineTranslationFallbacks is the Finnish-only offline
-	// translation dictionary from kielo-cms (G7). Empty for sv.
-	OfflineTranslationFallbacks map[string]string
+	// REMOVED 2026-05-25 (registry coverage audit, Phase 12 cleanup):
+	//   * OfflineTranslationFallbacks — fi-only (10 entries) AND
+	//     completely unconsumed. Migrated from kielo-cms G7 intent
+	//     in slice 1 but the consumer call site was never added.
+	//     Worst-of-both-worlds bloat: drifted AND unused.
 	// Phase 12 slice 9: convo agent prompt-table fields.
 	// NeverSayWords is the per-language set of words the LLM must
 	// not emit (e.g. "kielimalli", "tekoäly" for Finnish — terms
@@ -333,18 +330,13 @@ var capabilities = map[string]*Capability{
 	"fi": {
 		Code: "fi",
 		Display: DisplayCapability{
-			DisplayNameEn:           "Finnish",
-			CountryContext:          "Finland",
-			CapitalScene:            "Helsinki tram stop on a bright weekday morning.",
+			DisplayNameEn:                 "Finnish",
+			CountryContext:                "Finland",
 			NativeScriptHashtags:          []string{"#suomi", "#suomenkieli"},
-			DailyChallengeThemeName:       "Arki",
 			DefaultKtvVocabularySourceURL: "https://uusikielemme.fi/finnish-vocabulary",
 		},
 		Morphology: MorphologyCapability{
 			HasBaseWordLookup:    true,
-			PrimaryBackend:       "voikko",
-			LocalFallbackModule:  "", // no offline fallback for fi
-			HasParadigmGenerator: true,
 			SpacyPipeline:        "fi_core_news_sm",
 			ExclusiveCases:       []string{"partitive", "essive", "inessive", "elative", "illative", "adessive", "ablative", "allative"},
 			PostLLMCleanupPasses: []string{}, // none currently — pronoun-repair runs inline in exercise_quality_gate, not as a registry-driven post-LLM pass
@@ -359,22 +351,14 @@ var capabilities = map[string]*Capability{
 				"double consonants and long vowels held distinctly, stress on " +
 				"the first syllable of each word, clear ä/ö/y vowels (not " +
 				"anglicised). Use a warm, friendly, conversational tone.",
-			PreferredVoiceID: "",
 		},
-		STT: STTCapability{
-			WhisperLanguageTag: "fi",
-			DeepgramSupported:  true,
-		},
+		STT: STTCapability{},
 		Caption: CaptionCapability{
 			SceneGreeting: "Helsinki tram stop on a bright weekday morning.",
 			SceneVerb:     "Office break room before the first meeting.",
 			SceneDefault:  "Kitchen at home before heading out for the day.",
 		},
 		Grammar: GrammarCapability{
-			LanguageFeaturesDescription: "agglutination, vowel harmony, " +
-				"15 grammatical cases, no grammatical gender, " +
-				"consonant gradation (kpt rules), partitive case, " +
-				"essive/translative cases.",
 			CaseExamples: map[string]string{
 				"case": `"nominative", "genitive", "partitive"`,
 			},
@@ -409,27 +393,15 @@ var capabilities = map[string]*Capability{
 			ScenarioHintLookingFor:   "Etsin...",
 			ScenarioHintNeed:         "Tarvitsen...",
 			PoliteExamples:           "kiitos, anteeksi, hei",
-			OfflineTranslationFallbacks: map[string]string{
-				"moi":        "hi (casual greeting)",
-				"hei":        "hi / hello",
-				"kiitos":     "thank you",
-				"puhua":      "to speak",
-				"ymmärtää":   "to understand",
-				"sanoa":      "to say",
-				"kysyä":      "to ask",
-				"vastata":    "to answer",
-				"tervetuloa": "welcome",
-				"anteeksi":   "sorry / excuse me",
-			},
-			NeverSayWords:           []string{"kielimalli", "tekoäly"},
-			TerminationPhrase:       "Näkemiin",
-			ThankEndPhrase:          "Kiitos käynnistä, näkemiin!",
-			EncourageWords:          []string{"Hyvä!", "Hienosti!"},
-			AckWords:                []string{"Joo!", "Aivan!", "Hyvä!", "Juuri niin!"},
-			BookingQuestion:         "Onko teillä varausta?",
-			BookingAnswer:           "Ei hätää, voin tehdä varauksen nyt.",
-			HintComplexitySimple:    `"Kiitos!" / "Haluan kahvin." / "Kyllä."`,
-			HintComplexityChallenge: `"Voisinko saada yhden cappuccinon ja pienen pullan, kiitos?" / "Haluaisin varata ajan huomiselle, jos mahdollista."`,
+			NeverSayWords:            []string{"kielimalli", "tekoäly"},
+			TerminationPhrase:        "Näkemiin",
+			ThankEndPhrase:           "Kiitos käynnistä, näkemiin!",
+			EncourageWords:           []string{"Hyvä!", "Hienosti!"},
+			AckWords:                 []string{"Joo!", "Aivan!", "Hyvä!", "Juuri niin!"},
+			BookingQuestion:          "Onko teillä varausta?",
+			BookingAnswer:            "Ei hätää, voin tehdä varauksen nyt.",
+			HintComplexitySimple:     `"Kiitos!" / "Haluan kahvin." / "Kyllä."`,
+			HintComplexityChallenge:  `"Voisinko saada yhden cappuccinon ja pienen pullan, kiitos?" / "Haluaisin varata ajan huomiselle, jos mahdollista."`,
 			NudgeOpeners: map[string][]string{
 				"early": {
 					"Hyvä alku! Haluatko jatkaa suomeksi?",
@@ -474,18 +446,13 @@ var capabilities = map[string]*Capability{
 	"sv": {
 		Code: "sv",
 		Display: DisplayCapability{
-			DisplayNameEn:           "Swedish",
-			CountryContext:          "Sweden",
-			CapitalScene:            "Stockholm subway platform on a bright weekday morning.",
+			DisplayNameEn:                 "Swedish",
+			CountryContext:                "Sweden",
 			NativeScriptHashtags:          []string{"#svenska"},
-			DailyChallengeThemeName:       "Vardag",
 			DefaultKtvVocabularySourceURL: "",
 		},
 		Morphology: MorphologyCapability{
 			HasBaseWordLookup:    false,
-			PrimaryBackend:       "swedish_morphology",
-			LocalFallbackModule:  "swedish_morphology",
-			HasParadigmGenerator: true,
 			SpacyPipeline:        "sv_core_news_sm",
 			ExclusiveCases:       []string{}, // none unique to Swedish
 			PostLLMCleanupPasses: []string{"rejoin_swedish_definites"},
@@ -496,23 +463,14 @@ var capabilities = map[string]*Capability{
 				"the pitch-accent system (acute and grave) honored, å/ä/ö " +
 				"as distinct vowels (not anglicised), sj-/tj- sounds soft. " +
 				"Use a warm, friendly, conversational tone.",
-			PreferredVoiceID: "",
 		},
-		STT: STTCapability{
-			WhisperLanguageTag: "sv",
-			DeepgramSupported:  true,
-		},
+		STT: STTCapability{},
 		Caption: CaptionCapability{
 			SceneGreeting: "Stockholm subway platform on a bright weekday morning.",
 			SceneVerb:     "Office break room before the first meeting.",
 			SceneDefault:  "Kitchen at home before heading out for the day.",
 		},
 		Grammar: GrammarCapability{
-			LanguageFeaturesDescription: "V2 word order, two genders " +
-				"(en/ett — common vs neuter), definite article via " +
-				"suffix (-en/-et/-na), no case marking on nouns, " +
-				"verb conjugation primarily for tense (no person/" +
-				"number agreement).",
 			CaseExamples: map[string]string{
 				"case": `"definite", "indefinite", "genitive"`,
 			},
@@ -544,16 +502,15 @@ var capabilities = map[string]*Capability{
 			ScenarioHintLookingFor:   "Jag letar efter...",
 			ScenarioHintNeed:         "Jag behöver...",
 			PoliteExamples:           "tack, ursäkta, hej",
-			OfflineTranslationFallbacks: map[string]string{}, // no Swedish offline dictionary yet
-			NeverSayWords:           []string{"språkmodell", "ai"},
-			TerminationPhrase:       "Hej då",
-			ThankEndPhrase:          "Tack för besöket, hej då!",
-			EncourageWords:          []string{"Bra!", "Snyggt!"},
-			AckWords:                []string{"Ja!", "Precis!", "Bra!", "Just det!"},
-			BookingQuestion:         "Har ni en bokning?",
-			BookingAnswer:           "Inga problem, jag kan boka åt er nu.",
-			HintComplexitySimple:    `"Tack!" / "Jag vill ha kaffe." / "Ja."`,
-			HintComplexityChallenge: `"Skulle jag kunna få en cappuccino och en liten bulle, tack?" / "Jag skulle vilja boka en tid till imorgon, om möjligt."`,
+			NeverSayWords:            []string{"språkmodell", "ai"},
+			TerminationPhrase:        "Hej då",
+			ThankEndPhrase:           "Tack för besöket, hej då!",
+			EncourageWords:           []string{"Bra!", "Snyggt!"},
+			AckWords:                 []string{"Ja!", "Precis!", "Bra!", "Just det!"},
+			BookingQuestion:          "Har ni en bokning?",
+			BookingAnswer:            "Inga problem, jag kan boka åt er nu.",
+			HintComplexitySimple:     `"Tack!" / "Jag vill ha kaffe." / "Ja."`,
+			HintComplexityChallenge:  `"Skulle jag kunna få en cappuccino och en liten bulle, tack?" / "Jag skulle vilja boka en tid till imorgon, om möjligt."`,
 			NudgeOpeners: map[string][]string{
 				"early": {
 					"Bra start! Vill du fortsätta på svenska?",

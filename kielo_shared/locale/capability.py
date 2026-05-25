@@ -44,20 +44,12 @@ class MorphologyCapability:
     """Which morphology backend serves the language and what it supports.
 
     Mirrors kielo-shared/locale/MorphologyCapability (Go).
+
+    REMOVED 2026-05-25 (registry coverage audit, Phase 12 cleanup):
+      * primary_backend, local_fallback_module, has_paradigm_generator
+        — populated but never read outside kielo-shared. See the
+        capability.go REMOVED-* comments for rationale.
     """
-
-    primary_backend: str
-    """Names the kielo-models morphology backend that serves this language.
-    One of "voikko", "omorfi", "swedish_morphology", or "spacy_only".
-    Required."""
-
-    local_fallback_module: Optional[str] = None
-    """Python module name the engine can import for offline / models-
-    unreachable fallback. None if no local fallback exists."""
-
-    has_paradigm_generator: bool = False
-    """True if the backend can emit a full declension/conjugation
-    paradigm. Required."""
 
     spacy_pipeline: Optional[str] = None
     """spaCy pipeline name (e.g. "fi_core_news_sm"). None if no spaCy
@@ -87,6 +79,11 @@ class DisplayCapability:
     """Human-readable labels for prompts, UI, and caption decoration.
 
     Mirrors kielo-shared/locale/DisplayCapability (Go).
+
+    REMOVED 2026-05-25 (registry coverage audit, Phase 12 cleanup):
+      * capital_scene — duplicated by Caption.scene_greeting (which
+        IS consumed by ktv_locale.go); pure overlap.
+      * daily_challenge_theme_name — populated but never read.
     """
 
     display_name_en: str
@@ -97,16 +94,9 @@ class DisplayCapability:
     """Country most associated with this language (e.g. "Finland")
     for LLM scenario prompts."""
 
-    capital_scene: str = ""
-    """Short cultural-backdrop sentence used as the default simplified-
-    prompt scene."""
-
     native_script_hashtags: tuple[str, ...] = ()
     """Curated native-script hashtags appended to KTV captions
     (e.g. ("#suomi", "#suomenkieli") for fi)."""
-
-    daily_challenge_theme_name: str = ""
-    """Per-language "Daily Life" / equivalent theme label."""
 
     default_ktv_vocabulary_source_url: str = ""
     """Curated default URL the KTV vocabulary importer uses when
@@ -117,28 +107,31 @@ class DisplayCapability:
 
 @dataclass(frozen=True)
 class TTSCapability:
-    """Per-language gpt-4o-mini-tts configuration."""
+    """Per-language gpt-4o-mini-tts configuration.
+
+    REMOVED 2026-05-25 (registry coverage audit):
+      * preferred_voice_id — populated as None for both fi+sv;
+        never read.
+    """
 
     pronunciation_instructions: Optional[str] = None
     """Appended to gpt-4o-mini-tts `instructions` to nudge correct
     pronunciation. None leaves the default English-trained behavior."""
 
-    preferred_voice_id: Optional[str] = None
-    """Pin a non-default voice when supported. None means platform
-    default."""
-
 
 @dataclass(frozen=True)
 class STTCapability:
-    """Per-language Whisper / Deepgram configuration."""
+    """Per-language Whisper / Deepgram configuration.
 
-    whisper_language_tag: str
-    """Language tag passed to Whisper. Usually identical to the code
-    but explicit so we don't assume."""
+    Currently EMPTY after Phase 12 cleanup. Re-add fields when a
+    real consumer materializes.
 
-    deepgram_supported: bool = False
-    """True if the language can be used with the Deepgram voice-agent
-    provider."""
+    REMOVED 2026-05-25 (registry coverage audit):
+      * whisper_language_tag — populated as the language code itself
+        for both fi+sv; Whisper integration hard-codes elsewhere.
+      * deepgram_supported — populated True for both; never queried.
+    """
+    pass
 
 
 @dataclass(frozen=True)
@@ -193,12 +186,14 @@ class GrammarCapability:
     enrichment.
 
     Mirrors kielo-shared/locale/GrammarCapability (Go).
-    """
 
-    language_features_description: str = ""
-    """Short prose description of the language's distinguishing features
-    (e.g. agglutination, vowel harmony for Finnish). Injected into LLM
-    prompts so the model knows what kind of language it's processing."""
+    REMOVED 2026-05-25 (registry coverage audit):
+      * language_features_description — never read in production
+        code. nlp_utils.py:1043 had a comment saying the local
+        _LANGUAGE_FEATURES dict was *deliberately* kept divergent
+        from this field. The two strings drifted; this field was
+        actively misleading.
+    """
 
     case_examples: Mapping[str, str] = field(default_factory=dict)
     """Maps a grammar-feature axis ("case", "tense", etc.) to a
@@ -260,9 +255,9 @@ class PromptCapability:
     """Comma-separated polite-phrase list for the A1 LLM prompt
     (e.g. "kiitos, anteeksi, hei")."""
 
-    offline_translation_fallbacks: Mapping[str, str] = field(default_factory=dict)
-    """Finnish-only offline translation dictionary from kielo-cms (G7).
-    Empty for sv."""
+    # REMOVED 2026-05-25 (registry coverage audit):
+    #   * offline_translation_fallbacks — fi-only (10 entries) AND
+    #     completely unconsumed. See capability.go for rationale.
 
     # Phase 12 slice 9: convo agent prompt-table fields.
     never_say_words: tuple[str, ...] = ()
@@ -358,15 +353,10 @@ _CAPABILITIES: dict[str, Capability] = {
         display=DisplayCapability(
             display_name_en="Finnish",
             country_context="Finland",
-            capital_scene="Helsinki tram stop on a bright weekday morning.",
             native_script_hashtags=("#suomi", "#suomenkieli"),
-            daily_challenge_theme_name="Arki",
             default_ktv_vocabulary_source_url="https://uusikielemme.fi/finnish-vocabulary",
         ),
         morphology=MorphologyCapability(
-            primary_backend="voikko",
-            local_fallback_module=None,  # no offline fallback for fi
-            has_paradigm_generator=True,
             spacy_pipeline="fi_core_news_sm",
             exclusive_cases=(
                 "partitive",
@@ -393,24 +383,14 @@ _CAPABILITIES: dict[str, Capability] = {
                 "the first syllable of each word, clear ä/ö/y vowels (not "
                 "anglicised). Use a warm, friendly, conversational tone."
             ),
-            preferred_voice_id=None,
         ),
-        stt=STTCapability(
-            whisper_language_tag="fi",
-            deepgram_supported=True,
-        ),
+        stt=STTCapability(),
         caption=CaptionCapability(
             scene_greeting="Helsinki tram stop on a bright weekday morning.",
             scene_verb="Office break room before the first meeting.",
             scene_default="Kitchen at home before heading out for the day.",
         ),
         grammar=GrammarCapability(
-            language_features_description=(
-                "agglutination, vowel harmony, "
-                "15 grammatical cases, no grammatical gender, "
-                "consonant gradation (kpt rules), partitive case, "
-                "essive/translative cases."
-            ),
             case_examples={
                 "case": '"nominative", "genitive", "partitive"',
             },
@@ -442,18 +422,6 @@ _CAPABILITIES: dict[str, Capability] = {
             scenario_hint_looking_for="Etsin...",
             scenario_hint_need="Tarvitsen...",
             polite_examples="kiitos, anteeksi, hei",
-            offline_translation_fallbacks={
-                "moi": "hi (casual greeting)",
-                "hei": "hi / hello",
-                "kiitos": "thank you",
-                "puhua": "to speak",
-                "ymmärtää": "to understand",
-                "sanoa": "to say",
-                "kysyä": "to ask",
-                "vastata": "to answer",
-                "tervetuloa": "welcome",
-                "anteeksi": "sorry / excuse me",
-            },
             never_say_words=("kielimalli", "tekoäly"),
             termination_phrase="Näkemiin",
             thank_end_phrase="Kiitos käynnistä, näkemiin!",
@@ -512,15 +480,10 @@ _CAPABILITIES: dict[str, Capability] = {
         display=DisplayCapability(
             display_name_en="Swedish",
             country_context="Sweden",
-            capital_scene="Stockholm subway platform on a bright weekday morning.",
             native_script_hashtags=("#svenska",),
-            daily_challenge_theme_name="Vardag",
             default_ktv_vocabulary_source_url="",
         ),
         morphology=MorphologyCapability(
-            primary_backend="swedish_morphology",
-            local_fallback_module="swedish_morphology",
-            has_paradigm_generator=True,
             spacy_pipeline="sv_core_news_sm",
             exclusive_cases=(),  # none unique to Swedish
             post_llm_cleanup_passes=("rejoin_swedish_definites",),
@@ -534,25 +497,14 @@ _CAPABILITIES: dict[str, Capability] = {
                 "as distinct vowels (not anglicised), sj-/tj- sounds soft. "
                 "Use a warm, friendly, conversational tone."
             ),
-            preferred_voice_id=None,
         ),
-        stt=STTCapability(
-            whisper_language_tag="sv",
-            deepgram_supported=True,
-        ),
+        stt=STTCapability(),
         caption=CaptionCapability(
             scene_greeting="Stockholm subway platform on a bright weekday morning.",
             scene_verb="Office break room before the first meeting.",
             scene_default="Kitchen at home before heading out for the day.",
         ),
         grammar=GrammarCapability(
-            language_features_description=(
-                "V2 word order, two genders "
-                "(en/ett — common vs neuter), definite article via "
-                "suffix (-en/-et/-na), no case marking on nouns, "
-                "verb conjugation primarily for tense (no person/"
-                "number agreement)."
-            ),
             case_examples={
                 "case": '"definite", "indefinite", "genitive"',
             },
@@ -584,7 +536,6 @@ _CAPABILITIES: dict[str, Capability] = {
             scenario_hint_looking_for="Jag letar efter...",
             scenario_hint_need="Jag behöver...",
             polite_examples="tack, ursäkta, hej",
-            offline_translation_fallbacks={},  # no Swedish offline dictionary yet
             never_say_words=("språkmodell", "ai"),
             termination_phrase="Hej då",
             thank_end_phrase="Tack för besöket, hej då!",

@@ -21,25 +21,17 @@ def test_lookup_capability_happy_path():
     assert fi.code == "fi"
     assert fi.display.display_name_en == "Finnish"
     assert fi.display.country_context == "Finland"
-    assert fi.morphology.primary_backend == "voikko"
-    assert fi.morphology.has_paradigm_generator is True
     assert fi.morphology.spacy_pipeline == "fi_core_news_sm"
     assert "partitive" in fi.morphology.exclusive_cases
-    assert fi.stt.whisper_language_tag == "fi"
-    assert fi.prompts.offline_translation_fallbacks, (
-        "fi has an offline translation fallback dict"
-    )
+    assert fi.morphology.has_base_word_lookup is True
 
     sv = lookup_capability("sv")
     assert sv is not None
     assert sv.code == "sv"
     assert sv.display.display_name_en == "Swedish"
-    assert sv.morphology.primary_backend == "swedish_morphology"
-    assert sv.morphology.local_fallback_module == "swedish_morphology"
     assert sv.morphology.exclusive_cases == ()
-    assert not sv.prompts.offline_translation_fallbacks, (
-        "sv has no offline translation fallback dict yet"
-    )
+    assert sv.morphology.has_base_word_lookup is False
+    assert sv.morphology.post_llm_cleanup_passes == ("rejoin_swedish_definites",)
 
 
 def test_lookup_capability_normalizes_aliases():
@@ -105,22 +97,37 @@ def test_capability_display_name_matches_shared_display_name():
 
 
 def test_capability_all_required_slots_present():
-    # Required-slot policy from the scoping report §C.3:
+    # Required-slot policy (post-2026-05-25 registry coverage audit):
+    # only fields with at least one production consumer remain in the
+    # required set. Mirrors the Go-side assertion in capability_test.go.
+    #
+    # Required-slot policy (pruned from scoping §C.3):
     #   - code: required
-    #   - display.display_name_en: required
-    #   - morphology.primary_backend: required
-    #   - morphology.has_paradigm_generator: required (boolean, always set)
-    #   - stt.whisper_language_tag: required
+    #   - display.display_name_en: required (consumed by ktv_locale,
+    #     admin_handler, voiceagent, nlp_utils, etc.)
+    #   - display.country_context: required for LLM scenario prompts
+    #   - morphology.spacy_pipeline: required (kielo-models NLP service)
+    #   - caption.scene_greeting / scene_verb / scene_default: required
+    #     (kielo-cms ktv_locale.go)
     for cap in supported_capabilities():
         assert cap.code, "code is required"
         assert cap.display.display_name_en, (
             f"display.display_name_en is required for {cap.code!r}"
         )
-        assert cap.morphology.primary_backend, (
-            f"morphology.primary_backend is required for {cap.code!r}"
+        assert cap.display.country_context, (
+            f"display.country_context is required for {cap.code!r}"
         )
-        assert cap.stt.whisper_language_tag, (
-            f"stt.whisper_language_tag is required for {cap.code!r}"
+        assert cap.morphology.spacy_pipeline, (
+            f"morphology.spacy_pipeline is required for {cap.code!r}"
+        )
+        assert cap.caption.scene_greeting, (
+            f"caption.scene_greeting is required for {cap.code!r}"
+        )
+        assert cap.caption.scene_verb, (
+            f"caption.scene_verb is required for {cap.code!r}"
+        )
+        assert cap.caption.scene_default, (
+            f"caption.scene_default is required for {cap.code!r}"
         )
 
 
