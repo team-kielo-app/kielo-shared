@@ -18,6 +18,7 @@ Import side-effects: ``aiohttp`` is NOT a hard dependency of
 ``kielo-shared``. Importing this module without aiohttp installed
 raises a clear ``ImportError``; do not import at package init.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -41,8 +42,8 @@ from kielo_shared.trace import (
 
 
 async def _on_request_start(
-    session: aiohttp.ClientSession,  # noqa: ARG001 - aiohttp signature
-    trace_config_ctx: Any,  # noqa: ARG001
+    session: aiohttp.ClientSession,
+    trace_config_ctx: Any,
     params: aiohttp.TraceRequestStartParams,
 ) -> None:
     """aiohttp trace hook — stamps trace + learning-language headers on

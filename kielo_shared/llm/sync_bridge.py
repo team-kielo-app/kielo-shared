@@ -23,6 +23,7 @@ Phase D+3 will migrate one ingest call site (recommended: the
 loop — deterministic per concept_id, safe to cache `read_write`) using
 this bridge.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -110,18 +111,14 @@ def call_llm_text_sync(
     return run_sync(_call_text_async(request, registry))
 
 
-async def _call_text_async(
-    request: LLMRequest, registry: LLMRegistry | None
-) -> str:
+async def _call_text_async(request: LLMRequest, registry: LLMRegistry | None) -> str:
     reg = registry or get_default_llm_registry()
     provider = reg.resolve(task=request.task)
     result = await provider.generate(request)
     return result.text or ""
 
 
-async def _call_async(
-    request: LLMRequest, registry: LLMRegistry | None
-) -> dict | None:
+async def _call_async(request: LLMRequest, registry: LLMRegistry | None) -> dict | None:
     reg = registry or get_default_llm_registry()
     provider = reg.resolve(task=request.task)
     result = await provider.generate(request)
@@ -132,7 +129,7 @@ async def _call_async(
     if callable(dump):
         try:
             return dump()
-        except Exception:  # noqa: BLE001
+        except Exception:
             return None
     return None
 

@@ -28,6 +28,7 @@ so callers don't have to remember the spelling — historically
 ``X-API-Key`` and ``X-Internal-API-Key`` were both in use; the latter
 is canonical per ADR-006 §2.
 """
+
 from __future__ import annotations
 
 from typing import Optional, Union
@@ -90,7 +91,11 @@ def internal_headers(
                 # Capitalize for HTTP/1.1 wire convention; httpx and
                 # requests normalize anyway, but writing the canonical
                 # case keeps direct ``urllib`` users honest.
-                headers[name.title() if name == HEADER_TRACEPARENT else _canonical_case(name)] = value
+                headers[
+                    name.title()
+                    if name == HEADER_TRACEPARENT
+                    else _canonical_case(name)
+                ] = value
 
     if extra:
         headers.update(extra)

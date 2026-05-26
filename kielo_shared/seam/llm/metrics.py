@@ -11,6 +11,7 @@ Important: this decorator emits via the engine-side LLM family
 NOT a separate counter, so aggregate views work without label
 remapping.
 """
+
 from __future__ import annotations
 
 import logging
@@ -82,9 +83,7 @@ class MetricsDecorator:
         """
         provider, task, cache_policy, cached = self._labels(request)
         if not hasattr(self._inner, "generate_stream"):
-            raise AttributeError(
-                "inner provider does not implement generate_stream"
-            )
+            raise AttributeError("inner provider does not implement generate_stream")
         inner_stream = self._inner.generate_stream(request)  # type: ignore[attr-defined]
 
         started = time.perf_counter()
@@ -121,7 +120,7 @@ class MetricsDecorator:
                 LLM_LATENCY_S,
                 PROMETHEUS_AVAILABLE,
             )
-        except Exception:  # noqa: BLE001
+        except Exception:
             return
         if not PROMETHEUS_AVAILABLE or LLM_CALLS_TOTAL is None:
             return
@@ -133,10 +132,10 @@ class MetricsDecorator:
                 cached=cached,
                 error=class_of(err) if err is not None else "",
             ).inc()
-            LLM_LATENCY_S.labels(
-                provider=provider, task=task, cached=cached
-            ).observe(elapsed)
-        except Exception as exc:  # noqa: BLE001
+            LLM_LATENCY_S.labels(provider=provider, task=task, cached=cached).observe(
+                elapsed
+            )
+        except Exception as exc:
             logger.debug("llm metrics fanout failed: %s", exc)
 
 

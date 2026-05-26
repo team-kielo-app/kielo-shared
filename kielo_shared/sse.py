@@ -44,10 +44,19 @@ Usage::
             terminal_events={"persisted", "failed"},
         )
 """
+
 from __future__ import annotations
 
 import json
-from typing import AbstractSet, Any, AsyncIterator, Awaitable, Callable, Mapping, Optional
+from typing import (
+    AbstractSet,
+    Any,
+    AsyncIterator,
+    Awaitable,
+    Callable,
+    Mapping,
+    Optional,
+)
 
 
 SSE_HEADERS: dict = {
@@ -105,9 +114,7 @@ async def _format_stream(
     request,
     events: AsyncIterator[Mapping[str, Any]],
     terminal_events: AbstractSet[str],
-    payload_transform: Optional[
-        Callable[[Mapping[str, Any]], Awaitable[Any]]
-    ] = None,
+    payload_transform: Optional[Callable[[Mapping[str, Any]], Awaitable[Any]]] = None,
 ) -> AsyncIterator[str]:
     async for event in events:
         if hasattr(request, "is_disconnected"):
@@ -131,9 +138,7 @@ def sse_response(
     request,
     events: AsyncIterator[Mapping[str, Any]],
     terminal_events: AbstractSet[str] = frozenset(),
-    payload_transform: Optional[
-        Callable[[Mapping[str, Any]], Awaitable[Any]]
-    ] = None,
+    payload_transform: Optional[Callable[[Mapping[str, Any]], Awaitable[Any]]] = None,
 ):
     """Build a canonical FastAPI/Starlette SSE response.
 

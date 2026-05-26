@@ -11,6 +11,7 @@ Cache key recipe:
 Where `key` is `request.cache_key` if set, else
 `sha256(system_prompt|user_prompt|stable_json(variables)|response_schema_str)[:32]`.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -36,7 +37,7 @@ def _stable_json(value: Any) -> str:
     always serializes byte-for-byte identical."""
     try:
         return json.dumps(value, sort_keys=True, separators=(",", ":"), default=str)
-    except Exception:  # noqa: BLE001
+    except Exception:
         return repr(value)
 
 
@@ -125,7 +126,9 @@ class LLMCacheDecorator:
         if (result.text or "").strip() and result.provider != "passthrough":
             await self._safe_set(
                 key,
-                json.dumps({"text": result.text, "parsed": _serialize_parsed(result.parsed)}),
+                json.dumps(
+                    {"text": result.text, "parsed": _serialize_parsed(result.parsed)}
+                ),
             )
         return result
 
@@ -141,7 +144,7 @@ class LLMCacheDecorator:
     async def _safe_get(self, key: str) -> str | None:
         try:
             value = await self._redis.get(key)  # type: ignore[union-attr]
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.debug("LLMCacheDecorator GET failed key=%s: %s", key, exc)
             return None
         if value is None:
@@ -158,7 +161,7 @@ class LLMCacheDecorator:
     async def _safe_set(self, key: str, payload: str) -> None:
         try:
             await self._redis.set(key, payload, ex=self._ttl)  # type: ignore[union-attr]
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.debug("LLMCacheDecorator SET failed key=%s: %s", key, exc)
 
 
@@ -187,11 +190,11 @@ def _maybe_rehydrate_parsed(schema: Any, payload: Any) -> Any:
     if callable(validate):
         try:
             return validate(payload)
-        except Exception:  # noqa: BLE001
+        except Exception:
             return payload
     try:
         return schema_class(**payload)
-    except Exception:  # noqa: BLE001
+    except Exception:
         return payload
 
 
@@ -220,7 +223,7 @@ def _serialize_parsed(parsed: Any) -> Any:
     if callable(dump):
         try:
             return dump(mode="json")
-        except Exception:  # noqa: BLE001
+        except Exception:
             return None
     return None
 

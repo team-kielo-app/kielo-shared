@@ -24,6 +24,7 @@ Caller shape::
         task="convo_hint_engine",
     ))
 """
+
 from __future__ import annotations
 
 from kielo_shared.seam.llm.types import (

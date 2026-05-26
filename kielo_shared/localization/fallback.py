@@ -12,6 +12,7 @@ Usage:
     chain = FallbackDecorator([primary, secondary])
     registry.register("translate-resilient", chain)
 """
+
 from __future__ import annotations
 
 import logging
@@ -151,7 +152,7 @@ class FallbackDecorator:
                     target_locale=target_locale,
                     idempotency_key=idempotency_key,
                 )
-            except Exception as exc:  # noqa: BLE001 — chain to next provider
+            except Exception as exc:
                 breaker.record_failure()
                 last_error = exc
                 logger.warning(
@@ -175,12 +176,9 @@ class FallbackDecorator:
             raise last_error
         # All breakers open + no exception captured — degrade to passthrough
         # so the caller doesn't get a None response.
-        logger.warning(
-            "FallbackDecorator: all providers unavailable; passthrough."
-        )
+        logger.warning("FallbackDecorator: all providers unavailable; passthrough.")
         return [
-            TranslationResult(text=item.text, provider="passthrough")
-            for item in items
+            TranslationResult(text=item.text, provider="passthrough") for item in items
         ]
 
 

@@ -31,6 +31,36 @@ DEP001 = [
     "starlette",
 ]
 
+[tool.mypy]
+python_version = "3.11"
+warn_unused_configs = true
+namespace_packages = true
+explicit_package_bases = true
+
+# Consumer-provided runtime deps (mirrors [tool.deptry.per_rule_ignores] DEP001).
+# These libraries are intentionally not in kielo-shared's `dependencies` because
+# they come from the consuming service. Without per-module ignores mypy would
+# emit import-not-found for every Protocol/middleware/hook file that exposes
+# integration with them.
+[[tool.mypy.overrides]]
+module = [
+    "aiohttp",
+    "aiohttp.*",
+    "asyncpg",
+    "certifi",
+    "fastapi.*",
+    "google.*",
+    "httpx",
+    "httpx.*",
+    "livekit.*",
+    "prometheus_client",
+    "prometheus_client.*",
+    "sqlalchemy",
+    "sqlalchemy.*",
+    "starlette.*",
+]
+ignore_missing_imports = true
+
 [tool.vulture]
 # `ex` is the redis-py kwarg for TTL — Protocol abstract methods declare it
 # so callers can pass it positionally or by name. Vulture sees the abstract
@@ -52,3 +82,8 @@ include = ["kielo_shared*"]
 
 [tool.setuptools.package-data]
 kielo_shared = ["*.json"]
+
+[tool.ruff.lint]
+# RUF100 flags `# noqa` directives whose targeted rule is no longer triggered
+# at that line — surfaces stale suppressions for deletion.
+extend-select = ["RUF100"]

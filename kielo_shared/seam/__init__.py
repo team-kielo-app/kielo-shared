@@ -6,4 +6,5 @@ with bounded labels. Shared metric families
 (`kielo_tts_*`, `kielo_llm_*`) match the Go side so cross-process
 dashboards aggregate cleanly.
 """
+
 from __future__ import annotations

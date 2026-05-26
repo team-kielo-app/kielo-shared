@@ -214,7 +214,9 @@ async def _fetch_module_health_async(
             timeout=timeout_seconds,
             headers=_normalize_headers(headers),
         ) as client:
-            response = await client.get(urljoin(base_url.strip().rstrip("/") + "/", path))
+            response = await client.get(
+                urljoin(base_url.strip().rstrip("/") + "/", path)
+            )
             payload = response.json()
         if response.status_code not in (200, 503) or not isinstance(payload, dict):
             return None
@@ -421,9 +423,7 @@ def normalize_transcription_payload(
             # Emit BOTH ``text`` (read by kielolearn-engine) and
             # ``text_primary`` (consumed by ingest-processor's
             # ``TranscriptionSegment`` Pydantic model).
-            text_primary = str(
-                item.get("text") or item.get("text_primary") or ""
-            )
+            text_primary = str(item.get("text") or item.get("text_primary") or "")
             words_array = item.get("words_array") or []
             normalized_segments.append(
                 {

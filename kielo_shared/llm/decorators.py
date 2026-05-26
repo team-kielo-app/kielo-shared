@@ -1,4 +1,5 @@
 """Composable LLMProvider decorators."""
+
 from __future__ import annotations
 
 import logging
@@ -57,7 +58,7 @@ class LLMMetricsDecorator:
         try:
             result = await self._inner.generate(request)
             return result
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             error = type(exc).__name__
             raise
         finally:

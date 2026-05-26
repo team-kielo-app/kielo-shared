@@ -6,6 +6,7 @@ Roles map to the three localizer shapes that today live as
 when picking prompts / output validators (e.g. `html` must preserve tags;
 `gloss` must output target-language only).
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

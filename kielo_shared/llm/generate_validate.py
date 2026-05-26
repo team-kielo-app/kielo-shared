@@ -32,6 +32,7 @@ Usage:
         # exhausted; fall back / 502
         ...
 """
+
 from __future__ import annotations
 
 import logging
@@ -85,7 +86,7 @@ async def generate_and_validate(
     for attempt in range(1, max_attempts + 1):
         try:
             result = await provider.generate(request)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             last_error = type(exc).__name__
             logger.warning(
                 "generate_and_validate: provider raised on attempt=%d task=%s err=%s",
@@ -185,11 +186,11 @@ def _try_materialize(schema_class: type, payload: dict) -> Any | None:
     if callable(validate):
         try:
             return validate(payload)
-        except Exception:  # noqa: BLE001
+        except Exception:
             return None
     try:
         return schema_class(**payload)
-    except Exception:  # noqa: BLE001
+    except Exception:
         return None
 
 
@@ -200,7 +201,7 @@ async def _run_validator(validator: ResultValidator, value: Any) -> bool:
         if hasattr(outcome, "__await__"):
             outcome = await outcome  # type: ignore[assignment]
         return bool(outcome)
-    except Exception:  # noqa: BLE001
+    except Exception:
         return False
 
 

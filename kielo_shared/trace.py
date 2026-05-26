@@ -10,6 +10,7 @@ plumbing (FastAPI middleware, logging filters, httpx hooks) build on
 top of these primitives but the primitives themselves have no FastAPI
 or httpx dependency so they stay importable from any context.
 """
+
 from __future__ import annotations
 
 import contextvars

@@ -20,6 +20,7 @@
   * `cache_key`: optional explicit dedup key. When None, the provider
     derives one from `task + prompt_version + sha256(prompts + variables)`.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

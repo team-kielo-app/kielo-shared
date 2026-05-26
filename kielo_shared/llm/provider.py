@@ -3,6 +3,7 @@
 Single method: `generate(request) -> result`. Decorators implement the same
 Protocol so the stack composes the same way the localization seam does.
 """
+
 from __future__ import annotations
 
 from typing import Protocol, runtime_checkable
@@ -15,7 +16,7 @@ class LLMProvider(Protocol):
     """Provider contract for LLM calls across services."""
 
     @property
-    def provider_id(self) -> str:  # noqa: D401
+    def provider_id(self) -> str:
         """Stable id including version stamp; appears in logs + cache keys."""
         ...
 

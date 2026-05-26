@@ -23,6 +23,7 @@ Caller shape (mirrors the LLM seam pattern):
         text="...", voice_id="alloy", task="klearn_tts_baseword",
     ))
 """
+
 from __future__ import annotations
 
 from kielo_shared.seam.tts.types import (

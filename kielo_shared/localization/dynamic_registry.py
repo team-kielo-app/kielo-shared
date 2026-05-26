@@ -28,6 +28,7 @@ cannot await (module-load-time string resolution, tests). Anywhere
 overrides need to apply, the call site must already be in an async
 context (FastAPI request handlers, background workers, etc.).
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -48,8 +49,8 @@ logger = logging.getLogger(__name__)
 
 
 # Default TTLs (match the Go constants).
-DEFAULT_HIT_TTL_SECONDS = 5 * 60     # 5 minutes
-DEFAULT_MISS_TTL_SECONDS = 30        # 30 seconds
+DEFAULT_HIT_TTL_SECONDS = 5 * 60  # 5 minutes
+DEFAULT_MISS_TTL_SECONDS = 30  # 30 seconds
 
 
 # Sentinel for cached-negative entries. Mirrors the Go side. A string
@@ -62,9 +63,7 @@ class AsyncCache(Protocol):
     against aioredis (see ``AsyncRedisCache`` below) or supply
     ``NoopAsyncCache`` for tests / strict-consistency mode."""
 
-    async def get(
-        self, key: str
-    ) -> tuple[Optional[str], bool, bool]:
+    async def get(self, key: str) -> tuple[Optional[str], bool, bool]:
         """Return ``(value, is_override, cached_ok)``.
 
         * ``cached_ok=False``: cache miss; caller probes DB.
@@ -162,7 +161,7 @@ async def _pool_probe(
             source_version,
             locale,
         )
-    except Exception:  # noqa: BLE001 — degrade, never propagate
+    except Exception:
         logger.exception(
             "DynamicRegistry probe failed",
             extra={
@@ -264,10 +263,12 @@ class DynamicRegistry:
         if probe is not None:
             self._probe: Optional[ProbeFunc] = probe
         elif pool is not None:
+
             async def _bound_probe(
                 rt: str, rid: str, sv: str, loc: str
             ) -> tuple[Optional[str], bool, bool]:
                 return await _pool_probe(pool, rt, rid, sv, loc)
+
             self._probe = _bound_probe
         else:
             self._probe = None
@@ -283,6 +284,7 @@ class DynamicRegistry:
                 rt: str,
             ) -> dict[tuple[str, str], int]:
                 return await _pool_coverage_probe(pool, rt)  # type: ignore[arg-type]
+
             self._coverage_probe = _bound_coverage_probe
         else:
             self._coverage_probe = None
@@ -367,7 +369,9 @@ class DynamicRegistry:
         except (KeyError, IndexError, ValueError) as exc:
             logger.warning(
                 "DynamicRegistry template parse failed for key=%s locale=%s: %s",
-                key, support_locale, exc,
+                key,
+                support_locale,
+                exc,
             )
             return text
 
@@ -426,7 +430,7 @@ class DynamicRegistry:
 
         try:
             counts = await self._coverage_probe(self._resource_type)
-        except Exception:  # noqa: BLE001 — degrade, never propagate
+        except Exception:
             logger.exception(
                 "DynamicRegistry coverage probe failed; returning seed report unchanged",
                 extra={"resource_type": self._resource_type},
@@ -494,9 +498,7 @@ class DynamicRegistry:
         self._source_version_memo[key] = source_version
         return source_version, english, True
 
-    def _cache_key_for(
-        self, resource_id: str, source_version: str, locale: str
-    ) -> str:
+    def _cache_key_for(self, resource_id: str, source_version: str, locale: str) -> str:
         return f"{self._key_prefix}{resource_id}:{source_version}:{locale}"
 
 
@@ -509,9 +511,7 @@ class NoopAsyncCache:
     """AsyncCache that never caches. Useful for tests and
     strict-consistency mode. Always reports cache miss."""
 
-    async def get(
-        self, key: str
-    ) -> tuple[Optional[str], bool, bool]:
+    async def get(self, key: str) -> tuple[Optional[str], bool, bool]:
         return None, False, False
 
     async def set(self, key: str, value: str, ttl_seconds: int) -> None:
@@ -534,12 +534,10 @@ class AsyncRedisCache:
     def __init__(self, client: Any) -> None:
         self._client = client
 
-    async def get(
-        self, key: str
-    ) -> tuple[Optional[str], bool, bool]:
+    async def get(self, key: str) -> tuple[Optional[str], bool, bool]:
         try:
             value = await self._client.get(key)
-        except Exception:  # noqa: BLE001 — degrade
+        except Exception:
             logger.exception("AsyncRedisCache.get failed", extra={"key": key})
             return None, False, False
         if value is None:
@@ -553,13 +551,11 @@ class AsyncRedisCache:
     async def set(self, key: str, value: str, ttl_seconds: int) -> None:
         try:
             await self._client.set(key, value, ex=ttl_seconds)
-        except Exception:  # noqa: BLE001
+        except Exception:
             logger.exception("AsyncRedisCache.set failed", extra={"key": key})
 
     async def set_negative(self, key: str, ttl_seconds: int) -> None:
         try:
             await self._client.set(key, _NEGATIVE_SENTINEL, ex=ttl_seconds)
-        except Exception:  # noqa: BLE001
-            logger.exception(
-                "AsyncRedisCache.set_negative failed", extra={"key": key}
-            )
+        except Exception:
+            logger.exception("AsyncRedisCache.set_negative failed", extra={"key": key})

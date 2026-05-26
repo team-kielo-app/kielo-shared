@@ -10,6 +10,7 @@ Two execution lanes, picked from `LLMRequest.response_schema`:
 The provider stays SDK-free; engine wires both lanes from its existing
 `llm_service` instance at construction time.
 """
+
 from __future__ import annotations
 
 import logging
@@ -83,9 +84,7 @@ class OpenAILLMProvider:
 
     # ──────────────────────────── lanes ──────────────────────────────────
 
-    async def _call_text(
-        self, request: LLMRequest
-    ) -> tuple[str, object | None]:
+    async def _call_text(self, request: LLMRequest) -> tuple[str, object | None]:
         raw = await self._text(
             request.system_prompt,
             request.user_prompt,
@@ -93,9 +92,7 @@ class OpenAILLMProvider:
         )
         return (raw or ""), None
 
-    async def _call_json(
-        self, request: LLMRequest
-    ) -> tuple[str, object | None]:
+    async def _call_json(self, request: LLMRequest) -> tuple[str, object | None]:
         # Schema is a Pydantic class today; pass through verbatim. The engine
         # `generate_json_output` returns either a Pydantic instance OR a
         # dict (LangChain's JsonOutputParser produces dicts) — handle both.
@@ -118,14 +115,15 @@ class OpenAILLMProvider:
         if callable(dump):
             try:
                 return dump(), parsed
-            except Exception:  # noqa: BLE001
+            except Exception:
                 pass
         # Plain dict / list (LangChain JsonOutputParser path):
         if isinstance(parsed, (dict, list)):
             try:
                 import json as _json
+
                 return _json.dumps(parsed, ensure_ascii=False, default=str), parsed
-            except Exception:  # noqa: BLE001
+            except Exception:
                 return "", parsed
         return "", parsed
 

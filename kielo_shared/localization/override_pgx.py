@@ -86,7 +86,7 @@ class PgxOverrideStore:
                 source_version,
                 target_locale,
             )
-        except Exception:  # noqa: BLE001 — degrade, never propagate
+        except Exception:
             logger.exception(
                 "PgxOverrideStore.lookup failed",
                 extra={

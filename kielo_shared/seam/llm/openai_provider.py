@@ -13,6 +13,7 @@ Mapping:
 Caller injects an `AsyncOpenAI` client (so existing connection
 pool / retries stay caller-side).
 """
+
 from __future__ import annotations
 
 import time
@@ -82,7 +83,7 @@ class OpenAIChatProvider:
             )
         except Error:
             raise
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             raise Error(_classify_openai_exception(exc), exc) from exc
 
         text = _extract_chat_text(completion)
@@ -121,7 +122,7 @@ class OpenAIChatProvider:
             )
         except Error:
             raise
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             raise Error(_classify_openai_exception(exc), exc) from exc
 
         try:
@@ -131,7 +132,7 @@ class OpenAIChatProvider:
                     yield token
         except Error:
             raise
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             raise Error(_classify_openai_exception(exc), exc) from exc
 
 

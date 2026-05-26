@@ -36,6 +36,7 @@ shield the canonical syntax from LLM mangling, then restores. A leaked
 the simplifier sometimes hallucinates these even when the input had no
 media at all.
 """
+
 from __future__ import annotations
 
 import re
@@ -184,7 +185,9 @@ def parse_body(content: str) -> List[ParsedParagraph]:
     return [parse_paragraph(line) for line in lines if line.strip()]
 
 
-def dedupe_consecutive_headings(paragraphs: List[ParsedParagraph]) -> List[ParsedParagraph]:
+def dedupe_consecutive_headings(
+    paragraphs: List[ParsedParagraph],
+) -> List[ParsedParagraph]:
     """Drop consecutive identical headings (the LLM-duplication pattern).
 
     Real-data trigger: kielo-web-ingest's ARTICLE_EXTRACTION_PROMPT
@@ -217,11 +220,17 @@ def dedupe_consecutive_headings(paragraphs: List[ParsedParagraph]) -> List[Parse
     return out
 
 
-def drop_leaked_placeholders(paragraphs: List[ParsedParagraph]) -> List[ParsedParagraph]:
+def drop_leaked_placeholders(
+    paragraphs: List[ParsedParagraph],
+) -> List[ParsedParagraph]:
     """Drop paragraphs whose entire content is a leaked simplifier
     placeholder. Always safe — these never carry user-facing content.
     """
-    return [p for p in paragraphs if p.paragraph_type is not ParagraphType.LEAKED_PLACEHOLDER]
+    return [
+        p
+        for p in paragraphs
+        if p.paragraph_type is not ParagraphType.LEAKED_PLACEHOLDER
+    ]
 
 
 __all__ = [

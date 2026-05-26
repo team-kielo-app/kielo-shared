@@ -41,6 +41,7 @@ Use from a streaming-pull callback:
             handler_timeout=300.0,
         )
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -113,11 +114,13 @@ def process_pull_message(
     except (json.JSONDecodeError, UnicodeDecodeError) as exc:
         logger.warning(
             "pubsub_consumer: dropping unparseable message service=%s topic=%s err=%s",
-            service, topic_label, exc,
+            service,
+            topic_label,
+            exc,
         )
         try:
             message.ack()
-        except Exception as ack_exc:  # noqa: BLE001
+        except Exception as ack_exc:
             logger.debug("pubsub_consumer: ack-after-parse-error failed: %s", ack_exc)
         pubsub_ack_emit(service=service, topic=topic_label, outcome="drop")
         return
@@ -125,20 +128,17 @@ def process_pull_message(
     if loop is None or loop.is_closed():
         logger.error(
             "pubsub_consumer: event loop unavailable service=%s topic=%s",
-            service, topic_label,
+            service,
+            topic_label,
         )
         try:
             message.nack()
-        except Exception as nack_exc:  # noqa: BLE001
-            logger.debug(
-                "pubsub_consumer: nack-without-loop failed: %s", nack_exc
-            )
+        except Exception as nack_exc:
+            logger.debug("pubsub_consumer: nack-without-loop failed: %s", nack_exc)
         pubsub_ack_emit(service=service, topic=topic_label, outcome="nack")
         return
 
-    future = asyncio.run_coroutine_threadsafe(
-        handler(message, payload), loop
-    )
+    future = asyncio.run_coroutine_threadsafe(handler(message, payload), loop)
     try:
         future.result(timeout=handler_timeout)
     except asyncio.TimeoutError:
@@ -148,30 +148,34 @@ def process_pull_message(
         future.cancel()
         logger.error(
             "pubsub_consumer: handler timed out service=%s topic=%s timeout_s=%.1f",
-            service, topic_label, handler_timeout,
+            service,
+            topic_label,
+            handler_timeout,
         )
         try:
             message.nack()
-        except Exception as nack_exc:  # noqa: BLE001
+        except Exception as nack_exc:
             logger.debug("pubsub_consumer: nack-after-timeout failed: %s", nack_exc)
         pubsub_ack_emit(service=service, topic=topic_label, outcome="nack")
         return
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.error(
             "pubsub_consumer: handler raised service=%s topic=%s err=%s",
-            service, topic_label, exc,
+            service,
+            topic_label,
+            exc,
             exc_info=True,
         )
         try:
             message.nack()
-        except Exception as nack_exc:  # noqa: BLE001
+        except Exception as nack_exc:
             logger.debug("pubsub_consumer: nack-after-error failed: %s", nack_exc)
         pubsub_ack_emit(service=service, topic=topic_label, outcome="nack")
         return
 
     try:
         message.ack()
-    except Exception as ack_exc:  # noqa: BLE001
+    except Exception as ack_exc:
         logger.debug("pubsub_consumer: ack-after-success failed: %s", ack_exc)
     pubsub_ack_emit(service=service, topic=topic_label, outcome="ack")
 

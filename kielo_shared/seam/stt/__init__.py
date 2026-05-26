@@ -28,6 +28,7 @@ Caller shape:
         )
     )
 """
+
 from __future__ import annotations
 
 from kielo_shared.seam.stt.types import (

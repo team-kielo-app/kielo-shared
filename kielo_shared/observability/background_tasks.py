@@ -30,6 +30,7 @@ caller doesn't intend to await:
         service="kielolearn-engine",
     )
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -71,13 +72,16 @@ def spawn_background_task(
         except asyncio.CancelledError:
             logger.debug(
                 "spawn_background_task: task cancelled service=%s name=%s",
-                service, name,
+                service,
+                name,
             )
             return
         if exc is not None:
             logger.warning(
                 "spawn_background_task: task raised service=%s name=%s err=%s",
-                service, name, exc,
+                service,
+                name,
+                exc,
                 exc_info=(type(exc), exc, exc.__traceback__),
             )
             side_effect_failed_emit(
@@ -111,7 +115,8 @@ def spawn_background_task_lazy(
         # No running loop in this thread.
         logger.warning(
             "spawn_background_task_lazy: no running loop service=%s name=%s",
-            service, name,
+            service,
+            name,
         )
         return None
 
@@ -129,12 +134,14 @@ def spawn_background_task_lazy(
 
         try:
             exc = f.exception()
-        except Exception:  # noqa: BLE001
+        except Exception:
             return
         if exc is not None:
             logger.warning(
                 "spawn_background_task_lazy: task raised service=%s name=%s err=%s",
-                service, name, exc,
+                service,
+                name,
+                exc,
                 exc_info=(type(exc), exc, exc.__traceback__),
             )
             side_effect_failed_emit(

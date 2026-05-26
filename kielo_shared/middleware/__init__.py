@@ -10,6 +10,7 @@ Currently exposes:
     routes (and v3 alias routes) with IETF Deprecation/Sunset/Link
     headers and incrementing the v1-sunset burn-down counters.
 """
+
 from __future__ import annotations
 
 from kielo_shared.middleware.legacy_alias import (

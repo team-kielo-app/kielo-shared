@@ -14,6 +14,7 @@ Critical scope correction (Phase D):
     KNOW the request is deterministic (and want cross-call dedup) flip
     it to "read_write".
 """
+
 from __future__ import annotations
 
 from kielo_shared.llm.cache import LLMCacheDecorator

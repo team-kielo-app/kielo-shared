@@ -32,6 +32,7 @@ Telemetry source labels (stable, dashboarded):
   * "provider_call"       — provider invoked, value cached
   * "provider_error"      — provider unavailable / errored / returned empty
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -52,6 +53,7 @@ logger = logging.getLogger(__name__)
 
 
 # ──────────────────────── SourceRef ──────────────────────────────────────
+
 
 @dataclasses.dataclass(frozen=True)
 class SourceRef:
@@ -93,6 +95,7 @@ def source_version_from_text(*parts: str) -> str:
 
 
 # ──────────────────────── Dependency protocols ───────────────────────────
+
 
 class Cache(Protocol):
     """Translation cache abstraction. Implementations live service-side
@@ -138,6 +141,7 @@ class Metrics(Protocol):
 
 
 # ──────────────────────── Noop/test implementations ──────────────────────
+
 
 class NoopCache:
     """Cache that never hits. Use in environments without Redis. The
@@ -194,9 +198,9 @@ class MapOverrideStore:
         target_locale: str,
         value: str,
     ) -> None:
-        self._entries[
-            f"{namespace}|{source_id}|{source_version}|{target_locale}"
-        ] = value
+        self._entries[f"{namespace}|{source_id}|{source_version}|{target_locale}"] = (
+            value
+        )
 
 
 class NoopMetrics:
@@ -223,6 +227,7 @@ class CountingMetrics:
 
 
 # ──────────────────────── Seam ───────────────────────────────────────────
+
 
 @dataclasses.dataclass(frozen=True)
 class SeamConfig:
@@ -295,7 +300,10 @@ class Seam:
             return "english_passthrough", ref.source_text
 
         override = await self._overrides.lookup(
-            ref.namespace, ref.source_id, ref.source_version, target,
+            ref.namespace,
+            ref.source_id,
+            ref.source_version,
+            target,
         )
         if override:
             return "override", override
@@ -305,7 +313,10 @@ class Seam:
         if cached_value is not None and cached_age is not None:
             if cached_age <= self._config.fresh_ttl_seconds:
                 return "cache_hit", cached_value
-            if cached_age <= self._config.fresh_ttl_seconds + self._config.stale_ttl_seconds:
+            if (
+                cached_age
+                <= self._config.fresh_ttl_seconds + self._config.stale_ttl_seconds
+            ):
                 self._kickoff_swr(ref, target, cache_key)
                 return "cache_swr", cached_value
 
@@ -337,12 +348,15 @@ class Seam:
 
         try:
             value = await self._call_provider(ref, target, cache_key)
-        except Exception:  # noqa: BLE001 — fall back, log, continue
-            logger.exception("seam provider call failed", extra={
-                "namespace": ref.namespace,
-                "source_id": ref.source_id,
-                "target": target,
-            })
+        except Exception:
+            logger.exception(
+                "seam provider call failed",
+                extra={
+                    "namespace": ref.namespace,
+                    "source_id": ref.source_id,
+                    "target": target,
+                },
+            )
             value = ref.source_text
             # Distinguish provider_error from provider_call in metrics —
             # caller's metrics.record happens in translate(), so we
@@ -358,12 +372,16 @@ class Seam:
         return "provider_call", value
 
     async def _call_provider(self, ref: SourceRef, target: str, cache_key: str) -> str:
-        provider = self._registry.resolve(source_locale=TIER_A_LOCALE, target_locale=target)
-        items = [TranslationItem(
-            text=ref.source_text,
-            role=ref.role,
-            cache_key=cache_key,
-        )]
+        provider = self._registry.resolve(
+            source_locale=TIER_A_LOCALE, target_locale=target
+        )
+        items = [
+            TranslationItem(
+                text=ref.source_text,
+                role=ref.role,
+                cache_key=cache_key,
+            )
+        ]
         results: list[TranslationResult] = await provider.translate_batch(
             items,
             source_locale=TIER_A_LOCALE,
@@ -389,12 +407,15 @@ class Seam:
         async def refresh() -> None:
             try:
                 await self._call_provider(ref, target, cache_key)
-            except Exception:  # noqa: BLE001
-                logger.exception("seam SWR refresh failed", extra={
-                    "namespace": ref.namespace,
-                    "source_id": ref.source_id,
-                    "target": target,
-                })
+            except Exception:
+                logger.exception(
+                    "seam SWR refresh failed",
+                    extra={
+                        "namespace": ref.namespace,
+                        "source_id": ref.source_id,
+                        "target": target,
+                    },
+                )
             finally:
                 self._swr_inflight.discard(cache_key)
 
@@ -408,4 +429,6 @@ class Seam:
 
     @staticmethod
     def _cache_key(ref: SourceRef, target: str) -> str:
-        return f"kielo:i18n:{ref.namespace}:{ref.source_id}:{ref.source_version}:{target}"
+        return (
+            f"kielo:i18n:{ref.namespace}:{ref.source_id}:{ref.source_version}:{target}"
+        )

@@ -64,9 +64,7 @@ LocaleResolver = Callable[[Request], str]
 # status='auto' rows to localization.dynamic_translations. Errors
 # raised by the callback are caught + logged; they MUST NOT propagate
 # (the response has already been sent at this point anyway).
-AutoTranslateCallback = Callable[
-    [Iterable[tuple[str, str, str]], str], Awaitable[None]
-]
+AutoTranslateCallback = Callable[[Iterable[tuple[str, str, str]], str], Awaitable[None]]
 
 
 class SupportLocaleOverridesMiddleware(BaseHTTPMiddleware):
@@ -112,7 +110,7 @@ class SupportLocaleOverridesMiddleware(BaseHTTPMiddleware):
         try:
             try:
                 resolved_locale = self._resolve_locale(request) or ""
-            except Exception:  # noqa: BLE001
+            except Exception:
                 logger.exception(
                     "support-locale resolver raised; skipping override prefetch"
                 )
@@ -181,10 +179,11 @@ async def _run_autotranslate(
     cleanly."""
     try:
         await callback(missing, locale)
-    except Exception:  # noqa: BLE001
+    except Exception:
         logger.exception(
             "autotranslate callback failed for locale=%s items=%d",
-            locale, len(missing),
+            locale,
+            len(missing),
         )
 
 

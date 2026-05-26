@@ -13,6 +13,7 @@ two injected callables (`text_generator` and `single_text_generator`) so:
   - tests can inject deterministic stubs
   - swapping to a different SDK happens at the wire site, not here
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -117,9 +118,7 @@ def _strip_code_fences(value: str) -> str:
     return text.strip()
 
 
-def _parse_batch_payload(
-    raw: str, expected: int
-) -> list[str] | None:
+def _parse_batch_payload(raw: str, expected: int) -> list[str] | None:
     """Parse the JSON array the model returns. Returns ordered text list,
     or None if parsing/shape verification fails — caller falls back."""
     cleaned = _strip_code_fences(raw)
@@ -289,9 +288,7 @@ class OpenAIProvider:
         elapsed_ms = int((time.perf_counter() - started) * 1000)
 
         translations = (
-            _parse_batch_payload(raw or "", len(sendable_indices))
-            if raw
-            else None
+            _parse_batch_payload(raw or "", len(sendable_indices)) if raw else None
         )
 
         if translations is None:
@@ -323,9 +320,7 @@ class OpenAIProvider:
         # Per-item latency = chunk latency / sendable count. Coarse but
         # honest for now.
         per_item_ms = (
-            int(elapsed_ms / max(1, len(sendable_indices)))
-            if sendable_indices
-            else 0
+            int(elapsed_ms / max(1, len(sendable_indices))) if sendable_indices else 0
         )
         for i, item in enumerate(items):
             if i not in sendable_set:

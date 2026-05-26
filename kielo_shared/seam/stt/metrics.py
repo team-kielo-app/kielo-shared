@@ -6,6 +6,7 @@ factory call. Records keyterm count via
 keyterm-prompting effectiveness can be tracked WITHOUT exposing
 keyterm values as labels (cardinality control).
 """
+
 from __future__ import annotations
 
 import logging
@@ -69,7 +70,7 @@ class MetricsDecorator:
                 STT_CALLS_TOTAL,
                 STT_KEYTERMS_COUNT,
             )
-        except Exception:  # noqa: BLE001
+        except Exception:
             return
         if not PROMETHEUS_AVAILABLE or STT_CALLS_TOTAL is None:
             return
@@ -83,7 +84,7 @@ class MetricsDecorator:
             STT_KEYTERMS_COUNT.labels(
                 provider=provider, task=task, language=language
             ).observe(float(keyterm_count))
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.debug("stt metrics fanout failed: %s", exc)
 
 

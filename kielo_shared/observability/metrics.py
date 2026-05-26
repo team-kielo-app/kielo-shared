@@ -20,6 +20,7 @@ Histogram buckets cover the realistic latency range: 50ms baseline up to
 Resist the urge to add free-form labels; high-cardinality (e.g. user_id,
 item_id) belongs in trace logs, not metrics.
 """
+
 from __future__ import annotations
 
 import logging
@@ -42,6 +43,7 @@ _PER_LANGUAGE_FALLBACK_WARN_LOCK = threading.Lock()
 try:
     from prometheus_client import REGISTRY, Counter, Histogram, generate_latest
     from prometheus_client import CollectorRegistry  # noqa: F401 — re-exported via REGISTRY
+
     PROMETHEUS_AVAILABLE = True
 except ImportError:
     PROMETHEUS_AVAILABLE = False
@@ -348,16 +350,16 @@ def llm_emit(record: dict[str, Any]) -> None:
             error=error,
         ).inc()
         latency_ms = float(record.get("latency_ms") or 0)
-        LLM_LATENCY_S.labels(
-            provider=provider, task=task, cached=cached
-        ).observe(latency_ms / 1000.0)
+        LLM_LATENCY_S.labels(provider=provider, task=task, cached=cached).observe(
+            latency_ms / 1000.0
+        )
         LLM_CHAR_IN.labels(provider=provider, task=task).observe(
             float(record.get("char_count_in") or 0)
         )
         LLM_CHAR_OUT.labels(provider=provider, task=task).observe(
             float(record.get("char_count_out") or 0)
         )
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.debug("llm_emit prometheus fanout failed: %s", exc)
 
 
@@ -384,16 +386,16 @@ def localization_emit(record: dict[str, Any]) -> None:
             error=error,
         ).inc()
         latency_ms = float(record.get("latency_ms") or 0)
-        LOC_BATCH_LATENCY_S.labels(
-            provider=provider, target_locale=target
-        ).observe(latency_ms / 1000.0)
-        LOC_BATCH_ITEMS.labels(
-            provider=provider, target_locale=target
-        ).observe(float(record.get("item_count") or 0))
-        LOC_BATCH_CHARS.labels(
-            provider=provider, target_locale=target
-        ).observe(float(record.get("char_count") or 0))
-    except Exception as exc:  # noqa: BLE001
+        LOC_BATCH_LATENCY_S.labels(provider=provider, target_locale=target).observe(
+            latency_ms / 1000.0
+        )
+        LOC_BATCH_ITEMS.labels(provider=provider, target_locale=target).observe(
+            float(record.get("item_count") or 0)
+        )
+        LOC_BATCH_CHARS.labels(provider=provider, target_locale=target).observe(
+            float(record.get("char_count") or 0)
+        )
+    except Exception as exc:
         logger.debug("localization_emit prometheus fanout failed: %s", exc)
 
 
@@ -443,14 +445,12 @@ def pubsub_publish_emit(
             outcome = "error"
         else:
             outcome = "success"
-        PUBSUB_PUBLISH_TOTAL.labels(
-            service=service, topic=topic, outcome=outcome
-        ).inc()
+        PUBSUB_PUBLISH_TOTAL.labels(service=service, topic=topic, outcome=outcome).inc()
         if not skipped:
-            PUBSUB_PUBLISH_LATENCY_S.labels(
-                service=service, topic=topic
-            ).observe(latency_seconds)
-    except Exception as exc:  # noqa: BLE001
+            PUBSUB_PUBLISH_LATENCY_S.labels(service=service, topic=topic).observe(
+                latency_seconds
+            )
+    except Exception as exc:
         logger.debug("pubsub_publish_emit fanout failed: %s", exc)
 
 
@@ -487,10 +487,8 @@ def pubsub_ack_emit(
     if not PROMETHEUS_AVAILABLE:
         return
     try:
-        PUBSUB_ACK_TOTAL.labels(
-            service=service, topic=topic, outcome=outcome
-        ).inc()
-    except Exception as exc:  # noqa: BLE001
+        PUBSUB_ACK_TOTAL.labels(service=service, topic=topic, outcome=outcome).inc()
+    except Exception as exc:
         logger.debug("pubsub_ack_emit fanout failed: %s", exc)
 
 
@@ -590,10 +588,10 @@ def llm_generate_validate_emit(
             cached=cached_label,
             error_class=error_class,
         ).inc()
-        LLM_GENERATE_VALIDATE_ATTEMPTS.labels(
-            task=task, valid=valid_label
-        ).observe(float(attempts))
-    except Exception as exc:  # noqa: BLE001
+        LLM_GENERATE_VALIDATE_ATTEMPTS.labels(task=task, valid=valid_label).observe(
+            float(attempts)
+        )
+    except Exception as exc:
         logger.debug("llm_generate_validate_emit prometheus fanout failed: %s", exc)
 
 
@@ -617,21 +615,25 @@ def idempotency_emit(
     if result in quiet_results:
         logger.debug(
             "idempotency namespace=%s result=%s latency_s=%.4f",
-            namespace, result, latency_seconds,
+            namespace,
+            result,
+            latency_seconds,
         )
     else:
         logger.info(
             "idempotency namespace=%s result=%s latency_s=%.4f",
-            namespace, result, latency_seconds,
+            namespace,
+            result,
+            latency_seconds,
         )
     if not PROMETHEUS_AVAILABLE:
         return
     try:
         IDEMPOTENCY_TOTAL.labels(namespace=namespace, result=result).inc()
-        IDEMPOTENCY_LATENCY_S.labels(
-            namespace=namespace, result=result
-        ).observe(latency_seconds)
-    except Exception as exc:  # noqa: BLE001
+        IDEMPOTENCY_LATENCY_S.labels(namespace=namespace, result=result).observe(
+            latency_seconds
+        )
+    except Exception as exc:
         logger.debug("idempotency_emit prometheus fanout failed: %s", exc)
 
 
@@ -651,7 +653,7 @@ def tts_cache_emit(*, caller: str, outcome: str) -> None:
         return
     try:
         TTS_CACHE_RESULT_TOTAL.labels(caller=caller, outcome=outcome).inc()
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.debug("tts_cache_emit prometheus fanout failed: %s", exc)
 
 
@@ -666,7 +668,7 @@ def prewarm_emit(*, stage: str, result: str) -> None:
     if PROMETHEUS_AVAILABLE:
         try:
             PREWARM_TOTAL.labels(stage=stage, result=result).inc()
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.debug("prewarm_emit prometheus fanout failed: %s", exc)
 
 
@@ -694,10 +696,8 @@ def v1_route_hit_emit(*, service: str, method: str, path: str) -> None:
     if not PROMETHEUS_AVAILABLE:
         return
     try:
-        V1_ROUTE_HITS_TOTAL.labels(
-            service=service, method=method, path=path
-        ).inc()
-    except Exception as exc:  # noqa: BLE001
+        V1_ROUTE_HITS_TOTAL.labels(service=service, method=method, path=path).inc()
+    except Exception as exc:
         logger.debug("v1_route_hit_emit prometheus fanout failed: %s", exc)
 
 
@@ -725,7 +725,7 @@ def side_effect_failed_emit(
         return
     try:
         SIDE_EFFECT_FAILED_TOTAL.labels(service=service, kind=kind).inc()
-    except Exception as fanout_exc:  # noqa: BLE001
+    except Exception as fanout_exc:
         logger.debug(
             "side_effect_failed_emit prometheus fanout failed: %s",
             fanout_exc,
@@ -766,7 +766,8 @@ def per_language_search_path_fallback_emit(
     if expected_fallback:
         logger.debug(
             "per_language_search_path_fallback service=%s resolver=%s expected=true",
-            service, resolver,
+            service,
+            resolver,
         )
     else:
         key = (service, resolver)
@@ -780,12 +781,14 @@ def per_language_search_path_fallback_emit(
                 "per_language_search_path_fallback service=%s resolver=%s "
                 "(no active language; using static fallback — request-path "
                 "resolvers should always have a language scoped by middleware)",
-                service, resolver,
+                service,
+                resolver,
             )
         else:
             logger.debug(
                 "per_language_search_path_fallback service=%s resolver=%s expected=false",
-                service, resolver,
+                service,
+                resolver,
             )
     if not PROMETHEUS_AVAILABLE:
         return
@@ -793,16 +796,14 @@ def per_language_search_path_fallback_emit(
         PER_LANGUAGE_SEARCH_PATH_FALLBACK_TOTAL.labels(
             service=service, resolver=resolver
         ).inc()
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.debug(
             "per_language_search_path_fallback_emit prometheus fanout failed: %s",
             exc,
         )
 
 
-def legacy_alias_hit_emit(
-    *, service: str, path: str, successor: str
-) -> None:
+def legacy_alias_hit_emit(*, service: str, path: str, successor: str) -> None:
     """Increment the v3 legacy-alias hit counter. Used by the
     `LegacyAlias` ASGI middleware in `kielo_shared.middleware.legacy_alias`.
 
@@ -824,7 +825,7 @@ def legacy_alias_hit_emit(
         LEGACY_ALIAS_HITS_TOTAL.labels(
             service=service, path=path, successor=successor
         ).inc()
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.debug("legacy_alias_hit_emit prometheus fanout failed: %s", exc)
 
 

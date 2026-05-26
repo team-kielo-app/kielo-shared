@@ -17,6 +17,7 @@ No-ops when the contextvar is empty (background workers without a
 request scope) — keep the SQL byte-for-byte identical so plan caching is
 not invalidated by stamping comments unnecessarily.
 """
+
 from __future__ import annotations
 
 import logging
@@ -39,22 +40,24 @@ def attach_query_trace(engine: Any) -> None:
     target = getattr(engine, "sync_engine", engine)
 
     @event.listens_for(target, "before_cursor_execute", retval=True)
-    def _stamp_trace_comment(  # noqa: D401, ANN001
-        conn, cursor, statement, parameters, context, executemany  # noqa: ARG001
+    def _stamp_trace_comment(
+        conn,
+        cursor,
+        statement,
+        parameters,
+        context,
+        executemany,
     ):
         try:
             tc = current_trace_context()
-        except Exception:  # noqa: BLE001
+        except Exception:
             return statement, parameters
         if tc is None or tc.is_zero():
             return statement, parameters
         # Don't stamp twice if a prior layer already did. Cheap prefix check.
         if statement.startswith("/* trace_id="):
             return statement, parameters
-        comment = (
-            f"/* trace_id={tc.trace_id} "
-            f"request_id={tc.request_id or ''} */ "
-        )
+        comment = f"/* trace_id={tc.trace_id} request_id={tc.request_id or ''} */ "
         return comment + statement, parameters
 
     logger.info("attach_query_trace: installed on %s", target)

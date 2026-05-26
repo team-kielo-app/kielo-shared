@@ -3,6 +3,7 @@
 Uses httpx.AsyncClient for outbound calls. Caller injects the
 client (timeout / proxy / transport policy stay caller-side).
 """
+
 from __future__ import annotations
 
 import time
@@ -51,7 +52,9 @@ class OpenAITTSProvider:
 
     def _validate_request(self, request: Request) -> None:
         if not self._api_key:
-            raise Error(ErrorClass.CLIENT_ERROR, RuntimeError("OpenAI API key not configured"))
+            raise Error(
+                ErrorClass.CLIENT_ERROR, RuntimeError("OpenAI API key not configured")
+            )
         if not request.text:
             raise Error(ErrorClass.CLIENT_ERROR, RuntimeError("empty text"))
 
@@ -95,7 +98,9 @@ class OpenAITTSProvider:
         started = time.perf_counter()
         try:
             try:
-                response = await client.post(self._endpoint, json=payload, headers=self._headers())
+                response = await client.post(
+                    self._endpoint, json=payload, headers=self._headers()
+                )
             except httpx.TimeoutException as exc:
                 raise Error(ErrorClass.TIMEOUT, exc) from exc
             except httpx.RequestError as exc:
@@ -103,7 +108,9 @@ class OpenAITTSProvider:
 
             if response.status_code != 200:
                 cls = (
-                    ErrorClass.SERVER_ERROR if response.status_code >= 500 else ErrorClass.CLIENT_ERROR
+                    ErrorClass.SERVER_ERROR
+                    if response.status_code >= 500
+                    else ErrorClass.CLIENT_ERROR
                 )
                 raise Error(
                     cls,
@@ -114,7 +121,9 @@ class OpenAITTSProvider:
 
             audio = response.content
             if not audio:
-                raise Error(ErrorClass.EMPTY_RESPONSE, RuntimeError("openai tts empty body"))
+                raise Error(
+                    ErrorClass.EMPTY_RESPONSE, RuntimeError("openai tts empty body")
+                )
 
             return Result(
                 audio=audio,
@@ -160,7 +169,9 @@ class OpenAITTSProvider:
             if response.status_code != 200:
                 error_body = await response.aread()
                 cls = (
-                    ErrorClass.SERVER_ERROR if response.status_code >= 500 else ErrorClass.CLIENT_ERROR
+                    ErrorClass.SERVER_ERROR
+                    if response.status_code >= 500
+                    else ErrorClass.CLIENT_ERROR
                 )
                 raise Error(
                     cls,

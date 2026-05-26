@@ -129,7 +129,7 @@ def normalize_postgres_url(db_url: str) -> str:
 
 def build_sync_sqlalchemy_url_and_connect_args(
     db_url: str,
-    search_path: str | None = None,  # noqa: ARG001 - kept for backward compat
+    search_path: str | None = None,
 ) -> tuple[str, dict[str, Any]]:
     """Build a sync SQLAlchemy URL and connect_args from a Postgres URL.
 
@@ -146,7 +146,7 @@ def build_sync_sqlalchemy_url_and_connect_args(
 
 def build_asyncpg_url_and_connect_args(
     db_url: str,
-    search_path: str,  # noqa: ARG001 - kept for backward compat
+    search_path: str,
 ) -> tuple[str, dict[str, Any]]:
     """Build an asyncpg URL and connect_args from a Postgres URL.
 
@@ -340,7 +340,9 @@ async def check_per_language_schemas_present(
     startup) or just a warning (e.g. a worker that operates only on
     legacy ``_shared`` data and doesn't need per-language).
     """
-    from sqlalchemy import text  # local import: kielo_shared has no top-level sqlalchemy dep
+    from sqlalchemy import (
+        text,
+    )  # local import: kielo_shared has no top-level sqlalchemy dep
 
     if languages is None:
         # Late import to avoid a module-init cycle (locale_constants
@@ -348,6 +350,7 @@ async def check_per_language_schemas_present(
         # module top puts a runtime dep on locale_constants for every
         # importer of db_utils).
         from kielo_shared.locale_constants import SUPPORTED_LEARNING_LANGUAGES
+
         languages = SUPPORTED_LEARNING_LANGUAGES
 
     expected: list[str] = []
@@ -357,9 +360,7 @@ async def check_per_language_schemas_present(
 
     async with engine.connect() as conn:
         result = await conn.execute(
-            text(
-                "SELECT nspname FROM pg_namespace WHERE nspname = ANY(:names)"
-            ),
+            text("SELECT nspname FROM pg_namespace WHERE nspname = ANY(:names)"),
             {"names": expected},
         )
         present = {row[0] for row in result.fetchall()}
@@ -419,6 +420,7 @@ def make_per_language_search_path(
                     from kielo_shared.observability.metrics import (
                         per_language_search_path_fallback_emit,
                     )
+
                     per_language_search_path_fallback_emit(
                         service=service,  # type: ignore[arg-type]
                         resolver=resolver_name,  # type: ignore[arg-type]
@@ -493,7 +495,7 @@ def register_search_path_listener(
     sync_engine = engine.sync_engine if is_async_engine else engine
 
     @event.listens_for(sync_engine, "connect")
-    def _on_connect(dbapi_connection, _connection_record):  # noqa: ARG001
+    def _on_connect(dbapi_connection, _connection_record):
         # Async engines apply search_path at begin; the connect hook would
         # require an awaitable cursor anyway.
         if is_async_engine:
@@ -591,7 +593,7 @@ def register_asyncpg_disconnect_handler(engine: Any) -> None:
 
     # --- (2) handle_error event for mid-statement InterfaceErrors. ---
     @event.listens_for(sync_engine, "handle_error")
-    def _mark_asyncpg_disconnect(context):  # noqa: ANN001 - SQLAlchemy event type
+    def _mark_asyncpg_disconnect(context):
         original = context.original_exception
         if original is None:
             return

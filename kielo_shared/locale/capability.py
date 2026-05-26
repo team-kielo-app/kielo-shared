@@ -131,6 +131,7 @@ class STTCapability:
         for both fi+sv; Whisper integration hard-codes elsewhere.
       * deepgram_supported — populated True for both; never queried.
     """
+
     pass
 
 
@@ -346,7 +347,9 @@ class PromptCapability:
     """Per-language phrase the agent emits when approaching the
     session time limit. Phase 12 slice 9."""
 
-    phrase_frame_templates: PhraseFrameTemplates = field(default_factory=PhraseFrameTemplates)
+    phrase_frame_templates: PhraseFrameTemplates = field(
+        default_factory=PhraseFrameTemplates
+    )
     """Per-language POS-bucketed phrase-frame templates used by
     kielolearn-engine's dictionary enrichment to build rule-based
     fill-in-the-blank phrase frames. Phase 12 slice 12."""
@@ -456,10 +459,24 @@ _CAPABILITIES: dict[str, Capability] = {
                 "be": "olla",
             },
             common_words=(
-                "ja", "on", "se", "ei", "en", "niin", "tai", "ole", "olen", "minä", "sinä",
+                "ja",
+                "on",
+                "se",
+                "ei",
+                "en",
+                "niin",
+                "tai",
+                "ole",
+                "olen",
+                "minä",
+                "sinä",
             ),
             termination_phrases=(
-                "hyvästi", "näkemiin", "kiitos ja hei", "kiitos, hei", "lopetetaan",
+                "hyvästi",
+                "näkemiin",
+                "kiitos ja hei",
+                "kiitos, hei",
+                "lopetetaan",
             ),
         ),
         prompts=PromptCapability(
@@ -595,7 +612,11 @@ _CAPABILITIES: dict[str, Capability] = {
                 ),
                 "genitiv": CaseRuleSpec(
                     canonical_suffixes=("-s",),
-                    wrong_suffixes=("-en", "-et", "-na"),  # def-form suffixes ≠ genitive
+                    wrong_suffixes=(
+                        "-en",
+                        "-et",
+                        "-na",
+                    ),  # def-form suffixes ≠ genitive
                     category_keywords=("noun", "case"),
                     safe_time_explanation=(
                         "Swedish genitive case is formed by adding -s to the noun "
@@ -613,11 +634,33 @@ _CAPABILITIES: dict[str, Capability] = {
                 "be": "vara",
             },
             common_words=(
-                "och", "är", "jag", "du", "vi", "det", "en", "ett", "har", "inte",
-                "som", "på", "av", "för", "med", "men", "eller", "om", "när", "var",
+                "och",
+                "är",
+                "jag",
+                "du",
+                "vi",
+                "det",
+                "en",
+                "ett",
+                "har",
+                "inte",
+                "som",
+                "på",
+                "av",
+                "för",
+                "med",
+                "men",
+                "eller",
+                "om",
+                "när",
+                "var",
             ),
             termination_phrases=(
-                "hej då", "adjö", "tack och hej", "vi ses", "hejdå",
+                "hej då",
+                "adjö",
+                "tack och hej",
+                "vi ses",
+                "hejdå",
             ),
         ),
         prompts=PromptCapability(

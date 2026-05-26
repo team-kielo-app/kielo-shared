@@ -33,6 +33,7 @@ Counter increments happen pre-handler so 4xx/5xx requests are counted
 too — we want to know "is anyone still calling this path?" regardless
 of outcome.
 """
+
 from __future__ import annotations
 
 import datetime as _dt
@@ -68,8 +69,18 @@ def _rfc7231(date: _dt.datetime) -> str:
     utc = date.astimezone(_dt.timezone.utc)
     days = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
     months = (
-        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
     )
     return (
         f"{days[utc.weekday()]}, {utc.day:02d} {months[utc.month - 1]} "
@@ -166,9 +177,8 @@ class DeprecationMiddleware(BaseHTTPMiddleware):
         # Scope check first — when path_prefix is set, every request
         # outside that prefix is a no-op so the middleware can sit on
         # the global app without affecting /v3, /worker, /health, etc.
-        if (
-            self._path_prefix is not None
-            and not request.url.path.startswith(self._path_prefix)
+        if self._path_prefix is not None and not request.url.path.startswith(
+            self._path_prefix
         ):
             return await call_next(request)
         if self._skip is not None and self._skip(request):
@@ -198,21 +208,15 @@ class DeprecationMiddleware(BaseHTTPMiddleware):
                     path=template,
                 )
 
-    def _decorate_response(
-        self, request: Request, response: Response
-    ) -> Response:
+    def _decorate_response(self, request: Request, response: Response) -> Response:
         """Attach Deprecation/Sunset/Link headers to a successful
         response. Split out from `dispatch` so the metric increment in
         the `finally` block can still run when the handler raises
         (no response object to decorate in that case)."""
-        successor = self._successor_override or _default_v1_to_v3(
-            request.url.path
-        )
+        successor = self._successor_override or _default_v1_to_v3(request.url.path)
         response.headers["Deprecation"] = "true"
         response.headers["Sunset"] = self._sunset_header
-        response.headers["Link"] = (
-            f'<{successor}>; rel="successor-version"'
-        )
+        response.headers["Link"] = f'<{successor}>; rel="successor-version"'
         return response
 
 
@@ -265,9 +269,8 @@ class LegacyAliasMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next) -> Response:
         if self._noop:
             return await call_next(request)
-        if (
-            self._path_prefix is not None
-            and not request.url.path.startswith(self._path_prefix)
+        if self._path_prefix is not None and not request.url.path.startswith(
+            self._path_prefix
         ):
             return await call_next(request)
 

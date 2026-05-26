@@ -19,6 +19,7 @@ Env layout (read by `build_registry_from_env`):
 `LOC_ROUTE_<SOURCE>_<TARGET>` keys add per-pair overrides; `*` is the
 wildcard sentinel and must be uppercase to read clean.
 """
+
 from __future__ import annotations
 
 import os
@@ -60,7 +61,9 @@ class LocalizationRegistry:
         self.default_provider_id = provider_id
 
     # ───────────────────────────── resolution ────────────────────────────
-    def resolve(self, *, source_locale: str, target_locale: str) -> LocalizationProvider:
+    def resolve(
+        self, *, source_locale: str, target_locale: str
+    ) -> LocalizationProvider:
         provider_id = self._resolve_provider_id(source_locale, target_locale)
         provider = self._providers.get(provider_id)
         if provider is None:

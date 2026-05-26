@@ -9,6 +9,7 @@ pair like the localization registry. Routing precedence:
 Failing to register a routed provider id raises `UnknownLLMProviderError`
 — fail-loud over silent fallback.
 """
+
 from __future__ import annotations
 
 import os

@@ -22,6 +22,7 @@ The decorator stores the translated TEXT only, not the full
 `TranslationResult`, because provenance fields (`provider_id`, `metadata`,
 `correlation_id`) belong to THIS request, not the original cached one.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -62,10 +63,7 @@ def _key_for(
     else:
         digest_input = item.text or ""
     digest = hashlib.sha256(digest_input.encode("utf-8")).hexdigest()[:32]
-    base = (
-        (target_locale or "").split("-", 1)[0].lower()
-        or "_"
-    )
+    base = (target_locale or "").split("-", 1)[0].lower() or "_"
     src = (source_locale or "").split("-", 1)[0].lower() or "_"
     return f"loc:{provider_id}:{src}:{base}:{item.role}:{digest}"
 
@@ -183,8 +181,10 @@ class RedisCacheDecorator:
 
         # All slots filled (results contain TranslationResult, never None
         # here because inner is mandated to return one-per-input).
-        return [r if r is not None else self._passthrough(items[i])
-                for i, r in enumerate(results)]
+        return [
+            r if r is not None else self._passthrough(items[i])
+            for i, r in enumerate(results)
+        ]
 
     # ─────────────────────────── helpers ─────────────────────────────────
 
@@ -198,7 +198,7 @@ class RedisCacheDecorator:
     async def _safe_get(self, key: str) -> str | None:
         try:
             value = await self._redis.get(key)  # type: ignore[union-attr]
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.debug("RedisCacheDecorator GET failed key=%s: %s", key, exc)
             return None
         if value is None:
@@ -215,7 +215,7 @@ class RedisCacheDecorator:
     async def _safe_set(self, key: str, text: str) -> None:
         try:
             await self._redis.set(key, text, ex=self._ttl)  # type: ignore[union-attr]
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.debug("RedisCacheDecorator SET failed key=%s: %s", key, exc)
 
 

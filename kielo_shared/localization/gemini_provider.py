@@ -11,6 +11,7 @@ Use this as the secondary in `FallbackDecorator(primary=openai, secondary=gemini
 once both are registered. Switching the primary at runtime is a one-line env
 change.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -149,9 +150,7 @@ class GeminiProvider:
         elapsed_ms = int((time.perf_counter() - started) * 1000)
 
         translations = (
-            _parse_batch_payload(raw or "", len(sendable_idx))
-            if raw
-            else None
+            _parse_batch_payload(raw or "", len(sendable_idx)) if raw else None
         )
 
         if translations is None:

@@ -12,6 +12,7 @@ field set, same defaults), with two additions:
     construction; some plugin code paths read it from env rather
     than from the constructor).
 """
+
 from __future__ import annotations
 
 import os
@@ -68,7 +69,7 @@ class DeepgramLiveKitSTTProvider:
         # consumers that don't actually need it (engine, ingest).
         try:
             from livekit.plugins import deepgram  # type: ignore[import-not-found]
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             raise Error(ErrorClass.PROVIDER_ERROR, exc) from exc
 
         if self._api_key and self._propagate_api_key_to_env:
@@ -85,5 +86,5 @@ class DeepgramLiveKitSTTProvider:
             )
         except Error:
             raise
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             raise Error(ErrorClass.PROVIDER_ERROR, exc) from exc

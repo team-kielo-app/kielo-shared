@@ -38,6 +38,7 @@ Usage::
     # In a handler:
     text = REGISTRY.resolve("ui.exercise.prompt.fill_in_blank", support_locale)
 """
+
 from __future__ import annotations
 
 import logging
@@ -62,10 +63,10 @@ FALLBACK_LOCALE = "en"
 class CoverageStats:
     """Per-locale completion stats. Mirrors Go's CoverageStats."""
 
-    total: int = 0       # total registered keys
-    localized: int = 0   # keys with a non-English seed for this locale
+    total: int = 0  # total registered keys
+    localized: int = 0  # keys with a non-English seed for this locale
     overridden: int = 0  # keys with a runtime override (future)
-    fallback: int = 0    # keys where this locale falls through to English
+    fallback: int = 0  # keys where this locale falls through to English
 
 
 class SupportRegistry(Protocol):
@@ -211,7 +212,9 @@ class MapRegistry:
         except (KeyError, IndexError, ValueError) as exc:
             logger.warning(
                 "support_registry template parse failed for key=%s locale=%s: %s",
-                key, support_locale, exc,
+                key,
+                support_locale,
+                exc,
             )
             return text
 

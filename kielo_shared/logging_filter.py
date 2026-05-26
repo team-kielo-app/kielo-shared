@@ -32,6 +32,7 @@ Usage
     for handler in logging.getLogger().handlers:
         handler.addFilter(TraceLoggingFilter())
 """
+
 from __future__ import annotations
 
 import logging

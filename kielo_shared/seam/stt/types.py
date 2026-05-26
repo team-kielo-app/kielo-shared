@@ -6,6 +6,7 @@ expects to feed into ``livekit.agents.AgentSession(stt=...)``.
 Type-checked as ``Any`` so callers don't pull in livekit type
 imports here.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

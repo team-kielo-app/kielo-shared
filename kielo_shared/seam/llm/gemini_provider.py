@@ -5,6 +5,7 @@ Wraps `client.aio.models.generate_content(...)`. Caller passes
 seam Request; the provider builds the SDK config object and
 returns the response text. Stateless beyond the API key.
 """
+
 from __future__ import annotations
 
 import time
@@ -48,7 +49,7 @@ class GeminiSDKProvider:
             return self._client
         try:
             from google import genai  # type: ignore[import-not-found]
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             raise Error(ErrorClass.PROVIDER_ERROR, exc) from exc
         if not self._api_key:
             raise Error(
@@ -57,14 +58,14 @@ class GeminiSDKProvider:
             )
         try:
             self._client = genai.Client(api_key=self._api_key)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             raise Error(ErrorClass.PROVIDER_ERROR, exc) from exc
         return self._client
 
     def _build_config(self, request: Request) -> Any:
         try:
             from google.genai import types as _genai_types  # type: ignore[import-not-found]
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             raise Error(ErrorClass.PROVIDER_ERROR, exc) from exc
 
         config_kwargs: dict[str, Any] = {}
@@ -100,7 +101,7 @@ class GeminiSDKProvider:
             )
         except Error:
             raise
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             raise Error(_classify_genai_exception(exc), exc) from exc
 
         text = getattr(response, "text", None)
@@ -114,7 +115,6 @@ class GeminiSDKProvider:
             provider=self.provider_id,
             latency_ms=int((time.perf_counter() - started) * 1000),
         )
-
 
     async def generate_stream(self, request: Request) -> AsyncIterator[str]:
         """Stream text tokens via the genai SDK's
@@ -139,7 +139,7 @@ class GeminiSDKProvider:
             )
         except Error:
             raise
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             raise Error(_classify_genai_exception(exc), exc) from exc
 
         try:
@@ -149,7 +149,7 @@ class GeminiSDKProvider:
                     yield str(text)
         except Error:
             raise
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             raise Error(_classify_genai_exception(exc), exc) from exc
 
 

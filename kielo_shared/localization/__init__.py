@@ -26,6 +26,7 @@ The seam is:
 
 Callers depend only on this package — never on a concrete provider.
 """
+
 from __future__ import annotations
 
 from kielo_shared.localization.cache import (

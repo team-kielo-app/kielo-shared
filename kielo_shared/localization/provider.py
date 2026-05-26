@@ -3,6 +3,7 @@
 Single-method contract: `translate_batch`. A provider may dispatch internally
 (true batch prompt, fan-out, hybrid) — the caller only sees ordered results.
 """
+
 from __future__ import annotations
 
 from typing import Protocol, runtime_checkable
@@ -28,7 +29,7 @@ class LocalizationProvider(Protocol):
     """
 
     @property
-    def provider_id(self) -> str:  # noqa: D401
+    def provider_id(self) -> str:
         """Stable id including a version stamp; used in logs + telemetry."""
         ...
 

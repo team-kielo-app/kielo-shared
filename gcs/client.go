@@ -171,7 +171,7 @@ func (c *Client) DownloadBlob(ctx context.Context, bucketName, objectName, desti
 		return fmt.Errorf("os.MkdirAll %s: %w", destDir, err)
 	}
 
-	f, err := os.Create(destinationFile)
+	f, err := os.Create(destinationFile) //nolint:gosec // G304: destinationFile is service-controlled (download target, not user input)
 	if err != nil {
 		l.Error("Failed to create destination file", "error", err)
 		return fmt.Errorf("os.Create %s: %w", destinationFile, err)
@@ -201,7 +201,7 @@ func (c *Client) UploadBlob(ctx context.Context, sourceFile, bucketName, objectN
 	ulCtx, cancel := context.WithTimeout(ctx, time.Minute*3)
 	defer cancel()
 
-	f, err := os.Open(sourceFile)
+	f, err := os.Open(sourceFile) //nolint:gosec // G304: sourceFile is service-controlled local upload path
 	if err != nil {
 		l.Error("Failed to open source file for upload", "error", err)
 		return fmt.Errorf("os.Open %s: %w", sourceFile, err)

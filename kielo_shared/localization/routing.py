@@ -16,6 +16,7 @@ single decorator so callers stop re-implementing them:
 its existing curated overrides without exposing engine internals into the
 shared package.
 """
+
 from __future__ import annotations
 
 import logging

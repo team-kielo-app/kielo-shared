@@ -17,6 +17,7 @@ The exporter's labels match the record-shape contracts documented in
 `docs/architecture/llm_telemetry.md`. Bumping a label name is a breaking
 change for downstream dashboards — coordinate before merging.
 """
+
 from __future__ import annotations
 
 from kielo_shared.observability.background_tasks import (

@@ -4,6 +4,7 @@ Mirrors `kielo-shared/seam/tts/metrics.go` — emits the same metric
 family (``kielo_tts_calls_total``) so cross-process dashboards
 aggregate Go and Python TTS callers under one label vocabulary.
 """
+
 from __future__ import annotations
 
 import logging
@@ -28,7 +29,9 @@ class MetricsDecorator:
       provider / task / voice / error.
     """
 
-    def __init__(self, inner: Provider, provider_tag: Callable[[Request], str] | None = None):
+    def __init__(
+        self, inner: Provider, provider_tag: Callable[[Request], str] | None = None
+    ):
         self._inner = inner
         if provider_tag is not None:
             self._provider_tag = provider_tag
@@ -58,7 +61,7 @@ class MetricsDecorator:
                 TTS_CALLS_TOTAL,
                 TTS_LATENCY_SECONDS,
             )
-        except Exception:  # noqa: BLE001
+        except Exception:
             return
         if not PROMETHEUS_AVAILABLE or TTS_CALLS_TOTAL is None:
             return
@@ -72,7 +75,7 @@ class MetricsDecorator:
             TTS_LATENCY_SECONDS.labels(
                 provider=provider, task=task, voice=voice
             ).observe(elapsed)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.debug("tts metrics fanout failed: %s", exc)
 
     async def synthesize(self, request: Request) -> Result:
@@ -104,9 +107,7 @@ class MetricsDecorator:
         """
         provider, task, voice = self._labels(request)
         if not hasattr(self._inner, "synthesize_stream"):
-            raise AttributeError(
-                "inner provider does not implement synthesize_stream"
-            )
+            raise AttributeError("inner provider does not implement synthesize_stream")
         inner_stream = self._inner.synthesize_stream(request)  # type: ignore[attr-defined]
 
         started = time.perf_counter()

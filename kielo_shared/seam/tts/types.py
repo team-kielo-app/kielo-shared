@@ -3,6 +3,7 @@
 Pydantic-free dataclasses so the seam stays import-cheap and usable
 from any caller (kielolearn-engine, ingest, kielo-convo python_agent).
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass

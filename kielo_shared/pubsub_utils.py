@@ -13,6 +13,7 @@ publisher rolls its own attribute dict and forgets to forward the
 language, leaving consumers unable to re-establish the per-language
 search_path on their DB transactions.
 """
+
 from __future__ import annotations
 
 from typing import Optional

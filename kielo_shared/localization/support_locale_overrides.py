@@ -145,9 +145,7 @@ async def prefetch_overrides_for_locale(
     try:
         from sqlalchemy import text  # type: ignore[import-not-found]
     except ImportError:
-        logger.warning(
-            "sqlalchemy not installed; override prefetch is a no-op."
-        )
+        logger.warning("sqlalchemy not installed; override prefetch is a no-op.")
         return {}
 
     try:
@@ -157,7 +155,7 @@ async def prefetch_overrides_for_locale(
                 {"resource_type": resource_type, "language_code": locale},
             )
             rows = result.fetchall()
-    except Exception:  # noqa: BLE001 — degrade, never propagate
+    except Exception:
         logger.exception(
             "Override prefetch failed for locale=%s; falling through to seeds",
             locale,
@@ -281,8 +279,8 @@ def get_override(key: str, english_source: str, lang: str) -> Optional[str]:
 # tasks see the same set instance because the middleware established
 # it at request entry. Mutating in place is the supported way to share
 # state across the middleware/endpoint boundary.
-_missing_cv: contextvars.ContextVar[set[tuple[str, str, str]]] = (
-    contextvars.ContextVar("ui_string_missing", default=set())
+_missing_cv: contextvars.ContextVar[set[tuple[str, str, str]]] = contextvars.ContextVar(
+    "ui_string_missing", default=set()
 )
 
 

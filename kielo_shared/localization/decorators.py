@@ -13,6 +13,7 @@ Decorators are themselves `LocalizationProvider`s so they can be stacked:
 
     >>> provider = MetricsDecorator(CorrelationDecorator(OpenAIProvider(...)))
 """
+
 from __future__ import annotations
 
 import logging
@@ -94,7 +95,7 @@ class MetricsDecorator:
                 idempotency_key=idempotency_key,
             )
             return results
-        except Exception as exc:  # noqa: BLE001 — re-raise after emit
+        except Exception as exc:
             error = type(exc).__name__
             raise
         finally:
