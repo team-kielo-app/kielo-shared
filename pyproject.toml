@@ -20,7 +20,14 @@ dependencies = [
 # middleware / seam providers that only activate when the consumer's
 # own pyproject installs the underlying library. Declaring them as
 # required deps here would force every consumer to install the full
-# union (aiohttp + starlette + google-genai + livekit-plugins-deepgram).
+# union (aiohttp + starlette + google-genai + livekit-plugins-deepgram +
+# pydantic).
+#
+# `pydantic` is opt-in via `kielo_shared.sdk.v3` — the generated
+# pydantic-v2 models for the typed Python SDK. Engine + ingest-
+# processor already ship pydantic >=2.0 in their own dependency
+# manifests; consumers that don't import `kielo_shared.sdk.*` (e.g.
+# CLI tools, lightweight workers) skip the cost entirely.
 DEP001 = [
     "aiohttp",
     "asyncpg",
@@ -28,6 +35,7 @@ DEP001 = [
     "google",
     "livekit",
     "prometheus_client",
+    "pydantic",
     "starlette",
 ]
 
