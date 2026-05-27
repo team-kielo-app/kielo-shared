@@ -2710,10 +2710,6 @@ class QuickAddToStudyListRequest(AddTopicListItemRequest):
     pass
 
 
-class ReactivateSubscriptionResponse(CancelSubscriptionResponse):
-    pass
-
-
 class RecommendationCampaign(BaseModel):
     body_key_id: UUID | None = None
     body_template: str
@@ -3655,10 +3651,6 @@ class SingletonNotifyUploadCompleteResponse(BaseModel):
 
 class SingletonQueueStatus(BaseModel):
     data: QueueStatus
-
-
-class SingletonReactivateSubscriptionResponse(BaseModel):
-    data: ReactivateSubscriptionResponse
 
 
 class SingletonRecommendationCampaign(BaseModel):
