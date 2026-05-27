@@ -3277,23 +3277,6 @@ class SessionSummary(BaseModel):
     user_message_count: int
 
 
-class SessionSummaryRequest(BaseModel):
-    completion_rate: float
-    correct_items: int
-    session_id: str
-    time_spent_ms: int
-    total_items: int
-
-
-class SessionSummaryV3(BaseModel):
-    accuracy: float | None = None
-    completion_rate: float | None = None
-    correct_items: int
-    session_id: str
-    time_spent_ms: int
-    total_items: int
-
-
 class SetActiveTrackRequest(BaseModel):
     track_id: UUID = Field(..., title="Track Id")
 
@@ -3728,10 +3711,6 @@ class SingletonSendEmailResult(BaseModel):
 
 class SingletonSessionSummary(BaseModel):
     data: SessionSummary
-
-
-class SingletonSessionSummaryV3(BaseModel):
-    data: SessionSummaryV3
 
 
 class SingletonSetUserOverrideResponse(BaseModel):
