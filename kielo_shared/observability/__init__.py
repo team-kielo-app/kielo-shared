@@ -39,7 +39,6 @@ from kielo_shared.observability.metrics import (
     pubsub_publish_emit,
     side_effect_failed_emit,
     tts_cache_emit,
-    v1_route_hit_emit,
 )
 
 __all__ = [
@@ -59,5 +58,4 @@ __all__ = [
     "spawn_background_task",
     "spawn_background_task_lazy",
     "tts_cache_emit",
-    "v1_route_hit_emit",
 ]
