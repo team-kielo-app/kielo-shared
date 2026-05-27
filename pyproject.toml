@@ -61,6 +61,17 @@ module = [
 ]
 ignore_missing_imports = true
 
+# Generated SDK module. datamodel-code-generator emits pydantic
+# constrained-type constructor syntax (conint(...), constr(...)) that
+# mypy cannot parse as type annotations even though it's runtime-valid
+# pydantic — see https://github.com/koxudaxi/datamodel-code-generator/issues/2167.
+# The file is byte-deterministic regen output (no human edits), so
+# checking it would only surface tool-version drift, not real type
+# issues; the source of truth is the OpenAPI spec.
+[[tool.mypy.overrides]]
+module = ["kielo_shared.sdk.v3.models"]
+ignore_errors = true
+
 [tool.vulture]
 # `ex` is the redis-py kwarg for TTL — Protocol abstract methods declare it
 # so callers can pass it positionally or by name. Vulture sees the abstract
