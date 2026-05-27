@@ -7,12 +7,14 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/labstack/echo/v4"
 
 	"github.com/team-kielo-app/kielo-shared/observe"
 	observelog "github.com/team-kielo-app/kielo-shared/observe/log"
+	"github.com/team-kielo-app/kielo-shared/observe/pubsubutil"
 )
 
 func newTestContext(path string, headers http.Header) (echo.Context, *httptest.ResponseRecorder) {
@@ -38,7 +40,7 @@ func TestRequestTracing_CreatesNewTrace(t *testing.T) {
 		if tc.TraceID == "" {
 			t.Error("TraceID should be generated")
 		}
-		return nil
+		return c.NoContent(http.StatusOK)
 	})
 
 	if err := handler(c); err != nil {
@@ -111,6 +113,55 @@ func TestRequestTracing_StoresInEchoContext(t *testing.T) {
 
 	if err := handler(c); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestRequestTracing_PicksUpDownstreamCtxSwap(t *testing.T) {
+	c, rec := newTestContext("/test", nil)
+
+	producerTraceID := "0af7651916cd43dd8448eb211c80319c"
+	producerSpanID := "b7ad6b7169203331"
+
+	// Simulate downstream-middleware ctx swap: RequestTracing wraps
+	// the handler. The handler itself stands in for a hypothetical
+	// PushHandlerMiddleware that swaps the ctx with a different
+	// TraceContext (extracted from PubSub message attributes in real
+	// life).
+	handler := RequestTracing()(func(c echo.Context) error {
+		origTC, ok := observe.FromContext(c.Request().Context())
+		if !ok {
+			t.Fatal("RequestTracing did not set a TraceContext on the request ctx")
+		}
+		if origTC.TraceID == producerTraceID {
+			t.Fatal("test setup error: RequestTracing accidentally produced the swapped TraceID")
+		}
+
+		newCtx := pubsubutil.ConsumerContext(c.Request().Context(), map[string]string{
+			"trace_id": producerTraceID,
+			"span_id":  producerSpanID,
+		})
+		c.SetRequest(c.Request().WithContext(newCtx))
+
+		return c.NoContent(http.StatusOK)
+	})
+
+	if err := handler(c); err != nil {
+		t.Fatal(err)
+	}
+
+	respTraceparent := rec.Header().Get("Traceparent")
+	if respTraceparent == "" {
+		t.Fatal("response should have Traceparent header")
+	}
+	parts := strings.Split(respTraceparent, "-")
+	if len(parts) != 4 {
+		t.Fatalf("response Traceparent = %q, want W3C-shaped header", respTraceparent)
+	}
+	if parts[1] != producerTraceID {
+		t.Errorf("response trace_id = %q, want producer trace_id %q", parts[1], producerTraceID)
+	}
+	if parts[2] == producerSpanID {
+		t.Errorf("response span_id = %q, want fresh consumer child span", parts[2])
 	}
 }
 

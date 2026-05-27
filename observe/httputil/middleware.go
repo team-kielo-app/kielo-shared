@@ -19,6 +19,11 @@ const echoTraceContextKey = "trace_context"
 // [observe.TraceContext] for each request, stores it in both the stdlib context
 // (for downstream service/repo layers) and Echo context (for handlers), and
 // sets trace response headers.
+//
+// Header injection is deferred to Echo's Response.Before hook so group
+// middleware can still replace the request context before headers are written.
+// Pub/Sub push handlers rely on this: pubsubutil.PushHandlerMiddleware reads
+// trace_id/span_id message attributes and swaps in the consumer child span.
 func RequestTracing() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
@@ -34,8 +39,13 @@ func RequestTracing() echo.MiddlewareFunc {
 			// Store in Echo context (accessible via c.Get)
 			c.Set(echoTraceContextKey, tc)
 
-			// Set response headers
-			observe.InjectHeaders(c.Response().Header(), tc)
+			c.Response().Before(func() {
+				if latestTC, ok := observe.FromContext(c.Request().Context()); ok {
+					observe.InjectHeaders(c.Response().Header(), latestTC)
+				} else {
+					observe.InjectHeaders(c.Response().Header(), tc)
+				}
+			})
 
 			return next(c)
 		}
