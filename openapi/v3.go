@@ -242,6 +242,38 @@ func (w *Wrapper) register(method, path string, h echo.HandlerFunc, route Route,
 	return er
 }
 
+// Record adds a routeEntry to the Registry WITHOUT wiring an
+// Echo handler. Use this when the runtime router isn't Echo (e.g.
+// kielo-convo go_orchestrator uses chi) and the spec capture has
+// to happen separately from route registration.
+//
+// path uses OAS-canonical {name} placeholders. method is uppercase
+// (GET/POST/PUT/PATCH/DELETE). The route is appended to the registry's
+// routes slice under the registry mutex.
+//
+// Callers should register the actual handler with their own router
+// (chi, gorilla, net/http) using whatever path syntax that router
+// expects. The spec emit goes through the registry; the runtime
+// routing is the caller's responsibility.
+func (r *Registry) Record(method, path string, route Route) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.routes = append(r.routes, routeEntry{
+		method:          method,
+		path:            path,
+		summary:         route.Summary,
+		description:     route.Description,
+		tag:             route.Tag,
+		pathParams:      toParamSpecs(route.PathParams),
+		queryParams:     toParamSpecs(route.QueryParams),
+		requestBody:     route.RequestBody,
+		responseBody:    route.Response,
+		untypedResponse: route.UntypedResponse,
+		binaryResponse:  route.BinaryResponse,
+		errorCodes:      route.ErrorCodes,
+	})
+}
+
 // echoPathFromOAS converts an OAS-style path with `{name}` placeholders
 // into Echo's `:name` placeholder form. Both syntaxes coexist in this
 // codebase: the spec is OAS-canonical (per ADR-004 §1), Echo's router is
