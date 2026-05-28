@@ -6,7 +6,7 @@ from __future__ import annotations
 from datetime import date as date_aliased
 from enum import StrEnum
 from typing import Annotated, Any, Literal
-from uuid import UUID
+from uuid import UUID as UUID_aliased
 
 from pydantic import AwareDatetime, BaseModel, Field, confloat, conint, constr
 
@@ -14,7 +14,7 @@ from pydantic import AwareDatetime, BaseModel, Field, confloat, conint, constr
 class APIKey(BaseModel):
     created_at: AwareDatetime
     expires_at: AwareDatetime
-    id: UUID
+    id: UUID_aliased
     is_active: bool
     key_hash: str
     name: str
@@ -32,7 +32,7 @@ class APIKeyCreateResult(BaseModel):
 
 
 class AchievementDefinition(BaseModel):
-    achievement_id: UUID
+    achievement_id: UUID_aliased
     category: str | None = None
     code: str
     criteria_config: str | None = None
@@ -49,6 +49,10 @@ class AchievementDefinitionList(BaseModel):
     definitions: list[AchievementDefinition]
 
 
+class AchievementDefinitionsResponse(AchievementDefinitionList):
+    pass
+
+
 class AchievementDetails(BaseModel):
     achievement_id: str
     description: str
@@ -63,20 +67,25 @@ class AchievementV3(BaseModel):
     earned_at: str | None = None
 
 
+class ActivateAgentResponse(BaseModel):
+    position: int | None = None
+    status: str
+
+
 class ActiveLearningItem(BaseModel):
     cefr_level: str | None = Field(None, title="Cefr Level")
     display_text: str | None = Field(None, title="Display Text")
-    item_id: UUID = Field(..., title="Item Id")
+    item_id: UUID_aliased = Field(..., title="Item Id")
     item_type: str = Field(..., title="Item Type")
 
 
 class ActiveLearningItemsResponse(BaseModel):
     items: list[ActiveLearningItem] = Field(..., title="Items")
-    user_id: UUID = Field(..., title="User Id")
+    user_id: UUID_aliased = Field(..., title="User Id")
 
 
 class AddToStudyListRequest(BaseModel):
-    base_word_ids: list[UUID]
+    base_word_ids: list[UUID_aliased]
 
 
 class AddToStudyListRequestV3(BaseModel):
@@ -139,16 +148,56 @@ class AiConversationTeaser(BaseModel):
     title: str = Field(..., title="Title")
 
 
+class AppFeedback(BaseModel):
+    app_version: str | None = None
+    category: str
+    context: dict[str, Any] | None = None
+    created_at: AwareDatetime
+    feedback_id: UUID_aliased
+    locale: str | None = None
+    message: str
+    platform: str | None = None
+    rating: int | None = None
+    status: str
+    updated_at: AwareDatetime
+    user_email: str | None = None
+    user_id: UUID_aliased | None = None
+    user_learning_language_code: str | None = None
+    user_name: str | None = None
+
+
+class AppFeedbackCreateRequest(BaseModel):
+    app_version: str | None = None
+    category: str
+    context: dict[str, Any] | None = None
+    locale: str | None = None
+    message: str
+    platform: str | None = None
+    rating: int | None = None
+    user_id: UUID_aliased
+
+
+class AppFeedbackListResponse(BaseModel):
+    items: list[AppFeedback]
+    limit: int
+    offset: int
+    total: int
+
+
+class AppFeedbackUpdateStatusRequest(BaseModel):
+    status: str
+
+
 class AuditLog(BaseModel):
     action: str
-    entity_id: UUID
+    entity_id: UUID_aliased
     entity_type: str
-    id: UUID
+    id: UUID_aliased
     ip_address: str | None = None
     new_value: Any | None = None
     old_value: Any | None = None
     performed_at: AwareDatetime
-    performed_by: UUID | None = None
+    performed_by: UUID_aliased | None = None
     user_agent: str | None = None
 
 
@@ -156,6 +205,24 @@ class AuditLogsListResponse(BaseModel):
     items: list[AuditLog]
     page: int
     total: int
+
+
+class AvailableLocales(BaseModel):
+    captions: list[str]
+    mindmap: list[str]
+
+
+class AwardAchievementRequest(BaseModel):
+    achievement_code: str
+    context: str | None = None
+    user_id: str
+
+
+class AwardAchievementResponse(BaseModel):
+    achievement_id: UUID_aliased | None = None
+    awarded: bool
+    earned_at: AwareDatetime | None = None
+    reason: str | None = None
 
 
 class BatchEmailResultItem(BaseModel):
@@ -205,9 +272,55 @@ class BodyEvaluateRoadmapStepSpeechKlearnApiV3RoadmapLessonsLessonIdStepsStepInd
 
 
 class Brand(BaseModel):
-    id: str
-    name: str
-    slug: str | None = None
+    display_name: str
+    logo_url: str | None = None
+    navigation_active_color_hex: str | None = None
+    navigation_bg_color_hex: str | None = None
+    navigation_text_color_hex: str | None = None
+    primary_color_hex: str | None = None
+    secondary_color_hex: str | None = None
+    source_identifier: str
+
+
+class BrowseFacetOption(BaseModel):
+    count: int
+    key: str
+    label: str
+
+
+class BrowseScenariosFacets(BaseModel):
+    buckets: list[BrowseFacetOption]
+    categories: list[BrowseFacetOption]
+    levels: list[BrowseFacetOption]
+
+
+class BulkUpdateKeySourceTextRequest(BaseModel):
+    updates: dict[str, str]
+
+
+class BulkUpsertTranslationsItem(BaseModel):
+    key_id: UUID_aliased
+    language_code: str
+    status: str | None = None
+    translator_source: str | None = None
+    value: str
+
+
+class BulkUpsertTranslationsRequest(BaseModel):
+    created_by: UUID_aliased | None = None
+    items: list[BulkUpsertTranslationsItem]
+
+
+class CAMOccurrence(BaseModel):
+    end_offset: int
+    inflected_form_details: str | None = None
+    item_id: UUID_aliased
+    item_type: str
+    occurrence_id: UUID_aliased
+    paragraph_text: str
+    specific_explanation: str | None = None
+    specific_explanation_html: str | None = None
+    start_offset: int
 
 
 class CacheInvalidateResponse(BaseModel):
@@ -266,6 +379,21 @@ class CanonicalError(BaseModel):
     message: str | None = None
 
 
+class Captions(BaseModel):
+    content_version_id: UUID_aliased | None = None
+    created_at: AwareDatetime
+    cues: Any
+    id: UUID_aliased
+    is_fallback: bool
+    learning_language_code: str | None = None
+    locale: str
+    source_locale: str
+    translation_source: str | None = None
+    translation_status: Any
+    updated_at: AwareDatetime
+    video_id: UUID_aliased
+
+
 class Card(BaseModel):
     back: str
     front: str
@@ -297,10 +425,34 @@ class ChallengeTheme(BaseModel):
     theme_name_support: str | None = Field("", title="Theme Name Support")
 
 
+class CheckAndAwardRequest(BaseModel):
+    achievement_code: str
+    event_id: str | None = None
+    increment: int
+    target_value: int
+    user_id: str
+
+
+class CheckAndAwardResponse(BaseModel):
+    achievement_code: str
+    awarded: bool
+    current_value: int
+    deduped: bool | None = None
+    earned_at: AwareDatetime | None = None
+    target_value: int
+
+
 class ClusterWord(BaseModel):
     pos: str | None = None
     term: str | None = None
     translation: str | None = None
+
+
+class CommonMistake(BaseModel):
+    correction: str | None = None
+    correction_html: str | None = None
+    mistake: str | None = None
+    mistake_html: str | None = None
 
 
 class CommsBatchEmailRequest(BaseModel):
@@ -567,24 +719,21 @@ class CommsUserSearchHit(BaseModel):
 
 class CommunicationLog(BaseModel):
     CreatedAt: AwareDatetime
-    ID: UUID
+    ID: UUID_aliased
     Metadata: dict[str, Any]
     Recipient: str
     Status: str
     TemplateID: str
     Type: str
-    UserID: UUID | None = None
+    UserID: UUID_aliased | None = None
 
 
 class CompleteRoadmapStepRequest(BaseModel):
     state_patch: dict[str, Any] | None = None
 
 
-class ConceptHubCommonMistake(BaseModel):
-    correction: str | None = None
-    correction_html: str | None = None
-    mistake: str | None = None
-    mistake_html: str | None = None
+class ConceptHubCommonMistake(CommonMistake):
+    pass
 
 
 class ConceptHubExample(BaseModel):
@@ -619,6 +768,16 @@ class ConceptHubSentenceExample(BaseModel):
     translation: str | None = Field(None, title="Translation")
 
 
+class ConceptHubSummary(BaseModel):
+    category: str | None = None
+    cefr_level: str | None = None
+    description: str | None = None
+    enrichment_status: str | None = None
+    grammar_concept_id: UUID_aliased
+    id: UUID_aliased
+    title: str
+
+
 class ConceptHubSummaryResponse(BaseModel):
     category: str | None = Field(None, title="Category")
     cefr_level: str | None = Field(None, title="Cefr Level")
@@ -626,16 +785,16 @@ class ConceptHubSummaryResponse(BaseModel):
     enrichment_status: EnrichmentStatus | None = Field(
         "none", title="Enrichment Status"
     )
-    grammar_concept_id: UUID = Field(..., title="Grammar Concept Id")
-    id: UUID = Field(..., title="Id")
+    grammar_concept_id: UUID_aliased = Field(..., title="Grammar Concept Id")
+    id: UUID_aliased = Field(..., title="Id")
     title: str = Field(..., title="Title")
 
 
 class ConceptHubTeaser(BaseModel):
     cefr_level: str | None = Field(None, title="Cefr Level")
     description: str = Field(..., title="Description")
-    grammar_concept_id: UUID = Field(..., title="Grammar Concept Id")
-    id: UUID = Field(..., title="Id")
+    grammar_concept_id: UUID_aliased = Field(..., title="Grammar Concept Id")
+    id: UUID_aliased = Field(..., title="Id")
     thumbnail_url: str | None = Field(None, title="Thumbnail Url")
     title: str = Field(..., title="Title")
     user_proficiency_score: confloat(ge=0.0, le=1.0) | None = Field(
@@ -656,12 +815,12 @@ class Confusable(BaseModel):
 class ContentEntrySummary(BaseModel):
     content_type: str
     created_at: AwareDatetime
-    created_by: UUID | None = None
+    created_by: UUID_aliased | None = None
     description: str | None = None
-    id: UUID
+    id: UUID_aliased
     learning_language_code: str | None = None
     locale: str | None = None
-    media_id: UUID | None = None
+    media_id: UUID_aliased | None = None
     published_at: AwareDatetime | None = None
     slug: str
     source_locale: str | None = None
@@ -671,7 +830,7 @@ class ContentEntrySummary(BaseModel):
     translation_fallback: bool | None = None
     translation_status: dict[str, Any] | None = None
     updated_at: AwareDatetime
-    updated_by: UUID | None = None
+    updated_by: UUID_aliased | None = None
 
 
 class ContentUploadURLs(BaseModel):
@@ -693,22 +852,42 @@ class SourceType(StrEnum):
 
 
 class ContextualLearningOpportunity(BaseModel):
-    article_id: UUID = Field(..., title="Article Id")
+    article_id: UUID_aliased = Field(..., title="Article Id")
     context_snippet: str | None = Field(None, title="Context Snippet")
-    opportunity_id: UUID | None = Field(None, title="Opportunity Id")
+    opportunity_id: UUID_aliased | None = Field(None, title="Opportunity Id")
     reason: str = Field(..., title="Reason")
     suggested_exercise_types: list[str] | None = Field(
         None, title="Suggested Exercise Types"
     )
     target_item_display_text: str = Field(..., title="Target Item Display Text")
-    target_item_id: UUID = Field(..., title="Target Item Id")
+    target_item_id: UUID_aliased = Field(..., title="Target Item Id")
     target_item_type: ItemTypeFk = Field(..., title="Target Item Type")
-    user_id: UUID = Field(..., title="User Id")
+    user_id: UUID_aliased = Field(..., title="User Id")
 
 
 class ConversationCommandRequest(BaseModel):
     command: str
     payload: dict[str, Any] | None = None
+
+
+class ConversationDiscoveryScenario(BaseModel):
+    agent_avatar_url: str | None = None
+    avatar_wave_reversed: bool | None = None
+    category: str | None = None
+    cefr_level: str | None = None
+    character_position: str | None = None
+    description: str
+    difficulty: str
+    estimated_duration: int
+    id: str
+    is_featured: bool
+    sample_transcript: list[str] | None = None
+    scene_image_url: str | None = None
+    show_avatar: bool | None = None
+    tags: list[str] | None = None
+    text_mode: str | None = None
+    thumbnail_url: str | None = None
+    title: str
 
 
 class ConversationDrillCorrection(BaseModel):
@@ -718,10 +897,29 @@ class ConversationDrillCorrection(BaseModel):
     you_said: str = Field(..., title="You Said")
 
 
-class ConversationInterestOption(BaseModel):
-    count: int
-    key: str
-    label: str
+class ConversationHistory(BaseModel):
+    duration_seconds: int | None = None
+    ended_at: AwareDatetime | None = None
+    evaluation_generated_at: AwareDatetime | None = None
+    focus: str | None = None
+    scenario_id: str
+    scenario_title: str | None = None
+    score: float | None = None
+    session_id: UUID_aliased
+    started_at: AwareDatetime
+    state: str
+    transcript_available: bool
+
+
+class ConversationHistoryResponse(BaseModel):
+    conversations: list[ConversationHistory]
+    items: list[ConversationHistory]
+    next_page_key: str | None = None
+    total: int
+
+
+class ConversationInterestOption(BrowseFacetOption):
+    pass
 
 
 class ConversationInterestResponse(BaseModel):
@@ -732,6 +930,23 @@ class ConversationInterestResponse(BaseModel):
 class ConversationPersona(BaseModel):
     role: str
     style: str
+
+
+class ConversationRecommendation(BaseModel):
+    attempts: int
+    avg_score: float | None = None
+    gap_skills: list[str] | None = None
+    match_reason: str | None = None
+    reason: str
+    scenario_id: str
+    scenario_title: str | None = None
+    target_cefr: str | None = None
+
+
+class ConversationRecommendationsResponse(BaseModel):
+    items: list[ConversationRecommendation]
+    recommendations: list[ConversationRecommendation]
+    total: int
 
 
 class ConversationScenario(BaseModel):
@@ -770,6 +985,15 @@ class ConversationScenarioStepsResponse(BaseModel):
 class ConversationScenariosResponse(BaseModel):
     scenarios: list[ConversationScenario]
     total: int
+
+
+class ConversationSessionMeta(BaseModel):
+    evaluation: dict[str, Any] | None = None
+    state: str
+    transcript_bucket: str
+    transcript_events: list[dict[str, Any]] | None = None
+    transcript_path: str
+    transcript_srt: str | None = None
 
 
 class ConversationSetting(BaseModel):
@@ -924,18 +1148,51 @@ class CoreContent(BaseModel):
     )
 
 
+class CreateAuditLogRequest(BaseModel):
+    action: str
+    entity_id: UUID_aliased
+    entity_type: str
+    ip_address: str | None = None
+    new_value: Any | None = None
+    old_value: Any | None = None
+    performed_by: UUID_aliased | None = None
+    user_agent: str | None = None
+
+
+class CreateAuthUserRequest(BaseModel):
+    email: str
+    firebase_uid: str | None = None
+    id: UUID_aliased
+    learning_language: str | None = None
+    name: str
+
+
+class CreateAuthUserResponse(BaseModel):
+    email: str
+    firebase_uid: str | None = None
+    id: UUID_aliased
+
+
+class CreateBaseWordResponse(BaseModel):
+    base_word_id: UUID_aliased
+    is_new: bool
+    learning_language_code: str | None = None
+    part_of_speech: str | None = None
+    term: str | None = None
+
+
 class CreateBaseWordTTSSessionRequest(AddTopicListItemRequest):
     pass
 
 
 class CreateContentRequest(BaseModel):
-    brand_id: UUID | None = None
+    brand_id: UUID_aliased | None = None
     category: str | None = None
     content_type: str
     data: Any
     description: str | None = None
     learning_language_code: str | None = None
-    media_id: UUID | None = None
+    media_id: UUID_aliased | None = None
     slug: str
     status: str | None = None
     title: str
@@ -985,7 +1242,7 @@ class CreateCustomDeckRequest(BaseModel):
     intent: Intent | None = Field(
         "review", description="Pedagogical intent for the practice set.", title="Intent"
     )
-    item_ids: list[UUID] = Field(
+    item_ids: list[UUID_aliased] = Field(
         ...,
         description="List of item IDs (BaseWord or GrammarConcept) to include in deck",
         max_length=32,
@@ -1016,6 +1273,34 @@ class CreateFeatureRequestRequest(BaseModel):
     title: str
 
 
+class CreateLanguageRequest(BaseModel):
+    code: str
+    direction: str
+    fallback_to: str | None = None
+    flag: str | None = None
+    is_active: bool
+    is_default: bool
+    name: str
+    native_name: str | None = None
+
+
+class CreateNamespaceRequest(BaseModel):
+    description: str | None = None
+    is_active: bool
+    name: str
+    platform: str | None = None
+
+
+class CreateOrUpdateTranslationRequest(BaseModel):
+    created_by: UUID_aliased | None = None
+    key_id: UUID_aliased
+    language_code: str
+    quality_score: float | None = None
+    status: str | None = None
+    translator_source: str | None = None
+    value: str
+
+
 class CreateParagraphTTSSessionRequest(BaseModel):
     force: bool | None = None
     paragraph_id: str
@@ -1027,7 +1312,7 @@ class CreateStudyListRequest(BaseModel):
     icon: str | None = None
     name: str
     source: str | None = None
-    source_id: UUID | None = None
+    source_id: UUID_aliased | None = None
 
 
 class CreateStudyListRequestV3(BaseModel):
@@ -1045,7 +1330,7 @@ class CreateTierLimitRequest(BaseModel):
 
 
 class CreateTranslationRequest(BaseModel):
-    key_id: UUID
+    key_id: UUID_aliased
     language_code: str
     quality_score: float | None = None
     status: str | None = None
@@ -1055,13 +1340,13 @@ class CreateTranslationRequest(BaseModel):
 
 class CreateWordClusterSessionRequest(BaseModel):
     context_sentence: str | None = Field(None, title="Context Sentence")
-    item_id: UUID = Field(..., title="Item Id")
+    item_id: UUID_aliased = Field(..., title="Item Id")
     learning_language_code: str | None = Field("", title="Learning Language Code")
     support_language_code: str | None = Field("", title="Support Language Code")
 
 
 class CurriculumChapterLessonsRequest(BaseModel):
-    lesson_ids: list[UUID] = Field(..., title="Lesson Ids")
+    lesson_ids: list[UUID_aliased] = Field(..., title="Lesson Ids")
 
 
 class CurriculumChapterResponse(BaseModel):
@@ -1069,10 +1354,10 @@ class CurriculumChapterResponse(BaseModel):
     created_at: AwareDatetime = Field(..., title="Created At")
     description: str | None = Field(None, title="Description")
     icon_emoji: str | None = Field(None, title="Icon Emoji")
-    id: UUID = Field(..., title="Id")
+    id: UUID_aliased = Field(..., title="Id")
     learning_objectives: list[str] | None = Field(None, title="Learning Objectives")
     lesson_count: int | None = Field(0, title="Lesson Count")
-    level_id: UUID = Field(..., title="Level Id")
+    level_id: UUID_aliased = Field(..., title="Level Id")
     order_index: int = Field(..., title="Order Index")
     status: str = Field(..., title="Status")
     thumbnail_url: str | None = Field(None, title="Thumbnail Url")
@@ -1085,7 +1370,7 @@ class CurriculumChapterUpsertRequest(BaseModel):
     description: str | None = Field(None, title="Description")
     icon_emoji: str | None = Field(None, title="Icon Emoji")
     learning_objectives: list[str] | None = Field(None, title="Learning Objectives")
-    level_id: UUID = Field(..., title="Level Id")
+    level_id: UUID_aliased = Field(..., title="Level Id")
     order_index: int | None = Field(0, title="Order Index")
     status: str | None = Field("draft", title="Status")
     thumbnail_url: str | None = Field(None, title="Thumbnail Url")
@@ -1099,12 +1384,12 @@ class CurriculumLevelResponse(BaseModel):
     created_at: AwareDatetime = Field(..., title="Created At")
     description: str | None = Field(None, title="Description")
     icon_emoji: str | None = Field(None, title="Icon Emoji")
-    id: UUID = Field(..., title="Id")
+    id: UUID_aliased = Field(..., title="Id")
     order_index: int = Field(..., title="Order Index")
     status: str = Field(..., title="Status")
     thumbnail_url: str | None = Field(None, title="Thumbnail Url")
     title: str = Field(..., title="Title")
-    track_id: UUID = Field(..., title="Track Id")
+    track_id: UUID_aliased = Field(..., title="Track Id")
     updated_at: AwareDatetime = Field(..., title="Updated At")
 
 
@@ -1117,11 +1402,11 @@ class CurriculumLevelUpsertRequest(BaseModel):
     status: str | None = Field("draft", title="Status")
     thumbnail_url: str | None = Field(None, title="Thumbnail Url")
     title: constr(min_length=2, max_length=255) = Field(..., title="Title")
-    track_id: UUID = Field(..., title="Track Id")
+    track_id: UUID_aliased = Field(..., title="Track Id")
 
 
 class CurriculumReorderItem(BaseModel):
-    id: UUID = Field(..., title="Id")
+    id: UUID_aliased = Field(..., title="Id")
     order_index: int = Field(..., title="Order Index")
 
 
@@ -1143,7 +1428,7 @@ class CurriculumTrackResponse(BaseModel):
     created_at: AwareDatetime = Field(..., title="Created At")
     description: str | None = Field(None, title="Description")
     icon_emoji: str | None = Field(None, title="Icon Emoji")
-    id: UUID = Field(..., title="Id")
+    id: UUID_aliased = Field(..., title="Id")
     level_count: int | None = Field(0, title="Level Count")
     order_index: int = Field(..., title="Order Index")
     slug: str = Field(..., title="Slug")
@@ -1168,7 +1453,7 @@ class CurriculumTrackUpsertRequest(BaseModel):
 
 
 class CurriculumTreeLesson(BaseModel):
-    id: UUID = Field(..., title="Id")
+    id: UUID_aliased = Field(..., title="Id")
     order_index: int = Field(..., title="Order Index")
     status: str = Field(..., title="Status")
     title: str = Field(..., title="Title")
@@ -1182,7 +1467,7 @@ class CursorPageAchievementV3(BaseModel):
 class DailyChallengeGenerationAccepted(BaseModel):
     challenge_date: date_aliased = Field(..., title="Challenge Date")
     event_stream_path: str = Field(..., title="Event Stream Path")
-    job_id: UUID = Field(..., title="Job Id")
+    job_id: UUID_aliased = Field(..., title="Job Id")
     stage: str | None = Field(None, title="Stage")
     status: str = Field(..., title="Status")
 
@@ -1190,15 +1475,15 @@ class DailyChallengeGenerationAccepted(BaseModel):
 class DailyChallengeGenerationCreateRequest(BaseModel):
     challenge_date: date_aliased | None = Field(None, title="Challenge Date")
     force_regenerate: bool | None = Field(False, title="Force Regenerate")
-    user_id: UUID = Field(..., title="User Id")
+    user_id: UUID_aliased = Field(..., title="User Id")
 
 
 class DailyChallengeGenerationJobResponse(BaseModel):
     challenge_date: date_aliased | None = Field(None, title="Challenge Date")
-    challenge_id: UUID | None = Field(None, title="Challenge Id")
+    challenge_id: UUID_aliased | None = Field(None, title="Challenge Id")
     checkpoint: dict[str, Any] | None = Field(None, title="Checkpoint")
     error_message: str | None = Field(None, title="Error Message")
-    job_id: UUID = Field(..., title="Job Id")
+    job_id: UUID_aliased = Field(..., title="Job Id")
     preview: dict[str, Any] | None = Field(None, title="Preview")
     stage: str | None = Field(None, title="Stage")
     status: str = Field(..., title="Status")
@@ -1207,7 +1492,7 @@ class DailyChallengeGenerationJobResponse(BaseModel):
 class DailyChallengePendingAccepted(BaseModel):
     challenge_date: date_aliased = Field(..., title="Challenge Date")
     event_stream_path: str | None = Field(None, title="Event Stream Path")
-    job_id: UUID | None = Field(None, title="Job Id")
+    job_id: UUID_aliased | None = Field(None, title="Job Id")
     stage: str | None = Field(None, title="Stage")
     status: str = Field(..., title="Status")
 
@@ -1221,7 +1506,7 @@ class DailyChallengeV3(BaseModel):
 
 
 class DecisionReason(BaseModel):
-    objective_id: UUID = Field(..., title="Objective Id")
+    objective_id: UUID_aliased = Field(..., title="Objective Id")
     reason: str = Field(..., title="Reason")
     source: str = Field(..., title="Source")
 
@@ -1231,13 +1516,46 @@ class Definition(BaseModel):
     secondary: list[str] | None = None
 
 
-class DictionaryDefinition(Definition):
+class DeleteTierLimitResponse(BaseModel):
+    feature: str
+    message: str
+    tier: str
+
+
+class DeleteUserFeatureLimitResponse(BaseModel):
+    feature: str
+    message: str
+    user_id: str
+
+
+class DeleteVoiceAgentResponse(BaseModel):
+    message: str
+
+
+class DictionaryConfusable(Confusable):
     pass
 
 
-class DictionaryExample(BaseModel):
-    en: str
-    fi: str
+class DictionaryDefinition(BaseModel):
+    primary: str | None = None
+    secondary: list[str] | None = None
+    support_language_code: str | None = None
+
+
+class DictionaryExample(ConceptHubExample):
+    pass
+
+
+class DictionaryInflection(BaseModel):
+    case: str | None = None
+    comparison: str | None = None
+    form: str
+    label_short: str | None = None
+    mood: str | None = None
+    number: str | None = None
+    person: str | None = None
+    tense: str | None = None
+    voice: str | None = None
 
 
 class DictionaryMorphology(BaseModel):
@@ -1245,9 +1563,39 @@ class DictionaryMorphology(BaseModel):
     word_class: str
 
 
+class DictionaryParadigmRow(BaseModel):
+    cells: list[str]
+    label: str
+
+
 class DictionaryRelatedConcept(BaseModel):
     id: str
     term: str | None = None
+
+
+class DictionaryRelatedLemmas(BaseModel):
+    antonyms: list[str] | None = None
+    synonyms: list[str] | None = None
+
+
+class DictionarySense(BaseModel):
+    definition: str | None = None
+    definition_html: str | None = None
+    examples: list[DictionaryExample] | None = None
+    index: int
+    tags: list[str] | None = None
+    translation: str | None = None
+    usage_notes: str | None = None
+    usage_notes_html: str | None = None
+
+
+class DictionaryWordForm(BaseModel):
+    features: dict[str, str] | None = None
+    form: str
+    is_lemma: bool | None = None
+    label: str | None = None
+    label_short: str | None = None
+    paradigm_slot: str | None = None
 
 
 class DrillItem(BaseModel):
@@ -1258,12 +1606,29 @@ class DrillItem(BaseModel):
     type: str
 
 
-class EndSessionResponse(BaseModel):
+class DynamicTranslation(BaseModel):
+    created_at: AwareDatetime
+    id: UUID_aliased
+    language_code: str
+    resource_id: str
+    resource_type: str
+    reviewed_at: AwareDatetime | None = None
+    reviewed_by: UUID_aliased | None = None
+    source_locale: str | None = None
+    source_version: str
     status: str
+    translated_text: str
+    translator_source: str | None = None
+    updated_at: AwareDatetime
 
 
-class Example(DictionaryExample):
+class EndSessionResponse(AppFeedbackUpdateStatusRequest):
     pass
+
+
+class Example(BaseModel):
+    en: str
+    fi: str
 
 
 class ExampleSentencePair(ConceptHubExample):
@@ -1278,6 +1643,14 @@ class ExampleSentencePairResponse(BaseModel):
 class ExerciseDeck(BaseModel):
     cards: list[Card]
     id: str
+    title: str
+
+
+class ExerciseDeckHeader(BaseModel):
+    deck_id: UUID_aliased
+    difficulty: int
+    exercise_count: int
+    theme_thumbnail: str | None = None
     title: str
 
 
@@ -1311,7 +1684,7 @@ class ExerciseState(BaseModel):
 
 
 class ExerciseSubmission(BaseModel):
-    exercise_id: UUID = Field(..., title="Exercise Id")
+    exercise_id: UUID_aliased = Field(..., title="Exercise Id")
     response_time_ms: int | None = Field(None, title="Response Time Ms")
     submission_id: str | None = Field(None, title="Submission Id")
     submitted_at_client: AwareDatetime | None = Field(None, title="Submitted At Client")
@@ -1324,7 +1697,7 @@ class ExerciseVariantBackfillRequest(BaseModel):
     dry_run: bool | None = Field(True, title="Dry Run")
     exercise_types: list[str] | None = Field(None, title="Exercise Types")
     include_record_ids: bool | None = Field(True, title="Include Record Ids")
-    item_id: UUID | None = Field(None, title="Item Id")
+    item_id: UUID_aliased | None = Field(None, title="Item Id")
     max_batches: conint(ge=1, le=500) | None = Field(1, title="Max Batches")
     stop_when_exhausted: bool | None = Field(False, title="Stop When Exhausted")
 
@@ -1332,7 +1705,9 @@ class ExerciseVariantBackfillRequest(BaseModel):
 class ExerciseVariantBackfillResponse(BaseModel):
     batches_processed: int | None = Field(0, title="Batches Processed")
     created_count: int | None = Field(0, title="Created Count")
-    created_variant_ids: list[UUID] | None = Field(None, title="Created Variant Ids")
+    created_variant_ids: list[UUID_aliased] | None = Field(
+        None, title="Created Variant Ids"
+    )
     cursor_used: str | None = Field(None, title="Cursor Used")
     dry_run: bool = Field(..., title="Dry Run")
     error_count: int | None = Field(0, title="Error Count")
@@ -1341,9 +1716,33 @@ class ExerciseVariantBackfillResponse(BaseModel):
     next_cursor: str | None = Field(None, title="Next Cursor")
     scanned_count: int | None = Field(0, title="Scanned Count")
     skipped_count: int | None = Field(0, title="Skipped Count")
-    skipped_source_exercise_ids: list[UUID] | None = Field(
+    skipped_source_exercise_ids: list[UUID_aliased] | None = Field(
         None, title="Skipped Source Exercise Ids"
     )
+
+
+class FeatureCheckAndIncrementResponse(BaseModel):
+    allowed: bool
+    already_accessed: bool
+    feature: str
+    limit: int
+    remaining: int
+    tier: str
+
+
+class FeatureCheckResponse(BaseModel):
+    allowed: bool
+    remaining: int | None = None
+
+
+class FeatureCheckUniqueResponse(BaseModel):
+    allowed: bool
+    already_accessed: bool
+    limit: int
+    remaining: int
+    reset_at: str
+    tier: str
+    used_today: int
 
 
 class FeatureComment(BaseModel):
@@ -1359,15 +1758,31 @@ class FeatureCommentListResponse(BaseModel):
     comments: list[FeatureComment]
 
 
+class FeatureCommentsAdminResponse(FeatureCommentListResponse):
+    pass
+
+
 class FeatureLimit(BaseModel):
     feature: str
     limit_value: int
     tier: str
-    user_id: UUID | None = None
+    user_id: UUID_aliased | None = None
 
 
 class FeatureLimitResult(CreateTierLimitRequest):
     pass
+
+
+class FeatureLimitRow(CreateTierLimitRequest):
+    pass
+
+
+class FeatureLimitWithUsage(BaseModel):
+    feature: str
+    limit: int
+    period: str
+    reset_date: str
+    used: int
 
 
 class FeatureRequest(BaseModel):
@@ -1393,38 +1808,21 @@ class FeatureRequestListResponse(BaseModel):
     total: int
 
 
+class FeatureRequestsAdminResponse(FeatureRequestListResponse):
+    pass
+
+
 class FeatureVoteResult(BaseModel):
     has_voted: bool
     vote_count: int
 
 
-class Feedback(BaseModel):
-    app_version: str | None = None
-    category: str
-    context: dict[str, Any] | None = None
-    created_at: AwareDatetime
-    feedback_id: UUID
-    locale: str | None = None
-    message: str
-    platform: str | None = None
-    rating: int | None = None
-    status: str
-    updated_at: AwareDatetime
-    user_email: str | None = None
-    user_id: UUID | None = None
-    user_learning_language_code: str | None = None
-    user_name: str | None = None
+class Feedback(AppFeedback):
+    pass
 
 
-class FeedbackCreateRequest(BaseModel):
-    app_version: str | None = None
-    category: str
-    context: dict[str, Any] | None = None
-    locale: str | None = None
-    message: str
-    platform: str | None = None
-    rating: int | None = None
-    user_id: UUID
+class FeedbackCreateRequest(AppFeedbackCreateRequest):
+    pass
 
 
 class FeedbackListMeta(BaseModel):
@@ -1438,8 +1836,19 @@ class FeedbackListResponse(BaseModel):
     meta: FeedbackListMeta
 
 
-class FeedbackUpdateRequest(EndSessionResponse):
+class FeedbackUpdateRequest(AppFeedbackUpdateStatusRequest):
     pass
+
+
+class FetchDynamicTranslationsRequest(BaseModel):
+    language_code: str | None = None
+    resource_id_prefix: str | None = None
+    resource_ids: list[str] | None = None
+    resource_types: list[str]
+
+
+class FetchDynamicTranslationsResponse(BaseModel):
+    items: list[DynamicTranslation]
 
 
 class FillInTheBlankExercise(BaseModel):
@@ -1451,7 +1860,7 @@ class FillInTheBlankExercise(BaseModel):
     )
     correct_answer: str = Field(..., title="Correct Answer")
     error_pattern_tag: str | None = Field(None, title="Error Pattern Tag")
-    exercise_id: UUID | None = Field(
+    exercise_id: UUID_aliased | None = Field(
         None,
         description="Unique ID for this specific exercise instance.",
         title="Exercise Id",
@@ -1459,11 +1868,11 @@ class FillInTheBlankExercise(BaseModel):
     exercise_type: Literal["fill_in_the_blank"] = Field(
         "fill_in_the_blank", title="Exercise Type"
     )
-    generation_job_id: UUID | None = Field(None, title="Generation Job Id")
+    generation_job_id: UUID_aliased | None = Field(None, title="Generation Job Id")
     generation_model: str | None = Field(None, title="Generation Model")
-    item_id_fk: UUID = Field(..., title="Item Id Fk")
+    item_id_fk: UUID_aliased = Field(..., title="Item Id Fk")
     item_type_fk: ItemTypeFk = Field(..., title="Item Type Fk")
-    objective_id: UUID | None = Field(None, title="Objective Id")
+    objective_id: UUID_aliased | None = Field(None, title="Objective Id")
     options: list[str] | None = Field(None, title="Options")
     prompt: str = Field(..., title="Prompt")
     prompt_version: str | None = Field(None, title="Prompt Version")
@@ -1492,7 +1901,7 @@ class FlashcardExercise(BaseModel):
         title="Correct Answer",
     )
     error_pattern_tag: str | None = Field(None, title="Error Pattern Tag")
-    exercise_id: UUID | None = Field(
+    exercise_id: UUID_aliased | None = Field(
         None,
         description="Unique ID for this specific exercise instance.",
         title="Exercise Id",
@@ -1503,11 +1912,11 @@ class FlashcardExercise(BaseModel):
         description="Optional secondary teaching content rendered below the answer block when present.",
         title="Explanation Html",
     )
-    generation_job_id: UUID | None = Field(None, title="Generation Job Id")
+    generation_job_id: UUID_aliased | None = Field(None, title="Generation Job Id")
     generation_model: str | None = Field(None, title="Generation Model")
-    item_id_fk: UUID = Field(..., title="Item Id Fk")
+    item_id_fk: UUID_aliased = Field(..., title="Item Id Fk")
     item_type_fk: ItemTypeFk = Field(..., title="Item Type Fk")
-    objective_id: UUID | None = Field(None, title="Objective Id")
+    objective_id: UUID_aliased | None = Field(None, title="Objective Id")
     prompt: str = Field(..., title="Prompt")
     prompt_version: str | None = Field(None, title="Prompt Version")
     quality_score: float | None = Field(None, title="Quality Score")
@@ -1525,7 +1934,7 @@ class ForgotPasswordResponse(CancelSubscriptionResponse):
 
 
 class GeneralScheduleUpdateItem(BaseModel):
-    item_id: UUID = Field(..., title="Item Id")
+    item_id: UUID_aliased = Field(..., title="Item Id")
     item_type: ItemTypeFk = Field(..., title="Item Type")
     next_review_at: AwareDatetime = Field(..., title="Next Review At")
 
@@ -1545,7 +1954,7 @@ class GenerateTopicListRequest(BaseModel):
     user_id: str | None = None
 
 
-class GetUploadURLRequest(BaseModel):
+class GenerateUploadURLRequest(BaseModel):
     file_hash_sha256: str | None = None
     filename: str
     mime_type: str
@@ -1554,27 +1963,34 @@ class GetUploadURLRequest(BaseModel):
     size: int | None = None
 
 
-class GetUploadURLResponse(BaseModel):
+class GenerateUploadURLResponse(BaseModel):
     media_id: str
     upload_url: str
+
+
+class GetUploadURLRequest(GenerateUploadURLRequest):
+    pass
+
+
+class GetUploadURLResponse(GenerateUploadURLResponse):
+    pass
 
 
 class GrammarConcept(BaseModel):
     category: str | None = None
     cefr_level: str | None = None
     common_mistakes: str | None = None
+    created_at: AwareDatetime
     description: str | None = None
     example_structures: Any | None = None
     examples: list[ExampleSentencePair] | None = None
-    explanation: str | None = None
-    grammar_concept_id: UUID
-    learning_language_code: str
+    grammar_concept_id: UUID_aliased
     meaning: str | None = None
     notes: str | None = None
     related_concepts: Any | None = None
     term: str | None = None
+    updated_at: AwareDatetime
     user_status: str | None = None
-    vector_embedding: str | None = None
 
 
 class GrammarConceptResponse(BaseModel):
@@ -1583,11 +1999,22 @@ class GrammarConceptResponse(BaseModel):
     created_at: AwareDatetime = Field(..., title="Created At")
     description: str | None = Field(None, title="Description")
     examples: list[ExampleSentencePairResponse] | None = Field(None, title="Examples")
-    grammar_concept_id: UUID = Field(..., title="Grammar Concept Id")
+    grammar_concept_id: UUID_aliased = Field(..., title="Grammar Concept Id")
     learning_language_code: str | None = Field("", title="Learning Language Code")
     meaning: str | None = Field(None, title="Meaning")
     support_language_code: str | None = Field("", title="Support Language Code")
     term: str | None = Field(None, title="Term")
+
+
+class GrantSubscriptionRequest(BaseModel):
+    expires_at: AwareDatetime | None = None
+    product_id: str
+
+
+class GrantSubscriptionResponse(BaseModel):
+    message: str
+    subscription_id: UUID_aliased
+    success: bool
 
 
 class HintCard(BaseModel):
@@ -1620,13 +2047,13 @@ class IdentifyConceptExercise(BaseModel):
         description="A specific concept or hint for the exercise, e.g., 'inessive case'.",
         title="Context Hint",
     )
-    correct_answer: UUID = Field(
+    correct_answer: UUID_aliased = Field(
         ...,
         description="UUID of the correct option from the options list",
         title="Correct Answer",
     )
     error_pattern_tag: str | None = Field(None, title="Error Pattern Tag")
-    exercise_id: UUID | None = Field(
+    exercise_id: UUID_aliased | None = Field(
         None,
         description="Unique ID for this specific exercise instance.",
         title="Exercise Id",
@@ -1634,11 +2061,11 @@ class IdentifyConceptExercise(BaseModel):
     exercise_type: Literal["identify_the_concept"] = Field(
         "identify_the_concept", title="Exercise Type"
     )
-    generation_job_id: UUID | None = Field(None, title="Generation Job Id")
+    generation_job_id: UUID_aliased | None = Field(None, title="Generation Job Id")
     generation_model: str | None = Field(None, title="Generation Model")
-    item_id_fk: UUID = Field(..., title="Item Id Fk")
+    item_id_fk: UUID_aliased = Field(..., title="Item Id Fk")
     item_type_fk: ItemTypeFk = Field(..., title="Item Type Fk")
-    objective_id: UUID | None = Field(None, title="Objective Id")
+    objective_id: UUID_aliased | None = Field(None, title="Objective Id")
     options: list[dict[str, str]] = Field(
         ...,
         description="List of option objects with 'id' (UUID) and 'name' (text) keys",
@@ -1667,37 +2094,51 @@ class ImportJob(BaseModel):
     status: str
 
 
-class Inflection(BaseModel):
-    case: str | None = None
-    comparison: str | None = None
-    form: str
-    label_short: str | None = None
-    mood: str | None = None
-    number: str | None = None
-    person: str | None = None
-    tense: str | None = None
-    voice: str | None = None
+class Inflection(DictionaryInflection):
+    pass
+
+
+class IngestResponse(BaseModel):
+    event_id: str
+    idempotent: bool
+
+
+class InvalidateCacheResponse(BaseModel):
+    scope: str | None = None
+    status: str
+    video_id: str | None = None
+
+
+class IssueRow(BaseModel):
+    code: str
+    detail: str | None = None
+    detected_at: AwareDatetime
+    detected_run_id: str | None = None
+    domain: str
+    issue_id: str
+    language_code: str | None = None
+    metadata: Any
+    repair_action: str | None = None
+    repair_run_id: str | None = None
+    repaired_at: AwareDatetime | None = None
+    resource_id: str
+    severity: str
+    suggested_action: str
 
 
 class ItemSummary(BaseModel):
-    base_word_id: UUID | None = Field(None, title="Base Word Id")
+    base_word_id: UUID_aliased | None = Field(None, title="Base Word Id")
     cefr_level: str = Field(..., title="Cefr Level")
     display_text: str = Field(..., title="Display Text")
-    grammar_concept_id: UUID | None = Field(None, title="Grammar Concept Id")
-    item_id: UUID = Field(..., title="Item Id")
+    grammar_concept_id: UUID_aliased | None = Field(None, title="Grammar Concept Id")
+    item_id: UUID_aliased = Field(..., title="Item Id")
     item_type: ItemTypeFk = Field(..., title="Item Type")
     learning_language_code: str | None = Field("", title="Learning Language Code")
     support_language_code: str | None = Field("", title="Support Language Code")
     support_text: str | None = Field(None, title="Support Text")
 
 
-class JoinSessionRequest(BaseModel):
-    learning_language_code: str | None = None
-    scenario_id: str
-    support_language_code: str | None = None
-
-
-class JoinSessionResponse(BaseModel):
+class JoinResp(BaseModel):
     daily_remaining_sec: int | None = None
     estimated_ms: int
     livekit_token: str
@@ -1708,6 +2149,34 @@ class JoinSessionResponse(BaseModel):
     state: str
 
 
+class JoinSessionRequest(BaseModel):
+    learning_language_code: str | None = None
+    scenario_id: str
+    support_language_code: str | None = None
+
+
+class JoinSessionResponse(JoinResp):
+    pass
+
+
+class KLearnContextualLearningOpportunity(BaseModel):
+    article_id: UUID_aliased
+    context_snippet: str | None = None
+    internal_calculation_log_id: str | None = None
+    opportunity_id: UUID_aliased
+    reason: str | None = None
+    suggested_exercise_types: list[str] | None = None
+    target_item_display_text: str
+    target_item_id: UUID_aliased
+    target_item_type: str
+    user_id: UUID_aliased
+
+
+class KLearnScrambledWord(BaseModel):
+    is_correct_target_word: bool
+    text: str
+
+
 class KTVAttachDownloadVariantRequest(BaseModel):
     file_name: str
     metadata: dict[str, Any] | None = None
@@ -1716,7 +2185,7 @@ class KTVAttachDownloadVariantRequest(BaseModel):
 
 
 class KTVAvailableBaseWord(BaseModel):
-    base_word_id: UUID
+    base_word_id: UUID_aliased
     cefr_level: str | None = None
     created_at: AwareDatetime
     frequency_score: float | None = None
@@ -1749,8 +2218,8 @@ class KTVCaptionGenerateRequest(BaseModel):
 
 class KTVGeneratedVariant(BaseModel):
     created_at: AwareDatetime
-    job_id: UUID | None = None
-    media_id: UUID | None = None
+    job_id: UUID_aliased | None = None
+    media_id: UUID_aliased | None = None
     metadata: dict[str, Any] | None = None
     preview_url: str | None = None
     review_notes: str | None = None
@@ -1758,12 +2227,12 @@ class KTVGeneratedVariant(BaseModel):
     source_url: str | None = None
     status: str
     updated_at: AwareDatetime
-    variant_id: UUID
-    workflow_id: UUID
+    variant_id: UUID_aliased
+    workflow_id: UUID_aliased
 
 
 class KTVGeneratedVariantInput(BaseModel):
-    media_id: UUID | None = None
+    media_id: UUID_aliased | None = None
     metadata: dict[str, Any] | None = None
     preview_url: str | None = None
     source_url: str | None = None
@@ -1775,7 +2244,7 @@ class KTVGenerationJob(BaseModel):
     created_at: AwareDatetime
     error_message: str | None = None
     external_job_id: str | None = None
-    job_id: UUID
+    job_id: UUID_aliased
     model: str
     provider: str
     request_payload: dict[str, Any] | None = None
@@ -1784,7 +2253,7 @@ class KTVGenerationJob(BaseModel):
     status: str
     target_variants: int
     updated_at: AwareDatetime
-    workflow_id: UUID
+    workflow_id: UUID_aliased
 
 
 class KTVGenerationJobClaimRequest(BaseModel):
@@ -1834,7 +2303,7 @@ class KTVSocialSheetConfigRequest(BaseModel):
 
 
 class KTVSocialSheetExportRequest(BaseModel):
-    variant_id: UUID | None = None
+    variant_id: UUID_aliased | None = None
 
 
 class KTVSocialSheetWorksheetOption(BaseModel):
@@ -1870,8 +2339,8 @@ class KTVTempDownloadListResponse(BaseModel):
 
 
 class KTVVariantCreateRequest(BaseModel):
-    job_id: UUID | None = None
-    media_id: UUID | None = None
+    job_id: UUID_aliased | None = None
+    media_id: UUID_aliased | None = None
     metadata: dict[str, Any] | None = None
     preview_url: str | None = None
     source_url: str | None = None
@@ -1900,7 +2369,7 @@ class KTVVariantProcessResponse(BaseModel):
     progress: int | None = None
     target: str | None = None
     variant: KTVGeneratedVariant | None = None
-    workflow_id: UUID
+    workflow_id: UUID_aliased
 
 
 class KTVVariantReviewRequest(BaseModel):
@@ -1911,27 +2380,27 @@ class KTVVariantReviewRequest(BaseModel):
 
 
 class KTVWorkflow(BaseModel):
-    base_word_id: UUID | None = None
+    base_word_id: UUID_aliased | None = None
     created_at: AwareDatetime
-    created_by: UUID | None = None
+    created_by: UUID_aliased | None = None
     jobs: list[KTVGenerationJob] | None = None
-    kielotv_entry_id: UUID | None = None
+    kielotv_entry_id: UUID_aliased | None = None
     locale: str
     metadata: dict[str, Any] | None = None
     prompt: str | None = None
-    selected_production_variant_id: UUID | None = None
-    selected_social_variant_id: UUID | None = None
+    selected_production_variant_id: UUID_aliased | None = None
+    selected_social_variant_id: UUID_aliased | None = None
     source_url: str
     status: str
     term: str
     updated_at: AwareDatetime
-    updated_by: UUID | None = None
+    updated_by: UUID_aliased | None = None
     variants: list[KTVGeneratedVariant] | None = None
-    workflow_id: UUID
+    workflow_id: UUID_aliased
 
 
 class KTVWorkflowCreateRequest(BaseModel):
-    base_word_id: UUID | None = None
+    base_word_id: UUID_aliased | None = None
     locale: str | None = None
     metadata: dict[str, Any] | None = None
     prompt: str | None = None
@@ -1973,14 +2442,14 @@ class KTVWorkflowSeedResponse(BaseModel):
 
 class KTVWorkflowSourceImportItem(BaseModel):
     base_word_created: bool
-    base_word_id: UUID | None = None
+    base_word_id: UUID_aliased | None = None
     input_word: str
     message: str | None = None
     resolved_word: str | None = None
     source_entry_url: str | None = None
     status: str
     workflow_created: bool
-    workflow_id: UUID | None = None
+    workflow_id: UUID_aliased | None = None
 
 
 class KTVWorkflowSourceImportRequest(BaseModel):
@@ -2007,12 +2476,12 @@ class KTVWorkflowSourceImportResponse(BaseModel):
     workflows_existing: int
 
 
-class KTVWorkflowStatusUpdateRequest(EndSessionResponse):
+class KTVWorkflowStatusUpdateRequest(AppFeedbackUpdateStatusRequest):
     pass
 
 
 class KTVWorkflowSubmitRequest(BaseModel):
-    brand_id: UUID | None = None
+    brand_id: UUID_aliased | None = None
     description: str | None = None
     learning_language_code: str | None = None
     status: str | None = None
@@ -2020,51 +2489,50 @@ class KTVWorkflowSubmitRequest(BaseModel):
     title: str | None = None
     trigger_ingest: bool | None = None
     trigger_media_processing: bool | None = None
-    variant_id: UUID | None = None
+    variant_id: UUID_aliased | None = None
 
 
 class KTVWorkflowSubmitResponse(BaseModel):
-    content_entry_id: UUID
-    content_version_id: UUID
-    media_id: UUID | None = None
+    content_entry_id: UUID_aliased
+    content_version_id: UUID_aliased
+    media_id: UUID_aliased | None = None
     queued_ingest: bool
     queued_media_processing: bool
-    variant_id: UUID
+    variant_id: UUID_aliased
     warnings: list[str] | None = None
     workflow: KTVWorkflow | None = None
 
 
 class KieloTVCaptions(BaseModel):
-    content_version_id: UUID | None = None
+    content_version_id: UUID_aliased | None = None
     created_at: AwareDatetime
     cues: Any
-    id: UUID
+    id: UUID_aliased
     is_fallback: bool
     learning_language_code: str | None = None
     locale: str
     source_locale: str
     translation_status: Any
     updated_at: AwareDatetime
-    video_id: UUID
+    video_id: UUID_aliased
 
 
-class KieloTVLocaleSupport(BaseModel):
-    captions: list[str]
-    mindmap: list[str]
+class KieloTVLocaleSupport(AvailableLocales):
+    pass
 
 
 class KieloTVMindmap(BaseModel):
-    content_version_id: UUID | None = None
+    content_version_id: UUID_aliased | None = None
     created_at: AwareDatetime
     graph: Any
-    id: UUID
+    id: UUID_aliased
     is_fallback: bool
     learning_language_code: str | None = None
     locale: str
     source_locale: str
     translation_status: Any
     updated_at: AwareDatetime
-    video_id: UUID
+    video_id: UUID_aliased
 
 
 class KieloTVMindmapUpsertRequest(BaseModel):
@@ -2077,16 +2545,16 @@ class KieloTVMindmapUpsertRequest(BaseModel):
 
 class KieloTVVideo(BaseModel):
     audio_url: str | None = None
-    brand_id: UUID
+    brand_id: UUID_aliased
     carousel_images: list[str] | None = None
     created_at: AwareDatetime
     description: str
     duration_seconds: int
     format_type: str
-    id: UUID
+    id: UUID_aliased
     learning_language_code: str | None = None
     locale: str | None = None
-    media_asset_id: UUID | None = None
+    media_asset_id: UUID_aliased | None = None
     published_at: AwareDatetime
     status: str | None = None
     thumbnail_url: str
@@ -2146,12 +2614,16 @@ class LanguageCreateRequest(BaseModel):
     native_name: str | None = None
 
 
-class LanguageReadinessV3(BaseModel):
+class LanguageReadiness(BaseModel):
     code: str
     display_name: str
     missing_assets: list[str]
     quality_tiers: dict[str, str]
     ready: bool
+
+
+class LanguageReadinessV3(LanguageReadiness):
+    pass
 
 
 class LanguageUpdateRequest(BaseModel):
@@ -2171,8 +2643,8 @@ class Status3(StrEnum):
 
 
 class LearningArcStage(BaseModel):
-    exercise_ids: list[UUID] | None = Field(None, title="Exercise Ids")
-    objective_ids: list[UUID] | None = Field(None, title="Objective Ids")
+    exercise_ids: list[UUID_aliased] | None = Field(None, title="Exercise Ids")
+    objective_ids: list[UUID_aliased] | None = Field(None, title="Objective Ids")
     stage_key: str = Field(..., title="Stage Key")
     status: Status3 | None = Field("upcoming", title="Status")
     subtitle: str | None = Field(None, title="Subtitle")
@@ -2207,7 +2679,7 @@ class LearningObjective(BaseModel):
     error_pattern_tag: str | None = Field(None, title="Error Pattern Tag")
     exercise_sequence: list[str] | None = Field(None, title="Exercise Sequence")
     learning_language_code: str | None = Field("", title="Learning Language Code")
-    objective_id: UUID | None = Field(None, title="Objective Id")
+    objective_id: UUID_aliased | None = Field(None, title="Objective Id")
     objective_type: SectionType = Field(..., title="Objective Type")
     proficiency: float | None = Field(None, title="Proficiency")
     reason: str = Field(..., title="Reason")
@@ -2215,7 +2687,7 @@ class LearningObjective(BaseModel):
     source: str = Field(..., title="Source")
     support_language_code: str | None = Field("", title="Support Language Code")
     support_text: str | None = Field("", title="Support Text")
-    target_item_id: UUID = Field(..., title="Target Item Id")
+    target_item_id: UUID_aliased = Field(..., title="Target Item Id")
     target_item_type: ItemTypeFk = Field(..., title="Target Item Type")
 
 
@@ -2228,6 +2700,12 @@ class SessionType(StrEnum):
     daily_challenge = "daily_challenge"
     micro_drill = "micro_drill"
     exercise_deck = "exercise_deck"
+
+
+class LearningSessionState(BaseModel):
+    is_correct: bool | None = None
+    status: str
+    user_answer: str | None = None
 
 
 class LearningSessionV3(BaseModel):
@@ -2282,13 +2760,13 @@ class ListeningComprehensionExercise(BaseModel):
         description="A specific concept or hint for the exercise, e.g., 'inessive case'.",
         title="Context Hint",
     )
-    correct_answer: UUID = Field(
+    correct_answer: UUID_aliased = Field(
         ...,
         description="UUID of the correct option from the options list",
         title="Correct Answer",
     )
     error_pattern_tag: str | None = Field(None, title="Error Pattern Tag")
-    exercise_id: UUID | None = Field(
+    exercise_id: UUID_aliased | None = Field(
         None,
         description="Unique ID for this specific exercise instance.",
         title="Exercise Id",
@@ -2296,11 +2774,11 @@ class ListeningComprehensionExercise(BaseModel):
     exercise_type: Literal["listening_comprehension"] = Field(
         "listening_comprehension", title="Exercise Type"
     )
-    generation_job_id: UUID | None = Field(None, title="Generation Job Id")
+    generation_job_id: UUID_aliased | None = Field(None, title="Generation Job Id")
     generation_model: str | None = Field(None, title="Generation Model")
-    item_id_fk: UUID = Field(..., title="Item Id Fk")
+    item_id_fk: UUID_aliased = Field(..., title="Item Id Fk")
     item_type_fk: ItemTypeFk = Field(..., title="Item Type Fk")
-    objective_id: UUID | None = Field(None, title="Objective Id")
+    objective_id: UUID_aliased | None = Field(None, title="Objective Id")
     options: list[dict[str, str]] = Field(
         ...,
         description="List of options with 'id' (UUID) and 'text' keys",
@@ -2371,7 +2849,7 @@ class MediaAsset(BaseModel):
     created_at: AwareDatetime
     file_hash_sha256: str
     filename: str
-    media_id: UUID
+    media_id: UUID_aliased
     metadata: dict[str, Any] | None = None
     mime_type: str
     original_storage_path: str
@@ -2382,8 +2860,20 @@ class MediaAsset(BaseModel):
     storage_bucket: str
     storage_path_prefix: str | None = None
     updated_at: AwareDatetime
-    uploader_user_id: UUID
+    uploader_user_id: UUID_aliased
     variants: dict[str, Any] | None = None
+
+
+class MediaAssetResponse(BaseModel):
+    created_at: AwareDatetime
+    media_id: UUID_aliased
+    media_type: str
+    metadata: Any | None = None
+    processing_status: str
+    serve_base_url: str | None = None
+    temporary_url: str | None = None
+    updated_at: AwareDatetime
+    variants: Any | None = None
 
 
 class MediaUploadCompleteResponse(BaseModel):
@@ -2400,15 +2890,11 @@ class MediaUploadRequest(BaseModel):
     size: int | None = None
 
 
-class MediaUploadURLResponse(GetUploadURLResponse):
+class MediaUploadURLResponse(GenerateUploadURLResponse):
     pass
 
 
 class MediaVariant(BaseModel):
-    url: str
-
-
-class MediaVariantInfo(BaseModel):
     content_type: str
     height: int | None = None
     path: str
@@ -2416,9 +2902,32 @@ class MediaVariantInfo(BaseModel):
     width: int | None = None
 
 
+class MediaVariantInfo(MediaVariant):
+    pass
+
+
+class MessageResponse(DeleteVoiceAgentResponse):
+    pass
+
+
 class MicroDrill(BaseModel):
     id: str
     items: list[DrillItem]
+
+
+class Mindmap(BaseModel):
+    content_version_id: UUID_aliased | None = None
+    created_at: AwareDatetime
+    graph: Any
+    id: UUID_aliased
+    is_fallback: bool
+    learning_language_code: str | None = None
+    locale: str
+    source_locale: str
+    translation_source: str | None = None
+    translation_status: Any
+    updated_at: AwareDatetime
+    video_id: UUID_aliased
 
 
 class ModelChecksum(BaseModel):
@@ -2456,13 +2965,13 @@ class MultipleChoiceTranslationExercise(BaseModel):
         description="A specific concept or hint for the exercise, e.g., 'inessive case'.",
         title="Context Hint",
     )
-    correct_answer: UUID = Field(
+    correct_answer: UUID_aliased = Field(
         ...,
         description="UUID of the correct option from the options list",
         title="Correct Answer",
     )
     error_pattern_tag: str | None = Field(None, title="Error Pattern Tag")
-    exercise_id: UUID | None = Field(
+    exercise_id: UUID_aliased | None = Field(
         None,
         description="Unique ID for this specific exercise instance.",
         title="Exercise Id",
@@ -2470,11 +2979,11 @@ class MultipleChoiceTranslationExercise(BaseModel):
     exercise_type: Literal["multiple_choice_translation"] = Field(
         "multiple_choice_translation", title="Exercise Type"
     )
-    generation_job_id: UUID | None = Field(None, title="Generation Job Id")
+    generation_job_id: UUID_aliased | None = Field(None, title="Generation Job Id")
     generation_model: str | None = Field(None, title="Generation Model")
-    item_id_fk: UUID = Field(..., title="Item Id Fk")
+    item_id_fk: UUID_aliased = Field(..., title="Item Id Fk")
     item_type_fk: ItemTypeFk = Field(..., title="Item Type Fk")
-    objective_id: UUID | None = Field(None, title="Objective Id")
+    objective_id: UUID_aliased | None = Field(None, title="Objective Id")
     options: list[dict[str, str]] = Field(
         ...,
         description="List of translation options with 'id' (UUID) and 'text' keys",
@@ -2506,7 +3015,7 @@ class MultipleChoiceTranslationExercise(BaseModel):
 class Namespace(BaseModel):
     created_at: AwareDatetime
     description: str | None = None
-    id: UUID
+    id: UUID_aliased
     is_active: bool
     name: str
     platform: str | None = None
@@ -2569,10 +3078,10 @@ class NotificationJob(BaseModel):
     body: str
     completed_at: AwareDatetime | None = None
     created_at: AwareDatetime
-    created_by: UUID | None = None
+    created_by: UUID_aliased | None = None
     data: dict[str, Any]
     failed_count: int
-    job_id: UUID
+    job_id: UUID_aliased
     notification_type: str
     processed_count: int
     render_language_code: str | None = None
@@ -2599,17 +3108,17 @@ class NotificationPushPreferences(BaseModel):
 
 
 class NotificationRule(BaseModel):
-    body_key_id: UUID | None = None
+    body_key_id: UUID_aliased | None = None
     body_template: str
     created_at: AwareDatetime
     data_template: dict[str, Any]
     enabled: bool
     event_type: str
-    id: UUID
+    id: UUID_aliased
     notification_type: str
     target_ids: list[str]
     target_type: str
-    title_key_id: UUID | None = None
+    title_key_id: UUID_aliased | None = None
     title_template: str
     updated_at: AwareDatetime
 
@@ -2630,13 +3139,55 @@ class NotifyUploadCompleteResponse(CancelSubscriptionResponse):
     pass
 
 
+class NullFloat64(BaseModel):
+    Float64: float
+    Valid: bool
+
+
+class NullInt32(BaseModel):
+    Int32: int
+    Valid: bool
+
+
+class NullString(BaseModel):
+    String: str
+    Valid: bool
+
+
+class NullUUID(BaseModel):
+    UUID: UUID_aliased
+    Valid: bool
+
+
 class OffsetMeta(CommsOffsetMeta):
     pass
 
 
-class ParadigmRow(BaseModel):
-    cells: list[str]
-    label: str
+class OmorfiForm(BaseModel):
+    features: dict[str, str] | None = Field(None, title="Features")
+    form: str = Field(..., title="Form")
+    is_lemma: bool | None = Field(False, title="Is Lemma")
+    paradigm_slot: str | None = Field(None, title="Paradigm Slot")
+
+
+class OmorfiInflection(BaseModel):
+    case: str | None = Field(None, title="Case")
+    comparison: str | None = Field(None, title="Comparison")
+    form: str = Field(..., title="Form")
+    mood: str | None = Field(None, title="Mood")
+    number: str | None = Field(None, title="Number")
+    person: str | None = Field(None, title="Person")
+    tense: str | None = Field(None, title="Tense")
+    voice: str | None = Field(None, title="Voice")
+
+
+class OmorfiParadigmRow(BaseModel):
+    cells: list[str] | None = Field(None, title="Cells")
+    label: str = Field(..., title="Label")
+
+
+class ParadigmRow(DictionaryParadigmRow):
+    pass
 
 
 class PaymentHistory(BaseModel):
@@ -2654,6 +3205,14 @@ class PhraseFrame(BaseModel):
     example_translation: str | None = None
     text: str | None = None
     translation: str | None = None
+
+
+class PlacementTestItem(BaseModel):
+    base_word_id: UUID_aliased
+    cefr_level: str | None = None
+    meaning: str | None = None
+    part_of_speech: str | None = None
+    term: str | None = None
 
 
 class PlacementTestItemsResponse(BaseModel):
@@ -2700,29 +3259,47 @@ class PurchaseHistory(BaseModel):
     transaction_id: str
 
 
+class PushTokensResponse(BaseModel):
+    tokens: list[str]
+
+
 class QueueStatus(BaseModel):
     estimated_wait: int
     position: int
     status: str
 
 
+class QueueStatusResponse(BaseModel):
+    position: int
+    state: str
+
+
 class QuickAddToStudyListRequest(AddTopicListItemRequest):
     pass
 
 
+class ReadinessResponse(BaseModel):
+    models: str = Field(..., title="Models")
+    status: str = Field(..., title="Status")
+
+
+class RecentArticleReadIDsResponse(BaseModel):
+    ids: list[str]
+
+
 class RecommendationCampaign(BaseModel):
-    body_key_id: UUID | None = None
+    body_key_id: UUID_aliased | None = None
     body_template: str
     cadence_config: dict[str, Any]
     cadence_type: str
     content_types: list[str]
     cooldown_hours: int
     created_at: AwareDatetime
-    created_by: UUID | None = None
+    created_by: UUID_aliased | None = None
     data_template: dict[str, Any]
     delivery_config: dict[str, Any]
     enabled: bool
-    id: UUID
+    id: UUID_aliased
     max_per_send: int
     name: str
     notification_type: str
@@ -2732,7 +3309,7 @@ class RecommendationCampaign(BaseModel):
     target_ids: list[str]
     target_type: str
     timezone: str
-    title_key_id: UUID | None = None
+    title_key_id: UUID_aliased | None = None
     title_template: str
     updated_at: AwareDatetime
 
@@ -2742,10 +3319,10 @@ class RecommendationCampaignList(BaseModel):
 
 
 class RecommendationCampaignRun(BaseModel):
-    campaign_id: UUID
+    campaign_id: UUID_aliased
     created_at: AwareDatetime
-    id: UUID
-    notification_job_id: UUID | None = None
+    id: UUID_aliased
+    notification_job_id: UUID_aliased | None = None
     run_date: AwareDatetime
     scheduled_for: AwareDatetime
     status: str
@@ -2764,17 +3341,17 @@ class RecommendationCampaignRunNowResult(BaseModel):
 
 
 class RecommendationLaunchParams(BaseModel):
-    article_id: UUID | None = Field(None, title="Article Id")
+    article_id: UUID_aliased | None = Field(None, title="Article Id")
     context_sentence: str | None = Field(None, title="Context Sentence")
     deck_id: str | None = Field(None, title="Deck Id")
     exercise_types: list[str] | None = Field(None, title="Exercise Types")
-    item_id: UUID | None = Field(None, title="Item Id")
-    item_ids: list[UUID] | None = Field(None, title="Item Ids")
+    item_id: UUID_aliased | None = Field(None, title="Item Id")
+    item_ids: list[UUID_aliased] | None = Field(None, title="Item Ids")
     item_type: ItemTypeFk | None = Field(None, title="Item Type")
-    lesson_id: UUID | None = Field(None, title="Lesson Id")
-    source_session_id: UUID | None = Field(None, title="Source Session Id")
+    lesson_id: UUID_aliased | None = Field(None, title="Lesson Id")
+    source_session_id: UUID_aliased | None = Field(None, title="Source Session Id")
     source_session_mode: str | None = Field(None, title="Source Session Mode")
-    topic_list_id: UUID | None = Field(None, title="Topic List Id")
+    topic_list_id: UUID_aliased | None = Field(None, title="Topic List Id")
 
 
 class RefreshTokenRequest(BaseModel):
@@ -2816,18 +3393,30 @@ class RelatedConcept(DictionaryRelatedConcept):
     pass
 
 
-class RelatedLemmas(BaseModel):
-    antonyms: list[str] | None = None
-    synonyms: list[str] | None = None
+class RelatedLemmas(DictionaryRelatedLemmas):
+    pass
 
 
 class RelatedWord(BaseModel):
-    base_word_id: str
+    base_word_id: UUID_aliased
     cefr_level: str | None = None
     part_of_speech: str | None = None
     similarity_score: float
     term: str | None = None
     translation: str | None = None
+
+
+class RelatedWordsSource(BaseModel):
+    id: UUID_aliased
+    meaning: str
+    term: str
+    translation: str
+
+
+class RelatedWordsSummaryResponse(BaseModel):
+    count: int
+    related_words: list[RelatedWord]
+    source_word: RelatedWordsSource
 
 
 class RemoveFromStudyListRequest(AddToStudyListRequest):
@@ -2868,12 +3457,33 @@ class RestoreAccessResponse(CancelSubscriptionResponse):
     pass
 
 
+class RestoreSubscriptionRequest(LinkRevenueCatUserRequest):
+    pass
+
+
+class RestoreSubscriptionResponse(BaseModel):
+    message: str
+    subscription_id: UUID_aliased | None = None
+    success: bool
+
+
 class ResultMetadata(BaseModel):
     cefr_level: str | None = None
     duration_seconds: int | None = None
     is_saved: bool | None = None
     part_of_speech: str | None = None
     reading_time_minutes: int | None = None
+
+
+class ResumeSessionResponse(BaseModel):
+    flow_id: str
+    livekit_token: str
+    resumed_at_ms: int
+    room: str
+    server_url: str
+    session_id: str
+    state: str
+    step_index: int
 
 
 class RevenueCatUserResponse(BaseModel):
@@ -2884,7 +3494,7 @@ class RevenueCatUserResponse(BaseModel):
 
 class ReviewItem(BaseModel):
     display_text: str | None = Field(None, title="Display Text")
-    item_id: UUID = Field(..., title="Item Id")
+    item_id: UUID_aliased = Field(..., title="Item Id")
     item_type: str = Field(..., title="Item Type")
 
 
@@ -2893,20 +3503,29 @@ class ReviewScheduleResponse(BaseModel):
     next_batch_available_at: AwareDatetime | None = Field(
         None, title="Next Batch Available At"
     )
-    user_id: UUID = Field(..., title="User Id")
+    user_id: UUID_aliased = Field(..., title="User Id")
+
+
+class RevokeAchievementResponse(BaseModel):
+    reason: str | None = None
+    revoked: bool
+
+
+class RevokeSubscriptionResponse(CancelSubscriptionResponse):
+    pass
 
 
 class RoadmapAdminLessonResponse(BaseModel):
     category: str = Field(..., title="Category")
     cefr_level: str | None = Field(None, title="Cefr Level")
-    chapter_id: UUID | None = Field(None, title="Chapter Id")
+    chapter_id: UUID_aliased | None = Field(None, title="Chapter Id")
     created_at: AwareDatetime = Field(..., title="Created At")
     description: str | None = Field(None, title="Description")
     difficulty_level: str = Field(..., title="Difficulty Level")
     estimated_duration_minutes: int = Field(..., title="Estimated Duration Minutes")
     is_published: bool = Field(..., title="Is Published")
     lesson_content: dict[str, Any] = Field(..., title="Lesson Content")
-    lesson_id: UUID = Field(..., title="Lesson Id")
+    lesson_id: UUID_aliased = Field(..., title="Lesson Id")
     order_index: int = Field(..., title="Order Index")
     thumbnail_url: str | None = Field(None, title="Thumbnail Url")
     title: str = Field(..., title="Title")
@@ -2961,7 +3580,7 @@ class RoadmapLessonProgressSnapshot(BaseModel):
 class RoadmapLessonUpsertRequest(BaseModel):
     category: str | None = Field("Getting Started", title="Category")
     cefr_level: str | None = Field(None, title="Cefr Level")
-    chapter_id: UUID | None = Field(None, title="Chapter Id")
+    chapter_id: UUID_aliased | None = Field(None, title="Chapter Id")
     description: str | None = Field(None, title="Description")
     difficulty_level: DifficultyLevel | None = Field(
         "beginner", title="Difficulty Level"
@@ -2979,7 +3598,7 @@ class RoadmapLessonUpsertRequest(BaseModel):
 class RoadmapPracticeTargetBackfillRequest(BaseModel):
     dry_run: bool | None = Field(True, title="Dry Run")
     include_lesson_ids: bool | None = Field(True, title="Include Lesson Ids")
-    lesson_id: UUID | None = Field(None, title="Lesson Id")
+    lesson_id: UUID_aliased | None = Field(None, title="Lesson Id")
     published_only: bool | None = Field(True, title="Published Only")
 
 
@@ -2990,12 +3609,14 @@ class RoadmapPracticeTargetBackfillResponse(BaseModel):
     published_only: bool = Field(..., title="Published Only")
     scanned_count: int | None = Field(0, title="Scanned Count")
     unavailable_count: int | None = Field(0, title="Unavailable Count")
-    unavailable_lesson_ids: list[UUID] | None = Field(
+    unavailable_lesson_ids: list[UUID_aliased] | None = Field(
         None, title="Unavailable Lesson Ids"
     )
     unchanged_count: int | None = Field(0, title="Unchanged Count")
     updated_count: int | None = Field(0, title="Updated Count")
-    updated_lesson_ids: list[UUID] | None = Field(None, title="Updated Lesson Ids")
+    updated_lesson_ids: list[UUID_aliased] | None = Field(
+        None, title="Updated Lesson Ids"
+    )
 
 
 class RoadmapSpeechSegment(BaseModel):
@@ -3007,7 +3628,7 @@ class RoadmapSpeechSegment(BaseModel):
 
 
 class RoadmapStartLessonResponse(BaseModel):
-    lesson_id: UUID = Field(..., title="Lesson Id")
+    lesson_id: UUID_aliased = Field(..., title="Lesson Id")
     progress: RoadmapLessonProgressSnapshot
 
 
@@ -3016,7 +3637,7 @@ class RoadmapStepCompleteRequest(BaseModel):
 
 
 class RoadmapStepCompleteResponse(BaseModel):
-    lesson_id: UUID = Field(..., title="Lesson Id")
+    lesson_id: UUID_aliased = Field(..., title="Lesson Id")
     progress: RoadmapLessonProgressSnapshot
     step_index: int = Field(..., title="Step Index")
 
@@ -3024,18 +3645,35 @@ class RoadmapStepCompleteResponse(BaseModel):
 class RoadmapStepTTSStreamSessionResponse(BaseModel):
     cache_hit: bool | None = Field(False, title="Cache Hit")
     expires_at: AwareDatetime = Field(..., title="Expires At")
-    job_id: UUID | None = Field(None, title="Job Id")
-    session_id: UUID = Field(..., title="Session Id")
+    job_id: UUID_aliased | None = Field(None, title="Job Id")
+    session_id: UUID_aliased = Field(..., title="Session Id")
     text: str = Field(..., title="Text")
     token: str = Field(..., title="Token")
 
 
 class RoadmapUserProgressResponse(BaseModel):
-    active_lesson_id: UUID | None = Field(None, title="Active Lesson Id")
+    active_lesson_id: UUID_aliased | None = Field(None, title="Active Lesson Id")
     completed_lessons: int = Field(..., title="Completed Lessons")
     progress_percent: float | None = Field(0.0, title="Progress Percent")
     total_lessons: int = Field(..., title="Total Lessons")
-    user_id: UUID = Field(..., title="User Id")
+    user_id: UUID_aliased = Field(..., title="User Id")
+
+
+class RunRow(BaseModel):
+    completed_at: AwareDatetime | None = None
+    domain: str
+    dry_run: bool
+    errors: int
+    issues_detected: int
+    issues_repaired: int
+    language_code: str | None = None
+    notes: str | None = None
+    reasons: Any
+    run_id: str
+    scanned: int
+    started_at: AwareDatetime
+    trigger: str
+    triggered_by: str | None = None
 
 
 class SaveItemRequest(BaseModel):
@@ -3053,7 +3691,7 @@ class SavedCollectionPracticeRequest(BaseModel):
     intent: Intent2 | None = Field(
         "review", description="Pedagogical intent for the practice set.", title="Intent"
     )
-    item_ids: list[UUID] | None = Field(
+    item_ids: list[UUID_aliased] | None = Field(
         None,
         description="Subset of saved item IDs to practice. None means all saved items.",
         title="Item Ids",
@@ -3063,7 +3701,7 @@ class SavedCollectionPracticeRequest(BaseModel):
         description="Maximum number of items to include in the practice session.",
         title="Max Items",
     )
-    source_session_id: UUID | None = Field(
+    source_session_id: UUID_aliased | None = Field(
         None,
         description="ID of the session that led here (for context carryover).",
         title="Source Session Id",
@@ -3102,6 +3740,37 @@ class SavedItemsDashboardResponseV3(SavedItemsDashboardResponse):
     pass
 
 
+class Scenario(BaseModel):
+    ambient_audio_url: str | None = None
+    category: str | None = None
+    cefr_level: str | None = None
+    created_at: AwareDatetime
+    created_by: UUID_aliased | None = None
+    description: str | None = None
+    difficulty: str | None = None
+    estimated_duration_minutes: int | None = None
+    id: UUID_aliased
+    is_featured: bool
+    learning_language_code: str | None = None
+    localized_descriptions: dict[str, str] | None = None
+    localized_titles: dict[str, str] | None = None
+    sample_transcript: list[str] | None = None
+    scenario_content: dict[str, Any] | None = None
+    slug: str
+    sort_order: int
+    status: str
+    support_language_code: str | None = None
+    tags: list[str] | None = None
+    text_mode: str | None = None
+    thumbnail_media_id: UUID_aliased | None = None
+    thumbnail_url: str | None = None
+    title: str
+    updated_at: AwareDatetime
+    updated_by: UUID_aliased | None = None
+    voice_agent_id: UUID_aliased | None = None
+    voice_id: str | None = None
+
+
 class ScenarioChoiceExercise(BaseModel):
     cache_entry_id: str | None = Field(None, title="Cache Entry Id")
     context_hint: str | None = Field(
@@ -3111,7 +3780,7 @@ class ScenarioChoiceExercise(BaseModel):
     )
     correct_answer: str = Field(..., title="Correct Answer")
     error_pattern_tag: str | None = Field(None, title="Error Pattern Tag")
-    exercise_id: UUID | None = Field(
+    exercise_id: UUID_aliased | None = Field(
         None,
         description="Unique ID for this specific exercise instance.",
         title="Exercise Id",
@@ -3119,11 +3788,11 @@ class ScenarioChoiceExercise(BaseModel):
     exercise_type: Literal["scenario_choice"] = Field(
         "scenario_choice", title="Exercise Type"
     )
-    generation_job_id: UUID | None = Field(None, title="Generation Job Id")
+    generation_job_id: UUID_aliased | None = Field(None, title="Generation Job Id")
     generation_model: str | None = Field(None, title="Generation Model")
-    item_id_fk: UUID = Field(..., title="Item Id Fk")
+    item_id_fk: UUID_aliased = Field(..., title="Item Id Fk")
     item_type_fk: ItemTypeFk = Field(..., title="Item Type Fk")
-    objective_id: UUID | None = Field(None, title="Objective Id")
+    objective_id: UUID_aliased | None = Field(None, title="Objective Id")
     phrase_options: list[str] = Field(..., title="Phrase Options")
     prompt: str = Field(..., title="Prompt")
     prompt_version: str | None = Field(None, title="Prompt Version")
@@ -3134,8 +3803,29 @@ class ScenarioChoiceExercise(BaseModel):
     validation_signature: str | None = Field(None, title="Validation Signature")
 
 
+class ScenarioListItem(BaseModel):
+    agent_avatar_url: str | None = None
+    category: str | None = None
+    cefr_level: str | None = None
+    description: str | None = None
+    difficulty: str | None = None
+    estimated_duration_minutes: int | None = None
+    id: UUID_aliased
+    is_featured: bool
+    learning_language_code: str | None = None
+    localized_descriptions: dict[str, str] | None = None
+    localized_titles: dict[str, str] | None = None
+    scenario_content: dict[str, Any] | None = None
+    scene_image_url: str | None = None
+    slug: str
+    support_language_code: str | None = None
+    tags: list[str] | None = None
+    thumbnail_url: str | None = None
+    title: str
+
+
 class ScheduleUpdateItem(BaseModel):
-    id: UUID = Field(..., title="Id")
+    id: UUID_aliased = Field(..., title="Id")
     next_review_at: AwareDatetime = Field(..., title="Next Review At")
 
 
@@ -3147,7 +3837,7 @@ class ScheduledCommunication(BaseModel):
     body: str | None = None
     completed_at: AwareDatetime | None = None
     created_at: AwareDatetime
-    id: UUID
+    id: UUID_aliased
     metadata: dict[str, Any] | None = None
     recipient_type: str
     recipients: list[str]
@@ -3177,6 +3867,15 @@ class SearchResult(BaseModel):
 class SearchResults(BaseModel):
     content: list[SearchResult]
     saved: list[SearchResult]
+
+
+class SemanticSearchResult(BaseModel):
+    cefr_level: str
+    description: str
+    id: str
+    label: str
+    score: float
+    type: str
 
 
 class SendEmailResult(CommsSendEmailResult):
@@ -3223,7 +3922,7 @@ class SessionCompletionSummary(BaseModel):
 
 class SessionOrigin(BaseModel):
     entry_point: str | None = Field(None, title="Entry Point")
-    source_session_id: UUID | None = Field(None, title="Source Session Id")
+    source_session_id: UUID_aliased | None = Field(None, title="Source Session Id")
     source_session_mode: str | None = Field(None, title="Source Session Mode")
 
 
@@ -3274,18 +3973,38 @@ class SessionSummary(BaseModel):
 
 
 class SetActiveTrackRequest(BaseModel):
-    track_id: UUID = Field(..., title="Track Id")
+    track_id: UUID_aliased = Field(..., title="Track Id")
+
+
+class SetDynamicTranslationStatusRequest(BaseModel):
+    override_text: str | None = None
+    reviewed_by: UUID_aliased | None = None
+    status: str
+
+
+class SetTranslationStatusRequest(BaseModel):
+    reviewed_by: UUID_aliased | None = None
+    status: str
+
+
+class SetUserFeatureLimitRequest(BaseModel):
+    feature: str
+    limit_value: int
+
+
+class SetUserFeatureLimitResponse(BaseModel):
+    feature: str
+    limit_value: int
+    message: str
+    user_id: str
 
 
 class SetUserOverrideRequest(BaseModel):
     limit_value: int
 
 
-class SetUserOverrideResponse(BaseModel):
-    feature: str
-    limit_value: int
-    message: str
-    user_id: str
+class SetUserOverrideResponse(SetUserFeatureLimitResponse):
+    pass
 
 
 class SimpleAiConversationFlow(BaseModel):
@@ -3294,8 +4013,8 @@ class SimpleAiConversationFlow(BaseModel):
 
 
 class SimplifiedArticleTeaser(BaseModel):
-    article_id: UUID = Field(..., title="Article Id")
-    content_version_id: UUID = Field(..., title="Content Version Id")
+    article_id: UUID_aliased = Field(..., title="Article Id")
+    content_version_id: UUID_aliased = Field(..., title="Content Version Id")
     difficulty_score: float = Field(..., title="Difficulty Score")
     estimated_reading_time_minutes: int = Field(
         ..., title="Estimated Reading Time Minutes"
@@ -3729,7 +4448,7 @@ class SpellingChallengeExercise(BaseModel):
     )
     correct_answer: str = Field(..., title="Correct Answer")
     error_pattern_tag: str | None = Field(None, title="Error Pattern Tag")
-    exercise_id: UUID | None = Field(
+    exercise_id: UUID_aliased | None = Field(
         None,
         description="Unique ID for this specific exercise instance.",
         title="Exercise Id",
@@ -3737,12 +4456,12 @@ class SpellingChallengeExercise(BaseModel):
     exercise_type: Literal["spelling_challenge"] = Field(
         "spelling_challenge", title="Exercise Type"
     )
-    generation_job_id: UUID | None = Field(None, title="Generation Job Id")
+    generation_job_id: UUID_aliased | None = Field(None, title="Generation Job Id")
     generation_model: str | None = Field(None, title="Generation Model")
     hint: str | None = Field("", title="Hint")
-    item_id_fk: UUID = Field(..., title="Item Id Fk")
+    item_id_fk: UUID_aliased = Field(..., title="Item Id Fk")
     item_type_fk: ItemTypeFk = Field(..., title="Item Type Fk")
-    objective_id: UUID | None = Field(None, title="Objective Id")
+    objective_id: UUID_aliased | None = Field(None, title="Objective Id")
     prompt: str = Field(..., title="Prompt")
     prompt_version: str | None = Field(None, title="Prompt Version")
     quality_score: float | None = Field(None, title="Quality Score")
@@ -3759,7 +4478,11 @@ class StatsBreakdown(CommsStatsBreakdown):
     pass
 
 
-class StatusResult(EndSessionResponse):
+class StatusResponse(AppFeedbackUpdateStatusRequest):
+    pass
+
+
+class StatusResult(AppFeedbackUpdateStatusRequest):
     pass
 
 
@@ -3781,12 +4504,12 @@ class StudyList(BaseModel):
     icon: str | None = None
     is_archived: bool
     item_count: int
-    list_id: UUID
+    list_id: UUID_aliased
     name: str
     source: str
-    source_id: UUID | None = None
+    source_id: UUID_aliased | None = None
     updated_at: AwareDatetime
-    user_id: UUID
+    user_id: UUID_aliased
 
 
 class StudyListV3(BaseModel):
@@ -3846,16 +4569,22 @@ class SubscriptionInfo(BaseModel):
     trial_ends_at: str | None = None
 
 
+class SuggestedConceptHub(BaseModel):
+    grammar_concept_id: str
+    reason: str
+    title: str
+
+
 class TTSBaseWordStreamSessionResponse(BaseModel):
     cache_hit: bool | None = Field(False, title="Cache Hit")
     expires_at: AwareDatetime = Field(..., title="Expires At")
-    job_id: UUID | None = Field(None, title="Job Id")
-    session_id: UUID = Field(..., title="Session Id")
+    job_id: UUID_aliased | None = Field(None, title="Job Id")
+    session_id: UUID_aliased = Field(..., title="Session Id")
     token: str = Field(..., title="Token")
 
 
 class TTSGenerateRequest(BaseModel):
-    base_word_id: UUID = Field(..., title="Base Word Id")
+    base_word_id: UUID_aliased = Field(..., title="Base Word Id")
     force: bool | None = Field(False, title="Force")
     language_code: str | None = Field("", title="Language Code")
 
@@ -3868,21 +4597,21 @@ class Status6(StrEnum):
 
 class TTSGenerateResponse(BaseModel):
     audio_url: str | None = Field(None, title="Audio Url")
-    base_word_id: UUID = Field(..., title="Base Word Id")
+    base_word_id: UUID_aliased = Field(..., title="Base Word Id")
     error_message: str | None = Field(None, title="Error Message")
-    job_id: UUID | None = Field(None, title="Job Id")
+    job_id: UUID_aliased | None = Field(None, title="Job Id")
     job_status: Status | None = Field(None, title="Job Status")
-    media_id: UUID | None = Field(None, title="Media Id")
+    media_id: UUID_aliased | None = Field(None, title="Media Id")
     stage: str | None = Field(None, title="Stage")
     status: Status6 = Field(..., title="Status")
 
 
 class TTSJobStatusResponse(BaseModel):
     audio_url: str | None = Field(None, title="Audio Url")
-    base_word_id: UUID = Field(..., title="Base Word Id")
+    base_word_id: UUID_aliased = Field(..., title="Base Word Id")
     error_message: str | None = Field(None, title="Error Message")
-    job_id: UUID = Field(..., title="Job Id")
-    media_id: UUID | None = Field(None, title="Media Id")
+    job_id: UUID_aliased = Field(..., title="Job Id")
+    media_id: UUID_aliased | None = Field(None, title="Media Id")
     stage: str | None = Field(None, title="Stage")
     status: Status | None = Field(None, title="Status")
 
@@ -3890,17 +4619,17 @@ class TTSJobStatusResponse(BaseModel):
 class TTSParagraphGenerateRequest(BaseModel):
     force: bool | None = Field(False, title="Force")
     language_code: str | None = Field("", title="Language Code")
-    paragraph_id: UUID = Field(..., title="Paragraph Id")
+    paragraph_id: UUID_aliased = Field(..., title="Paragraph Id")
     text: str = Field(..., title="Text")
 
 
 class TTSParagraphGenerateResponse(BaseModel):
     audio_url: str | None = Field(None, title="Audio Url")
     error_message: str | None = Field(None, title="Error Message")
-    job_id: UUID | None = Field(None, title="Job Id")
+    job_id: UUID_aliased | None = Field(None, title="Job Id")
     job_status: Status | None = Field(None, title="Job Status")
-    media_id: UUID | None = Field(None, title="Media Id")
-    paragraph_id: UUID = Field(..., title="Paragraph Id")
+    media_id: UUID_aliased | None = Field(None, title="Media Id")
+    paragraph_id: UUID_aliased = Field(..., title="Paragraph Id")
     stage: str | None = Field(None, title="Stage")
     status: Status6 = Field(..., title="Status")
 
@@ -3908,9 +4637,9 @@ class TTSParagraphGenerateResponse(BaseModel):
 class TTSParagraphJobStatusResponse(BaseModel):
     audio_url: str | None = Field(None, title="Audio Url")
     error_message: str | None = Field(None, title="Error Message")
-    job_id: UUID = Field(..., title="Job Id")
-    media_id: UUID | None = Field(None, title="Media Id")
-    paragraph_id: UUID = Field(..., title="Paragraph Id")
+    job_id: UUID_aliased = Field(..., title="Job Id")
+    media_id: UUID_aliased | None = Field(None, title="Media Id")
+    paragraph_id: UUID_aliased = Field(..., title="Paragraph Id")
     stage: str | None = Field(None, title="Stage")
     status: Status | None = Field(None, title="Status")
 
@@ -3919,8 +4648,14 @@ class TTSParagraphStreamSessionResponse(TTSBaseWordStreamSessionResponse):
     pass
 
 
+class Tag(BaseModel):
+    tag_id: UUID_aliased
+    tag_name: str
+    tag_type: NullString | None = None
+
+
 class TargetedLearningSuggestion(BaseModel):
-    grammar_concept_id: UUID = Field(..., title="Grammar Concept Id")
+    grammar_concept_id: UUID_aliased = Field(..., title="Grammar Concept Id")
     reason: str = Field(..., title="Reason")
     title: str = Field(..., title="Title")
 
@@ -3929,7 +4664,12 @@ class TargetedLessonResponse(BaseModel):
     suggested_concept_hubs: list[TargetedLearningSuggestion] = Field(
         ..., title="Suggested Concept Hubs"
     )
-    user_id: UUID = Field(..., title="User Id")
+    user_id: UUID_aliased = Field(..., title="User Id")
+
+
+class TargetedSuggestionsResponse(BaseModel):
+    suggested_concept_hubs: list[SuggestedConceptHub]
+    user_id: str
 
 
 class Thumbnail(BaseModel):
@@ -3941,26 +4681,34 @@ class TimeSeriesPoint(CommsTimeSeriesPoint):
     pass
 
 
+class TokenResponse(BaseModel):
+    access_token: str
+    expires_in: int
+    refresh_token: str | None = None
+    token_type: str
+    user_id: UUID_aliased
+
+
 class TopicListClusteringRequest(BaseModel):
     candidate_limit: int | None = Field(300, title="Candidate Limit")
     cluster_size: int | None = Field(12, title="Cluster Size")
     max_topics: int | None = Field(10, title="Max Topics")
-    seed_word_id: UUID | None = Field(None, title="Seed Word Id")
+    seed_word_id: UUID_aliased | None = Field(None, title="Seed Word Id")
 
 
 class TopicListGenerateRequest(BaseModel):
     lang: str | None = Field("", title="Lang")
     must_include: list[str] | None = Field(None, title="Must Include")
     prompt: str = Field(..., title="Prompt")
-    user_id: UUID = Field(..., title="User Id")
+    user_id: UUID_aliased = Field(..., title="User Id")
 
 
 class TopicListItemCreate(BaseModel):
-    base_word_id: UUID = Field(..., title="Base Word Id")
+    base_word_id: UUID_aliased = Field(..., title="Base Word Id")
 
 
 class TopicListItemResponse(BaseModel):
-    base_word_id: UUID = Field(..., title="Base Word Id")
+    base_word_id: UUID_aliased = Field(..., title="Base Word Id")
     meaning: str | None = Field(None, title="Meaning")
     position: int = Field(..., title="Position")
     similarity_to_centroid: float | None = Field(None, title="Similarity To Centroid")
@@ -3974,7 +4722,7 @@ class TopicListPreview(BaseModel):
     display_name: str | None = Field(None, title="Display Name")
     icon: str | None = Field(None, title="Icon")
     name: str | None = Field(None, title="Name")
-    seed_word_id: UUID = Field(..., title="Seed Word Id")
+    seed_word_id: UUID_aliased = Field(..., title="Seed Word Id")
     words: list[TopicListItemResponse] | None = Field(None, title="Words")
 
 
@@ -3985,9 +4733,9 @@ class TopicListResponse(BaseModel):
     description: str | None = Field(None, title="Description")
     display_name: str | None = Field(None, title="Display Name")
     icon: str | None = Field(None, title="Icon")
-    id: UUID = Field(..., title="Id")
+    id: UUID_aliased = Field(..., title="Id")
     name: str = Field(..., title="Name")
-    owner_user_id: UUID | None = Field(None, title="Owner User Id")
+    owner_user_id: UUID_aliased | None = Field(None, title="Owner User Id")
     source_type: str | None = Field("ai_generated", title="Source Type")
     status: str = Field(..., title="Status")
     word_count: int | None = Field(0, title="Word Count")
@@ -4004,9 +4752,9 @@ class TopicListTeaser(BaseModel):
     cefr_level: str | None = Field(None, title="Cefr Level")
     display_name: str | None = Field(None, title="Display Name")
     icon: str | None = Field(None, title="Icon")
-    id: UUID = Field(..., title="Id")
+    id: UUID_aliased = Field(..., title="Id")
     name: str = Field(..., title="Name")
-    owner_user_id: UUID | None = Field(None, title="Owner User Id")
+    owner_user_id: UUID_aliased | None = Field(None, title="Owner User Id")
     sample_words: list[str] | None = Field(
         None,
         description="Sample learning-language words from this topic (no translations)",
@@ -4023,7 +4771,7 @@ class TopicListWithWordsResponse(BaseModel):
 
 class TopicListsForWordResponse(BaseModel):
     topic_lists: list[TopicListTeaser] = Field(..., title="Topic Lists")
-    word_id: UUID = Field(..., title="Word Id")
+    word_id: UUID_aliased = Field(..., title="Word Id")
 
 
 class TrackListItem(BaseModel):
@@ -4031,7 +4779,7 @@ class TrackListItem(BaseModel):
     color_hex: str | None = Field(None, title="Color Hex")
     description: str | None = Field(None, title="Description")
     icon_emoji: str | None = Field(None, title="Icon Emoji")
-    id: UUID = Field(..., title="Id")
+    id: UUID_aliased = Field(..., title="Id")
     is_recommended: bool | None = Field(False, title="Is Recommended")
     level_count: int | None = Field(0, title="Level Count")
     slug: str = Field(..., title="Slug")
@@ -4051,7 +4799,7 @@ class Status12(StrEnum):
 
 
 class TrackRoadmapLesson(BaseModel):
-    lesson_id: UUID = Field(..., title="Lesson Id")
+    lesson_id: UUID_aliased = Field(..., title="Lesson Id")
     order_index: int = Field(..., title="Order Index")
     state: Status12 = Field(..., title="State")
     thumbnail_url: str | None = Field(None, title="Thumbnail Url")
@@ -4106,13 +4854,13 @@ class TransferSubscriptionResponse(BaseModel):
 
 class Translation(BaseModel):
     created_at: AwareDatetime
-    created_by: UUID | None = None
-    id: UUID
-    key_id: UUID
+    created_by: UUID_aliased | None = None
+    id: UUID_aliased
+    key_id: UUID_aliased
     language_code: str
     quality_score: float | None = None
     reviewed_at: AwareDatetime | None = None
-    reviewed_by: UUID | None = None
+    reviewed_by: UUID_aliased | None = None
     status: str
     translator_source: str | None = None
     updated_at: AwareDatetime
@@ -4123,9 +4871,9 @@ class TranslationBundle(BaseModel):
     bundle: dict[str, str]
     checksum: str
     generated_at: AwareDatetime
-    id: UUID
+    id: UUID_aliased
     language_code: str
-    namespace_id: UUID | None = None
+    namespace_id: UUID_aliased | None = None
     version: int
 
 
@@ -4135,7 +4883,7 @@ class TranslationKeyPlaceholder(BaseModel):
     type: str
 
 
-class TranslationStateResponse(EndSessionResponse):
+class TranslationStateResponse(AppFeedbackUpdateStatusRequest):
     pass
 
 
@@ -4147,7 +4895,11 @@ class UnreadNotificationCountResponseV3(UnreadNotificationCountResponse):
     pass
 
 
-class UpdateContentStatusRequest(EndSessionResponse):
+class UpdateAuthUserFirebaseUIDRequest(BaseModel):
+    firebase_uid: str
+
+
+class UpdateContentStatusRequest(AppFeedbackUpdateStatusRequest):
     pass
 
 
@@ -4159,17 +4911,48 @@ class UpdateFeatureCategoryRequest(BaseModel):
     category: str | None = None
 
 
+class UpdateFeatureCategoryResponse(UpdateFeatureCategoryRequest):
+    pass
+
+
 class UpdateFeaturePrivacyRequest(BaseModel):
     is_private: bool
 
 
-class UpdateFeatureStatusRequest(EndSessionResponse):
+class UpdateFeaturePrivacyResponse(UpdateFeaturePrivacyRequest):
     pass
+
+
+class UpdateFeatureStatusRequest(AppFeedbackUpdateStatusRequest):
+    pass
+
+
+class UpdateFeatureStatusResponse(AppFeedbackUpdateStatusRequest):
+    pass
+
+
+class UpdateLanguageRequest(BaseModel):
+    direction: str
+    fallback_to: str | None = None
+    flag: str | None = None
+    is_active: bool
+    is_default: bool
+    name: str
+    native_name: str | None = None
+
+
+class UpdateLearningProgressResponse(BaseModel):
+    progress_id: str
+    updated_at: str
 
 
 class UpdateLearningStatusRequest(BaseModel):
     item_type: str | None = None
     suggested_kielo_status: str
+
+
+class UpdateNamespaceRequest(CreateNamespaceRequest):
+    pass
 
 
 class UpdateProfileRequest(BaseModel):
@@ -4180,6 +4963,25 @@ class UpdateProfileRequest(BaseModel):
     learning_minutes_goal: int | None = None
     name: str | None = None
     newsletter_consent: bool | None = None
+
+
+class UpdateProgressRequest(BaseModel):
+    achievement_code: str
+    event_id: str | None = None
+    increment: int
+    target_value: int | None = None
+    user_id: str
+
+
+class UpdateProgressResponse(BaseModel):
+    achievement_code: str
+    current_value: int
+    deduped: bool | None = None
+    target_value: int | None = None
+
+
+class UpdateScenarioResponse(DeleteVoiceAgentResponse):
+    pass
 
 
 class UpdateStudyListRequest(BaseModel):
@@ -4205,6 +5007,47 @@ class UpdateTranslationKeyRequest(BaseModel):
     tags: list[str] | None = None
 
 
+class UpsertDynamicTranslationRequest(BaseModel):
+    language_code: str
+    resource_id: str
+    resource_type: str
+    reviewer_id: UUID_aliased | None = None
+    source_locale: str | None = None
+    source_version: str
+    status: str | None = None
+    translated_text: str
+    translator_source: str | None = None
+
+
+class UpsertDynamicTranslationResponse(BaseModel):
+    inserted: bool
+    row: DynamicTranslation | None = None
+
+
+class UpsertTierLimitRequest(CreateTierLimitRequest):
+    pass
+
+
+class UpsertTierLimitResponse(BaseModel):
+    feature: str
+    limit_value: int
+    message: str
+    tier: str
+
+
+class UserAchievementProgress(BaseModel):
+    achievement_code: str
+    current_value: int
+    id: UUID_aliased
+    target_value: int | None = None
+    updated_at: AwareDatetime
+    user_id: UUID_aliased
+
+
+class UserAchievementProgressResponse(BaseModel):
+    progress: list[UserAchievementProgress]
+
+
 class UserAchievementWithDetails(BaseModel):
     category: str | None = None
     code: str
@@ -4215,17 +5058,35 @@ class UserAchievementWithDetails(BaseModel):
     points: int
 
 
+class UserAchievementsCountResponse(CommsUserCountResult):
+    pass
+
+
+class UserAchievementsResponse(BaseModel):
+    achievements: list[UserAchievementWithDetails]
+
+
+class UserActionEnvelope(BaseModel):
+    context: Any
+    derived_from: str | None = None
+    event_id: str
+    event_type: str
+    props: Any
+    schema_version: int
+    ts: AwareDatetime
+
+
 class UserActiveTrackResponse(BaseModel):
     progress_percent: float | None = Field(0.0, title="Progress Percent")
     track_color_hex: str | None = Field(None, title="Track Color Hex")
     track_icon_emoji: str | None = Field(None, title="Track Icon Emoji")
-    track_id: UUID | None = Field(None, title="Track Id")
+    track_id: UUID_aliased | None = Field(None, title="Track Id")
     track_title: str | None = Field(None, title="Track Title")
 
 
 class UserBasicInfo(BaseModel):
     email: str
-    id: UUID
+    id: UUID_aliased
     name: str | None = None
     tier: str
 
@@ -4238,7 +5099,16 @@ class UserDerivedProfileResponse(BaseModel):
     created_at: AwareDatetime = Field(..., title="Created At")
     last_calculated_at: AwareDatetime | None = Field(None, title="Last Calculated At")
     updated_at: AwareDatetime = Field(..., title="Updated At")
-    user_id: UUID = Field(..., title="User Id")
+    user_id: UUID_aliased = Field(..., title="User Id")
+
+
+class UserExistsResponse(BaseModel):
+    exists: bool
+
+
+class UserFeatureLimitsResponse(BaseModel):
+    overrides: dict[str, int]
+    user_id: str
 
 
 class UserFeatureOverridesResult(BaseModel):
@@ -4250,7 +5120,7 @@ class UserNotification(BaseModel):
     body: str
     created_at: AwareDatetime
     data: dict[str, Any] | None = None
-    id: UUID
+    id: UUID_aliased
     read: bool
     title: str
     type: str
@@ -4311,13 +5181,19 @@ class UserResponse(BaseModel):
     profile: UserProfileData
 
 
+class UserRevenueCatLink(BaseModel):
+    linked_at: AwareDatetime
+    revenue_cat_user_id: str
+    updated_at: AwareDatetime
+    user_id: UUID_aliased
+
+
 class UserSearchHit(CommsUserSearchHit):
     pass
 
 
-class UserSubscriptionGrantRequest(BaseModel):
-    expires_at: AwareDatetime | None = None
-    product_id: str
+class UserSubscriptionGrantRequest(GrantSubscriptionRequest):
+    pass
 
 
 class UserSubscriptionGrantResponse(BaseModel):
@@ -4328,6 +5204,15 @@ class UserSubscriptionGrantResponse(BaseModel):
 
 class UserSubscriptionRevokeResponse(CancelSubscriptionResponse):
     pass
+
+
+class UserWithOverride(BaseModel):
+    override_count: int
+    user_id: str
+
+
+class UsersWithOverridesResponse(BaseModel):
+    users: list[UserWithOverride]
 
 
 class ValidateDiscountRequest(BaseModel):
@@ -4357,8 +5242,69 @@ class VerifyResetTokenResponse(BaseModel):
     valid: bool
 
 
+class VersionSummary(BaseModel):
+    article_type: str
+    title: str
+    version_id: UUID_aliased
+
+
+class Video(BaseModel):
+    audio_url: str | None = None
+    brand_id: UUID_aliased
+    carousel_images: list[str] | None = None
+    created_at: AwareDatetime
+    description: str
+    description_translation_fallback: bool | None = None
+    description_translation_locale: str | None = None
+    description_translation_source_locale: str | None = None
+    duration_seconds: int
+    format_type: str | None = None
+    id: UUID_aliased
+    learning_language_code: str | None = None
+    locale: str | None = None
+    original_description: str | None = None
+    original_title: str | None = None
+    published_at: AwareDatetime
+    source_locale: str | None = None
+    thumbnail_url: str
+    title: str
+    title_translation_fallback: bool | None = None
+    title_translation_locale: str | None = None
+    title_translation_source_locale: str | None = None
+    transcription_status: str | None = None
+    updated_at: AwareDatetime
+    video_url: str
+
+
+class VoiceAgent(BaseModel):
+    avatar_url: str | None = None
+    created_at: AwareDatetime
+    description: str | None = None
+    gender: str | None = None
+    id: UUID_aliased
+    is_active: bool
+    language: str
+    language_code: str | None = None
+    name: str
+    updated_at: AwareDatetime
+    voice_id: str
+
+
+class WatchedVideo(BaseModel):
+    feature: str
+    video_id: str
+    watched_at: AwareDatetime
+    within_cooldown: bool
+
+
+class WatchedVideosResponse(BaseModel):
+    cooldown_hours: int
+    video_ids: list[str]
+    watched_details: list[WatchedVideo]
+
+
 class WebIngestPlanItem(BaseModel):
-    brand_id: UUID | None = None
+    brand_id: UUID_aliased | None = None
     brand_name: str | None = None
     display_name: str
     is_active: bool
@@ -4384,10 +5330,10 @@ class WebIngestRunItem(BaseModel):
 
 
 class WebIngestTarget(BaseModel):
-    brand_id: UUID | None = None
+    brand_id: UUID_aliased | None = None
     brand_name: str | None = None
     created_at: AwareDatetime
-    created_by: UUID | None = None
+    created_by: UUID_aliased | None = None
     display_name: str
     is_active: bool
     learning_language_code: str
@@ -4395,7 +5341,7 @@ class WebIngestTarget(BaseModel):
     source_url: str
     target_id: str
     updated_at: AwareDatetime
-    updated_by: UUID | None = None
+    updated_by: UUID_aliased | None = None
 
 
 class WebIngestTargetRequest(BaseModel):
@@ -4482,7 +5428,7 @@ class WordCluster(BaseModel):
 
 
 class WordClusterSessionStatusResponse(BaseModel):
-    item_id: UUID = Field(..., title="Item Id")
+    item_id: UUID_aliased = Field(..., title="Item Id")
     message: str = Field(..., title="Message")
     missing_components: list[str] | None = Field(None, title="Missing Components")
     retry_after_ms: conint(ge=0) | None = Field(2500, title="Retry After Ms")
@@ -4499,15 +5445,15 @@ class WordDeckCreate(BaseModel):
 
 
 class WordDeckItemCreate(BaseModel):
-    item_id: UUID = Field(..., title="Item Id")
+    item_id: UUID_aliased = Field(..., title="Item Id")
     item_type: ItemTypeFk = Field(..., title="Item Type")
 
 
 class WordDeckItemResponse(BaseModel):
     added_at: AwareDatetime = Field(..., title="Added At")
-    deck_id_fk: UUID = Field(..., title="Deck Id Fk")
-    id: UUID = Field(..., title="Id")
-    item_id: UUID = Field(..., title="Item Id")
+    deck_id_fk: UUID_aliased = Field(..., title="Deck Id Fk")
+    id: UUID_aliased = Field(..., title="Id")
+    item_id: UUID_aliased = Field(..., title="Item Id")
     item_type: str = Field(..., title="Item Type")
     order: int | None = Field(..., title="Order")
 
@@ -4515,16 +5461,16 @@ class WordDeckItemResponse(BaseModel):
 class WordDeckResponse(BaseModel):
     created_at: AwareDatetime = Field(..., title="Created At")
     description: str | None = Field(..., title="Description")
-    id: UUID = Field(..., title="Id")
+    id: UUID_aliased = Field(..., title="Id")
     is_public: bool = Field(..., title="Is Public")
     name: str = Field(..., title="Name")
     updated_at: AwareDatetime = Field(..., title="Updated At")
-    user_id_fk: UUID = Field(..., title="User Id Fk")
+    user_id_fk: UUID_aliased = Field(..., title="User Id Fk")
 
 
 class WordDeckReviewRequest(BaseModel):
-    deck_id: UUID = Field(..., title="Deck Id")
-    item_id: UUID = Field(..., title="Item Id")
+    deck_id: UUID_aliased = Field(..., title="Deck Id")
+    item_id: UUID_aliased = Field(..., title="Item Id")
     outcome_correct: bool = Field(..., title="Outcome Correct")
     response_time_ms: int | None = Field(None, title="Response Time Ms")
 
@@ -4540,13 +5486,8 @@ class WordDeckWithItemsResponse(BaseModel):
     items: list[WordDeckItemResponse] = Field(..., title="Items")
 
 
-class WordForm(BaseModel):
-    features: dict[str, str] | None = None
-    form: str
-    is_lemma: bool | None = None
-    label: str | None = None
-    label_short: str | None = None
-    paradigm_slot: str | None = None
+class WordForm(DictionaryWordForm):
+    pass
 
 
 class WordScrambleItem(BaseModel):
@@ -4568,16 +5509,24 @@ class FieldTranslateBatchResponse(BaseModel):
     translations: list[str] | None = Field(None, title="Translations")
 
 
+class AIConversation(BaseModel):
+    id: str
+    persona: ConversationPersona
+    setting: ConversationSetting
+    title: str
+
+
 class AiConversationFlow(BaseModel):
     id: str = Field(..., title="Id")
     steps: list[str | AiConversationStep] = Field(..., title="Steps")
 
 
-class AiConversationSummary(BaseModel):
-    id: str
-    persona: ConversationPersona
-    setting: ConversationSetting
-    title: str
+class AiConversationSummary(AIConversation):
+    pass
+
+
+class AllFeatureLimitsResponse(BaseModel):
+    limits: list[FeatureLimitRow]
 
 
 class Article(BaseModel):
@@ -4587,27 +5536,46 @@ class Article(BaseModel):
     title: str
 
 
+class ArticleVersionSnippet(BaseModel):
+    article_type: str | None = None
+    brand: Brand
+    difficulty_score: NullFloat64 | None = None
+    estimated_reading_time_minutes: NullInt32 | None = None
+    id: UUID_aliased
+    learning_language_code: str | None = None
+    original_title: str | None = None
+    publication_date: AwareDatetime | None = None
+    source_url: str | None = None
+    support_language_code: str | None = None
+    tags: list[str] | None = None
+    thumbnail: MediaAssetResponse | None = None
+    title: str
+    title_support_language_code: str | None = None
+    title_translation_fallback: bool | None = None
+    title_translation_source_locale: str | None = None
+
+
 class BaseWord(BaseModel):
     audio_pronunciation_url: str | None = None
-    base_word_id: UUID
+    base_word_id: UUID_aliased
     cefr_level: str | None = None
+    created_at: AwareDatetime
     examples: list[ExampleSentencePair] | None = None
     frequency_score: float | None = None
-    learning_language_code: str
     meaning: str | None = None
     notes: str | None = None
     part_of_speech: str | None = None
     pronunciation_ipa: str | None = None
     related_lemmas: Any | None = None
-    secondary_translations: Any | None = None
+    secondary_meanings: Any | None = None
     term: str | None = None
+    updated_at: AwareDatetime
     user_status: str | None = None
-    vector_embedding: str | None = None
 
 
 class BaseWordResponse(BaseModel):
     audio_pronunciation_url: str | None = Field(None, title="Audio Pronunciation Url")
-    base_word_id: UUID = Field(..., title="Base Word Id")
+    base_word_id: UUID_aliased = Field(..., title="Base Word Id")
     cefr_level: str | None = Field(None, title="Cefr Level")
     created_at: AwareDatetime = Field(..., title="Created At")
     description: str | None = Field(None, title="Description")
@@ -4640,6 +5608,20 @@ class BatchScheduleUpdateRequest(BaseModel):
     updates: list[ScheduleUpdateItem] = Field(..., title="Updates")
 
 
+class BrowseScenariosResponse(BaseModel):
+    facets: BrowseScenariosFacets
+    items: list[ScenarioListItem]
+    next_cursor: str | None = None
+    next_page_key: str | None = None
+
+
+class CAMArticleContent(BaseModel):
+    article_version_id: UUID_aliased
+    occurrences: list[CAMOccurrence]
+    unique_base_words: list[BaseWord] | None = None
+    unique_grammar_concepts: list[GrammarConcept] | None = None
+
+
 class CampaignConfigSchema(BaseModel):
     cadence_types: list[str]
     content_types: list[str]
@@ -4654,7 +5636,7 @@ class CampaignPreviewDetails(BaseModel):
 
 
 class CampaignPreviewResult(BaseModel):
-    campaign_id: UUID
+    campaign_id: UUID_aliased
     preview: CampaignPreviewDetails
 
 
@@ -4708,6 +5690,14 @@ class ConceptHubCategory(BaseModel):
     concept_hubs: list[ConceptHubTeaser] = Field(..., title="Concept Hubs")
 
 
+class ConceptHubCore(BaseModel):
+    common_mistakes: list[CommonMistake]
+    examples: list[ExampleSentencePair]
+    explanation_html: str
+    image_url: str | None = None
+    in_the_wild: list[ConceptHubSentenceExample]
+
+
 class ConceptHubCoreContent(BaseModel):
     common_mistakes: list[ConceptHubCommonMistake] | None = None
     examples: list[ConceptHubExample] | None = None
@@ -4724,7 +5714,7 @@ class ConceptHubFollowUps(BaseModel):
 
 class ContentDiscoveryResponse(BaseModel):
     categories: list[ConceptHubCategory] = Field(..., title="Categories")
-    user_id: UUID = Field(..., title="User Id")
+    user_id: UUID_aliased = Field(..., title="User Id")
 
 
 class ContextMatchingExercise(BaseModel):
@@ -4740,7 +5730,7 @@ class ContextMatchingExercise(BaseModel):
         title="Correct Answer",
     )
     error_pattern_tag: str | None = Field(None, title="Error Pattern Tag")
-    exercise_id: UUID | None = Field(
+    exercise_id: UUID_aliased | None = Field(
         None,
         description="Unique ID for this specific exercise instance.",
         title="Exercise Id",
@@ -4748,11 +5738,11 @@ class ContextMatchingExercise(BaseModel):
     exercise_type: Literal["context_matching"] = Field(
         "context_matching", title="Exercise Type"
     )
-    generation_job_id: UUID | None = Field(None, title="Generation Job Id")
+    generation_job_id: UUID_aliased | None = Field(None, title="Generation Job Id")
     generation_model: str | None = Field(None, title="Generation Model")
-    item_id_fk: UUID = Field(..., title="Item Id Fk")
+    item_id_fk: UUID_aliased = Field(..., title="Item Id Fk")
     item_type_fk: ItemTypeFk = Field(..., title="Item Type Fk")
-    objective_id: UUID | None = Field(None, title="Objective Id")
+    objective_id: UUID_aliased | None = Field(None, title="Objective Id")
     options: list[dict[str, str]] = Field(
         ...,
         description="List of scenario options with keys: id, scenario_name",
@@ -4802,10 +5792,11 @@ class ConversationDiscoveryResponse(BaseModel):
 
 class CreateTranslationKeyRequest(BaseModel):
     context_screenshot_url: str | None = None
+    created_by: UUID_aliased | None = None
     description: str | None = None
     key: str
     max_length: int | None = None
-    namespace_id: UUID
+    namespace_id: UUID_aliased
     placeholders: list[TranslationKeyPlaceholder] | None = None
     source_text: str
     tags: list[str] | None = None
@@ -4814,7 +5805,7 @@ class CreateTranslationKeyRequest(BaseModel):
 class CurriculumTreeChapter(BaseModel):
     description: str | None = Field(None, title="Description")
     icon_emoji: str | None = Field(None, title="Icon Emoji")
-    id: UUID = Field(..., title="Id")
+    id: UUID_aliased = Field(..., title="Id")
     lesson_count: int | None = Field(0, title="Lesson Count")
     lessons: list[CurriculumTreeLesson] | None = Field(None, title="Lessons")
     order_index: int = Field(..., title="Order Index")
@@ -4829,7 +5820,7 @@ class CurriculumTreeLevel(BaseModel):
     chapters: list[CurriculumTreeChapter] | None = Field(None, title="Chapters")
     description: str | None = Field(None, title="Description")
     icon_emoji: str | None = Field(None, title="Icon Emoji")
-    id: UUID = Field(..., title="Id")
+    id: UUID_aliased = Field(..., title="Id")
     order_index: int = Field(..., title="Order Index")
     status: str = Field(..., title="Status")
     thumbnail_url: str | None = Field(None, title="Thumbnail Url")
@@ -4839,7 +5830,7 @@ class CurriculumTreeLevel(BaseModel):
 class CurriculumTreeTrack(BaseModel):
     description: str | None = Field(None, title="Description")
     icon_emoji: str | None = Field(None, title="Icon Emoji")
-    id: UUID = Field(..., title="Id")
+    id: UUID_aliased = Field(..., title="Id")
     level_count: int | None = Field(0, title="Level Count")
     levels: list[CurriculumTreeLevel] | None = Field(None, title="Levels")
     order_index: int = Field(..., title="Order Index")
@@ -4848,6 +5839,11 @@ class CurriculumTreeTrack(BaseModel):
     thumbnail_url: str | None = Field(None, title="Thumbnail Url")
     title: str = Field(..., title="Title")
     track_type: str = Field(..., title="Track Type")
+
+
+class CursorPageArticleVersionSnippet(BaseModel):
+    items: list[ArticleVersionSnippet]
+    next_page_key: str | None = None
 
 
 class CursorPageFeatureComment(BaseModel):
@@ -4885,6 +5881,11 @@ class CursorPageStudyListV3(BaseModel):
     next_page_key: str | None = None
 
 
+class CursorPageTag(BaseModel):
+    items: list[Tag]
+    next_page_key: str | None = None
+
+
 class CursorPageUserNotification(BaseModel):
     items: list[UserNotification]
     next_page_key: str | None = None
@@ -4893,6 +5894,21 @@ class CursorPageUserNotification(BaseModel):
 class CursorPageUserNotificationV3(BaseModel):
     items: list[UserNotificationV3]
     next_page_key: str | None = None
+
+
+class CursorPageVideo(BaseModel):
+    items: list[Video]
+    next_page_key: str | None = None
+
+
+class DataQualityIssuesPage(BaseModel):
+    issues: list[IssueRow]
+    limit: int
+    offset: int
+
+
+class DataQualityRunsPage(BaseModel):
+    runs: list[RunRow]
 
 
 class DecisionLog(BaseModel):
@@ -4918,30 +5934,21 @@ class DecisionLog(BaseModel):
     timing_ms: dict[str, int] | None = Field(None, title="Timing Ms")
 
 
-class DictionaryEntry(BaseModel):
-    audio_url: str | None = None
-    cefr_level: str | None = None
-    definition: DictionaryDefinition
-    examples: list[DictionaryExample] | None = None
-    id: str
-    learning_language_code: str | None = None
-    morphology: DictionaryMorphology | None = None
-    part_of_speech: str | None = None
-    pronunciation_ipa: str | None = None
-    related_grammar: list[DictionaryRelatedConcept] | None = None
-    term: str | None = None
-
-
-class DictionaryLookupResponse(BaseModel):
-    entry: DictionaryEntry | None = None
-    found: bool
-    morphology: DictionaryMorphology | None = None
-    suggestions: list[str] | None = None
-    word: str
+class DictionaryParadigm(BaseModel):
+    headers: list[str]
+    rows: list[DictionaryParadigmRow]
+    source: str | None = None
+    type: str
 
 
 class DiscoveryItemsResponse(BaseModel):
     items: list[ItemSummary] = Field(..., title="Items")
+
+
+class EffectiveUserLimitsResponse(BaseModel):
+    effective_limits: list[FeatureLimitWithUsage]
+    tier: str
+    user_id: str
 
 
 class FollowUpActivities(BaseModel):
@@ -4966,8 +5973,74 @@ class GenerateHintRequest(BaseModel):
     step_index: int | None = None
 
 
+class GenerateScenarioResponse(BaseModel):
+    message: str
+    scenario: Scenario | None = None
+
+
+class GetMediaResponse(BaseModel):
+    created_at: AwareDatetime
+    media_id: str
+    media_type: str
+    processing_error: str | None = None
+    processing_status: str
+    serve_base_url: str
+    temporary_url: str | None = None
+    updated_at: AwareDatetime
+    variants: dict[str, MediaVariant] | None = None
+
+
 class HTTPValidationError(BaseModel):
     detail: list[ValidationError] | None = Field(None, title="Detail")
+
+
+class KLearnArticleInjection(BaseModel):
+    action: str
+    base_word_id: NullUUID | None = None
+    grammar_concept_id: NullUUID | None = None
+    paragraph_index: int
+    payload: dict[str, Any] | None = None
+    sentence_index: int | None = None
+    target_text: str | None = None
+
+
+class KLearnExercise(BaseModel):
+    answer_html: str | None = None
+    audio_text: str | None = None
+    audio_url: str | None = None
+    context_hint: str | None = None
+    correct_answer: str | None = None
+    distractor_translations: list[str] | None = None
+    exercise_id: str
+    exercise_type: str
+    explanation: str | None = None
+    explanation_html: str | None = None
+    hint: str | None = None
+    item_id_fk: NullUUID | None = None
+    item_type_fk: str | None = None
+    options: Any | None = None
+    phrase_options: list[str] | None = None
+    prompt: str
+    question: str | None = None
+    replay_limit: int | None = None
+    scenario_description: str | None = None
+    scenario_image_hint: str | None = None
+    scrambled_words: list[KLearnScrambledWord] | None = None
+    sentence: str | None = None
+    sentence_with_blank: str | None = None
+    source_language: str | None = None
+    source_phrase: str | None = None
+    source_text: str | None = None
+    state: LearningSessionState
+    target_items: Any | None = None
+    target_language: str | None = None
+    translation_prompt: str | None = None
+
+
+class KLearnPersonalizedArticleResponse(BaseModel):
+    article_version_id: UUID_aliased
+    injections: list[KLearnArticleInjection] | None = None
+    modified_markdown_content: str | None = None
 
 
 class KTVCaptionGenerateResponse(BaseModel):
@@ -5009,7 +6082,7 @@ class KTVSocialSheetExportResponse(BaseModel):
     updated_cells: int | None = None
     updated_range: str | None = None
     updated_rows: int | None = None
-    variant_id: UUID
+    variant_id: UUID_aliased
     workflow: KTVWorkflow | None = None
     worksheet: str
 
@@ -5019,6 +6092,10 @@ class KTVSpeechFixResponse(BaseModel):
     notes: str | None = None
     speech_script: str
     workflow: KTVWorkflow | None = None
+
+
+class ListScenariosResponse(BaseModel):
+    items: list[ScenarioListItem]
 
 
 class MediaMetadata(BaseModel):
@@ -5034,14 +6111,14 @@ class MediaMetadata(BaseModel):
 
 
 class NextStepRecommendation(BaseModel):
-    article_id: UUID | None = Field(None, title="Article Id")
+    article_id: UUID_aliased | None = Field(None, title="Article Id")
     cta_id: CtaId | None = Field(None, title="Cta Id")
     cta_label: str | None = Field(None, title="Cta Label")
     destination_mode: str | None = Field(None, title="Destination Mode")
     exercise_types: list[str] | None = Field(None, title="Exercise Types")
     intent: Intent1 | None = Field(None, title="Intent")
-    item_id: UUID | None = Field(None, title="Item Id")
-    item_ids: list[UUID] | None = Field(None, title="Item Ids")
+    item_id: UUID_aliased | None = Field(None, title="Item Id")
+    item_ids: list[UUID_aliased] | None = Field(None, title="Item Ids")
     item_type: ItemTypeFk | None = Field(None, title="Item Type")
     launch_params: RecommendationLaunchParams | None = None
     rationale: str | None = Field(None, title="Rationale")
@@ -5059,6 +6136,35 @@ class NotificationJobListResponse(BaseModel):
 class NotificationPreferences(BaseModel):
     inbox: NotificationInboxPreferences
     push: NotificationPushPreferences
+
+
+class OmorfiAnalysisCandidate(BaseModel):
+    base_form: str = Field(..., title="Base Form")
+    inflection: OmorfiInflection | None = None
+    upos: str | None = Field(None, title="Upos")
+    weight: float | None = Field(None, title="Weight")
+    word_class: str = Field(..., title="Word Class")
+
+
+class OmorfiAnalysisResponse(BaseModel):
+    base_form: str = Field(..., title="Base Form")
+    candidates: list[OmorfiAnalysisCandidate] | None = Field(None, title="Candidates")
+    inflections: list[OmorfiInflection] | None = Field(None, title="Inflections")
+    is_valid_word: bool = Field(..., title="Is Valid Word")
+    suggestions: list[str] | None = Field(None, title="Suggestions")
+    word: str = Field(..., title="Word")
+    word_class: str = Field(..., title="Word Class")
+
+
+class OmorfiParadigm(BaseModel):
+    headers: list[str] | None = Field(None, title="Headers")
+    rows: list[OmorfiParadigmRow] | None = Field(None, title="Rows")
+    type: str = Field(..., title="Type")
+
+
+class OmorfiResponse(BaseModel):
+    forms: list[OmorfiForm] | None = Field(None, title="Forms")
+    paradigm: OmorfiParadigm | None = None
 
 
 class Paradigm(BaseModel):
@@ -5100,8 +6206,15 @@ class ProgressSummaryV3(BaseModel):
     weekly_activity: list[WeeklyActivityDayV3]
 
 
+class RelatedVersionsResponse(BaseModel):
+    current_type: str
+    current_version_id: UUID_aliased
+    original_version: VersionSummary | None = None
+    simplified_versions: list[VersionSummary] | None = None
+
+
 class RoadmapAdminGenerateLessonRequest(BaseModel):
-    chapter_id: UUID | None = Field(None, title="Chapter Id")
+    chapter_id: UUID_aliased | None = Field(None, title="Chapter Id")
     description: str | None = Field(None, title="Description")
     is_published: bool | None = Field(False, title="Is Published")
     order_index: int | None = Field(None, title="Order Index")
@@ -5111,7 +6224,7 @@ class RoadmapAdminGenerateLessonRequest(BaseModel):
 
 
 class RoadmapCompleteLessonResponse(BaseModel):
-    lesson_id: UUID = Field(..., title="Lesson Id")
+    lesson_id: UUID_aliased = Field(..., title="Lesson Id")
     practice_recommendation: NextStepRecommendation | None = None
     practice_status: PracticeStatus | None = Field(
         "unavailable", title="Practice Status"
@@ -5130,7 +6243,7 @@ class RoadmapLessonDetailResponse(BaseModel):
     difficulty_level: str = Field(..., title="Difficulty Level")
     estimated_duration_minutes: int = Field(..., title="Estimated Duration Minutes")
     lesson_content: dict[str, Any] = Field(..., title="Lesson Content")
-    lesson_id: UUID = Field(..., title="Lesson Id")
+    lesson_id: UUID_aliased = Field(..., title="Lesson Id")
     order_index: int = Field(..., title="Order Index")
     practice_recommendation: NextStepRecommendation | None = None
     practice_status: PracticeStatus | None = Field(
@@ -5152,7 +6265,7 @@ class RoadmapLessonListItem(BaseModel):
     description: str | None = Field(None, title="Description")
     difficulty_level: str = Field(..., title="Difficulty Level")
     estimated_duration_minutes: int = Field(..., title="Estimated Duration Minutes")
-    lesson_id: UUID = Field(..., title="Lesson Id")
+    lesson_id: UUID_aliased = Field(..., title="Lesson Id")
     order_index: int = Field(..., title="Order Index")
     progress: RoadmapLessonProgressSnapshot
     state: State = Field(..., title="State")
@@ -5162,13 +6275,13 @@ class RoadmapLessonListItem(BaseModel):
 
 class RoadmapLessonsResponse(BaseModel):
     lessons: list[RoadmapLessonListItem] = Field(..., title="Lessons")
-    user_id: UUID = Field(..., title="User Id")
+    user_id: UUID_aliased = Field(..., title="User Id")
 
 
 class RoadmapSpeechEvaluationResponse(BaseModel):
     expected_text: str = Field(..., title="Expected Text")
     language_probability: float | None = Field(0.0, title="Language Probability")
-    lesson_id: UUID = Field(..., title="Lesson Id")
+    lesson_id: UUID_aliased = Field(..., title="Lesson Id")
     passed: bool = Field(..., title="Passed")
     recognized_text: str = Field(..., title="Recognized Text")
     segments: list[RoadmapSpeechSegment] | None = Field(None, title="Segments")
@@ -5183,6 +6296,12 @@ class SearchResponse(BaseModel):
     took_ms: int
 
 
+class SemanticSearchResponse(BaseModel):
+    count: int
+    query: str
+    results: list[SemanticSearchResult]
+
+
 class SentenceConstructionExercise(BaseModel):
     cache_entry_id: str | None = Field(None, title="Cache Entry Id")
     context_hint: str | None = Field(
@@ -5192,7 +6311,7 @@ class SentenceConstructionExercise(BaseModel):
     )
     correct_answer: str = Field(..., title="Correct Answer")
     error_pattern_tag: str | None = Field(None, title="Error Pattern Tag")
-    exercise_id: UUID | None = Field(
+    exercise_id: UUID_aliased | None = Field(
         None,
         description="Unique ID for this specific exercise instance.",
         title="Exercise Id",
@@ -5200,11 +6319,11 @@ class SentenceConstructionExercise(BaseModel):
     exercise_type: Literal["sentence_construction"] = Field(
         "sentence_construction", title="Exercise Type"
     )
-    generation_job_id: UUID | None = Field(None, title="Generation Job Id")
+    generation_job_id: UUID_aliased | None = Field(None, title="Generation Job Id")
     generation_model: str | None = Field(None, title="Generation Model")
-    item_id_fk: UUID = Field(..., title="Item Id Fk")
+    item_id_fk: UUID_aliased = Field(..., title="Item Id Fk")
     item_type_fk: ItemTypeFk = Field(..., title="Item Type Fk")
-    objective_id: UUID | None = Field(None, title="Objective Id")
+    objective_id: UUID_aliased | None = Field(None, title="Objective Id")
     prompt: str = Field(..., title="Prompt")
     prompt_version: str | None = Field(None, title="Prompt Version")
     quality_score: float | None = Field(None, title="Quality Score")
@@ -5216,7 +6335,7 @@ class SentenceConstructionExercise(BaseModel):
 
 
 class SessionReconcileItemResult(BaseModel):
-    exercise_id: UUID = Field(..., title="Exercise Id")
+    exercise_id: UUID_aliased = Field(..., title="Exercise Id")
     result: SubmissionResult | None = None
     status: Status4 | None = Field("applied", title="Status")
     submission_id: str | None = Field(None, title="Submission Id")
@@ -5248,14 +6367,6 @@ class SingletonConversationBrowseResponse(BaseModel):
 
 class SingletonConversationDiscoveryResponse(BaseModel):
     data: ConversationDiscoveryResponse
-
-
-class SingletonDictionaryEntry(BaseModel):
-    data: DictionaryEntry
-
-
-class SingletonDictionaryLookupResponse(BaseModel):
-    data: DictionaryLookupResponse
 
 
 class SingletonKTVCaptionGenerateResponse(BaseModel):
@@ -5332,6 +6443,10 @@ class SingletonSubmitAnswerResponseV3(BaseModel):
 
 class SingletonSubscriptionInfo(BaseModel):
     data: SubscriptionInfo
+
+
+class SingletonTargetedSuggestionsResponse(BaseModel):
+    data: TargetedSuggestionsResponse
 
 
 class SingletonTransactionHistoryResponse(BaseModel):
@@ -5445,20 +6560,20 @@ class StatsChartResponse(BaseModel):
 
 class TopicListGenerationJobResponse(BaseModel):
     error_message: str | None = Field(None, title="Error Message")
-    job_id: UUID = Field(..., title="Job Id")
+    job_id: UUID_aliased = Field(..., title="Job Id")
     preview: TopicListPreview | None = None
-    seed_word_id: UUID = Field(..., title="Seed Word Id")
+    seed_word_id: UUID_aliased = Field(..., title="Seed Word Id")
     stage: str | None = Field(None, title="Stage")
     status: Status = Field(..., title="Status")
-    topic_list_id: UUID | None = Field(None, title="Topic List Id")
+    topic_list_id: UUID_aliased | None = Field(None, title="Topic List Id")
 
 
 class TopicListStatusResponse(BaseModel):
-    job_id: UUID | None = Field(None, title="Job Id")
+    job_id: UUID_aliased | None = Field(None, title="Job Id")
     job_status: Status | None = Field(None, title="Job Status")
     message: str = Field(..., title="Message")
     preview: TopicListPreview | None = None
-    seed_word_id: UUID = Field(..., title="Seed Word Id")
+    seed_word_id: UUID_aliased = Field(..., title="Seed Word Id")
     stage: str | None = Field(None, title="Stage")
     status: Status11 = Field(..., title="Status")
     topic_lists: list[TopicListTeaser] | None = Field(None, title="Topic Lists")
@@ -5468,7 +6583,7 @@ class TrackRoadmapChapter(BaseModel):
     completed_lesson_count: int | None = Field(0, title="Completed Lesson Count")
     description: str | None = Field(None, title="Description")
     icon_emoji: str | None = Field(None, title="Icon Emoji")
-    id: UUID = Field(..., title="Id")
+    id: UUID_aliased = Field(..., title="Id")
     lesson_count: int | None = Field(0, title="Lesson Count")
     lessons: list[TrackRoadmapLesson] | None = Field(None, title="Lessons")
     status: Status12 = Field(..., title="Status")
@@ -5482,7 +6597,7 @@ class TrackRoadmapLevel(BaseModel):
     chapters: list[TrackRoadmapChapter] | None = Field(None, title="Chapters")
     completed_chapter_count: int | None = Field(0, title="Completed Chapter Count")
     icon_emoji: str | None = Field(None, title="Icon Emoji")
-    id: UUID = Field(..., title="Id")
+    id: UUID_aliased = Field(..., title="Id")
     progress_percent: float | None = Field(0.0, title="Progress Percent")
     status: Status12 = Field(..., title="Status")
     thumbnail_url: str | None = Field(None, title="Thumbnail Url")
@@ -5493,14 +6608,14 @@ class TrackRoadmapResponse(BaseModel):
     completed_lessons: int | None = Field(0, title="Completed Lessons")
     levels: list[TrackRoadmapLevel] | None = Field(None, title="Levels")
     next_chapter_title: str | None = Field(None, title="Next Chapter Title")
-    next_lesson_id: UUID | None = Field(None, title="Next Lesson Id")
+    next_lesson_id: UUID_aliased | None = Field(None, title="Next Lesson Id")
     next_lesson_title: str | None = Field(None, title="Next Lesson Title")
     progress_percent: float | None = Field(0.0, title="Progress Percent")
     total_lessons: int | None = Field(0, title="Total Lessons")
     track_color_hex: str | None = Field(None, title="Track Color Hex")
     track_description: str | None = Field(None, title="Track Description")
     track_icon_emoji: str | None = Field(None, title="Track Icon Emoji")
-    track_id: UUID = Field(..., title="Track Id")
+    track_id: UUID_aliased = Field(..., title="Track Id")
     track_thumbnail_url: str | None = Field(None, title="Track Thumbnail Url")
     track_title: str = Field(..., title="Track Title")
 
@@ -5508,13 +6623,12 @@ class TrackRoadmapResponse(BaseModel):
 class TranslationKey(BaseModel):
     context_screenshot_url: str | None = None
     created_at: AwareDatetime
-    created_by: UUID | None = None
+    created_by: UUID_aliased | None = None
     description: str | None = None
-    id: UUID
+    id: UUID_aliased
     key: str
     max_length: int | None = None
-    namespace_id: UUID
-    namespace_name: str | None = None
+    namespace_id: UUID_aliased
     placeholders: list[TranslationKeyPlaceholder] | None = None
     source_text: str
     tags: list[str] | None = None
@@ -5546,14 +6660,14 @@ class UserAchievementsResult(BaseModel):
 
 class WebIngestPlan(BaseModel):
     created_at: AwareDatetime
-    created_by: UUID | None = None
+    created_by: UUID_aliased | None = None
     learning_language_code: str
     plan_date: str
-    plan_id: UUID
+    plan_id: UUID_aliased
     targets: list[WebIngestPlanItem]
     timezone: str
     updated_at: AwareDatetime
-    updated_by: UUID | None = None
+    updated_by: UUID_aliased | None = None
 
 
 class WebIngestRun(BaseModel):
@@ -5567,7 +6681,7 @@ class WebIngestRun(BaseModel):
     learning_language_code: str
     pending_targets: int
     plan_date: str
-    run_id: UUID
+    run_id: UUID_aliased
     runner_name: str | None = None
     started_at: AwareDatetime
     status: str
@@ -5575,6 +6689,10 @@ class WebIngestRun(BaseModel):
     timezone: str
     total_targets: int
     updated_at: AwareDatetime
+
+
+class BundledHintResponse(HintResponse):
+    pass
 
 
 class AiConversationContent(BaseModel):
@@ -5591,6 +6709,38 @@ class AiConversationScenarioResponse(BaseModel):
     setting: AiConversationSetting
     support_language_code: str | None = Field("", title="Support Language Code")
     title: str = Field(..., title="Title")
+
+
+class ArticleVersionOccurrence(BaseModel):
+    base_word_detail: BaseWord | None = None
+    base_word_id: UUID_aliased | None = None
+    end_char_offset: int
+    end_word_index: int | None = None
+    grammar_concept_id: UUID_aliased | None = None
+    grammar_detail: GrammarConcept | None = None
+    inflected_form_details: Any | None = None
+    is_kpt_change_example: bool | None = None
+    kpt_original_stem: str | None = None
+    kpt_rule_applied: str | None = None
+    occurrence_id: UUID_aliased
+    occurrence_type: str
+    original_token_phrase: str | None = None
+    paragraph_id: UUID_aliased
+    sentence_text: str | None = None
+    sentence_translation: str | None = None
+    specific_explanation: str | None = None
+    specific_explanation_html: str | None = None
+    start_char_offset: int
+    start_word_index: int | None = None
+
+
+class BulkCreateTranslationKeysRequest(BaseModel):
+    created_by: UUID_aliased | None = None
+    keys: list[CreateTranslationKeyRequest]
+
+
+class BulkCreateTranslationKeysResponse(BaseModel):
+    items: list[TranslationKey]
 
 
 class ChallengeSection(BaseModel):
@@ -5612,7 +6762,7 @@ class ChallengeSection(BaseModel):
     learning_objective_summary: str | None = Field(
         None, title="Learning Objective Summary"
     )
-    objective_id: UUID | None = Field(None, title="Objective Id")
+    objective_id: UUID_aliased | None = Field(None, title="Objective Id")
     section_type: SectionType = Field(..., title="Section Type")
     selection_source_label: str | None = Field(None, title="Selection Source Label")
     subtitle: str | None = Field(None, title="Subtitle")
@@ -5639,7 +6789,7 @@ class ConceptHubPreview(BaseModel):
     core_content: CoreContent | None = None
     description: str | None = Field(None, title="Description")
     follow_up_activities: FollowUpActivities | None = None
-    grammar_concept_id: UUID = Field(..., title="Grammar Concept Id")
+    grammar_concept_id: UUID_aliased = Field(..., title="Grammar Concept Id")
     title: str | None = Field(None, title="Title")
 
 
@@ -5659,8 +6809,8 @@ class ConceptHubResponse(BaseModel):
         "none", title="Enrichment Status"
     )
     follow_up_activities: FollowUpActivities
-    grammar_concept_id: UUID = Field(..., title="Grammar Concept Id")
-    id: UUID = Field(..., title="Id")
+    grammar_concept_id: UUID_aliased = Field(..., title="Grammar Concept Id")
+    id: UUID_aliased = Field(..., title="Id")
     title: str = Field(..., title="Title")
 
 
@@ -5677,13 +6827,50 @@ class DevicePreferences(BaseModel):
     user_id: str
 
 
+class DictionaryEntry(BaseModel):
+    all_forms: list[DictionaryWordForm] | None = None
+    audio_url: str | None = None
+    cefr_level: str | None = None
+    confusables: list[DictionaryConfusable] | None = None
+    definition: DictionaryDefinition
+    examples: list[DictionaryExample] | None = None
+    id: str
+    inflection_features: DictionaryInflection | None = None
+    inflections: list[DictionaryInflection] | None = None
+    is_new: bool | None = None
+    key_forms: list[DictionaryWordForm] | None = None
+    learning_language_code: str | None = None
+    meaning: str | None = None
+    mnemonic_help: str | None = None
+    mnemonic_html: str | None = None
+    morphology: DictionaryMorphology | None = None
+    paradigm: DictionaryParadigm | None = None
+    part_of_speech: str | None = None
+    phrase_frames: list[PhraseFrame] | None = None
+    pronunciation_ipa: str | None = None
+    related_lemmas: DictionaryRelatedLemmas | None = None
+    senses: list[DictionarySense] | None = None
+    similar_words: list[DictionaryConfusable] | None = None
+    support_language_code: str | None = None
+    surface_form: str | None = None
+    term: str | None = None
+    word_cluster: WordCluster | None = None
+
+
+class DictionaryLookupResponse(BaseModel):
+    entry: DictionaryEntry | None = None
+    found: bool
+    suggestions: list[str] | None = None
+    word: str
+
+
 class HubStatusResponse(BaseModel):
-    concept_id: UUID = Field(..., title="Concept Id")
-    enrichment_job_id: UUID | None = Field(None, title="Enrichment Job Id")
+    concept_id: UUID_aliased = Field(..., title="Concept Id")
+    enrichment_job_id: UUID_aliased | None = Field(None, title="Enrichment Job Id")
     enrichment_job_status: Status | None = Field(None, title="Enrichment Job Status")
     enrichment_stage: str | None = Field(None, title="Enrichment Stage")
     enrichment_status: EnrichmentStatus | None = Field(None, title="Enrichment Status")
-    job_id: UUID | None = Field(None, title="Job Id")
+    job_id: UUID_aliased | None = Field(None, title="Job Id")
     job_status: Status | None = Field(None, title="Job Status")
     message: str = Field(..., title="Message")
     preview: ConceptHubPreview | None = None
@@ -5697,8 +6884,10 @@ class LearningSession(BaseModel):
     created_at: AwareDatetime | None = Field(None, title="Created At")
     decision_log: DecisionLog | None = None
     description: str | None = Field(None, title="Description")
-    exercise_run_id: UUID | None = Field(None, title="Exercise Run Id")
-    exercise_step_map: dict[str, UUID] | None = Field(None, title="Exercise Step Map")
+    exercise_run_id: UUID_aliased | None = Field(None, title="Exercise Run Id")
+    exercise_step_map: dict[str, UUID_aliased] | None = Field(
+        None, title="Exercise Step Map"
+    )
     exercises: list[
         Annotated[
             FlashcardExercise
@@ -5713,7 +6902,7 @@ class LearningSession(BaseModel):
             Field(discriminator="exercise_type"),
         ]
     ] = Field(..., title="Exercises")
-    generation_job_id: UUID | None = Field(None, title="Generation Job Id")
+    generation_job_id: UUID_aliased | None = Field(None, title="Generation Job Id")
     learning_language_code: str | None = Field("", title="Learning Language Code")
     learning_objectives: list[LearningObjective] | None = Field(
         None, title="Learning Objectives"
@@ -5736,7 +6925,7 @@ class LearningSession(BaseModel):
         "checkpoint", title="Session Backend"
     )
     session_goal: str | None = Field(None, title="Session Goal")
-    session_id: UUID | None = Field(None, title="Session Id")
+    session_id: UUID_aliased | None = Field(None, title="Session Id")
     session_mode: str | None = Field("practice", title="Session Mode")
     session_origin: SessionOrigin | None = None
     session_type: SessionType = Field(..., title="Session Type")
@@ -5744,10 +6933,23 @@ class LearningSession(BaseModel):
     streak_days: int | None = Field(None, title="Streak Days")
     theme: ChallengeTheme | None = None
     title: str = Field(..., title="Title")
-    user_id: UUID = Field(..., title="User Id")
+    user_id: UUID_aliased = Field(..., title="User Id")
     version: int | None = Field(2, title="Version")
     xp_earned: int | None = Field(None, title="Xp Earned")
     xp_target: int | None = Field(None, title="Xp Target")
+
+
+class Paragraph(BaseModel):
+    audio_url: str | None = None
+    grammar_occurrences: list[ArticleVersionOccurrence] | None = None
+    paragraph_id: UUID_aliased
+    paragraph_index: int
+    support_language_code: str | None = None
+    text: str | None = None
+    translation: str | None = None
+    translation_fallback: bool | None = None
+    word_occurrences: list[ArticleVersionOccurrence] | None = None
+    words: list[str] | None = None
 
 
 class SessionReconcileResponse(BaseModel):
@@ -5761,6 +6963,14 @@ class SingletonConceptHub(BaseModel):
 
 class SingletonDevicePreferences(BaseModel):
     data: DevicePreferences
+
+
+class SingletonDictionaryEntry(BaseModel):
+    data: DictionaryEntry
+
+
+class SingletonDictionaryLookupResponse(BaseModel):
+    data: DictionaryLookupResponse
 
 
 class SingletonTranslationKey(BaseModel):
@@ -5799,12 +7009,44 @@ class SingletonWebIngestRunList(BaseModel):
     data: list[WebIngestRun]
 
 
+class ArticleVersion(BaseModel):
+    article_type: str | None = None
+    brand: Brand
+    contextual_learning_opportunities: (
+        list[KLearnContextualLearningOpportunity] | None
+    ) = None
+    difficulty_score: NullFloat64 | None = None
+    estimated_reading_time_minutes: NullInt32 | None = None
+    id: UUID_aliased
+    learning_language_code: str | None = None
+    original_article_version_id: UUID_aliased | None = None
+    original_title: str | None = None
+    paragraphs: list[Paragraph] | None = None
+    personalized_content: KLearnPersonalizedArticleResponse | None = None
+    publication_date: AwareDatetime | None = None
+    simplified_article_version_id: UUID_aliased | None = None
+    source_url: str | None = None
+    support_language_code: str | None = None
+    tags: list[str] | None = None
+    thumbnail: MediaAssetResponse | None = None
+    title: str
+    title_support_language_code: str | None = None
+    title_translation_fallback: bool | None = None
+    title_translation_source_locale: str | None = None
+    translation_fallback: bool | None = None
+
+
 class ConceptHubGenerationJobResponse(BaseModel):
-    concept_hub_id: UUID | None = Field(None, title="Concept Hub Id")
-    concept_id: UUID = Field(..., title="Concept Id")
+    concept_hub_id: UUID_aliased | None = Field(None, title="Concept Hub Id")
+    concept_id: UUID_aliased = Field(..., title="Concept Id")
     error_message: str | None = Field(None, title="Error Message")
-    job_id: UUID = Field(..., title="Job Id")
+    job_id: UUID_aliased = Field(..., title="Job Id")
     job_type: JobType | None = Field("concept_hub", title="Job Type")
     preview: ConceptHubPreview | None = None
     stage: str | None = Field(None, title="Stage")
     status: Status = Field(..., title="Status")
+
+
+class CursorPageArticleVersion(BaseModel):
+    items: list[ArticleVersion]
+    next_page_key: str | None = None
