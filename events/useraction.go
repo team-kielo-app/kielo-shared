@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
+	"github.com/team-kielo-app/kielo-shared/observe/httputil"
 )
 
 // UserActionEnvelope is the canonical ADR-011 §D2.2 wire shape every
@@ -67,7 +69,11 @@ type HTTPEmitter struct {
 // path completes in <50ms in practice; 5s catches a stuck network).
 func NewHTTPEmitter(eventsServiceURL, internalAPIKey, sourceService string, httpClient *http.Client) *HTTPEmitter {
 	if httpClient == nil {
-		httpClient = &http.Client{Timeout: 5 * time.Second}
+		// httputil.NewClient installs TracingTransport so the
+		// traceparent header propagates to kielo-events per
+		// ADR-006 §H/Rule H1. Previously bare `&http.Client{
+		// Timeout: 5s}`.
+		httpClient = httputil.NewClient(5 * time.Second)
 	}
 	return &HTTPEmitter{
 		EventsServiceURL: eventsServiceURL,
