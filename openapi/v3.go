@@ -415,7 +415,7 @@ func (r *Registry) operationDoc(rt routeEntry) map[string]any {
 			"description": "Success",
 			"content": map[string]any{
 				"application/json": map[string]any{
-					"schema": map[string]any{"$ref": schemaRef(rt.responseBody)},
+					"schema": responseSchema(rt.responseBody, r),
 				},
 			},
 		}
@@ -488,6 +488,14 @@ func (r *Registry) collectSchema(v any) {
 	t := reflect.TypeOf(v)
 	for t.Kind() == reflect.Ptr {
 		t = t.Elem()
+	}
+	// Walk into slice/array element types so list responses like
+	// Response: []models.Foo{} register the element schema.
+	for t.Kind() == reflect.Slice || t.Kind() == reflect.Array {
+		t = t.Elem()
+		for t.Kind() == reflect.Ptr {
+			t = t.Elem()
+		}
 	}
 	if t.Kind() != reflect.Struct {
 		return
@@ -758,6 +766,37 @@ func schemaRef(v any) string {
 		return "#/components/schemas/" + t.Name()
 	}
 	return "#/components/schemas/AnonymousSchema"
+}
+
+// responseSchema renders the response schema map for a Route.Response
+// zero value. Named structs ($ref) and arrays-of-named-structs
+// (`{type: array, items: {$ref: ...}}`) both produce typed schemas
+// that pass scripts/contract-health.py's "typed" classifier.
+// Pointers are unwrapped; anonymous structs fall back to the
+// AnonymousSchema $ref (legacy behavior).
+func responseSchema(v any, r *Registry) map[string]any {
+	t := reflect.TypeOf(v)
+	for t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+	switch t.Kind() {
+	case reflect.Slice, reflect.Array:
+		// Walk the element type so its schema is collected.
+		elem := t.Elem()
+		for elem.Kind() == reflect.Ptr {
+			elem = elem.Elem()
+		}
+		return map[string]any{
+			"type":  "array",
+			"items": fieldSchema(t.Elem(), r),
+		}
+	default:
+		if t.Kind() == reflect.Struct && t.Name() != "" {
+			return map[string]any{"$ref": "#/components/schemas/" + t.Name()}
+		}
+		// Legacy fallback (anonymous types, maps, primitives).
+		return map[string]any{"$ref": schemaRef(v)}
+	}
 }
 
 // WriteSpecToFile serializes the registry to a JSON file. Typically called
