@@ -2,7 +2,9 @@
 // producers.
 //
 // The canonical vocabulary lives in
-//     kielo-events/internal/validate/vocabulary.go
+//
+//	kielo-events/internal/validate/vocabulary.go
+//
 // which is owned by the spine consumer. Producers in OTHER services
 // can't import that internal package across module boundaries, so this
 // file mirrors the constants here in `kielo-shared/events` where
