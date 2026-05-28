@@ -27,8 +27,14 @@ import (
 // `user_id` is NOT a field — it travels in the X-User-ID header
 // (matches kielo-events' IngestInternal handler contract).
 type UserActionEnvelope struct {
-	EventID       string         `json:"event_id"`
-	EventType     string         `json:"event_type"`
+	EventID string `json:"event_id"`
+	// EventType is the closed ADR-011 §D1 vocabulary. Typed as
+	// `EventType` (this package) rather than bare `string` so
+	// producers must reference a constant in this package — a
+	// stray literal won't compile, and the event_vocabulary_contract
+	// test pins this package against the spine vocabulary so the
+	// two stay in sync.
+	EventType     EventType      `json:"event_type"`
 	TS            time.Time      `json:"ts"`
 	SchemaVersion int16          `json:"schema_version"`
 	Props         map[string]any `json:"props"`
