@@ -5418,6 +5418,10 @@ class WhisperModelManifest(BaseModel):
     models: list[WhisperModelDescriptor]
 
 
+class WontFixIssueRequest(BaseModel):
+    notes: str | None = None
+
+
 class WordCluster(BaseModel):
     collocation: list[ClusterWord] | None = None
     contrast: list[ClusterWord] | None = None
