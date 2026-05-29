@@ -159,7 +159,7 @@ func (commonParams) Limit() ParamSpec {
 		In:          "query",
 		Type:        "integer",
 		Required:    false,
-		Description: "Maximum number of items to return (offset-pagination).",
+		Description: "Legacy offset-pagination limit. Prefer page_size on new routes.",
 	}
 }
 
@@ -170,7 +170,7 @@ func (commonParams) Offset() ParamSpec {
 		In:          "query",
 		Type:        "integer",
 		Required:    false,
-		Description: "Number of items to skip (offset-pagination).",
+		Description: "Legacy offset-pagination offset. Prefer next_page_key on new routes.",
 	}
 }
 
