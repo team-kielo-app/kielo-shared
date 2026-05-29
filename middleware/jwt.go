@@ -196,7 +196,23 @@ func setClaimsInContext(c echo.Context, claims Claims, options *JWTOptions) {
 	}
 }
 
-// GatewayAuth trusts headers forwarded by the API gateway instead of re-validating JWT
+// GatewayAuth trusts headers forwarded by the API gateway instead
+// of re-validating JWT.
+//
+// DEAD CODE NOTE (2026-05-29): this function has zero callers in
+// the monorepo. It encodes a planned future gateway-fronted topology
+// (Cloudflare / GCP LB stamps the X-User-* headers based on the JWT
+// it verified) that hasn't shipped. The X-User-Email / X-Device-Token
+// reads at lines below assume those headers are populated by the
+// gateway; today nothing in the monorepo sets X-User-Email
+// (diag-header-drift.py flags this as GET-only), so a real call
+// would extract empty strings.
+//
+// Kept as-is rather than deleted because (a) the upstream contract
+// is documented in the function shape, and (b) ripping it out forces
+// a contract re-design if the gateway topology ever ships. Mark for
+// deletion at Phase 8 if the gateway topology is decisively
+// abandoned.
 func GatewayAuth() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
@@ -213,7 +229,10 @@ func GatewayAuth() echo.MiddlewareFunc {
 				return echo.NewHTTPError(http.StatusUnauthorized, "Invalid user ID format")
 			}
 
-			// Set user context from gateway headers
+			// Set user context from gateway headers. X-User-Email
+			// / X-Device-Token are stamped by the gateway in the
+			// planned topology; in the current direct-JWT topology
+			// they're empty (see DEAD CODE NOTE above).
 			c.Set("userID", userID)
 			c.Set("userEmail", c.Request().Header.Get("X-User-Email"))
 			c.Set("deviceToken", c.Request().Header.Get("X-Device-Token"))
