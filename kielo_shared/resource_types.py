@@ -42,6 +42,18 @@ ENGINE_CHALLENGE_PROMPT = "engine.challenge.prompt"
 ENGINE_ROADMAP_LESSON_TITLE = "engine.roadmap.lesson_title"
 ENGINE_CONCEPT_HUB_SUMMARY = "engine.concept_hub.summary"
 
+# Curriculum (kielolearn-engine) — added 2026-05-29 to translate
+# track/level/chapter title+description on the mobile track-picker
+# + roadmap surfaces. Pre-fix /api/v3/curriculum/tracks emitted
+# `title: "New Track"` (canonical English) regardless of the
+# caller's support_language_code. See
+# docs/architecture/adr-007-localization-canonical-english.md.
+ENGINE_CURRICULUM_TRACK_TITLE = "engine.curriculum.track_title"
+ENGINE_CURRICULUM_TRACK_DESCRIPTION = "engine.curriculum.track_description"
+ENGINE_CURRICULUM_LEVEL_TITLE = "engine.curriculum.level_title"
+ENGINE_CURRICULUM_CHAPTER_TITLE = "engine.curriculum.chapter_title"
+ENGINE_CURRICULUM_CHAPTER_DESCRIPTION = "engine.curriculum.chapter_description"
+
 # Notifications + emails (kielo-communications-service) — Phase 4.5
 NOTIFICATIONS_TITLE = "notifications.title"
 NOTIFICATIONS_BODY = "notifications.body"
@@ -73,6 +85,11 @@ ALL_RESOURCE_TYPES: FrozenSet[str] = frozenset(
         ENGINE_CHALLENGE_PROMPT,
         ENGINE_ROADMAP_LESSON_TITLE,
         ENGINE_CONCEPT_HUB_SUMMARY,
+        ENGINE_CURRICULUM_TRACK_TITLE,
+        ENGINE_CURRICULUM_TRACK_DESCRIPTION,
+        ENGINE_CURRICULUM_LEVEL_TITLE,
+        ENGINE_CURRICULUM_CHAPTER_TITLE,
+        ENGINE_CURRICULUM_CHAPTER_DESCRIPTION,
         NOTIFICATIONS_TITLE,
         NOTIFICATIONS_BODY,
         EMAIL_SUBJECT,

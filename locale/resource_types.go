@@ -38,6 +38,18 @@ const (
 	ResourceTypeEngineRoadmapLessonTitle  = "engine.roadmap.lesson_title"
 	ResourceTypeEngineConceptHubSummary   = "engine.concept_hub.summary"
 
+	// Curriculum (kielolearn-engine) — added 2026-05-29 to translate
+	// track/level/chapter title+description on the mobile track-picker
+	// + roadmap surfaces. Pre-fix /api/v3/curriculum/tracks emitted
+	// `title: "New Track"` (canonical English) regardless of the
+	// caller's support_language_code. See
+	// docs/architecture/adr-007-localization-canonical-english.md.
+	ResourceTypeEngineCurriculumTrackTitle         = "engine.curriculum.track_title"
+	ResourceTypeEngineCurriculumTrackDescription   = "engine.curriculum.track_description"
+	ResourceTypeEngineCurriculumLevelTitle         = "engine.curriculum.level_title"
+	ResourceTypeEngineCurriculumChapterTitle       = "engine.curriculum.chapter_title"
+	ResourceTypeEngineCurriculumChapterDescription = "engine.curriculum.chapter_description"
+
 	// Notifications + emails (kielo-communications-service) — Phase 4.5
 	ResourceTypeNotificationsTitle = "notifications.title"
 	ResourceTypeNotificationsBody  = "notifications.body"
@@ -54,26 +66,31 @@ const (
 // allResourceTypes is the authoritative set of valid resource_type
 // values. Updated when constants above change. Used by IsValidResourceType.
 var allResourceTypes = map[string]struct{}{
-	ResourceTypeArticleTitle:              {},
-	ResourceTypeArticleDescription:        {},
-	ResourceTypeArticleParagraph:          {},
-	ResourceTypeScenarioTitle:             {},
-	ResourceTypeScenarioDescription:       {},
-	ResourceTypeConvoTranscriptLine:       {},
-	ResourceTypeConvoEvaluationFeedback:   {},
-	ResourceTypeKtvCaptionCue:             {},
-	ResourceTypeKtvMindmapNode:            {},
-	ResourceTypeEngineExerciseInstruction: {},
-	ResourceTypeEngineExerciseOption:      {},
-	ResourceTypeEngineExerciseExplanation: {},
-	ResourceTypeEngineChallengePrompt:     {},
-	ResourceTypeEngineRoadmapLessonTitle:  {},
-	ResourceTypeEngineConceptHubSummary:   {},
-	ResourceTypeNotificationsTitle:        {},
-	ResourceTypeNotificationsBody:         {},
-	ResourceTypeEmailSubject:              {},
-	ResourceTypeEmailBody:                 {},
-	ResourceTypeUIString:                  {},
+	ResourceTypeArticleTitle:                       {},
+	ResourceTypeArticleDescription:                 {},
+	ResourceTypeArticleParagraph:                   {},
+	ResourceTypeScenarioTitle:                      {},
+	ResourceTypeScenarioDescription:                {},
+	ResourceTypeConvoTranscriptLine:                {},
+	ResourceTypeConvoEvaluationFeedback:            {},
+	ResourceTypeKtvCaptionCue:                      {},
+	ResourceTypeKtvMindmapNode:                     {},
+	ResourceTypeEngineExerciseInstruction:          {},
+	ResourceTypeEngineExerciseOption:               {},
+	ResourceTypeEngineExerciseExplanation:          {},
+	ResourceTypeEngineChallengePrompt:              {},
+	ResourceTypeEngineRoadmapLessonTitle:           {},
+	ResourceTypeEngineConceptHubSummary:            {},
+	ResourceTypeEngineCurriculumTrackTitle:         {},
+	ResourceTypeEngineCurriculumTrackDescription:   {},
+	ResourceTypeEngineCurriculumLevelTitle:         {},
+	ResourceTypeEngineCurriculumChapterTitle:       {},
+	ResourceTypeEngineCurriculumChapterDescription: {},
+	ResourceTypeNotificationsTitle:                 {},
+	ResourceTypeNotificationsBody:                  {},
+	ResourceTypeEmailSubject:                       {},
+	ResourceTypeEmailBody:                          {},
+	ResourceTypeUIString:                           {},
 }
 
 // IsValidResourceType returns true if rt is a recognized resource_type.
