@@ -33,14 +33,34 @@ CONVO_EVALUATION_FEEDBACK = "convo.evaluation.feedback"
 # kielotv (kielo-content-service) — Phase 6
 KTV_CAPTION_CUE = "kielotv.caption.cue"
 KTV_MINDMAP_NODE = "kielotv.mindmap.node"
+# Sweep WW (2026-05-30): video title was an unregistered literal at
+# kielo-content-service/.../kielotv/metadata_localizer.go +
+# daily_word_localizer.go. Now canonical.
+KTV_VIDEO_TITLE = "kielotv.title"
 
 # Engine-generated content (kielolearn-engine) — Phase 3.5
 ENGINE_EXERCISE_INSTRUCTION = "engine.exercise.instruction"
 ENGINE_EXERCISE_OPTION = "engine.exercise.option"
 ENGINE_EXERCISE_EXPLANATION = "engine.exercise.explanation"
 ENGINE_CHALLENGE_PROMPT = "engine.challenge.prompt"
+ENGINE_CHALLENGE_ERROR = "engine.challenge.error"
 ENGINE_ROADMAP_LESSON_TITLE = "engine.roadmap.lesson_title"
+ENGINE_ROADMAP_LESSON_CATEGORY = "engine.roadmap.lesson.category"
 ENGINE_CONCEPT_HUB_SUMMARY = "engine.concept_hub.summary"
+ENGINE_CONCEPT_HUB_TITLE = "engine.concept_hub.title"
+ENGINE_CONCEPT_HUB_DESCRIPTION = "engine.concept_hub.description"
+ENGINE_CONCEPT_HUB_CATEGORY = "engine.concept_hub.category"
+
+# Sweep WW (2026-05-30) — engine-level persistent emission namespaces.
+# Pre-Sweep-WW these were string-literal-only in production. See
+# AGENTS.md Sweep WW row.
+ROADMAP_LESSON = "roadmap_lesson"
+CONCEPT_HUB = "concept_hub"
+EXERCISE_DECK = "exercise_deck"
+TOPIC_LIST = "topic_list"
+BASE_WORD = "base_word"
+GRAMMAR_CONCEPT = "grammar_concept"
+WORD_DECK = "word_deck"
 
 # Curriculum (kielolearn-engine) — added 2026-05-29 to translate
 # track/level/chapter title+description on the mobile track-picker
@@ -79,17 +99,30 @@ ALL_RESOURCE_TYPES: FrozenSet[str] = frozenset(
         CONVO_EVALUATION_FEEDBACK,
         KTV_CAPTION_CUE,
         KTV_MINDMAP_NODE,
+        KTV_VIDEO_TITLE,
         ENGINE_EXERCISE_INSTRUCTION,
         ENGINE_EXERCISE_OPTION,
         ENGINE_EXERCISE_EXPLANATION,
         ENGINE_CHALLENGE_PROMPT,
+        ENGINE_CHALLENGE_ERROR,
         ENGINE_ROADMAP_LESSON_TITLE,
+        ENGINE_ROADMAP_LESSON_CATEGORY,
         ENGINE_CONCEPT_HUB_SUMMARY,
+        ENGINE_CONCEPT_HUB_TITLE,
+        ENGINE_CONCEPT_HUB_DESCRIPTION,
+        ENGINE_CONCEPT_HUB_CATEGORY,
         ENGINE_CURRICULUM_TRACK_TITLE,
         ENGINE_CURRICULUM_TRACK_DESCRIPTION,
         ENGINE_CURRICULUM_LEVEL_TITLE,
         ENGINE_CURRICULUM_CHAPTER_TITLE,
         ENGINE_CURRICULUM_CHAPTER_DESCRIPTION,
+        ROADMAP_LESSON,
+        CONCEPT_HUB,
+        EXERCISE_DECK,
+        TOPIC_LIST,
+        BASE_WORD,
+        GRAMMAR_CONCEPT,
+        WORD_DECK,
         NOTIFICATIONS_TITLE,
         NOTIFICATIONS_BODY,
         EMAIL_SUBJECT,

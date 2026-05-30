@@ -29,6 +29,10 @@ const (
 	// kielotv (kielo-content-service) — Phase 6
 	ResourceTypeKtvCaptionCue  = "kielotv.caption.cue"
 	ResourceTypeKtvMindmapNode = "kielotv.mindmap.node"
+	// Sweep WW (2026-05-30): video title was an unregistered literal
+	// at kielotv/metadata_localizer.go:259,316 and
+	// daily_word_localizer.go:611,660. Now canonical.
+	ResourceTypeKtvVideoTitle = "kielotv.title"
 
 	// Engine-generated content (kielolearn-engine) — Phase 3.5
 	ResourceTypeEngineExerciseInstruction = "engine.exercise.instruction"
@@ -37,6 +41,69 @@ const (
 	ResourceTypeEngineChallengePrompt     = "engine.challenge.prompt"
 	ResourceTypeEngineRoadmapLessonTitle  = "engine.roadmap.lesson_title"
 	ResourceTypeEngineConceptHubSummary   = "engine.concept_hub.summary"
+
+	// Sweep WW (2026-05-30) — formerly unregistered emission
+	// namespaces caught by Sweep VV recon. Each was being used as a
+	// string literal in production engine endpoints; now canonical.
+	// See AGENTS.md Sweep WW row for the full drift trail.
+
+	// roadmap_lesson — emitted by engine roadmap.py list+detail and
+	// curriculum.py track-roadmap. Field keys: title_llm,
+	// description_llm, category, lesson_content_json_llm. Canonical
+	// post-Sweep-WW: list+detail+track-roadmap all use title_llm.
+	ResourceTypeRoadmapLesson = "roadmap_lesson"
+
+	// engine.roadmap.lesson.category — currently emitted by detail
+	// endpoint as a separate resource_type (with the category string
+	// itself as the resource_id) — closed-vocabulary translation
+	// surface. Keep distinct from roadmap_lesson/category so the
+	// admin can override categories independently of any specific
+	// lesson row.
+	ResourceTypeEngineRoadmapLessonCategory = "engine.roadmap.lesson.category"
+
+	// engine.concept_hub.* — emitted by concept_hubs.py +
+	// content_discovery_module.py. Per Sweep WW F2-F5 the summary +
+	// title + description namespaces share underlying source strings
+	// but stay separate at the seam level for cache independence
+	// (summary teasers may live longer than full-detail rows).
+	ResourceTypeEngineConceptHubTitle       = "engine.concept_hub.title"
+	ResourceTypeEngineConceptHubDescription = "engine.concept_hub.description"
+	ResourceTypeEngineConceptHubCategory    = "engine.concept_hub.category"
+
+	// concept_hub — used by content_discovery_module.py and
+	// concept_hubs.py persisted fields (title, description_llm,
+	// common_mistakes, explanation_html_llm, etc.). Distinct from
+	// the engine.concept_hub.* namespaces above because these are
+	// persistent per-concept-hub fields (LLM-translated content)
+	// rather than per-request seam translations.
+	ResourceTypeConceptHub = "concept_hub"
+
+	// exercise_deck — emitted by concept_hubs.py + lessons.py.
+	// Field keys: title, description, session_goal.
+	ResourceTypeExerciseDeck = "exercise_deck"
+
+	// topic_list — emitted by topic_lists.py + Go content-service.
+	// Field keys: display_name, description.
+	ResourceTypeTopicList = "topic_list"
+
+	// base_word — emitted by content.py + discovery.py + reviews.py +
+	// placement.py + topic_lists.py + Go content-service +
+	// Go user-service. Field key: meaning.
+	ResourceTypeBaseWord = "base_word"
+
+	// grammar_concept — emitted by content.py + discovery.py +
+	// placement.py + reviews.py + Go user-service. Field key:
+	// support_text. (The "meaning" field_key fallback in Go
+	// user-service was removed by Sweep WW — dead read path.)
+	ResourceTypeGrammarConcept = "grammar_concept"
+
+	// word_deck — emitted by decks.py. Field keys: name, description.
+	ResourceTypeWordDeck = "word_deck"
+
+	// engine.challenge.error — emitted by challenges.py:969 as the
+	// resource_id-bearing seam for non-fatal error messages on the
+	// daily-challenge surface.
+	ResourceTypeEngineChallengeError = "engine.challenge.error"
 
 	// Curriculum (kielolearn-engine) — added 2026-05-29 to translate
 	// track/level/chapter title+description on the mobile track-picker
@@ -75,17 +142,30 @@ var allResourceTypes = map[string]struct{}{
 	ResourceTypeConvoEvaluationFeedback:            {},
 	ResourceTypeKtvCaptionCue:                      {},
 	ResourceTypeKtvMindmapNode:                     {},
+	ResourceTypeKtvVideoTitle:                      {},
 	ResourceTypeEngineExerciseInstruction:          {},
 	ResourceTypeEngineExerciseOption:               {},
 	ResourceTypeEngineExerciseExplanation:          {},
 	ResourceTypeEngineChallengePrompt:              {},
+	ResourceTypeEngineChallengeError:               {},
 	ResourceTypeEngineRoadmapLessonTitle:           {},
+	ResourceTypeEngineRoadmapLessonCategory:        {},
 	ResourceTypeEngineConceptHubSummary:            {},
+	ResourceTypeEngineConceptHubTitle:              {},
+	ResourceTypeEngineConceptHubDescription:        {},
+	ResourceTypeEngineConceptHubCategory:           {},
 	ResourceTypeEngineCurriculumTrackTitle:         {},
 	ResourceTypeEngineCurriculumTrackDescription:   {},
 	ResourceTypeEngineCurriculumLevelTitle:         {},
 	ResourceTypeEngineCurriculumChapterTitle:       {},
 	ResourceTypeEngineCurriculumChapterDescription: {},
+	ResourceTypeRoadmapLesson:                      {},
+	ResourceTypeConceptHub:                         {},
+	ResourceTypeExerciseDeck:                       {},
+	ResourceTypeTopicList:                          {},
+	ResourceTypeBaseWord:                           {},
+	ResourceTypeGrammarConcept:                     {},
+	ResourceTypeWordDeck:                           {},
 	ResourceTypeNotificationsTitle:                 {},
 	ResourceTypeNotificationsBody:                  {},
 	ResourceTypeEmailSubject:                       {},
