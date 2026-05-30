@@ -57,24 +57,36 @@ def _language_name(code: str) -> str:
 
 # ────────────────────── per-role prompt templates ────────────────────────
 
+# Sweep UU (2026-05-30): the preservation-rule sentences used to
+# hardcode "Finnish" — baked-in assumption that the only learning
+# language was Finnish. Now that sv (and forward, other languages)
+# are supported, the rule generalises to "preserve any embedded
+# non-English (learning-language) tokens / inflections / grammar
+# markers exactly". The seam doesn't know which learning language
+# the embedded tokens belong to (the same English support string
+# can be served to fi and sv learners), so the prompt has to be
+# language-agnostic at this layer.
+
 _PLAIN_PROMPT = (
     "Translate English educational content into natural {lang} for "
-    "language learners. Preserve Finnish words, inflected Finnish forms, "
-    "quoted Finnish examples, and grammar markers like -n or -ssa exactly. "
+    "language learners. Preserve any embedded non-English tokens "
+    "(learning-language words, inflected forms, quoted examples, "
+    "and grammar markers like case suffixes) exactly as written. "
     "Do not add commentary."
 )
 
 _HTML_PROMPT = (
     "Translate the visible English text inside the provided HTML into "
     "natural {lang} for language learners. Preserve all HTML tags and "
-    "attributes exactly. Preserve Finnish words, inflected Finnish forms, "
-    "and grammar markers exactly."
+    "attributes exactly. Preserve any embedded non-English tokens "
+    "(learning-language words, inflected forms, and grammar markers) "
+    "exactly as written."
 )
 
 _GLOSS_PROMPT = (
     "Translate short English glossary text into natural {lang}. Output "
-    "only the target language. Never output Finnish. Preserve slashes, "
-    "semicolons, and commas when they separate senses."
+    "only the target language ({lang}). Do not output any other language. "
+    "Preserve slashes, semicolons, and commas when they separate senses."
 )
 
 
@@ -91,12 +103,12 @@ _BATCH_SYSTEM = (
     "You will receive a JSON array of items to translate from {source_lang} "
     "to {target_lang}. Each item has an 'id', a 'role' (plain | gloss | "
     "html), and 'text'. Apply the role-specific translation rules:\n"
-    "- plain: natural prose; preserve Finnish words, inflected Finnish "
-    "forms, quoted Finnish examples, and grammar markers like -n / -ssa "
-    "exactly. No commentary.\n"
-    "- gloss: short glossary; output the target language only, never "
-    "Finnish. Preserve slashes, semicolons, and commas that separate "
-    "senses.\n"
+    "- plain: natural prose; preserve any embedded non-{source_lang} "
+    "tokens (learning-language words, inflected forms, quoted examples, "
+    "grammar markers like case suffixes) exactly. No commentary.\n"
+    "- gloss: short glossary; output ONLY {target_lang}. Do not output "
+    "{source_lang} or any other language. Preserve slashes, semicolons, "
+    "and commas that separate senses.\n"
     "- html: preserve every HTML tag and attribute exactly; translate "
     "only the visible text. Output must remain valid HTML.\n"
     "Return ONLY a JSON array of objects with 'id' and 'text' keys, in the "

@@ -270,6 +270,17 @@ type PromptCapability struct {
 	// PoliteExamples is the comma-separated "polite phrase" list for
 	// the A1 LLM prompt (G18). e.g. "kiitos, anteeksi, hei".
 	PoliteExamples string
+	// BasicConjunctions is the comma-separated A2-level conjunction
+	// examples used in the A2 cefrInstructions block. Sweep UU
+	// (2026-05-30) — moved out of inline literal in
+	// kielo-convo/go_orchestrator/internal/scenario/admin_handler.go
+	// cefrInstructions, which hardcoded Finnish "ja, mutta, koska"
+	// for every learning language. Now resolved per-language at the
+	// call site; missing-value behaviour falls back to the empty
+	// string (caller renders the surrounding sentence without an
+	// example list rather than showing Finnish-only examples to
+	// sv/other learners).
+	BasicConjunctions string
 	// REMOVED 2026-05-25 (registry coverage audit, Phase 12 cleanup):
 	//   * OfflineTranslationFallbacks — fi-only (10 entries) AND
 	//     completely unconsumed. Migrated from kielo-cms G7 intent
@@ -456,6 +467,7 @@ var capabilities = map[string]*Capability{
 			ScenarioHintLookingFor:   "Etsin...",
 			ScenarioHintNeed:         "Tarvitsen...",
 			PoliteExamples:           "kiitos, anteeksi, hei",
+			BasicConjunctions:        "ja, mutta, koska",
 			NeverSayWords:            []string{"kielimalli", "tekoäly"},
 			TerminationPhrase:        "Näkemiin",
 			ThankEndPhrase:           "Kiitos käynnistä, näkemiin!",
@@ -639,6 +651,7 @@ var capabilities = map[string]*Capability{
 			ScenarioHintLookingFor:   "Jag letar efter...",
 			ScenarioHintNeed:         "Jag behöver...",
 			PoliteExamples:           "tack, ursäkta, hej",
+			BasicConjunctions:        "och, men, eftersom",
 			NeverSayWords:            []string{"språkmodell", "ai"},
 			TerminationPhrase:        "Hej då",
 			ThankEndPhrase:           "Tack för besöket, hej då!",
