@@ -2936,6 +2936,12 @@ class MediaVariantInfo(MediaVariant):
     pass
 
 
+class MessageAudioRequest(BaseModel):
+    msg_index: int
+    speed: float | None = None
+    text: str
+
+
 class MessageResponse(DeleteVoiceAgentResponse):
     pass
 
