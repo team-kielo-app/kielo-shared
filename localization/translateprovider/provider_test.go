@@ -11,14 +11,20 @@ import (
 	sharedtranslation "github.com/team-kielo-app/kielo-shared/translation"
 )
 
-// newStubServer stands up a fake kielo-models translation endpoint
-// that echoes texts with a marker so tests can assert which inputs
-// reached the upstream. Keeps the adapter testable without spinning
-// up a real translation backend.
+// newStubServer stands up a fake kielo-models / engine translation
+// endpoint that echoes texts with a marker so tests can assert which
+// inputs reached the upstream. Keeps the adapter testable without
+// spinning up a real translation backend.
+//
+// Sweep EEE (2026-05-30) — the stub handles BOTH wire URLs (opus-mt
+// `/api/v3/translations` and engine `/internal/translate-batch`)
+// because the routing decision in kielo-shared/translation can pick
+// either depending on (pair, n_tokens). Tests configure the same
+// `server.URL` as both modelsURL and engineURL so the stub catches
+// dispatches regardless of routing.
 func newStubServer(t *testing.T) *httptest.Server {
 	t.Helper()
-	mux := http.NewServeMux()
-	mux.HandleFunc("/api/v3/translations", func(w http.ResponseWriter, r *http.Request) {
+	handler := func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
 			Texts      []string `json:"texts"`
 			SourceLang string   `json:"source_lang"`
@@ -32,7 +38,10 @@ func newStubServer(t *testing.T) *httptest.Server {
 		_ = json.NewEncoder(w).Encode(struct {
 			Translations []string `json:"translations"`
 		}{out})
-	})
+	}
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/v3/translations", handler)
+	mux.HandleFunc("/internal/translate-batch", handler)
 	server := httptest.NewServer(mux)
 	t.Cleanup(server.Close)
 	return server
@@ -40,7 +49,25 @@ func newStubServer(t *testing.T) *httptest.Server {
 
 func TestProvider_TranslateBatch_HappyPath(t *testing.T) {
 	server := newStubServer(t)
-	client := sharedtranslation.NewClient(server.URL, "test-api-key", nil)
+	// Sweep EEE (2026-05-30): NewClient added engineURL parameter so
+	// the routing decision can dispatch short input + non-opus pairs
+	// to Gemini. Pass empty engineURL here so the test stays on the
+	// opus-mt path that the existing httptest server mocks.
+	//
+	// Sweep EEE note: items[1] = "Hello" is single-token and would
+	// route to Gemini under EEE, NOT opus-mt. To keep the test
+	// exercising the opus-mt path (which is what this test pins),
+	// the input text below is long enough to stay on opus-mt for
+	// en→vi… wait, en→vi is NOT in the high-quality pair set so it
+	// always routes to Gemini. This test stub mocks the opus-mt URL
+	// but EEE routes en→vi to engine — the test as written would
+	// need the engine URL configured to pass post-EEE.
+	//
+	// Resolution: pass server.URL as BOTH modelsURL and engineURL so
+	// the EEE routing reaches our stub regardless of which path the
+	// decision picks. The stub server handles `/api/v3/translations`
+	// AND can also be augmented to handle `/internal/translate-batch`.
+	client := sharedtranslation.NewClient(server.URL, server.URL, "test-api-key", nil)
 	provider := New(client, "kielo-models:test")
 
 	items := []localization.TranslationItem{
