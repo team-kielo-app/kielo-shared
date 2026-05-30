@@ -212,6 +212,10 @@ class AvailableLocales(BaseModel):
     mindmap: list[str]
 
 
+class AwardAchievementByPathRequest(BaseModel):
+    context: str | None = None
+
+
 class AwardAchievementRequest(BaseModel):
     achievement_code: str
     context: str | None = None
@@ -223,6 +227,19 @@ class AwardAchievementResponse(BaseModel):
     awarded: bool
     earned_at: AwareDatetime | None = None
     reason: str | None = None
+
+
+class BaseWordTTSRequest(BaseModel):
+    base_word_id: UUID_aliased
+    force: bool
+
+
+class BatchEmailRequest(BaseModel):
+    name: str | None = None
+    product_id: str | None = None
+    recipients: list[str]
+    support_language_code: str | None = None
+    template_id: str
 
 
 class BatchEmailResultItem(BaseModel):
@@ -280,6 +297,14 @@ class Brand(BaseModel):
     primary_color_hex: str | None = None
     secondary_color_hex: str | None = None
     source_identifier: str
+
+
+class BroadcastNotificationRequest(BaseModel):
+    body: str
+    data: dict[str, Any]
+    notification_type: str
+    title: str
+    user_ids: list[str]
 
 
 class BrowseFacetOption(BaseModel):
@@ -442,6 +467,15 @@ class CheckAndAwardResponse(BaseModel):
     target_value: int
 
 
+class CheckAndIncrementFeatureRequest(BaseModel):
+    increment_by: int | None = None
+    item_id: str | None = None
+
+
+class CheckFeatureUniqueRequest(BaseModel):
+    item_id: str | None = None
+
+
 class ClusterWord(BaseModel):
     pos: str | None = None
     term: str | None = None
@@ -455,12 +489,8 @@ class CommonMistake(BaseModel):
     mistake_html: str | None = None
 
 
-class CommsBatchEmailRequest(BaseModel):
-    name: str | None = None
-    product_id: str | None = None
-    recipients: list[str]
-    support_language_code: str | None = None
-    template_id: str
+class CommsBatchEmailRequest(BatchEmailRequest):
+    pass
 
 
 class CommsBatchEmailResultItem(BatchEmailResultItem):
@@ -1284,6 +1314,16 @@ class CreateFeatureRequestRequest(BaseModel):
     title: str
 
 
+class CreateJobRequest(BaseModel):
+    body: str
+    data: dict[str, Any]
+    notification_type: str
+    scheduled_at: str | None = None
+    target_ids: list[str]
+    target_type: str
+    title: str
+
+
 class CreateLanguageRequest(BaseModel):
     code: str
     direction: str
@@ -1316,6 +1356,17 @@ class CreateParagraphTTSSessionRequest(BaseModel):
     force: bool | None = None
     paragraph_id: str
     text: str
+
+
+class CreateScheduleRequest(BaseModel):
+    body: str | None = None
+    metadata: dict[str, Any] | None = None
+    recipient_type: str
+    recipients: list[str]
+    scheduled_at: str
+    subject: str | None = None
+    template_id: str | None = None
+    type: str
 
 
 class CreateStudyListRequest(BaseModel):
@@ -1649,6 +1700,12 @@ class DynamicTranslationListResponse(BaseModel):
     page: int
     page_size: int
     total: int
+
+
+class EndConversationSessionRequest(BaseModel):
+    duration_seconds: int
+    transcript_bucket: str
+    transcript_path: str
 
 
 class EndSessionResponse(AppFeedbackUpdateStatusRequest):
@@ -3106,6 +3163,15 @@ class Type(StrEnum):
     saved_collection = "saved_collection"
 
 
+class Notification(BaseModel):
+    body: str
+    data: dict[str, Any] | None = None
+    device_token: str | None = None
+    title: str
+    type: str
+    user_id: UUID_aliased | None = None
+
+
 class NotificationInboxPreferences(BaseModel):
     enabled: bool
 
@@ -3230,6 +3296,12 @@ class ParadigmRow(DictionaryParadigmRow):
     pass
 
 
+class ParagraphTTSRequest(BaseModel):
+    force: bool
+    paragraph_id: UUID_aliased
+    text: str
+
+
 class PaymentHistory(BaseModel):
     amount: float
     currency: str
@@ -3314,6 +3386,10 @@ class QueueStatusResponse(BaseModel):
     state: str
 
 
+class QuickAddToDefaultListRequest(BaseModel):
+    base_word_id: UUID_aliased
+
+
 class QuickAddToStudyListRequest(AddTopicListItemRequest):
     pass
 
@@ -3392,6 +3468,13 @@ class RecommendationLaunchParams(BaseModel):
     source_session_id: UUID_aliased | None = Field(None, title="Source Session Id")
     source_session_mode: str | None = Field(None, title="Source Session Mode")
     topic_list_id: UUID_aliased | None = Field(None, title="Topic List Id")
+
+
+class RecordConversationSessionRequest(BaseModel):
+    scenario_id: str
+    session_id: str
+    state: str
+    user_id: str
 
 
 class RefreshTokenRequest(BaseModel):
@@ -3716,6 +3799,11 @@ class RunRow(BaseModel):
     triggered_by: str | None = None
 
 
+class SaveConversationTranscriptRequest(BaseModel):
+    events: list[dict[str, Any]]
+    srt: str
+
+
 class SaveItemRequest(BaseModel):
     item_id: str
     item_type: str
@@ -3916,6 +4004,10 @@ class SemanticSearchResult(BaseModel):
     label: str
     score: float
     type: str
+
+
+class SendEmailRequest(CommsSendEmailRequest):
+    pass
 
 
 class SendEmailResult(CommsSendEmailResult):
@@ -4947,6 +5039,11 @@ class UpdateConversationInterestsRequest(BaseModel):
     categories: list[str]
 
 
+class UpdateConversationSessionEvaluationRequest(BaseModel):
+    evaluation: dict[str, Any]
+    source: str
+
+
 class UpdateFeatureCategoryRequest(BaseModel):
     category: str | None = None
 
@@ -5022,6 +5119,10 @@ class UpdateProgressResponse(BaseModel):
 
 class UpdateScenarioResponse(DeleteVoiceAgentResponse):
     pass
+
+
+class UpdateSkillLevelRequest(BaseModel):
+    estimated_skill_level: str
 
 
 class UpdateStudyListRequest(BaseModel):
