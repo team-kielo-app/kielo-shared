@@ -1251,6 +1251,17 @@ class CreateCustomDeckRequest(BaseModel):
     )
 
 
+class CreateDynamicTranslationRequest(BaseModel):
+    english_source: str | None = None
+    language_code: str
+    resource_id: str
+    resource_type: str
+    source_version: str | None = None
+    status: str | None = None
+    translated_text: str
+    translator_source: str | None = None
+
+
 class CreateExerciseDeckRequest(BaseModel):
     exercise_types: list[str] | None = None
     intent: str | None = None
@@ -1620,6 +1631,24 @@ class DynamicTranslation(BaseModel):
     translated_text: str
     translator_source: str | None = None
     updated_at: AwareDatetime
+
+
+class DynamicTranslationCoverage(BaseModel):
+    language_code: str
+    resource_type: str
+    row_count: int
+    status: str
+
+
+class DynamicTranslationCoverageResponse(BaseModel):
+    items: list[DynamicTranslationCoverage]
+
+
+class DynamicTranslationListResponse(BaseModel):
+    items: list[DynamicTranslation]
+    page: int
+    page_size: int
+    total: int
 
 
 class EndSessionResponse(AppFeedbackUpdateStatusRequest):
@@ -2820,8 +2849,9 @@ class LoginResponse(BaseModel):
 
 
 class LoginSocialRequest(BaseModel):
+    access_token: str
+    nonce: str | None = None
     provider: str
-    token: str
 
 
 class LogoutRequest(BaseModel):
@@ -3184,6 +3214,10 @@ class OmorfiInflection(BaseModel):
 class OmorfiParadigmRow(BaseModel):
     cells: list[str] | None = Field(None, title="Cells")
     label: str = Field(..., title="Label")
+
+
+class OverrideDynamicTranslationRequest(BaseModel):
+    translated_text: str
 
 
 class ParadigmRow(DictionaryParadigmRow):
