@@ -61,6 +61,19 @@ func PrepareInternalJSONRequest(
 	}
 	ApplyActiveLanguageQuery(req)
 	ApplyActiveLanguageHeader(req)
+	// Sweep QQQQ: forward the active support (UI/translation) language
+	// from ctx onto every internal request. Sibling to the learning-
+	// language pair above. Pre-QQQQ only kielo-content-service's
+	// klearn_client.go (Sweep PPPP) and kielo-mobile-bff's
+	// utils/http.go::injectSupportLanguageQueryParam implemented this
+	// per-service; every other Go HTTP client that talks to an
+	// upstream returning localized user-facing content silently
+	// dropped the signal. Engine's get_support_language FastAPI dep
+	// then fell back to "en" -> raw source language returned to
+	// non-Finnish learners (root cause of the user-reported
+	// concept-hub localization leak that drove Sweep OOOO+PPPP).
+	ApplySupportLanguageQuery(req)
+	ApplySupportLanguageHeader(req)
 	// Forward the active trace context onto the outbound request so the
 	// downstream service can treat this call as a child span and the
 	// mobile-issued X-Client-Trace-Id flows end-to-end through every
