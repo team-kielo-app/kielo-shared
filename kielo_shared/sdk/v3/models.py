@@ -188,6 +188,35 @@ class AppFeedbackUpdateStatusRequest(BaseModel):
     status: str
 
 
+class ArticleBrand(BaseModel):
+    display_name: str
+    logo_url: str | None = None
+    navigation_active_color_hex: str | None = None
+    navigation_bg_color_hex: str | None = None
+    navigation_text_color_hex: str | None = None
+    primary_color_hex: str | None = None
+    secondary_color_hex: str | None = None
+    source_identifier: str
+
+
+class ArticleParagraphTranslationItem(BaseModel):
+    content_locale: str
+    fallback: bool
+    paragraph_id: str
+    source_language_code: str
+    support_language_code: str
+    translation: str
+
+
+class ArticleParagraphTranslationsRequest(BaseModel):
+    paragraph_ids: list[str]
+    support_language_code: str | None = None
+
+
+class ArticleParagraphTranslationsResponse(BaseModel):
+    translations: list[ArticleParagraphTranslationItem]
+
+
 class AuditLog(BaseModel):
     action: str
     entity_id: UUID_aliased
@@ -288,15 +317,8 @@ class BodyEvaluateRoadmapStepSpeechKlearnApiV3RoadmapLessonsLessonIdStepsStepInd
     file: bytes = Field(..., title="File")
 
 
-class Brand(BaseModel):
-    display_name: str
-    logo_url: str | None = None
-    navigation_active_color_hex: str | None = None
-    navigation_bg_color_hex: str | None = None
-    navigation_text_color_hex: str | None = None
-    primary_color_hex: str | None = None
-    secondary_color_hex: str | None = None
-    source_identifier: str
+class Brand(ArticleBrand):
+    pass
 
 
 class BroadcastNotificationRequest(BaseModel):
@@ -896,8 +918,8 @@ class ContextualLearningOpportunity(BaseModel):
 
 
 class ConversationCommandRequest(BaseModel):
-    command: str
     payload: dict[str, Any] | None = None
+    type: str
 
 
 class ConversationDiscoveryScenario(BaseModel):
@@ -1594,6 +1616,17 @@ class DeleteVoiceAgentResponse(BaseModel):
     message: str
 
 
+class SupportLanguageSource(StrEnum):
+    explicit_settings = "explicit_settings"
+    onboarding_picker = "onboarding_picker"
+    auto_detected = "auto_detected"
+    signup_default = "signup_default"
+    v062_normalization = "v062_normalization"
+    v064_backfill = "v064_backfill"
+    admin_override = "admin_override"
+    unknown = "unknown"
+
+
 class DictionaryConfusable(Confusable):
     pass
 
@@ -1850,9 +1883,10 @@ class FeatureCommentsAdminResponse(FeatureCommentListResponse):
 
 class FeatureLimit(BaseModel):
     feature: str
-    limit_value: int
-    tier: str
-    user_id: UUID_aliased | None = None
+    used: int
+    limit: int
+    period: str
+    reset_date: AwareDatetime
 
 
 class FeatureLimitResult(CreateTierLimitRequest):
@@ -1885,6 +1919,7 @@ class FeatureRequest(BaseModel):
     title: str
     updated_at: str
     vote_count: int
+    has_voted: bool
 
 
 class FeatureRequestListResponse(BaseModel):
@@ -2666,6 +2701,16 @@ class KieloTVVideoUpsertRequest(BaseModel):
     video_url: str | None = None
 
 
+class LLLLLNullFloat64(BaseModel):
+    Float64: float
+    Valid: bool
+
+
+class LLLLLNullInt32(BaseModel):
+    Int32: int
+    Valid: bool
+
+
 class Language(BaseModel):
     code: str
     created_at: AwareDatetime
@@ -2999,8 +3044,9 @@ class MessageAudioRequest(BaseModel):
     text: str
 
 
-class MessageResponse(DeleteVoiceAgentResponse):
-    pass
+class MessageResponse(BaseModel):
+    code: str | None = None
+    message: str
 
 
 class MicroDrill(BaseModel):
@@ -3241,14 +3287,12 @@ class NotifyUploadCompleteResponse(CancelSubscriptionResponse):
     pass
 
 
-class NullFloat64(BaseModel):
-    Float64: float
-    Valid: bool
+class NullFloat64(LLLLLNullFloat64):
+    pass
 
 
-class NullInt32(BaseModel):
-    Int32: int
-    Valid: bool
+class NullInt32(LLLLLNullInt32):
+    pass
 
 
 class NullString(BaseModel):
@@ -3302,13 +3346,31 @@ class ParagraphTTSRequest(BaseModel):
     text: str
 
 
+class ParagraphTranslationItem(BaseModel):
+    content_locale: str
+    fallback: bool
+    paragraph_id: UUID_aliased
+    source_language_code: str
+    support_language_code: str
+    translation: str
+
+
+class ParagraphTranslationRequest(BaseModel):
+    paragraph_ids: list[UUID_aliased]
+    support_language_code: str | None = None
+
+
+class ParagraphTranslationResponse(BaseModel):
+    translations: list[ParagraphTranslationItem]
+
+
 class PaymentHistory(BaseModel):
+    date: AwareDatetime
     amount: float
     currency: str
-    date: str
+    status: str
     description: str
     event_type: str
-    status: str
 
 
 class PhraseFrame(BaseModel):
@@ -3363,12 +3425,12 @@ class PubSubMessage(BaseModel):
 
 
 class PurchaseHistory(BaseModel):
+    purchase_date: AwareDatetime
+    product_id: str
     amount: float
     currency: str
-    product_id: str
-    purchase_date: str
-    status: str
     transaction_id: str
+    status: str = Field(..., description="completed | refunded | failed")
 
 
 class PushTokensResponse(BaseModel):
@@ -3494,6 +3556,7 @@ class RegenerateLanguageBundlesResponse(BaseModel):
 
 
 class RegisterPushTokenRequest(BaseModel):
+    device_language_code: str | None = None
     platform: str
     token: str
 
@@ -4666,7 +4729,11 @@ class SubmissionResult(BaseModel):
 
 
 class SubmitAnswerRequest(BaseModel):
-    answer: str
+    exercise_id: str
+    response_time_ms: int | None = None
+    submission_id: str | None = None
+    submitted_at_client: str | None = None
+    user_answer: Any
 
 
 class SubmitAnswerResponseV3(BaseModel):
@@ -4688,6 +4755,19 @@ class SubmitFeedbackRequest(BaseModel):
     rating: int | None = None
 
 
+class GrantSource(StrEnum):
+    revenuecat_webhook = "revenuecat_webhook"
+    admin_grant = "admin_grant"
+    restore = "restore"
+    transfer = "transfer"
+    promo_code = "promo_code"
+    referral = "referral"
+    support_comp = "support_comp"
+    beta = "beta"
+    legacy_backfill = "legacy_backfill"
+    unknown = "unknown"
+
+
 class SubscriptionInfo(BaseModel):
     auto_renew: bool
     canceled_at: str | None = None
@@ -4699,6 +4779,20 @@ class SubscriptionInfo(BaseModel):
     subscription_id: str
     tier: str
     trial_ends_at: str | None = None
+    is_manual: bool
+    grant_source: GrantSource = Field(
+        ..., description="Sweep SSS-B typed write-source tag."
+    )
+    features: list[FeatureLimit]
+    subscription_type: str | None = Field(
+        None, description="monthly | yearly | weekly | etc."
+    )
+    next_payment_date: AwareDatetime | None = None
+    current_period_status: str = Field(
+        ..., description="paid | unpaid | trial | grace_period"
+    )
+    purchase_history: list[PurchaseHistory] | None = None
+    payment_history: list[PaymentHistory] | None = None
 
 
 class SuggestedConceptHub(BaseModel):
@@ -4804,11 +4898,6 @@ class TargetedSuggestionsResponse(BaseModel):
     user_id: str
 
 
-class Thumbnail(BaseModel):
-    media_id: str
-    variants: dict[str, MediaVariant]
-
-
 class TimeSeriesPoint(CommsTimeSeriesPoint):
     pass
 
@@ -4861,15 +4950,20 @@ class TopicListPreview(BaseModel):
 class TopicListResponse(BaseModel):
     category: str = Field(..., title="Category")
     cefr_level: str | None = Field(None, title="Cefr Level")
-    created_at: AwareDatetime = Field(..., title="Created At")
+    created_at: AwareDatetime
     description: str | None = Field(None, title="Description")
     display_name: str | None = Field(None, title="Display Name")
     icon: str | None = Field(None, title="Icon")
     id: UUID_aliased = Field(..., title="Id")
     name: str = Field(..., title="Name")
-    owner_user_id: UUID_aliased | None = Field(None, title="Owner User Id")
-    source_type: str | None = Field("ai_generated", title="Source Type")
-    status: str = Field(..., title="Status")
+    owner_user_id: UUID_aliased | None = Field(
+        None,
+        description="User who owns this topic list; null/absent for system-curated lists.",
+    )
+    source_type: str | None = Field(
+        None, description="ai_generated | admin_curated | user_created"
+    )
+    status: str
     word_count: int | None = Field(0, title="Word Count")
 
 
@@ -5042,6 +5136,13 @@ class UpdateConversationInterestsRequest(BaseModel):
 class UpdateConversationSessionEvaluationRequest(BaseModel):
     evaluation: dict[str, Any]
     source: str
+
+
+class SupportLanguageSource1(StrEnum):
+    explicit_settings = "explicit_settings"
+    onboarding_picker = "onboarding_picker"
+    auto_detected = "auto_detected"
+    admin_override = "admin_override"
 
 
 class UpdateFeatureCategoryRequest(BaseModel):
@@ -5291,6 +5392,10 @@ class UserProfile(BaseModel):
     name: str | None = None
     newsletter_consent: bool | None = None
     support_language_code: str | None = None
+    support_language_source: SupportLanguageSource | None = Field(
+        None,
+        description="Sweep VVV: write-source classifier for users.users.support_language_code. 8 canonical values.",
+    )
 
 
 class UserProfileData(BaseModel):
@@ -5674,13 +5779,6 @@ class AllFeatureLimitsResponse(BaseModel):
     limits: list[FeatureLimitRow]
 
 
-class Article(BaseModel):
-    brand: Brand | None = None
-    id: str
-    thumbnail: Thumbnail | None = None
-    title: str
-
-
 class ArticleVersionSnippet(BaseModel):
     article_type: str | None = None
     brand: Brand
@@ -5758,6 +5856,14 @@ class BrowseScenariosResponse(BaseModel):
     items: list[ScenarioListItem]
     next_cursor: str | None = None
     next_page_key: str | None = None
+
+
+class BulkUpsertDynamicTranslationsRequest(BaseModel):
+    items: list[UpsertDynamicTranslationRequest]
+
+
+class BulkUpsertDynamicTranslationsResponse(BaseModel):
+    results: list[UpsertDynamicTranslationResponse]
 
 
 class CAMArticleContent(BaseModel):
@@ -6486,10 +6592,6 @@ class SessionReconcileItemResult(BaseModel):
     submission_id: str | None = Field(None, title="Submission Id")
 
 
-class SingletonArticle(BaseModel):
-    data: Article
-
-
 class SingletonBaseWordList(BaseModel):
     data: list[BaseWord]
 
@@ -6504,6 +6606,10 @@ class SingletonCampaignConfigSchema(BaseModel):
 
 class SingletonCampaignPreviewResult(BaseModel):
     data: CampaignPreviewResult
+
+
+class SingletonConceptHubCoreContent(BaseModel):
+    data: ConceptHubCoreContent
 
 
 class SingletonConversationBrowseResponse(BaseModel):
@@ -6795,7 +6901,10 @@ class UpdateDevicePreferencesRequest(BaseModel):
     notifications: NotificationPreferences | None = None
     sound_enabled: bool | None = None
     support_language_code: str | None = None
-    theme: str | None = None
+    support_language_source: SupportLanguageSource1 | None = Field(
+        None,
+        description="Sweep VVV: write-source classifier. Writer subset — only deliberate-choice + auto-detected sources may be emitted via the API.",
+    )
 
 
 class UserAchievementsResult(BaseModel):
@@ -6918,7 +7027,7 @@ class ChallengeSection(BaseModel):
 class ConceptHub(BaseModel):
     category: str | None = None
     cefr_level: str | None = None
-    core_content: ConceptHubCoreContent
+    core_content: ConceptHubCoreContent | None = None
     description: str
     enrichment_completed_at: AwareDatetime | None = None
     enrichment_error_message: str | None = None
@@ -6941,7 +7050,7 @@ class ConceptHubPreview(BaseModel):
 class ConceptHubResponse(BaseModel):
     category: str | None = Field(None, title="Category")
     cefr_level: str | None = Field(None, title="Cefr Level")
-    core_content: CoreContent
+    core_content: CoreContent | None = None
     description: str | None = Field(None, title="Description")
     enrichment_completed_at: AwareDatetime | None = Field(
         None, title="Enrichment Completed At"
@@ -6968,7 +7077,10 @@ class DevicePreferences(BaseModel):
     notifications: NotificationPreferences
     sound_enabled: bool
     support_language_code: str
-    theme: str | None = None
+    support_language_source: SupportLanguageSource | None = Field(
+        None,
+        description="Sweep VVV: write-source classifier for users.users.support_language_code. 8 canonical values.",
+    )
     user_id: str
 
 
@@ -7086,6 +7198,7 @@ class LearningSession(BaseModel):
 
 class Paragraph(BaseModel):
     audio_url: str | None = None
+    content_locale: str | None = None
     grammar_occurrences: list[ArticleVersionOccurrence] | None = None
     paragraph_id: UUID_aliased
     paragraph_index: int
@@ -7154,9 +7267,14 @@ class SingletonWebIngestRunList(BaseModel):
     data: list[WebIngestRun]
 
 
+class ArticleParagraph(Paragraph):
+    pass
+
+
 class ArticleVersion(BaseModel):
     article_type: str | None = None
     brand: Brand
+    content_locale: str | None = None
     contextual_learning_opportunities: (
         list[KLearnContextualLearningOpportunity] | None
     ) = None
@@ -7195,3 +7313,7 @@ class ConceptHubGenerationJobResponse(BaseModel):
 class CursorPageArticleVersion(BaseModel):
     items: list[ArticleVersion]
     next_page_key: str | None = None
+
+
+class SingletonArticleVersion(BaseModel):
+    data: ArticleVersion
