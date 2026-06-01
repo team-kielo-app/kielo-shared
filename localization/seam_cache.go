@@ -11,9 +11,31 @@ import (
 // serving stale + kicking off a background refresh, or treating as a
 // miss. Concrete implementations live in service-side packages so this
 // shared library doesn't pull in a Redis client.
+//
+// Sweep TTTT-B: BatchGet + BatchSet added so list-of-refs callers
+// (Seam.TranslateBatch) issue ONE Redis pipelined MGET+PTTL instead of
+// N sequential GETs. Backward-compat default implementations route
+// through Get/Set so existing Cache impls continue to work without
+// the batch optimization; production impls (cacheredis) override.
 type Cache interface {
 	Get(ctx context.Context, key string) (CacheEntry, bool)
 	Set(ctx context.Context, key string, value string, ttl time.Duration) error
+}
+
+// BatchCache is the optional batch-aware interface. Impls that
+// implement this surface get a true single-RTT batch path; impls that
+// don't continue to work via Cache.Get/Set fallback in the seam's
+// batch fan-out logic.
+type BatchCache interface {
+	Cache
+	// BatchGet returns a map from key → entry for every key that hit.
+	// Misses are omitted from the map (callers iterate `for _, k :=
+	// range keys; if entry, ok := result[k]; ok { ... }`). One round-
+	// trip to the backing store regardless of len(keys).
+	BatchGet(ctx context.Context, keys []string) map[string]CacheEntry
+	// BatchSet writes multiple key→value pairs with a common TTL in
+	// one round-trip. Implementations should pipeline the writes.
+	BatchSet(ctx context.Context, entries map[string]string, ttl time.Duration) error
 }
 
 // CacheEntry is a cache hit with the time since it was written. Age >

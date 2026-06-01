@@ -3,6 +3,7 @@ package localization
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -420,7 +421,115 @@ func TestSeam_TranslateBatch(t *testing.T) {
 	if got[0] != "Gọi một ly cà phê" || got[1] != "Xin chào" {
 		t.Fatalf("batch results: %v", got)
 	}
-	if provider.calls.Load() != 2 {
-		t.Fatalf("expected 2 provider calls for 2 unique refs; got %d", provider.calls.Load())
+	// Sweep TTTT-B: TranslateBatch now coalesces all unique refs into
+	// ONE provider.TranslateBatch call with N items, instead of the
+	// pre-TTTT N×provider.TranslateBatch each with 1 item.
+	if provider.calls.Load() != 1 {
+		t.Fatalf("expected 1 batched provider call for 2 refs (post-TTTT); got %d", provider.calls.Load())
+	}
+}
+
+// TestSeam_TranslateBatch_LargeN pins the canonical scenario-list case:
+// 264 refs (the prod scenario count) collapse into exactly 1 provider
+// call. Pre-TTTT this would have been 264 sequential provider calls.
+func TestSeam_TranslateBatch_LargeN(t *testing.T) {
+	h := newSeamHarness(t)
+	seam, provider := h.seam, h.provider
+	// Pre-populate stub translations for 264 unique refs.
+	const N = 264
+	refs := make([]SourceRef, N)
+	for i := 0; i < N; i++ {
+		src := fmt.Sprintf("Source %d", i)
+		dst := fmt.Sprintf("Đích %d", i)
+		provider.translations["vi|"+src] = dst
+		refs[i] = SourceRef{
+			Namespace:     "convo.scenario.description",
+			SourceID:      fmt.Sprintf("ref-%d", i),
+			SourceVersion: "v1",
+			SourceText:    src,
+		}
+	}
+	got := seam.TranslateBatch(context.Background(), refs, "vi")
+	if len(got) != N {
+		t.Fatalf("batch len mismatch: %d", len(got))
+	}
+	// Spot check first / middle / last.
+	if got[0] != "Đích 0" || got[N/2] != fmt.Sprintf("Đích %d", N/2) || got[N-1] != fmt.Sprintf("Đích %d", N-1) {
+		t.Fatalf("batch results sample mismatch: [0]=%q [%d]=%q [%d]=%q", got[0], N/2, got[N/2], N-1, got[N-1])
+	}
+	if provider.calls.Load() != 1 {
+		t.Fatalf("expected exactly 1 provider call for %d refs (post-TTTT); got %d", N, provider.calls.Load())
+	}
+}
+
+// TestSeam_TranslateBatch_CacheHitsSkipProvider pins that cache-hit
+// refs short-circuit before the provider phase. With 5 refs all
+// pre-cached, the provider should see 0 calls.
+func TestSeam_TranslateBatch_CacheHitsSkipProvider(t *testing.T) {
+	h := newSeamHarness(t)
+	seam, provider := h.seam, h.provider
+	// First call populates cache.
+	refs := []SourceRef{
+		{Namespace: "convo.scenario.description", SourceID: "s1", SourceVersion: "v1", SourceText: "Order a coffee"},
+		{Namespace: "convo.scenario.description", SourceID: "s2", SourceVersion: "v1", SourceText: "Hello"},
+	}
+	_ = seam.TranslateBatch(context.Background(), refs, "vi")
+	if provider.calls.Load() != 1 {
+		t.Fatalf("first call should make 1 provider call; got %d", provider.calls.Load())
+	}
+	// Second call should be 100% cache hits → 0 provider calls.
+	_ = seam.TranslateBatch(context.Background(), refs, "vi")
+	if provider.calls.Load() != 1 {
+		t.Fatalf("second call should hit cache (still 1 total provider call); got %d", provider.calls.Load())
+	}
+}
+
+// TestSeam_TranslateBatch_MixedCacheHitMiss pins that the provider only
+// sees the cache-miss subset.
+func TestSeam_TranslateBatch_MixedCacheHitMiss(t *testing.T) {
+	h := newSeamHarness(t)
+	seam, provider := h.seam, h.provider
+	provider.translations["vi|Source A"] = "Đích A"
+	provider.translations["vi|Source B"] = "Đích B"
+	provider.translations["vi|Source C"] = "Đích C"
+	// Warm cache with 1 of 3 refs.
+	_ = seam.TranslateBatch(context.Background(), []SourceRef{
+		{Namespace: "x", SourceID: "a", SourceVersion: "v1", SourceText: "Source A"},
+	}, "vi")
+	if provider.calls.Load() != 1 {
+		t.Fatalf("warm-up should make 1 call; got %d", provider.calls.Load())
+	}
+	// Now batch-translate 3 refs (1 hit, 2 miss). Expect 1 additional
+	// provider call carrying only the 2 misses.
+	provider.calls.Store(0)
+	got := seam.TranslateBatch(context.Background(), []SourceRef{
+		{Namespace: "x", SourceID: "a", SourceVersion: "v1", SourceText: "Source A"},
+		{Namespace: "x", SourceID: "b", SourceVersion: "v1", SourceText: "Source B"},
+		{Namespace: "x", SourceID: "c", SourceVersion: "v1", SourceText: "Source C"},
+	}, "vi")
+	if got[0] != "Đích A" || got[1] != "Đích B" || got[2] != "Đích C" {
+		t.Fatalf("mixed batch results: %v", got)
+	}
+	if provider.calls.Load() != 1 {
+		t.Fatalf("expected 1 provider call for 2-of-3 misses; got %d", provider.calls.Load())
+	}
+}
+
+// TestSeam_TranslateBatch_EnglishPassthrough pins that en target
+// short-circuits before touching any backing store. Provider must see
+// zero calls even for N refs.
+func TestSeam_TranslateBatch_EnglishPassthrough(t *testing.T) {
+	h := newSeamHarness(t)
+	seam, provider := h.seam, h.provider
+	refs := []SourceRef{
+		{Namespace: "x", SourceID: "a", SourceVersion: "v1", SourceText: "Hello"},
+		{Namespace: "x", SourceID: "b", SourceVersion: "v1", SourceText: "World"},
+	}
+	got := seam.TranslateBatch(context.Background(), refs, "en")
+	if got[0] != "Hello" || got[1] != "World" {
+		t.Fatalf("en passthrough should echo source; got %v", got)
+	}
+	if provider.calls.Load() != 0 {
+		t.Fatalf("provider should not be called for en path; got %d", provider.calls.Load())
 	}
 }

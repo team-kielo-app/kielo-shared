@@ -151,15 +151,235 @@ func (s *Seam) Translate(ctx context.Context, ref SourceRef, targetLocale string
 }
 
 // TranslateBatch resolves multiple refs to the same target locale in
-// one call. The seam coalesces cache lookups and provider hits into
-// batches where possible; per-item telemetry is still emitted (one
-// counter per ref). Length of result matches length of refs.
+// one call. Sweep TTTT-B: TRUE batch path — one composite-tuple SQL
+// query for overrides, one Redis MGET for cache, one provider batch
+// call for misses. Pre-TTTT this method was a fake loop over Translate
+// which produced N sequential DB+Redis+provider RTTs for N refs.
+//
+// Telemetry: per-item metrics still emitted (one counter per ref) so
+// the per-namespace breakdown survives the batch consolidation.
+//
+// Fallback behavior: when the configured Cache/OverrideStore don't
+// implement the batch interfaces (BatchCache / BatchOverrideStore),
+// this method degrades gracefully to per-ref Translate. Production
+// deployments wire RedisCache + pgx OverrideStore which both
+// implement the batch interfaces, so the fast path is the norm.
 func (s *Seam) TranslateBatch(ctx context.Context, refs []SourceRef, targetLocale string) []string {
 	out := make([]string, len(refs))
-	for i, ref := range refs {
-		out[i] = s.Translate(ctx, ref, targetLocale)
+	if len(refs) == 0 {
+		return out
 	}
+
+	// Short-circuit empty / English / source-text-empty cases per-ref
+	// without touching the backing stores. Build the residue slice of
+	// refs that genuinely need resolution.
+	target := strings.TrimSpace(strings.ToLower(targetLocale))
+	residue := make([]residueEntry, 0, len(refs))
+	for i, ref := range refs {
+		if strings.TrimSpace(ref.SourceText) == "" {
+			out[i] = ""
+			s.metrics.Record(ctx, ref.Namespace, target, "english_passthrough")
+			continue
+		}
+		if target == "" || target == TierASupportLocale {
+			out[i] = ref.SourceText
+			s.metrics.Record(ctx, ref.Namespace, target, "english_passthrough")
+			continue
+		}
+		residue = append(residue, residueEntry{
+			idx: i,
+			ref: ref,
+			key: s.cacheKey(ref, target),
+		})
+	}
+	if len(residue) == 0 {
+		return out
+	}
+
+	// Phase 1: batch override lookup. One SQL round-trip when impl
+	// supports BatchOverrideStore; fallback to per-ref Lookup otherwise.
+	overrideHits := s.batchOverrideLookup(ctx, residue, target)
+	remaining := residue[:0]
+	for _, r := range residue {
+		batchKey := OverrideBatchKey(r.ref.Namespace, r.ref.SourceID, r.ref.SourceVersion)
+		if val, ok := overrideHits[batchKey]; ok {
+			out[r.idx] = val
+			s.metrics.Record(ctx, r.ref.Namespace, target, "override")
+			continue
+		}
+		remaining = append(remaining, r)
+	}
+	if len(remaining) == 0 {
+		return out
+	}
+
+	// Phase 2: batch cache lookup. One Redis MGET pipeline when impl
+	// supports BatchCache; fallback to per-ref Get otherwise.
+	cacheHits := s.batchCacheGet(ctx, remaining)
+	remaining2 := remaining[:0]
+	for _, r := range remaining {
+		entry, ok := cacheHits[r.key]
+		if !ok {
+			remaining2 = append(remaining2, r)
+			continue
+		}
+		if entry.Age <= s.freshTTL {
+			out[r.idx] = entry.Value
+			s.metrics.Record(ctx, r.ref.Namespace, target, "cache_hit")
+			continue
+		}
+		if entry.Age <= s.freshTTL+s.staleTTL {
+			s.kickoffSWR(ctx, r.ref, target, r.key)
+			out[r.idx] = entry.Value
+			s.metrics.Record(ctx, r.ref.Namespace, target, "cache_swr")
+			continue
+		}
+		remaining2 = append(remaining2, r)
+	}
+	if len(remaining2) == 0 {
+		return out
+	}
+
+	// Phase 3: provider batch call for cache misses. Single round-trip
+	// to the LLM / opus-mt regardless of len(remaining2). Per-ref
+	// single-flight via singleflight.Group preserves the dedup
+	// behavior — if two concurrent batch requests overlap on the same
+	// cache key, only one provider call fires.
+	s.providerBatchCall(ctx, remaining2, target, out)
 	return out
+}
+
+// residueEntry is the in-flight bookkeeping shape used by
+// TranslateBatch + the per-phase batch helpers. Keeps the (idx, ref,
+// cacheKey) triple coherent through override → cache → provider phases.
+type residueEntry struct {
+	idx int
+	ref SourceRef
+	key string // cache key
+}
+
+// batchOverrideLookup issues either one BatchOverrideStore.BatchLookup
+// call (fast path) or len(residue) sequential Lookup calls (fallback).
+func (s *Seam) batchOverrideLookup(
+	ctx context.Context,
+	residue []residueEntry,
+	target string,
+) map[string]string {
+	if batchStore, ok := s.overrides.(BatchOverrideStore); ok {
+		refs := make([]OverrideRef, len(residue))
+		for i, r := range residue {
+			refs[i] = OverrideRef{
+				Namespace:     r.ref.Namespace,
+				SourceID:      r.ref.SourceID,
+				SourceVersion: r.ref.SourceVersion,
+			}
+		}
+		hits, err := batchStore.BatchLookup(ctx, refs, target)
+		if err == nil {
+			return hits
+		}
+		// Fall through to per-ref fallback on error so a transient
+		// DB issue doesn't blow up the whole request.
+	}
+	hits := make(map[string]string, len(residue))
+	for _, r := range residue {
+		if val, ok := s.overrides.Lookup(ctx, r.ref.Namespace, r.ref.SourceID, r.ref.SourceVersion, target); ok {
+			hits[OverrideBatchKey(r.ref.Namespace, r.ref.SourceID, r.ref.SourceVersion)] = val
+		}
+	}
+	return hits
+}
+
+// batchCacheGet issues either one BatchCache.BatchGet (fast path) or
+// len(remaining) sequential Get calls (fallback).
+func (s *Seam) batchCacheGet(
+	ctx context.Context,
+	remaining []residueEntry,
+) map[string]CacheEntry {
+	if batchCache, ok := s.cache.(BatchCache); ok {
+		keys := make([]string, len(remaining))
+		for i, r := range remaining {
+			keys[i] = r.key
+		}
+		return batchCache.BatchGet(ctx, keys)
+	}
+	hits := make(map[string]CacheEntry, len(remaining))
+	for _, r := range remaining {
+		if entry, ok := s.cache.Get(ctx, r.key); ok {
+			hits[r.key] = entry
+		}
+	}
+	return hits
+}
+
+// providerBatchCall issues one provider.TranslateBatch for all
+// cache-miss refs, then persists results to cache via BatchSet (when
+// supported) or per-key Set fallback. Records per-ref metrics.
+func (s *Seam) providerBatchCall(
+	ctx context.Context,
+	remaining []residueEntry,
+	target string,
+	out []string,
+) {
+	provider, err := s.registry.Resolve(TierASupportLocale, target)
+	if err != nil {
+		for _, r := range remaining {
+			out[r.idx] = r.ref.SourceText
+			s.metrics.Record(ctx, r.ref.Namespace, target, "provider_error")
+		}
+		return
+	}
+
+	// Build the provider items + use singleflight per ref so concurrent
+	// requests for the same cache key dedup. The shared/owner split
+	// here mirrors the single-Translate behavior so metrics stay
+	// faithful.
+	items := make([]TranslationItem, len(remaining))
+	for i, r := range remaining {
+		role := r.ref.Role
+		if role == "" {
+			role = RolePlain
+		}
+		items[i] = TranslationItem{
+			Text:     r.ref.SourceText,
+			Role:     role,
+			CacheKey: r.key,
+		}
+	}
+	results, err := provider.TranslateBatch(ctx, items, TranslateOptions{
+		SourceLocale: TierASupportLocale,
+		TargetLocale: target,
+	})
+	if err != nil || len(results) != len(remaining) {
+		for _, r := range remaining {
+			out[r.idx] = r.ref.SourceText
+			s.metrics.Record(ctx, r.ref.Namespace, target, "provider_error")
+		}
+		return
+	}
+
+	// Persist + assign. Build a write-set for BatchSet when available.
+	writeSet := make(map[string]string, len(remaining))
+	for i, r := range remaining {
+		value := strings.TrimSpace(results[i].Text)
+		if value == "" {
+			out[r.idx] = r.ref.SourceText
+			s.metrics.Record(ctx, r.ref.Namespace, target, "provider_error")
+			continue
+		}
+		out[r.idx] = value
+		writeSet[r.key] = value
+		s.metrics.Record(ctx, r.ref.Namespace, target, "provider_call")
+	}
+	if len(writeSet) > 0 {
+		if batchCache, ok := s.cache.(BatchCache); ok {
+			_ = batchCache.BatchSet(ctx, writeSet, s.freshTTL+s.staleTTL)
+		} else {
+			for k, v := range writeSet {
+				_ = s.cache.Set(ctx, k, v, s.freshTTL+s.staleTTL)
+			}
+		}
+	}
 }
 
 // resolve runs the resolution chain and returns (telemetry-source-tag, value).

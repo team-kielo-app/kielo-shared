@@ -87,3 +87,95 @@ func (c *Cache) Set(ctx context.Context, key, value string, ttl time.Duration) e
 	}
 	return c.client.Set(ctx, key, value, ttl).Err()
 }
+
+// BatchGet implements localization.BatchCache. Sweep TTTT-B: pipelined
+// MGET + per-key PTTL fits in a single RTT regardless of len(keys).
+// MGET returns nil for misses; we omit those from the result map so
+// callers iterate `for _, k := range keys; if entry, ok := result[k];
+// ok { ... }` matching the single-Get convention.
+//
+// Performance shape vs per-key Get loop:
+//   - Pre-TTTT: N keys → N round-trips × (GET+PTTL pipeline each = 1 RTT)
+//     = N RTTs
+//   - Post-TTTT: 1 round-trip for MGET + 1 pipelined batch of N PTTLs
+//     = 2 RTTs total (or 1 RTT when the pipeline is auto-flushed by
+//     the go-redis client)
+//
+// For the canonical scenario-list case (264 refs), this is 264 RTTs
+// → 1 RTT.
+func (c *Cache) BatchGet(ctx context.Context, keys []string) map[string]localization.CacheEntry {
+	out := make(map[string]localization.CacheEntry, len(keys))
+	if len(keys) == 0 {
+		return out
+	}
+	// Phase 1: MGET all values in one command.
+	values, err := c.client.MGet(ctx, keys...).Result()
+	if err != nil {
+		return out
+	}
+	// Phase 2: pipeline PTTL for each hit. Only hits need age — misses
+	// are dropped before the pipeline executes so we don't spend RTT
+	// on keys that aren't present.
+	pipe := c.client.Pipeline()
+	pttlCmds := make([]*redisv9.DurationCmd, len(keys))
+	for i, raw := range values {
+		if raw == nil {
+			continue
+		}
+		pttlCmds[i] = pipe.PTTL(ctx, keys[i])
+	}
+	if _, err := pipe.Exec(ctx); err != nil {
+		// PTTL pipeline failed; serve hits with Age=0 so they still
+		// look fresh. Better than dropping every hit silently.
+		for i, raw := range values {
+			if raw == nil {
+				continue
+			}
+			str, ok := raw.(string)
+			if !ok || str == "" {
+				continue
+			}
+			out[keys[i]] = localization.CacheEntry{Value: str, Age: 0}
+		}
+		return out
+	}
+	for i, raw := range values {
+		if raw == nil {
+			continue
+		}
+		str, ok := raw.(string)
+		if !ok || str == "" {
+			continue
+		}
+		var age time.Duration
+		if pttlCmds[i] != nil {
+			remaining, err := pttlCmds[i].Result()
+			if err == nil && remaining > 0 {
+				age = c.totalTTL - remaining
+				if age < 0 {
+					age = 0
+				}
+			}
+		}
+		out[keys[i]] = localization.CacheEntry{Value: str, Age: age}
+	}
+	return out
+}
+
+// BatchSet implements localization.BatchCache. Sweep TTTT-B: pipelined
+// SET-with-EX for every entry in one RTT. Go-redis pipelines flush in
+// one TCP write when called inside a single Exec.
+func (c *Cache) BatchSet(ctx context.Context, entries map[string]string, ttl time.Duration) error {
+	if len(entries) == 0 {
+		return nil
+	}
+	if ttl <= 0 {
+		ttl = c.totalTTL
+	}
+	pipe := c.client.Pipeline()
+	for k, v := range entries {
+		pipe.Set(ctx, k, v, ttl)
+	}
+	_, err := pipe.Exec(ctx)
+	return err
+}

@@ -39,6 +39,43 @@ type OverrideStore interface {
 	Lookup(ctx context.Context, namespace, sourceID, sourceVersion, targetLocale string) (value string, found bool)
 }
 
+// BatchOverrideStore is the optional batch-aware extension. Impls
+// implementing this interface receive a list of refs and return a map
+// from `(namespace|sourceID|sourceVersion)` → value for every override
+// that matched the (status + source_version) gate. Sweep TTTT-B
+// closes the N+1 DB-query pattern that pre-TTTT made list endpoints
+// issue 1 pgx QueryRow per row.
+//
+// Wire-shape:
+//   - keys formatted via OverrideBatchKey for deterministic packing
+//   - misses are omitted (callers check map-presence, not value-non-empty)
+//   - one SQL round-trip per call (composite-tuple `(namespace,
+//     source_id, source_version) IN (...)` clause)
+type BatchOverrideStore interface {
+	OverrideStore
+	BatchLookup(
+		ctx context.Context,
+		refs []OverrideRef,
+		targetLocale string,
+	) (map[string]string, error)
+}
+
+// OverrideRef is the input shape for BatchLookup. Pack the same
+// three identity fields the per-row Lookup signature carries.
+type OverrideRef struct {
+	Namespace     string
+	SourceID      string
+	SourceVersion string
+}
+
+// OverrideBatchKey is the canonical packed key for BatchLookup results.
+// Same shape as MapOverrideStore's key but exposed publicly so callers
+// can build lookup keys without depending on the package-private
+// MapOverrideStore implementation.
+func OverrideBatchKey(namespace, sourceID, sourceVersion string) string {
+	return namespace + "|" + sourceID + "|" + sourceVersion
+}
+
 // NoopOverrideStore is an OverrideStore that always returns "not
 // found". Use in environments without a localization DB or in unit
 // tests of the seam where overrides aren't under test.
