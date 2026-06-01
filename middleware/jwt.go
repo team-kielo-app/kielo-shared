@@ -95,10 +95,15 @@ func JWTAuthWithOptions(jwtSecret string, userChecker UserExistenceChecker, opti
 					if userChecker != nil {
 						exists, err := userChecker.UserExists(c.Request().Context(), claims.UserID)
 						if err != nil {
-							return echo.NewHTTPError(http.StatusInternalServerError, "Failed to verify user existence")
+							// Sweep ZZZZ: typed code so client can branch
+							// (transient infra issue → retry vs hard auth fail).
+							c.Logger().Errorf("JWT middleware userChecker failed: %v", err)
+							return authErr(http.StatusInternalServerError, AuthCodeUserCheckFailed,
+								"Unable to verify your account right now. Please try again in a moment.")
 						}
 						if !exists {
-							return echo.NewHTTPError(http.StatusUnauthorized, "User no longer exists")
+							return authErr(http.StatusUnauthorized, AuthCodeUserDeleted,
+								"Your account is no longer available. Please contact support if this is unexpected.")
 						}
 					}
 					// Set claims in context
@@ -110,12 +115,21 @@ func JWTAuthWithOptions(jwtSecret string, userChecker UserExistenceChecker, opti
 			// Fallback to traditional Bearer token parsing
 			authHeader := c.Request().Header.Get("Authorization")
 			if authHeader == "" {
-				return echo.NewHTTPError(http.StatusUnauthorized, "Missing authorization header")
+				// Sweep ZZZZ: dedicated AUTH_TOKEN_MISSING (was default
+				// UNAUTHORIZED + "Missing authorization header"). Mobile
+				// branches on this to silently retry-after-refresh.
+				return authErr(http.StatusUnauthorized, AuthCodeTokenMissing,
+					"You need to be signed in to continue.")
 			}
 
 			tokenString, ok := strings.CutPrefix(authHeader, "Bearer ")
 			if !ok {
-				return echo.NewHTTPError(http.StatusBadRequest, "Invalid authorization header format")
+				// Sweep ZZZZ: pre-ZZZZ returned 400 + BAD_REQUEST on bad
+				// bearer prefix (per RFC 6750 this should be 401). Now:
+				// 401 + AUTH_TOKEN_MALFORMED so the client treats it as
+				// "force re-login" not "fix your request".
+				return authErr(http.StatusUnauthorized, AuthCodeTokenMalformed,
+					"Your session token format is invalid. Please log in again.")
 			}
 
 			keyFunc := func(token *jwt.Token) (any, error) {
@@ -147,7 +161,14 @@ func JWTAuthWithOptions(jwtSecret string, userChecker UserExistenceChecker, opti
 				jwt.WithLeeway(1*time.Minute))
 
 			if err != nil {
-				return echo.NewHTTPError(http.StatusUnauthorized, "Invalid token")
+				// Sweep ZZZZ: classify the failure mode so the client can
+				// differentiate "token expired → silent refresh" from
+				// "signature invalid → force re-login" from "malformed →
+				// corrupt storage → force re-login". Pre-ZZZZ all four
+				// collapsed to "Invalid token" with default UNAUTHORIZED.
+				code, message := classifyJWTError(err)
+				c.Logger().Debugf("JWT middleware parse failed: code=%s err=%v", code, err)
+				return authErr(http.StatusUnauthorized, code, message)
 			}
 
 			if claims, ok := token.Claims.(*Claims); ok && token.Valid {
@@ -155,10 +176,13 @@ func JWTAuthWithOptions(jwtSecret string, userChecker UserExistenceChecker, opti
 				if userChecker != nil {
 					exists, err := userChecker.UserExists(c.Request().Context(), claims.UserID)
 					if err != nil {
-						return echo.NewHTTPError(http.StatusInternalServerError, "Failed to verify user existence")
+						c.Logger().Errorf("JWT middleware userChecker failed: %v", err)
+						return authErr(http.StatusInternalServerError, AuthCodeUserCheckFailed,
+							"Unable to verify your account right now. Please try again in a moment.")
 					}
 					if !exists {
-						return echo.NewHTTPError(http.StatusUnauthorized, "User no longer exists")
+						return authErr(http.StatusUnauthorized, AuthCodeUserDeleted,
+							"Your account is no longer available. Please contact support if this is unexpected.")
 					}
 				}
 
@@ -167,7 +191,8 @@ func JWTAuthWithOptions(jwtSecret string, userChecker UserExistenceChecker, opti
 				return next(c)
 			}
 
-			return echo.NewHTTPError(http.StatusUnauthorized, "Invalid token claims")
+			return authErr(http.StatusUnauthorized, AuthCodeTokenClaimsInvalid,
+				"Your session token is missing required information. Please log in again.")
 		}
 	}
 }
@@ -322,16 +347,23 @@ func FlexibleAuthWithOptions(jwtSecret string, userChecker UserExistenceChecker,
 			if userIDStr := c.Request().Header.Get("X-User-ID"); userIDStr != "" && hasValidInternalAPIKey(c.Request()) {
 				userID, err := uuid.Parse(userIDStr)
 				if err != nil {
-					return echo.NewHTTPError(http.StatusUnauthorized, "Invalid user ID format")
+					// Sweep ZZZZ: typed code; the gateway sent a non-UUID
+					// X-User-ID — internal infra bug or bad upstream call.
+					c.Logger().Warnf("FlexibleAuth: invalid X-User-ID format: %v", err)
+					return authErr(http.StatusUnauthorized, AuthCodeTokenClaimsInvalid,
+						"Your session token is missing required information. Please log in again.")
 				}
 				// Check user existence if checker provided
 				if userChecker != nil {
 					exists, err := userChecker.UserExists(c.Request().Context(), userID)
 					if err != nil {
-						return echo.NewHTTPError(http.StatusInternalServerError, "Failed to verify user existence")
+						c.Logger().Errorf("FlexibleAuth userChecker failed: %v", err)
+						return authErr(http.StatusInternalServerError, AuthCodeUserCheckFailed,
+							"Unable to verify your account right now. Please try again in a moment.")
 					}
 					if !exists {
-						return echo.NewHTTPError(http.StatusUnauthorized, "User no longer exists")
+						return authErr(http.StatusUnauthorized, AuthCodeUserDeleted,
+							"Your account is no longer available. Please contact support if this is unexpected.")
 					}
 				}
 				// Set context based on options
@@ -379,7 +411,11 @@ func RequireAdminRole() echo.MiddlewareFunc {
 					if claims.Role == "admin" {
 						return next(c)
 					}
-					return echo.NewHTTPError(http.StatusForbidden, "admin access required")
+					// Sweep ZZZZ: dedicated AUTH_ADMIN_REQUIRED code so
+					// admin-ui can render "your account does not have
+					// admin access" instead of generic "forbidden".
+					return authErr(http.StatusForbidden, AuthCodeAdminRequired,
+						"This area requires administrator access.")
 				}
 			}
 
@@ -388,11 +424,14 @@ func RequireAdminRole() echo.MiddlewareFunc {
 				if role == "admin" {
 					return next(c)
 				}
-				return echo.NewHTTPError(http.StatusForbidden, "admin access required")
+				return authErr(http.StatusForbidden, AuthCodeAdminRequired,
+					"This area requires administrator access.")
 			}
 
-			// No valid authentication found
-			return echo.NewHTTPError(http.StatusUnauthorized, "authentication required")
+			// Sweep ZZZZ: dedicated AUTH_AUTH_REQUIRED so client can
+			// distinguish "no auth at all" from "auth but wrong role".
+			return authErr(http.StatusUnauthorized, AuthCodeAuthRequired,
+				"You need to be signed in to continue.")
 		}
 	}
 }
