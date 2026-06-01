@@ -299,6 +299,10 @@ async def test_provider_error_falls_back_to_source() -> None:
 
 @pytest.mark.asyncio
 async def test_translate_batch() -> None:
+    # Sweep AAAAA: the seam now collapses N refs into ONE provider call
+    # (sibling of Go TTTT-B which did the same on the Go side). Pre-
+    # AAAAA this assertion was `provider.calls == 2` because translate_batch
+    # was an asyncio.gather over per-item translate().
     seam, provider, _, _, _ = _make_seam()
     refs = [
         SourceRef(namespace="convo.scenario.title", source_id="s1",
@@ -308,7 +312,12 @@ async def test_translate_batch() -> None:
     ]
     got = await seam.translate_batch(refs, target_locale="vi")
     assert got == ["Gọi một ly cà phê", "Xin chào"]
-    assert provider.calls == 2
+    assert provider.calls == 1, (
+        "Sweep AAAAA: translate_batch should issue ONE provider call "
+        "regardless of N — got {} calls for {} refs".format(
+            provider.calls, len(refs)
+        )
+    )
 
 
 # ──────────────────────── source_version_from_text ───────────────────────
@@ -326,3 +335,254 @@ def test_source_version_from_text_order_sensitive() -> None:
     a = source_version_from_text("Order a coffee", "2026-05-15T12:00:00Z")
     b = source_version_from_text("2026-05-15T12:00:00Z", "Order a coffee")
     assert a != b
+
+
+# ──────────────────────── Sweep AAAAA: true batch path ──────────────────
+
+
+class FakeBatchCache(FakeCache):
+    """FakeCache + BatchCache protocol — exercises the fast path that
+    PgxBatchOverrideStore / RedisCache use in production."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        # Track call counts so tests can assert ONE batch call instead
+        # of N per-key calls.
+        self.batch_get_calls = 0
+        self.batch_set_calls = 0
+        self.per_key_get_calls = 0
+        self.per_key_set_calls = 0
+
+    async def get(self, key: str):  # type: ignore[override]
+        self.per_key_get_calls += 1
+        return await super().get(key)
+
+    async def set(self, key: str, value: str, ttl_seconds: float) -> None:  # type: ignore[override]
+        self.per_key_set_calls += 1
+        await super().set(key, value, ttl_seconds)
+
+    async def batch_get(self, keys):
+        from kielo_shared.localization.seam import CacheEntry
+
+        self.batch_get_calls += 1
+        out: dict[str, CacheEntry] = {}
+        for k in keys:
+            entry = self._entries.get(k)
+            if entry is not None:
+                value, written_at = entry
+                out[k] = CacheEntry(value=value, age_seconds=self._now - written_at)
+        return out
+
+    async def batch_set(self, entries, ttl_seconds: float) -> None:
+        self.batch_set_calls += 1
+        for k, v in entries.items():
+            self._entries[k] = (v, self._now)
+
+
+class FakeBatchOverrideStore:
+    """OverrideStore + BatchOverrideStore — used to assert the batch
+    path is exercised when wired."""
+
+    def __init__(self, entries=None) -> None:
+        from kielo_shared.localization.seam import MapOverrideStore
+
+        self._inner = MapOverrideStore(entries or {})
+        self.batch_lookup_calls = 0
+        self.per_key_lookup_calls = 0
+
+    async def lookup(self, namespace, source_id, source_version, target_locale):
+        self.per_key_lookup_calls += 1
+        return await self._inner.lookup(
+            namespace, source_id, source_version, target_locale
+        )
+
+    async def batch_lookup(self, refs, target_locale):
+        self.batch_lookup_calls += 1
+        out: dict[str, str] = {}
+        for ref in refs:
+            hit = await self._inner.lookup(
+                ref.namespace, ref.source_id, ref.source_version, target_locale
+            )
+            if hit:
+                from kielo_shared.localization.seam import override_batch_key
+
+                out[
+                    override_batch_key(
+                        ref.namespace, ref.source_id, ref.source_version
+                    )
+                ] = hit
+        return out
+
+
+@pytest.mark.asyncio
+async def test_aaaaa_translate_batch_records_one_per_phase_budget() -> None:
+    """Sweep AAAAA central invariant: a batch of N refs records
+    Refs:N Overrides:1 CacheGets:1 Providers:1 — matching the Go
+    seam.go:184-273 post-TTTT-B shape that YYYY budget headers
+    expose on the wire."""
+    from kielo_shared.localization.budget import (
+        BudgetKind,
+        budget_snapshot,
+        reset_budget,
+        with_budget,
+    )
+
+    seam, provider, _, _, _ = _make_seam()
+    refs = [
+        SourceRef(namespace="convo.scenario.title", source_id=f"s{i}",
+                  source_version="v1", source_text=text)
+        for i, text in enumerate(["Order a coffee", "Hello", "Order a coffee"])
+    ]
+    # Note: the StubProvider only knows 2 phrases, so the 3rd ref will
+    # fall back to source. That's fine — we're testing budget counts
+    # not translation quality.
+    token = with_budget()
+    try:
+        _ = await seam.translate_batch(refs, target_locale="vi")
+        snap = budget_snapshot()
+    finally:
+        reset_budget(token)
+
+    assert snap.refs_resolved == 3, (
+        f"REF_RESOLVED should record N for the whole batch (got {snap.refs_resolved})"
+    )
+    assert snap.override_lookups == 1, (
+        f"OVERRIDE_LOOKUP should record exactly 1 regardless of N "
+        f"(got {snap.override_lookups})"
+    )
+    assert snap.cache_gets == 1, (
+        f"CACHE_GET should record exactly 1 regardless of N "
+        f"(got {snap.cache_gets})"
+    )
+    assert snap.provider_calls == 1, (
+        f"PROVIDER_CALL should record exactly 1 regardless of N "
+        f"(got {snap.provider_calls})"
+    )
+    # And the actual provider got exactly one batch call.
+    assert provider.calls == 1
+
+
+@pytest.mark.asyncio
+async def test_aaaaa_translate_batch_empty_records_no_budget() -> None:
+    from kielo_shared.localization.budget import (
+        budget_snapshot,
+        reset_budget,
+        with_budget,
+    )
+
+    seam, provider, _, _, _ = _make_seam()
+    token = with_budget()
+    try:
+        result = await seam.translate_batch([], target_locale="vi")
+        snap = budget_snapshot()
+    finally:
+        reset_budget(token)
+    assert result == []
+    assert snap.refs_resolved == 0
+    assert snap.override_lookups == 0
+    assert snap.cache_gets == 0
+    assert snap.provider_calls == 0
+    assert provider.calls == 0
+
+
+@pytest.mark.asyncio
+async def test_aaaaa_translate_batch_passthrough_refs_skip_phases() -> None:
+    """English-target refs and empty-source refs short-circuit before
+    phase 1 — the seam records REF_RESOLVED but skips overrides/cache/
+    provider for those refs."""
+    from kielo_shared.localization.budget import (
+        budget_snapshot,
+        reset_budget,
+        with_budget,
+    )
+
+    seam, provider, _, _, _ = _make_seam()
+    refs = [
+        SourceRef(namespace="ns", source_id="s1", source_version="v1",
+                  source_text=""),  # empty source → passthrough
+        SourceRef(namespace="ns", source_id="s2", source_version="v1",
+                  source_text="Hello"),
+    ]
+    token = with_budget()
+    try:
+        result = await seam.translate_batch(refs, target_locale="en")
+        snap = budget_snapshot()
+    finally:
+        reset_budget(token)
+    # target=en short-circuits BOTH refs to passthrough.
+    assert result == ["", "Hello"]
+    assert snap.refs_resolved == 2  # whole batch counted
+    # No phase 1-3 work because every ref short-circuited.
+    assert snap.override_lookups == 0
+    assert snap.cache_gets == 0
+    assert snap.provider_calls == 0
+    assert provider.calls == 0
+
+
+@pytest.mark.asyncio
+async def test_aaaaa_translate_batch_override_hit_skips_cache_for_that_ref() -> None:
+    """Override hits remove refs from the cache/provider pipeline.
+    Cache/provider still record 1 for the remaining residue."""
+    overrides = FakeBatchOverrideStore(
+        {"ns|s1|v1|vi": "Admin Vietnamese title"}
+    )
+    seam, provider, _, _, _ = _make_seam(overrides=overrides)
+    refs = [
+        SourceRef(namespace="ns", source_id="s1", source_version="v1",
+                  source_text="Order a coffee"),  # override hit
+        SourceRef(namespace="ns", source_id="s2", source_version="v1",
+                  source_text="Hello"),  # falls through to provider
+    ]
+    result = await seam.translate_batch(refs, target_locale="vi")
+    assert result == ["Admin Vietnamese title", "Xin chào"]
+    # Override hit went through batch path — one batch_lookup call.
+    assert overrides.batch_lookup_calls == 1
+    assert overrides.per_key_lookup_calls == 0
+    # Provider only saw the remaining ref — but still one batch call.
+    assert provider.calls == 1
+
+
+@pytest.mark.asyncio
+async def test_aaaaa_translate_batch_with_batch_cache_uses_fast_path() -> None:
+    """When the cache satisfies BatchCache protocol, seam should call
+    batch_get instead of per-key get."""
+    cache = FakeBatchCache()
+    seam, provider, _, _, _ = _make_seam(cache=cache)
+    refs = [
+        SourceRef(namespace="ns", source_id=f"s{i}", source_version="v1",
+                  source_text=t)
+        for i, t in enumerate(["Order a coffee", "Hello"])
+    ]
+    await seam.translate_batch(refs, target_locale="vi")
+
+    # First call: cache miss → 1 batch_get + 1 provider + 1 batch_set
+    assert cache.batch_get_calls == 1
+    assert cache.per_key_get_calls == 0
+    assert cache.batch_set_calls == 1
+    assert cache.per_key_set_calls == 0
+    assert provider.calls == 1
+
+    # Second call: cache hit → 1 batch_get + 0 provider + 0 batch_set
+    await seam.translate_batch(refs, target_locale="vi")
+    assert cache.batch_get_calls == 2
+    assert cache.batch_set_calls == 1  # unchanged
+    assert provider.calls == 1  # unchanged — all hits
+
+
+@pytest.mark.asyncio
+async def test_aaaaa_translate_batch_fallback_when_cache_lacks_batch_protocol() -> None:
+    """Existing FakeCache (no BatchCache protocol) must still work
+    via per-key fallback. Same shape pre-AAAAA seam used."""
+    cache = FakeCache()
+    seam, provider, _, _, _ = _make_seam(cache=cache)
+    refs = [
+        SourceRef(namespace="ns", source_id=f"s{i}", source_version="v1",
+                  source_text=t)
+        for i, t in enumerate(["Order a coffee", "Hello"])
+    ]
+    result = await seam.translate_batch(refs, target_locale="vi")
+    assert result == ["Gọi một ly cà phê", "Xin chào"]
+    # Even with per-key fallback, provider still gets ONE batch call
+    # (the per-key fallback only applies to cache, not the provider
+    # phase that happens after).
+    assert provider.calls == 1

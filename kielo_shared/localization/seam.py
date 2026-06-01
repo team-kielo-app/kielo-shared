@@ -39,7 +39,7 @@ import asyncio
 import dataclasses
 import hashlib
 import logging
-from typing import Iterable, Protocol
+from typing import Iterable, Protocol, runtime_checkable
 
 from kielo_shared.localization.budget import (
     BudgetKind as _BudgetKind,
@@ -101,9 +101,15 @@ def source_version_from_text(*parts: str) -> str:
 # ──────────────────────── Dependency protocols ───────────────────────────
 
 
+@runtime_checkable
 class Cache(Protocol):
     """Translation cache abstraction. Implementations live service-side
-    (Redis-backed) so this package doesn't pull in aioredis."""
+    (Redis-backed) so this package doesn't pull in aioredis.
+
+    Sweep AAAAA: marked @runtime_checkable so production code can
+    isinstance-check seam dependencies — the seam itself doesn't
+    rely on this, but tests + alternative wirings benefit.
+    """
 
     async def get(self, key: str) -> tuple[str | None, float | None]:
         """Return (value, age_seconds). When no entry exists, return
@@ -112,6 +118,7 @@ class Cache(Protocol):
     async def set(self, key: str, value: str, ttl_seconds: float) -> None: ...
 
 
+@runtime_checkable
 class OverrideStore(Protocol):
     """Reads admin-approved translations from localization.translations.
 
@@ -142,6 +149,72 @@ class Metrics(Protocol):
     canonical source values."""
 
     def record(self, namespace: str, target_locale: str, source: str) -> None: ...
+
+
+# Sweep AAAAA: Python sibling of Go TTTT-B BatchCache / BatchOverrideStore.
+# When the seam's cache / override store satisfy these batch-aware
+# protocols, translate_batch collapses N round-trips to 1 (composite
+# override SELECT + Redis MGET + provider batch + pipelined cache SET).
+# When they don't, the seam falls back to per-key gather — same shape
+# as the pre-AAAAA translate_batch which was asyncio.gather over per-
+# item translate. So existing wirings using NoopCache/NoopOverrideStore
+# keep working without change.
+
+
+@dataclasses.dataclass(frozen=True)
+class CacheEntry:
+    """Mirror of Go's localization.CacheEntry. BatchCache.batch_get
+    returns dict[key, CacheEntry] so a missing key cleanly encodes
+    "miss" without sentinel-None convention."""
+
+    value: str
+    age_seconds: float
+
+
+@runtime_checkable
+class BatchCache(Protocol):
+    """Optional batch-aware extension of Cache. The seam runtime-checks
+    via isinstance() and uses the fast path when wired."""
+
+    async def batch_get(self, keys: list[str]) -> dict[str, "CacheEntry"]:
+        """Return {key: CacheEntry} for every hit. Misses omitted."""
+
+    async def batch_set(
+        self, entries: dict[str, str], ttl_seconds: float
+    ) -> None: ...
+
+
+@dataclasses.dataclass(frozen=True)
+class OverrideRef:
+    """Composite key for batch override lookups. Mirror of Go's
+    localization.OverrideRef."""
+
+    namespace: str
+    source_id: str
+    source_version: str
+
+
+def override_batch_key(
+    namespace: str, source_id: str, source_version: str
+) -> str:
+    """Canonical packed key matching Go's OverrideBatchKey. Used as
+    dict key in BatchOverrideStore.batch_lookup return values."""
+    return f"{namespace}|{source_id}|{source_version}"
+
+
+@runtime_checkable
+class BatchOverrideStore(Protocol):
+    """Optional batch-aware extension of OverrideStore. Production
+    impls (PgxBatchOverrideStore) issue 1 composite-tuple SELECT for
+    the whole batch instead of N single-row SELECTs."""
+
+    async def batch_lookup(
+        self,
+        refs: list["OverrideRef"],
+        target_locale: str,
+    ) -> dict[str, str]:
+        """Return {override_batch_key(...): translated_text} for every
+        hit. Misses omitted from the map."""
 
 
 # ──────────────────────── Noop/test implementations ──────────────────────
@@ -283,22 +356,252 @@ class Seam:
         refs: Iterable[SourceRef],
         target_locale: str,
     ) -> list[str]:
-        """Resolve many refs to the same target locale. Each item is
-        resolved independently; single-flight coalesces duplicates.
+        """Sweep AAAAA: true batch path mirroring Go TTTT-B
+        seam.go:184-273. Three phases, each recording exactly 1
+        per-kind budget regardless of fan-out N:
 
-        Sweep YYYY note: REF_RESOLVED is recorded by the per-item
-        ``translate`` calls inside the gather (1 per ref → N total).
-        We don't double-count at the batch entry. When the Python
-        seam grows a true batch path (sibling of Go TTTT-B), this
-        method will switch to a single composite override lookup +
-        Redis MGET + provider batch, and the per-phase counters
-        will reflect the new shape (1 override / 1 cache get / 1
-        provider call, regardless of N).
+          Phase 1: 1 composite-tuple override lookup (BatchOverrideStore)
+          Phase 2: 1 Redis MGET (BatchCache)
+          Phase 3: 1 provider batch call + pipelined cache write-back
+
+        Falls back to per-key gather when the cache / override store
+        don't satisfy the batch protocols — so existing wirings using
+        NoopCache/NoopOverrideStore keep working unchanged. The per-
+        kind budget counts in fallback mode reflect the actual
+        fan-out (matching pre-AAAAA behaviour); only the batch-
+        protocol path collapses to O(1) non-REF counters.
+
+        Single-flight tradeoff: batch path doesn't dedupe against
+        in-flight per-key translate() calls. Concurrent
+        translate_batch + translate on the same source_version may
+        issue duplicate provider calls. Acceptable because the
+        provider's own caching layer (RedisCacheDecorator in the
+        engine chain) catches the duplicate before it reaches the
+        LLM. Same tradeoff as Go seam.go:184 documents.
+
+        Never returns empty for a non-empty source_text — every error
+        path falls back to source.
         """
         refs_list = list(refs)
-        return await asyncio.gather(
-            *(self.translate(r, target_locale) for r in refs_list)
+        if not refs_list:
+            return []
+
+        # Sweep AAAAA: record REF_RESOLVED for the whole batch up front.
+        # Matches Go seam.go:217 RecordBudget(BudgetKindRefResolved, N).
+        # Each per-item translate() records 1 — we don't double-count
+        # because translate() isn't called on the batch path.
+        _record_budget(_BudgetKind.REF_RESOLVED, len(refs_list))
+
+        out: list[str] = [""] * len(refs_list)
+
+        # English-passthrough short-circuit: refs with empty source_text
+        # or target=en never touch backing stores. Filter into residue
+        # that needs phases 1-3.
+        target_str = str(target_locale) if target_locale is not None else ""
+        target = target_str.strip().lower() if target_str else ""
+        residue: list[tuple[int, SourceRef, str]] = []  # (idx, ref, cache_key)
+        for i, ref in enumerate(refs_list):
+            if not ref.source_text or not ref.source_text.strip():
+                out[i] = ""
+                self._metrics.record(ref.namespace, target, "english_passthrough")
+                continue
+            if not target or target == TIER_A_LOCALE:
+                out[i] = ref.source_text
+                self._metrics.record(
+                    ref.namespace, target, "english_passthrough"
+                )
+                continue
+            residue.append((i, ref, self._cache_key(ref, target)))
+        if not residue:
+            return out
+
+        # Phase 1: batch override lookup. 1 SQL RTT via BatchOverrideStore;
+        # fallback to per-ref gather when the store doesn't implement it.
+        _record_budget(_BudgetKind.OVERRIDE_LOOKUP, 1)
+        override_hits = await self._batch_override_lookup(residue, target)
+        remaining_after_overrides: list[tuple[int, SourceRef, str]] = []
+        for idx, ref, key in residue:
+            batch_key = override_batch_key(
+                ref.namespace, ref.source_id, ref.source_version
+            )
+            value = override_hits.get(batch_key)
+            if value:
+                out[idx] = value
+                self._metrics.record(ref.namespace, target, "override")
+                continue
+            remaining_after_overrides.append((idx, ref, key))
+        if not remaining_after_overrides:
+            return out
+
+        # Phase 2: batch cache lookup. 1 Redis MGET via BatchCache;
+        # fallback to per-key gather when the cache doesn't implement it.
+        _record_budget(_BudgetKind.CACHE_GET, 1)
+        cache_hits = await self._batch_cache_get(
+            [k for _, _, k in remaining_after_overrides]
         )
+        remaining_after_cache: list[tuple[int, SourceRef, str]] = []
+        for idx, ref, key in remaining_after_overrides:
+            entry = cache_hits.get(key)
+            if entry is None:
+                remaining_after_cache.append((idx, ref, key))
+                continue
+            if entry.age_seconds <= self._config.fresh_ttl_seconds:
+                out[idx] = entry.value
+                self._metrics.record(ref.namespace, target, "cache_hit")
+                continue
+            if (
+                entry.age_seconds
+                <= self._config.fresh_ttl_seconds
+                + self._config.stale_ttl_seconds
+            ):
+                self._kickoff_swr(ref, target, key)
+                out[idx] = entry.value
+                self._metrics.record(ref.namespace, target, "cache_swr")
+                continue
+            remaining_after_cache.append((idx, ref, key))
+        if not remaining_after_cache:
+            return out
+
+        # Phase 3: provider batch call + cache write-back. 1 LLM RTT.
+        _record_budget(_BudgetKind.PROVIDER_CALL, 1)
+        await self._provider_batch_call(remaining_after_cache, target, out)
+        return out
+
+    # ───────────── Sweep AAAAA: batch-phase helpers ──────────────────
+
+    async def _batch_override_lookup(
+        self,
+        residue: list[tuple[int, SourceRef, str]],
+        target: str,
+    ) -> dict[str, str]:
+        """Returns {override_batch_key: translated_text} for every hit.
+        Misses omitted. Uses BatchOverrideStore.batch_lookup when
+        available; falls back to per-ref OverrideStore.lookup gather."""
+        if isinstance(self._overrides, BatchOverrideStore):
+            ref_list = [
+                OverrideRef(r.namespace, r.source_id, r.source_version)
+                for _, r, _ in residue
+            ]
+            try:
+                return await self._overrides.batch_lookup(ref_list, target)
+            except Exception:
+                logger.exception(
+                    "seam batch_override_lookup failed; falling back to per-ref"
+                )
+        # Fallback: per-ref gather. Same shape the pre-AAAAA seam used.
+        hits: dict[str, str] = {}
+        coros = [
+            self._overrides.lookup(
+                r.namespace, r.source_id, r.source_version, target
+            )
+            for _, r, _ in residue
+        ]
+        values = await asyncio.gather(*coros)
+        for (_, r, _), val in zip(residue, values):
+            if val:
+                hits[
+                    override_batch_key(r.namespace, r.source_id, r.source_version)
+                ] = val
+        return hits
+
+    async def _batch_cache_get(
+        self, keys: list[str]
+    ) -> dict[str, CacheEntry]:
+        """Returns {key: CacheEntry} for every hit. Misses omitted."""
+        if isinstance(self._cache, BatchCache):
+            try:
+                return await self._cache.batch_get(keys)
+            except Exception:
+                logger.exception(
+                    "seam batch_cache_get failed; falling back to per-key"
+                )
+        # Fallback: per-key gather over Cache.get
+        hits: dict[str, CacheEntry] = {}
+        coros = [self._cache.get(k) for k in keys]
+        pairs = await asyncio.gather(*coros)
+        for k, (value, age) in zip(keys, pairs):
+            if value is not None and age is not None:
+                hits[k] = CacheEntry(value=value, age_seconds=age)
+        return hits
+
+    async def _provider_batch_call(
+        self,
+        remaining: list[tuple[int, SourceRef, str]],
+        target: str,
+        out: list[str],
+    ) -> None:
+        """One provider batch call + pipelined cache write-back. On
+        any error, falls back to source text per ref (never raises)."""
+        try:
+            provider = self._registry.resolve(
+                source_locale=TIER_A_LOCALE, target_locale=target
+            )
+        except Exception:
+            logger.exception("seam batch provider resolve failed")
+            for idx, ref, _ in remaining:
+                out[idx] = ref.source_text
+                self._metrics.record(ref.namespace, target, "provider_error")
+            return
+
+        items = [
+            TranslationItem(text=r.source_text, role=r.role, cache_key=k)
+            for _, r, k in remaining
+        ]
+        try:
+            results = await provider.translate_batch(
+                items,
+                source_locale=TIER_A_LOCALE,
+                target_locale=target,
+            )
+        except Exception:
+            logger.exception("seam batch provider translate_batch failed")
+            for idx, ref, _ in remaining:
+                out[idx] = ref.source_text
+                self._metrics.record(ref.namespace, target, "provider_error")
+            return
+
+        # Provider contract: results align 1-1 with items, in order.
+        # Any length mismatch is a provider bug; fall back to source.
+        if len(results) != len(remaining):
+            logger.error(
+                "seam batch provider returned %d results for %d items",
+                len(results),
+                len(remaining),
+            )
+            for idx, ref, _ in remaining:
+                out[idx] = ref.source_text
+                self._metrics.record(ref.namespace, target, "provider_error")
+            return
+
+        write_set: dict[str, str] = {}
+        for (idx, ref, key), result in zip(remaining, results):
+            value = (result.text or "").strip()
+            if not value:
+                out[idx] = ref.source_text
+                self._metrics.record(ref.namespace, target, "provider_error")
+                continue
+            out[idx] = value
+            write_set[key] = value
+            self._metrics.record(ref.namespace, target, "provider_call")
+
+        if not write_set:
+            return
+        ttl = self._config.fresh_ttl_seconds + self._config.stale_ttl_seconds
+        if isinstance(self._cache, BatchCache):
+            try:
+                await self._cache.batch_set(write_set, ttl)
+                return
+            except Exception:
+                logger.exception(
+                    "seam batch_set failed; falling back to per-key"
+                )
+        # Fallback: per-key gather over Cache.set
+        try:
+            await asyncio.gather(
+                *(self._cache.set(k, v, ttl) for k, v in write_set.items())
+            )
+        except Exception:
+            logger.exception("seam batch cache write-back fallback failed")
 
     # ──────────────────── resolution chain ───────────────────────────
 

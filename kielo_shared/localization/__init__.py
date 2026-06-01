@@ -33,6 +33,7 @@ from kielo_shared.localization.cache import (
     RedisAsyncClient,
     RedisCacheDecorator,
 )
+from kielo_shared.localization.cache_redis import RedisCache
 from kielo_shared.localization.decorators import (
     CorrelationDecorator,
     MetricsDecorator,
@@ -58,17 +59,22 @@ from kielo_shared.localization.routing import (
     VietnameseLookup,
 )
 from kielo_shared.localization.seam import (
+    BatchCache,
+    BatchOverrideStore,
     Cache,
+    CacheEntry,
     CountingMetrics,
     MapOverrideStore,
     Metrics,
     NoopCache,
     NoopMetrics,
     NoopOverrideStore,
+    OverrideRef,
     OverrideStore,
     Seam,
     SeamConfig,
     SourceRef,
+    override_batch_key,
     source_version_from_text,
 )
 from kielo_shared.localization.types import (
@@ -78,7 +84,10 @@ from kielo_shared.localization.types import (
 )
 
 __all__ = [
+    "BatchCache",
+    "BatchOverrideStore",
     "Cache",
+    "CacheEntry",
     "CircuitBreaker",
     "CorrelationDecorator",
     "CountingMetrics",
@@ -93,8 +102,10 @@ __all__ = [
     "NoopMetrics",
     "NoopOverrideStore",
     "OpenAIProvider",
+    "OverrideRef",
     "OverrideStore",
     "RedisAsyncClient",
+    "RedisCache",
     "RedisCacheDecorator",
     "RoutingDecorator",
     "Seam",
@@ -109,6 +120,7 @@ __all__ = [
     "VietnameseLookup",
     "build_registry_from_env",
     "get_default_registry",
+    "override_batch_key",
     "reset_default_registry",
     "source_version_from_text",
 ]

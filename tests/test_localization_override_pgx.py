@@ -209,3 +209,115 @@ async def test_different_namespaces_isolated(real_pool: Any) -> None:
     finally:
         await _cleanup(real_pool, "article.title", rid_article)
         await _cleanup(real_pool, "scenario.title", rid_scenario)
+
+
+# ─── Sweep AAAAA: batch_lookup tests ────────────────────────────────
+
+
+class _CannedFetchPool:
+    """Fake pool returning canned `fetch` results for batch_lookup."""
+
+    def __init__(self, records: list[dict[str, Any]]) -> None:
+        self._records = records
+        self.fetch_calls: list[tuple[str, tuple[Any, ...]]] = []
+
+    async def fetchval(self, query: str, *args: Any) -> Any:
+        return None
+
+    async def fetch(self, query: str, *args: Any) -> list[dict[str, Any]]:
+        self.fetch_calls.append((query, args))
+        return list(self._records)
+
+
+@pytest.mark.asyncio
+async def test_batch_lookup_nil_pool_returns_empty() -> None:
+    from kielo_shared.localization import OverrideRef
+
+    store = PgxOverrideStore(None)
+    refs = [OverrideRef("ns", "s1", "v1"), OverrideRef("ns", "s2", "v1")]
+    got = await store.batch_lookup(refs, "vi")
+    assert got == {}
+
+
+@pytest.mark.asyncio
+async def test_batch_lookup_empty_refs_returns_empty() -> None:
+    pool = _CannedFetchPool([])
+    store = PgxOverrideStore(pool)
+    got = await store.batch_lookup([], "vi")
+    assert got == {}
+    assert pool.fetch_calls == [], "no SQL should be issued for empty batch"
+
+
+@pytest.mark.asyncio
+async def test_batch_lookup_returns_one_call_with_composite_tuple() -> None:
+    from kielo_shared.localization import OverrideRef, override_batch_key
+
+    canned = [
+        {
+            "resource_type": "scenario.title",
+            "resource_id": "s1",
+            "source_version": "v1",
+            "translated_text": "Vi tiêu đề một",
+            "status": "approved",
+        },
+        {
+            "resource_type": "scenario.title",
+            "resource_id": "s3",
+            "source_version": "v1",
+            "translated_text": "Vi tiêu đề ba",
+            "status": "override",
+        },
+    ]
+    pool = _CannedFetchPool(canned)
+    store = PgxOverrideStore(pool)
+    refs = [
+        OverrideRef("scenario.title", "s1", "v1"),
+        OverrideRef("scenario.title", "s2", "v1"),  # miss
+        OverrideRef("scenario.title", "s3", "v1"),
+    ]
+    got = await store.batch_lookup(refs, "vi")
+
+    # ONE SQL call for the whole batch
+    assert len(pool.fetch_calls) == 1
+    query, args = pool.fetch_calls[0]
+    # Composite-tuple shape: 1 + 3*N args
+    assert args[0] == "vi"
+    assert len(args) == 1 + 3 * 3  # target + 3 (ns, id, ver) tuples
+    # Refs round-tripped in order
+    assert args[1:4] == ("scenario.title", "s1", "v1")
+    assert args[4:7] == ("scenario.title", "s2", "v1")
+    assert args[7:10] == ("scenario.title", "s3", "v1")
+
+    # Hits returned with correct packed keys; miss omitted
+    assert got == {
+        override_batch_key("scenario.title", "s1", "v1"): "Vi tiêu đề một",
+        override_batch_key("scenario.title", "s3", "v1"): "Vi tiêu đề ba",
+    }
+    assert override_batch_key("scenario.title", "s2", "v1") not in got
+
+
+@pytest.mark.asyncio
+async def test_batch_lookup_pool_error_returns_empty_not_raises() -> None:
+    """Same degrade-gracefully contract as single-row lookup."""
+    from kielo_shared.localization import OverrideRef
+
+    class _BrokenPool:
+        async def fetchval(self, *args: Any, **kwargs: Any) -> Any:
+            raise RuntimeError("simulated")
+
+        async def fetch(self, *args: Any, **kwargs: Any) -> list[Any]:
+            raise RuntimeError("simulated")
+
+    store = PgxOverrideStore(_BrokenPool())
+    got = await store.batch_lookup([OverrideRef("ns", "s1", "v1")], "vi")
+    assert got == {}
+
+
+@pytest.mark.asyncio
+async def test_batch_lookup_protocol_check_satisfies_batch_override_store() -> None:
+    """Sweep AAAAA: the seam's runtime isinstance() check for
+    BatchOverrideStore must succeed against PgxOverrideStore."""
+    from kielo_shared.localization import BatchOverrideStore
+
+    store = PgxOverrideStore(_CannedFetchPool([]))
+    assert isinstance(store, BatchOverrideStore)
