@@ -41,6 +41,10 @@ import hashlib
 import logging
 from typing import Iterable, Protocol
 
+from kielo_shared.localization.budget import (
+    BudgetKind as _BudgetKind,
+    record_budget as _record_budget,
+)
 from kielo_shared.localization.registry import LocalizationRegistry
 from kielo_shared.localization.routing import TIER_A_LOCALE
 from kielo_shared.localization.types import (
@@ -267,6 +271,9 @@ class Seam:
     async def translate(self, ref: SourceRef, target_locale: str) -> str:
         """Resolve ref to a localized string. Never returns empty for a
         non-empty source_text — every error path falls back to source."""
+        # Sweep YYYY: record 1 ref per single-item resolve (sibling of
+        # Go seam's RecordBudget on Translate).
+        _record_budget(_BudgetKind.REF_RESOLVED, 1)
         source, value = await self._resolve(ref, target_locale)
         self._metrics.record(ref.namespace, target_locale, source)
         return value
@@ -277,7 +284,17 @@ class Seam:
         target_locale: str,
     ) -> list[str]:
         """Resolve many refs to the same target locale. Each item is
-        resolved independently; single-flight coalesces duplicates."""
+        resolved independently; single-flight coalesces duplicates.
+
+        Sweep YYYY note: REF_RESOLVED is recorded by the per-item
+        ``translate`` calls inside the gather (1 per ref → N total).
+        We don't double-count at the batch entry. When the Python
+        seam grows a true batch path (sibling of Go TTTT-B), this
+        method will switch to a single composite override lookup +
+        Redis MGET + provider batch, and the per-phase counters
+        will reflect the new shape (1 override / 1 cache get / 1
+        provider call, regardless of N).
+        """
         refs_list = list(refs)
         return await asyncio.gather(
             *(self.translate(r, target_locale) for r in refs_list)
@@ -299,6 +316,11 @@ class Seam:
         if not target or target == TIER_A_LOCALE:
             return "english_passthrough", ref.source_text
 
+        # Sweep YYYY: per-phase counters. Sibling of the Go seam's
+        # RecordBudget calls in seam.go::Translate. Override lookup
+        # always runs (the override store hit/miss is what the counter
+        # measures — the lookup itself counts regardless of outcome).
+        _record_budget(_BudgetKind.OVERRIDE_LOOKUP, 1)
         override = await self._overrides.lookup(
             ref.namespace,
             ref.source_id,
@@ -309,6 +331,7 @@ class Seam:
             return "override", override
 
         cache_key = self._cache_key(ref, target)
+        _record_budget(_BudgetKind.CACHE_GET, 1)
         cached_value, cached_age = await self._cache.get(cache_key)
         if cached_value is not None and cached_age is not None:
             if cached_age <= self._config.fresh_ttl_seconds:
@@ -372,6 +395,12 @@ class Seam:
         return "provider_call", value
 
     async def _call_provider(self, ref: SourceRef, target: str, cache_key: str) -> str:
+        # Sweep YYYY: count each unique provider dispatch. Sibling of
+        # Go seam's RecordBudget(PROVIDER_CALL) in the provider-path.
+        # Single-flight coalescing in _provider_path means we only land
+        # here for cache-misses that aren't already in flight, so this
+        # counts unique LLM/opus-mt round-trips.
+        _record_budget(_BudgetKind.PROVIDER_CALL, 1)
         provider = self._registry.resolve(
             source_locale=TIER_A_LOCALE, target_locale=target
         )

@@ -37,19 +37,35 @@ const (
 // LocalizationBudget returns Echo middleware that:
 //  1. Attaches a fresh localization budget counter to the request ctx
 //     via localization.WithBudget.
-//  2. After the handler completes, stamps the totals as response headers.
+//  2. Registers a pre-flush hook via c.Response().Before(...) so the
+//     budget snapshot is stamped onto the response headers BEFORE
+//     the handler writes its body. Handlers like serverctl.Liveness
+//     call c.String(200, "OK") which flushes headers as a side effect
+//     of writing the body — without the Before hook, our post-next
+//     header.Set is a no-op.
 //
 // No-op for handlers that don't invoke the seam — the counter just
 // remains at zero. Safe to register globally.
+//
+// Sweep YYYY note: pre-YYYY this middleware only stamped headers
+// POST-handler-return, which silently dropped them for any handler
+// that wrote headers eagerly (Liveness, c.JSON, c.Stream). YYYY
+// audit caught this on kielo-content-service/cms/user-service via
+// the TestYYYY_BudgetHeadersAcrossAllTiers regression test.
 func LocalizationBudget() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			req := c.Request()
 			ctx := localization.WithBudget(req.Context())
 			c.SetRequest(req.WithContext(ctx))
-			err := next(c)
-			stampBudgetHeaders(c.Response().Header(), ctx)
-			return err
+			// Stamp BEFORE the response is flushed. The Before hook
+			// fires when Echo is about to write the status + headers
+			// to the wire — at this point our seam counters are
+			// final-state (handler has returned or is about to).
+			c.Response().Before(func() {
+				stampBudgetHeaders(c.Response().Header(), ctx)
+			})
+			return next(c)
 		}
 	}
 }
