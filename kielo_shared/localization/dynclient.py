@@ -261,6 +261,34 @@ class DynClient:
             raise DynClientError("upsert", resp.status_code, resp.text)
         return UpsertResponse.from_payload(resp.json())
 
+    async def upsert_bulk(self, requests: list[UpsertRequest]) -> list[UpsertResponse]:
+        """POST /internal/api/v3/localization/dynamic/bulk.
+
+        Sweep WWWW canonical: closes the N-HTTP-RTT cost the TTTT-C
+        Python helpers paid when persisting N translations via
+        asyncio.gather(*[client.upsert(...) for ...]). Post-WWWW: ONE
+        HTTP call carrying the full list → server-side ONE SQL
+        round-trip via the bulk repository method.
+
+        Returns a list of UpsertResponse in the same order as the
+        input requests (server preserves order via the VALUES tuple
+        construction + ORDER BY-stable RETURNING). Empty input returns
+        an empty list without issuing the HTTP call.
+        """
+        if not requests:
+            return []
+        client = await self._ensure_client()
+        body = {"items": [r.to_payload() for r in requests]}
+        resp = await client.post(
+            "/internal/api/v3/localization/dynamic/bulk",
+            json=body,
+        )
+        if resp.status_code not in (200, 201):
+            raise DynClientError("upsert_bulk", resp.status_code, resp.text)
+        data = resp.json()
+        results = data.get("results", []) or []
+        return [UpsertResponse.from_payload(r) for r in results]
+
     async def fetch_by_resources(self, request: FetchRequest) -> FetchResponse:
         """POST /internal/api/v3/localization/dynamic/fetch.
 

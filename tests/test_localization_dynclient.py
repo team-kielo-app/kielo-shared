@@ -272,3 +272,95 @@ def test_dynamic_translation_from_payload_with_minimal_fields():
     assert dt.translated_text == "t"
     assert dt.source_locale is None
     assert dt.translator_source is None
+
+
+# ============================================================================
+# Sweep WWWW: upsert_bulk tests
+# ============================================================================
+
+
+@pytest.mark.asyncio
+async def test_upsert_bulk_posts_list_and_returns_results():
+    captured: dict = {}
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        captured["url"] = str(request.url)
+        captured["body"] = json.loads(request.content)
+        # Mirror the items back with synthesized IDs + alternating inserted flag.
+        results = []
+        for i, item in enumerate(captured["body"]["items"]):
+            results.append(
+                {
+                    "row": {
+                        "id": f"00000000-0000-0000-0000-00000000000{i}",
+                        "resource_type": item["resource_type"],
+                        "resource_id": item["resource_id"],
+                        "source_version": item["source_version"],
+                        "language_code": item["language_code"],
+                        "translated_text": item["translated_text"],
+                        "status": item.get("status", "machine"),
+                        "source_locale": None,
+                        "translator_source": None,
+                        "reviewed_by": None,
+                        "reviewed_at": None,
+                        "created_at": "2026-06-01T10:00:00Z",
+                        "updated_at": "2026-06-01T10:00:00Z",
+                    },
+                    "inserted": i % 2 == 0,
+                }
+            )
+        return httpx.Response(200, json={"results": results})
+
+    client = _make_client(handler)
+    inputs = [
+        UpsertRequest(
+            resource_type="lesson",
+            resource_id=f"l{i}",
+            source_version="v1",
+            language_code="vi",
+            translated_text=f"Bài học {i}",
+        )
+        for i in range(5)
+    ]
+    out = await client.upsert_bulk(inputs)
+    assert captured["url"].endswith("/internal/api/v3/localization/dynamic/bulk")
+    assert len(captured["body"]["items"]) == 5
+    assert len(out) == 5
+    for i, r in enumerate(out):
+        assert r.inserted == (i % 2 == 0)
+        assert r.row.translated_text == f"Bài học {i}"
+
+
+@pytest.mark.asyncio
+async def test_upsert_bulk_empty_does_not_post():
+    called = 0
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal called
+        called += 1
+        return httpx.Response(200, json={"results": []})
+
+    client = _make_client(handler)
+    out = await client.upsert_bulk([])
+    assert out == []
+    assert called == 0, "empty batch should skip the HTTP call entirely"
+
+
+@pytest.mark.asyncio
+async def test_upsert_bulk_non2xx_raises():
+    async def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(500, text="boom")
+
+    client = _make_client(handler)
+    with pytest.raises(DynClientError):
+        await client.upsert_bulk(
+            [
+                UpsertRequest(
+                    resource_type="x",
+                    resource_id="x",
+                    source_version="v",
+                    language_code="vi",
+                    translated_text="t",
+                )
+            ]
+        )
