@@ -45,6 +45,17 @@ LEARNING_LANGUAGE_QUERY_PARAM = "learning_language_code"
 # the active learning language between hops.
 LEARNING_LANGUAGE_HEADER = "X-Kielo-Learning-Language"
 
+# Sweep SSSS-C: support-language wire constants — sibling to the
+# learning-language pair above. Mirrors `SupportLanguageQueryParam` +
+# `SupportLanguageHeader` exported by kielo-shared/observe/httputil
+# on the Go side (Sweep QQQQ). When the engine calls back into Go
+# services (content-service /api/v3/* paths that re-fetch localized
+# content while processing a user request) the support language must
+# flow through; pre-SSSS-C only the inbound resolver populated the
+# contextvar, outbound httpx clients dropped it.
+SUPPORT_LANGUAGE_QUERY_PARAM = "support_language_code"
+SUPPORT_LANGUAGE_HEADER = "X-Kielo-Support-Language"
+
 
 async def inject_active_language_query(request: httpx.Request) -> None:
     """httpx event hook — stamps the active learning language on the request
@@ -57,6 +68,28 @@ async def inject_active_language_query(request: httpx.Request) -> None:
     or when the corresponding channel is already explicitly set.
     """
     _stamp_active_language(request)
+
+
+async def inject_active_support_language_query(request: httpx.Request) -> None:
+    """httpx event hook — stamps the active support (UI/translation)
+    language on the request as BOTH a `support_language_code` query
+    parameter AND an `X-Kielo-Support-Language` header.
+
+    Sweep SSSS-C canonical: Python sibling of the Go-side QQQQ shared
+    helper (`ApplySupportLanguageQuery` + `ApplySupportLanguageHeader`
+    wired into `PrepareInternalJSONRequest`). Engine calls back into
+    content-service / cms via httpx clients (e.g. paragraph snippet
+    fetches during enrichment, concept-hub re-localization) — pre-
+    SSSS-C those calls dropped the support language signal because
+    only the inbound `get_support_language` FastAPI dep populated the
+    contextvar.
+
+    Reads from `kielo_shared.db_utils.get_active_support_language`,
+    populated by the per-request FastAPI middleware (or explicitly by
+    background workers that need to scope a re-call to the user's
+    locale). No-op when empty or when caller pre-set the channel.
+    """
+    _stamp_active_support_language(request)
 
 
 async def inject_trace_headers(request: httpx.Request) -> None:
@@ -98,6 +131,31 @@ def _stamp_active_language(request: httpx.Request) -> None:
         request.headers[LEARNING_LANGUAGE_HEADER] = lang
 
 
+def _stamp_active_support_language(request: httpx.Request) -> None:
+    """Body shared between the sync and async support-language hooks.
+
+    Stamps the active support (UI/translation) language on BOTH:
+      * URL query param `support_language_code` — engine endpoints
+        consume this via `kielo_shared.locale.fastapi.get_support_language`
+        which honors query first then `Accept-Language`.
+      * Header `X-Kielo-Support-Language` — canonical service-to-service
+        channel (Sweep QQQQ Go-side mirror).
+
+    Each channel is set-if-missing for caller-override survival.
+    Sweep SSSS-C: sibling to `_stamp_active_language`.
+    """
+    from kielo_shared.db_utils import get_active_support_language
+
+    code = get_active_support_language()
+    if not code:
+        return
+    url = request.url
+    if not url.params.get(SUPPORT_LANGUAGE_QUERY_PARAM):
+        request.url = url.copy_merge_params({SUPPORT_LANGUAGE_QUERY_PARAM: code})
+    if SUPPORT_LANGUAGE_HEADER not in request.headers:
+        request.headers[SUPPORT_LANGUAGE_HEADER] = code
+
+
 def _stamp_trace_headers(request: httpx.Request) -> None:
     """Body shared between the sync and async trace hooks."""
     from kielo_shared.trace import (
@@ -128,6 +186,15 @@ def inject_active_language_query_sync(request: httpx.Request) -> None:
     _stamp_active_language(request)
 
 
+def inject_active_support_language_query_sync(request: httpx.Request) -> None:
+    """Sync variant of `inject_active_support_language_query` for
+    `httpx.Client`. Sweep SSSS-C: required because some engine
+    background workers use sync httpx clients and the async hook would
+    silently no-op on them. Mirror of `inject_active_language_query_sync`.
+    """
+    _stamp_active_support_language(request)
+
+
 def inject_trace_headers_sync(request: httpx.Request) -> None:
     """Sync variant of `inject_trace_headers` for `httpx.Client`."""
     _stamp_trace_headers(request)
@@ -136,9 +203,13 @@ def inject_trace_headers_sync(request: httpx.Request) -> None:
 __all__ = [
     "LEARNING_LANGUAGE_QUERY_PARAM",
     "LEARNING_LANGUAGE_HEADER",
+    "SUPPORT_LANGUAGE_QUERY_PARAM",
+    "SUPPORT_LANGUAGE_HEADER",
     "LANGUAGE_ATTRIBUTE",
     "inject_active_language_query",
     "inject_active_language_query_sync",
+    "inject_active_support_language_query",
+    "inject_active_support_language_query_sync",
     "inject_trace_headers",
     "inject_trace_headers_sync",
 ]

@@ -55,6 +55,19 @@ _active_language: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "kielo_active_language", default=None
 )
 
+# Sweep SSSS-C: Python sibling of Go's `db.WithSupportLanguage` /
+# `SupportLanguageFromContext`. Carries the request's support
+# (UI/translation) language so httpx_hooks can stamp
+# `support_language_code` + `X-Kielo-Support-Language` on outbound
+# requests from engine ↔ Go services. Pre-SSSS-C only the inbound
+# resolver (`kielo_shared.locale.fastapi.get_support_language`) set
+# this value; outbound httpx clients dropped it, so engine-driven
+# flows that re-fetched localized content from Go services lost the
+# support-language signal mid-chain. Mirror of the QQQQ Go-side lift.
+_active_support_language: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "kielo_active_support_language", default=None
+)
+
 
 def normalize_search_path(search_path: str) -> str:
     return ",".join(part.strip() for part in search_path.split(",") if part.strip())
@@ -299,6 +312,40 @@ def require_active_language() -> str:
     if not language:
         raise RuntimeError("active learning language is required")
     return language
+
+
+# Sweep SSSS-C: support-language accessors (sibling to active-language above).
+# Storage is unvalidated string because the resolver
+# (`kielo_shared.locale.fastapi.get_support_language`) already passes through
+# `IsSupportedSupportLanguage`; this layer is just a contextvar passthrough.
+def set_active_support_language(code: str) -> contextvars.Token[str | None]:
+    """Set the active support (UI/translation) language for the current
+    async/sync context. Returns a contextvars Token that callers can
+    pass to :func:`reset_active_support_language` if they want to
+    restore the previous value (FastAPI request middleware should not
+    need to — the contextvar is implicitly per-task).
+    """
+    if not isinstance(code, str):
+        raise TypeError(
+            f"support language code must be str, got {type(code).__name__}"
+        )
+    code = code.strip()
+    if not code:
+        raise ValueError("support language code must be non-empty")
+    return _active_support_language.set(code)
+
+
+def reset_active_support_language(token: contextvars.Token[str | None]) -> None:
+    _active_support_language.reset(token)
+
+
+def get_active_support_language() -> str | None:
+    """Return the active support language for the current context, or
+    ``None`` if unset. Used by ``kielo_shared.httpx_hooks.
+    inject_active_support_language_query`` to forward the signal on
+    outbound httpx requests from the engine.
+    """
+    return _active_support_language.get()
 
 
 async def check_per_language_schemas_present(

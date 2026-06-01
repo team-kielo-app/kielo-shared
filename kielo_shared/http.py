@@ -145,6 +145,7 @@ def internal_client_async(
     """
     from kielo_shared.httpx_hooks import (
         inject_active_language_query,
+        inject_active_support_language_query,
         inject_trace_headers,
     )
 
@@ -163,6 +164,15 @@ def internal_client_async(
         event_hooks={
             "request": [
                 inject_active_language_query,
+                # Sweep SSSS-C: forward the active support (UI/translation)
+                # language so engine callbacks into Go services (e.g.
+                # content-service paragraph snippets during enrichment)
+                # return localized content in the user's locale instead of
+                # the engine's default "en" fallback. Sibling to the
+                # learning-language hook above. Mirrors the Go-side QQQQ
+                # wiring of ApplySupportLanguageQuery + Header into
+                # PrepareInternalJSONRequest.
+                inject_active_support_language_query,
                 inject_trace_headers,
             ],
         },
@@ -188,6 +198,7 @@ def internal_client_sync(
     """
     from kielo_shared.httpx_hooks import (
         inject_active_language_query_sync,
+        inject_active_support_language_query_sync,
         inject_trace_headers_sync,
     )
 
@@ -206,6 +217,11 @@ def internal_client_sync(
         event_hooks={
             "request": [
                 inject_active_language_query_sync,
+                # Sweep SSSS-C: sync sibling — see internal_client_async
+                # above for rationale. The sync variant exists because
+                # convo_service.py + skill_assessment.py + a few legacy
+                # background workers still use httpx.Client.
+                inject_active_support_language_query_sync,
                 inject_trace_headers_sync,
             ],
         },
