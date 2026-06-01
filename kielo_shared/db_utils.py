@@ -326,9 +326,7 @@ def set_active_support_language(code: str) -> contextvars.Token[str | None]:
     need to — the contextvar is implicitly per-task).
     """
     if not isinstance(code, str):
-        raise TypeError(
-            f"support language code must be str, got {type(code).__name__}"
-        )
+        raise TypeError(f"support language code must be str, got {type(code).__name__}")
     code = code.strip()
     if not code:
         raise ValueError("support language code must be non-empty")

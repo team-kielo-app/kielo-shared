@@ -34,12 +34,12 @@
 //
 // Adding a new SupportLanguageSource value:
 //
-//   1. Add the constant here with the canonical wire string.
-//   2. Extend AllSupportLanguageSources for iteration.
-//   3. Update the CHECK constraint in a new V0XX migration.
-//   4. Update OpenAPI enum lists in docs/api/v3/openapi.json +
-//      openapi-internal.json (both required fields).
-//   5. Wire the new write source's call site to emit the constant.
+//  1. Add the constant here with the canonical wire string.
+//  2. Extend AllSupportLanguageSources for iteration.
+//  3. Update the CHECK constraint in a new V0XX migration.
+//  4. Update OpenAPI enum lists in docs/api/v3/openapi.json +
+//     openapi-internal.json (both required fields).
+//  5. Wire the new write source's call site to emit the constant.
 //
 // The contract test in tests/contract/
 // support_language_source_vocabulary_contract_test.go enforces parity

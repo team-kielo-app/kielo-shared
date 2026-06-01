@@ -162,9 +162,7 @@ class PgxOverrideStore:
             args.extend([ref.namespace, ref.source_id, ref.source_version])
 
         query = (
-            self._BATCH_LOOKUP_HEAD
-            + ", ".join(placeholders)
-            + self._BATCH_LOOKUP_TAIL
+            self._BATCH_LOOKUP_HEAD + ", ".join(placeholders) + self._BATCH_LOOKUP_TAIL
         )
 
         try:

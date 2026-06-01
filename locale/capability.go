@@ -276,7 +276,7 @@ type PromptCapability struct {
 	// kielo-convo/go_orchestrator/internal/scenario/admin_handler.go
 	// cefrInstructions, which hardcoded Finnish "ja, mutta, koska"
 	// for every learning language. Now resolved per-language at the
-	// call site; missing-value behaviour falls back to the empty
+	// call site; missing-value behavior falls back to the empty
 	// string (caller renders the surrounding sentence without an
 	// example list rather than showing Finnish-only examples to
 	// sv/other learners).

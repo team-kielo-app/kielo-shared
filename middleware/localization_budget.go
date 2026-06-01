@@ -125,5 +125,5 @@ func (b *budgetResponseWriter) flush() {
 		return
 	}
 	b.stamped = true
-	stampBudgetHeaders(b.ResponseWriter.Header(), b.ctx)
+	stampBudgetHeaders(b.Header(), b.ctx)
 }

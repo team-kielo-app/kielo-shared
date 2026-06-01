@@ -179,9 +179,7 @@ class BatchCache(Protocol):
     async def batch_get(self, keys: list[str]) -> dict[str, "CacheEntry"]:
         """Return {key: CacheEntry} for every hit. Misses omitted."""
 
-    async def batch_set(
-        self, entries: dict[str, str], ttl_seconds: float
-    ) -> None: ...
+    async def batch_set(self, entries: dict[str, str], ttl_seconds: float) -> None: ...
 
 
 @dataclasses.dataclass(frozen=True)
@@ -194,9 +192,7 @@ class OverrideRef:
     source_version: str
 
 
-def override_batch_key(
-    namespace: str, source_id: str, source_version: str
-) -> str:
+def override_batch_key(namespace: str, source_id: str, source_version: str) -> str:
     """Canonical packed key matching Go's OverrideBatchKey. Used as
     dict key in BatchOverrideStore.batch_lookup return values."""
     return f"{namespace}|{source_id}|{source_version}"
@@ -407,9 +403,7 @@ class Seam:
                 continue
             if not target or target == TIER_A_LOCALE:
                 out[i] = ref.source_text
-                self._metrics.record(
-                    ref.namespace, target, "english_passthrough"
-                )
+                self._metrics.record(ref.namespace, target, "english_passthrough")
                 continue
             residue.append((i, ref, self._cache_key(ref, target)))
         if not residue:
@@ -451,8 +445,7 @@ class Seam:
                 continue
             if (
                 entry.age_seconds
-                <= self._config.fresh_ttl_seconds
-                + self._config.stale_ttl_seconds
+                <= self._config.fresh_ttl_seconds + self._config.stale_ttl_seconds
             ):
                 self._kickoff_swr(ref, target, key)
                 out[idx] = entry.value
@@ -491,30 +484,24 @@ class Seam:
         # Fallback: per-ref gather. Same shape the pre-AAAAA seam used.
         hits: dict[str, str] = {}
         coros = [
-            self._overrides.lookup(
-                r.namespace, r.source_id, r.source_version, target
-            )
+            self._overrides.lookup(r.namespace, r.source_id, r.source_version, target)
             for _, r, _ in residue
         ]
         values = await asyncio.gather(*coros)
         for (_, r, _), val in zip(residue, values):
             if val:
-                hits[
-                    override_batch_key(r.namespace, r.source_id, r.source_version)
-                ] = val
+                hits[override_batch_key(r.namespace, r.source_id, r.source_version)] = (
+                    val
+                )
         return hits
 
-    async def _batch_cache_get(
-        self, keys: list[str]
-    ) -> dict[str, CacheEntry]:
+    async def _batch_cache_get(self, keys: list[str]) -> dict[str, CacheEntry]:
         """Returns {key: CacheEntry} for every hit. Misses omitted."""
         if isinstance(self._cache, BatchCache):
             try:
                 return await self._cache.batch_get(keys)
             except Exception:
-                logger.exception(
-                    "seam batch_cache_get failed; falling back to per-key"
-                )
+                logger.exception("seam batch_cache_get failed; falling back to per-key")
         # Fallback: per-key gather over Cache.get
         hits: dict[str, CacheEntry] = {}
         coros = [self._cache.get(k) for k in keys]
@@ -592,9 +579,7 @@ class Seam:
                 await self._cache.batch_set(write_set, ttl)
                 return
             except Exception:
-                logger.exception(
-                    "seam batch_set failed; falling back to per-key"
-                )
+                logger.exception("seam batch_set failed; falling back to per-key")
         # Fallback: per-key gather over Cache.set
         try:
             await asyncio.gather(

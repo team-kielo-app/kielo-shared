@@ -25,9 +25,9 @@ func TestAuthCodedError_ImplementsCodedHTTPError(t *testing.T) {
 
 func TestClassifyJWTError_DistinctCodesPerFailureMode(t *testing.T) {
 	cases := []struct {
-		name      string
-		jwtErr    error
-		wantCode  string
+		name        string
+		jwtErr      error
+		wantCode    string
 		mustContain string
 	}{
 		{

@@ -9,6 +9,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 
+	kerrors "github.com/team-kielo-app/kielo-shared/errors"
 	"github.com/team-kielo-app/kielo-shared/observe"
 )
 
@@ -184,27 +185,15 @@ func CanonicalEchoErrorHandler(err error, c echo.Context) {
 	_ = APIError(c, status, code, message, details)
 }
 
+// Sweep DDDDD: byte-equivalent delegation to the central SoT at
+// kielo-shared/errors. Pre-DDDDD the 9 default codes were bare-string
+// literals inside this switch + independently re-declared as a
+// duplicate typed enum at kielo-media-upload-api/handlers/errors.go
+// (Sweep KK-class divergence risk). Post-DDDDD the canonical Code
+// values live in errors/defaults.go and this function is a thin
+// adapter that returns the same wire strings via Code.String().
 func defaultCodeForStatus(status int) string {
-	switch status {
-	case http.StatusBadRequest:
-		return "BAD_REQUEST"
-	case http.StatusUnauthorized:
-		return "UNAUTHORIZED"
-	case http.StatusForbidden:
-		return "FORBIDDEN"
-	case http.StatusNotFound:
-		return "NOT_FOUND"
-	case http.StatusConflict:
-		return "CONFLICT"
-	case http.StatusUnprocessableEntity:
-		return "VALIDATION_FAILED"
-	case http.StatusTooManyRequests:
-		return "RATE_LIMITED"
-	}
-	if status >= 500 {
-		return "INTERNAL_ERROR"
-	}
-	return "ERROR"
+	return kerrors.DefaultForStatus(status).String()
 }
 
 func traceIDFromContext(ctx context.Context) string {

@@ -37,6 +37,7 @@ Cross-language parity:
   canonical resource_type set with ``kielo_shared/resource_types``
   (the existing simpler registry).
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass

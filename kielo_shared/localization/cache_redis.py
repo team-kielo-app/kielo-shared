@@ -54,9 +54,7 @@ class RedisPipeline(Protocol):
 
     def get(self, key: str) -> "RedisPipeline": ...
 
-    def set(
-        self, key: str, value: str, ex: int | None = None
-    ) -> "RedisPipeline": ...
+    def set(self, key: str, value: str, ex: int | None = None) -> "RedisPipeline": ...
 
     def pttl(self, key: str) -> "RedisPipeline": ...
 
@@ -128,9 +126,7 @@ class RedisCache:
         age = self._age_from_pttl(pttl_ms)
         return self._coerce_str(value), age
 
-    async def set(
-        self, key: str, value: str, ttl_seconds: float
-    ) -> None:
+    async def set(self, key: str, value: str, ttl_seconds: float) -> None:
         try:
             ex = int(ttl_seconds) if ttl_seconds > 0 else None
             await self._client.set(key, value, ex=ex)
@@ -197,9 +193,7 @@ class RedisCache:
             for k, v, a in zip(hit_keys, hit_values, ages)
         }
 
-    async def batch_set(
-        self, entries: dict[str, str], ttl_seconds: float
-    ) -> None:
+    async def batch_set(self, entries: dict[str, str], ttl_seconds: float) -> None:
         """Pipelined SET per entry, 1 Exec round-trip.
 
         Mirror of Go ``cacheredis.Cache.BatchSet`` at
@@ -214,9 +208,7 @@ class RedisCache:
                 pipe.set(key, value, ex=ex)
             await pipe.execute()
         except Exception:
-            logger.exception(
-                "RedisCache.batch_set failed for %d entries", len(entries)
-            )
+            logger.exception("RedisCache.batch_set failed for %d entries", len(entries))
 
     # ─── helpers ───────────────────────────────────────────────────────
 

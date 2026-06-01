@@ -7,8 +7,8 @@
 package translation
 
 import (
-	"encoding/json"
 	_ "embed"
+	"encoding/json"
 	"testing"
 )
 
