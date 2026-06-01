@@ -181,6 +181,8 @@ func (s *Seam) Translate(ctx context.Context, ref SourceRef, targetLocale string
 // this method degrades gracefully to per-ref Translate. Production
 // deployments wire RedisCache + pgx OverrideStore which both
 // implement the batch interfaces, so the fast path is the norm.
+//
+//nolint:funlen // Batch seam keeps cache, override, provider, and metrics branches together for one round-trip contract.
 func (s *Seam) TranslateBatch(ctx context.Context, refs []SourceRef, targetLocale string) []string {
 	out := make([]string, len(refs))
 	if len(refs) == 0 {

@@ -2,13 +2,13 @@
 //
 // Three test groups:
 //
-//   1. Vocabulary: every declared Code matches UPPER_SNAKE_CASE per
-//      the casing gate at tests/contract/error_code_vocabulary_test.go.
-//   2. Structural defaults: DefaultForStatus returns the exact pre-
-//      DDDDD wire strings for every HTTP status — byte-equivalent
-//      to the legacy switch.
-//   3. CodedError: implements the CodedHTTPError interface contract
-//      with the expected JSON shape.
+//  1. Vocabulary: every declared Code matches UPPER_SNAKE_CASE per
+//     the casing gate at tests/contract/error_code_vocabulary_test.go.
+//  2. Structural defaults: DefaultForStatus returns the exact pre-
+//     DDDDD wire strings for every HTTP status — byte-equivalent
+//     to the legacy switch.
+//  3. CodedError: implements the CodedHTTPError interface contract
+//     with the expected JSON shape.
 package errors
 
 import (
@@ -96,26 +96,26 @@ func TestDefaultForStatus_MatchesPreDDDDDSwitch(t *testing.T) {
 		status int
 		want   Code
 	}{
-		{http.StatusBadRequest, CodeBadRequest},                  // 400
-		{http.StatusUnauthorized, CodeUnauthorized},              // 401
-		{http.StatusForbidden, CodeForbidden},                    // 403
-		{http.StatusNotFound, CodeNotFound},                      // 404
-		{http.StatusConflict, CodeConflict},                      // 409
-		{http.StatusUnprocessableEntity, CodeValidationFailed},   // 422
-		{http.StatusTooManyRequests, CodeRateLimited},            // 429
-		{http.StatusInternalServerError, CodeInternalError},      // 500
-		{http.StatusBadGateway, CodeInternalError},               // 502
+		{http.StatusBadRequest, CodeBadRequest},                // 400
+		{http.StatusUnauthorized, CodeUnauthorized},            // 401
+		{http.StatusForbidden, CodeForbidden},                  // 403
+		{http.StatusNotFound, CodeNotFound},                    // 404
+		{http.StatusConflict, CodeConflict},                    // 409
+		{http.StatusUnprocessableEntity, CodeValidationFailed}, // 422
+		{http.StatusTooManyRequests, CodeRateLimited},          // 429
+		{http.StatusInternalServerError, CodeInternalError},    // 500
+		{http.StatusBadGateway, CodeInternalError},             // 502
 		// Sweep DDDDD-B2 refinement: 503 now maps to SERVICE_UNAVAILABLE
 		// rather than INTERNAL_ERROR fallback. This is a deliberate
 		// vocabulary refinement (503 has a distinct operational meaning:
 		// "service is temporarily down, retry later" vs. INTERNAL_ERROR's
 		// "something went wrong in the request"). kielo-media-upload-api
 		// had this code declared locally pre-DDDDD-B2.
-		{http.StatusServiceUnavailable, CodeServiceUnavailable},  // 503
-		{http.StatusGatewayTimeout, CodeInternalError},           // 504
-		{http.StatusOK, CodeGenericError},                        // unexpected fallback
-		{http.StatusMovedPermanently, CodeGenericError},          // 301
-		{http.StatusPaymentRequired, CodeGenericError},           // 402 — falls through to ERROR
+		{http.StatusServiceUnavailable, CodeServiceUnavailable}, // 503
+		{http.StatusGatewayTimeout, CodeInternalError},          // 504
+		{http.StatusOK, CodeGenericError},                       // unexpected fallback
+		{http.StatusMovedPermanently, CodeGenericError},         // 301
+		{http.StatusPaymentRequired, CodeGenericError},          // 402 — falls through to ERROR
 	}
 	for _, tc := range cases {
 		got := DefaultForStatus(tc.status)

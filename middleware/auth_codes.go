@@ -101,6 +101,6 @@ func classifyJWTError(err error) (code, message string) {
 // isJWTErr wraps errors.Is + the jwt sentinel comparison. The jwt
 // library returns joined errors via errors.Join (jwt.ValidationError
 // composite); errors.Is walks the tree.
-func isJWTErr(err error, target error) bool {
+func isJWTErr(err, target error) bool {
 	return errors.Is(err, target)
 }

@@ -103,6 +103,8 @@ func (c *Cache) Set(ctx context.Context, key, value string, ttl time.Duration) e
 //
 // For the canonical scenario-list case (264 refs), this is 264 RTTs
 // → 1 RTT.
+//
+//nolint:gocyclo // Single Redis MGET/PTTL batch path with miss, TTL, stale, and decode branches kept in one pass.
 func (c *Cache) BatchGet(ctx context.Context, keys []string) map[string]localization.CacheEntry {
 	out := make(map[string]localization.CacheEntry, len(keys))
 	if len(keys) == 0 {

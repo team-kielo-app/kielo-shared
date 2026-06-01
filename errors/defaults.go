@@ -35,16 +35,16 @@ func (c Code) String() string { return string(c) }
 //
 //	{"error": {"code": "BAD_REQUEST", "message": "..."}, "message": "..."}
 const (
-	CodeBadRequest        Code = "BAD_REQUEST"        // 400
-	CodeUnauthorized      Code = "UNAUTHORIZED"       // 401
-	CodeForbidden         Code = "FORBIDDEN"          // 403
-	CodeNotFound          Code = "NOT_FOUND"          // 404
-	CodeConflict          Code = "CONFLICT"           // 409
-	CodeValidationFailed  Code = "VALIDATION_FAILED"  // 422
-	CodeRateLimited       Code = "RATE_LIMITED"       // 429
-	CodeInternalError     Code = "INTERNAL_ERROR"     // 5xx
+	CodeBadRequest         Code = "BAD_REQUEST"         // 400
+	CodeUnauthorized       Code = "UNAUTHORIZED"        // 401
+	CodeForbidden          Code = "FORBIDDEN"           // 403
+	CodeNotFound           Code = "NOT_FOUND"           // 404
+	CodeConflict           Code = "CONFLICT"            // 409
+	CodeValidationFailed   Code = "VALIDATION_FAILED"   // 422
+	CodeRateLimited        Code = "RATE_LIMITED"        // 429
+	CodeInternalError      Code = "INTERNAL_ERROR"      // 5xx
 	CodeServiceUnavailable Code = "SERVICE_UNAVAILABLE" // 503
-	CodeGenericError      Code = "ERROR"              // fallback when status is unrecognized
+	CodeGenericError       Code = "ERROR"               // fallback when status is unrecognized
 
 	// Sweep DDDDD Tier 1B-promoted-to-1A: upstream-proxy semantics.
 	// Emitted by 11+ kielo-cms proxy sites + 6 kielo-user-service
