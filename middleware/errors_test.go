@@ -186,7 +186,7 @@ func TestDefaultCodeForStatus(t *testing.T) {
 		{http.StatusTooManyRequests, "RATE_LIMITED"},
 		{http.StatusInternalServerError, "INTERNAL_ERROR"},
 		{http.StatusBadGateway, "INTERNAL_ERROR"},
-		{http.StatusServiceUnavailable, "INTERNAL_ERROR"},
+		{http.StatusServiceUnavailable, "SERVICE_UNAVAILABLE"},
 		{http.StatusTeapot, "ERROR"},
 	}
 	for _, tc := range cases {

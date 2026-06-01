@@ -19,7 +19,6 @@ func TestCommonParamsCanonicalNames(t *testing.T) {
 	}{
 		{CommonParams.SupportLanguageCode(), "support_language_code", "string", "query"},
 		{CommonParams.LearningLanguageCode(), "learning_language_code", "string", "query"},
-		{CommonParams.WithTranslation(), "with_translation", "boolean", "query"},
 		{CommonParams.PageSize(), "page_size", "integer", "query"},
 		{CommonParams.NextPageKey(), "next_page_key", "string", "query"},
 		{CommonParams.Cursor(), "cursor", "string", "query"},
@@ -79,7 +78,6 @@ func TestCommonParamsAllOptionalByDefault(t *testing.T) {
 	params := []ParamSpec{
 		CommonParams.SupportLanguageCode(),
 		CommonParams.LearningLanguageCode(),
-		CommonParams.WithTranslation(),
 		CommonParams.PageSize(),
 		CommonParams.NextPageKey(),
 		CommonParams.Cursor(),

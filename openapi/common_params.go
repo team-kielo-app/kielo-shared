@@ -13,7 +13,6 @@
 //	    Tag: "articles",
 //	    QueryParams: []openapi.ParamSpec{
 //	        openapi.CommonParams.SupportLanguageCode(),
-//	        openapi.CommonParams.WithTranslation(),
 //	        openapi.CommonParams.PageSize(),
 //	        openapi.CommonParams.NextPageKey(),
 //	    },
