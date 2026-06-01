@@ -89,18 +89,20 @@ func (commonParams) LearningLanguageCode() ParamSpec {
 	}
 }
 
-// WithTranslation toggles translated paragraphs/strings in the response
-// payload. Defaults to false at the handler level; declare explicitly so
-// the spec advertises the toggle to clients.
-func (commonParams) WithTranslation() ParamSpec {
-	return ParamSpec{
-		Name:        "with_translation",
-		In:          "query",
-		Type:        "boolean",
-		Required:    false,
-		Description: "When true, response includes translated paragraphs/strings in support_language_code.",
-	}
-}
+// Sweep GGGGG (2026-06-01): `WithTranslation()` removed.
+// Pre-GGGGG this ParamSpec advertised `?with_translation=true` on
+// 15 route declarations across kielo-mobile-bff (13) + kielo-cms (2).
+// content-service GET handlers NEVER read the param (proven via grep:
+// 0 references in kielo-content-service). The whole stack — mobile
+// slice + BFF passthrough + OAS declaration + content-service — was
+// shipping a dead wire param.
+//
+// Per-paragraph translations now fire lazily via the canonical
+// POST /api/v3/news/articles/{id}/paragraph-translations endpoint
+// (Sweep TTTT-D) driven by `ArticleParagraphsList.tsx`'s
+// isTranslationVisible flag (user-intent gated). The lazy contract
+// is enforced by the static gate `_lint-with-translation-dead-param`
+// (Sweep GGGGG) at baseline 0.
 
 // ---------------------------------------------------------------------------
 // Cursor-based pagination params (canonical per ADR-006)
