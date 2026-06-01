@@ -43,6 +43,7 @@ const (
 	CodeValidationFailed  Code = "VALIDATION_FAILED"  // 422
 	CodeRateLimited       Code = "RATE_LIMITED"       // 429
 	CodeInternalError     Code = "INTERNAL_ERROR"     // 5xx
+	CodeServiceUnavailable Code = "SERVICE_UNAVAILABLE" // 503
 	CodeGenericError      Code = "ERROR"              // fallback when status is unrecognized
 
 	// Sweep DDDDD Tier 1B-promoted-to-1A: upstream-proxy semantics.
@@ -79,6 +80,8 @@ func DefaultForStatus(status int) Code {
 		return CodeValidationFailed
 	case http.StatusTooManyRequests:
 		return CodeRateLimited
+	case http.StatusServiceUnavailable:
+		return CodeServiceUnavailable
 	}
 	if status >= 500 {
 		return CodeInternalError

@@ -105,7 +105,13 @@ func TestDefaultForStatus_MatchesPreDDDDDSwitch(t *testing.T) {
 		{http.StatusTooManyRequests, CodeRateLimited},            // 429
 		{http.StatusInternalServerError, CodeInternalError},      // 500
 		{http.StatusBadGateway, CodeInternalError},               // 502
-		{http.StatusServiceUnavailable, CodeInternalError},       // 503
+		// Sweep DDDDD-B2 refinement: 503 now maps to SERVICE_UNAVAILABLE
+		// rather than INTERNAL_ERROR fallback. This is a deliberate
+		// vocabulary refinement (503 has a distinct operational meaning:
+		// "service is temporarily down, retry later" vs. INTERNAL_ERROR's
+		// "something went wrong in the request"). kielo-media-upload-api
+		// had this code declared locally pre-DDDDD-B2.
+		{http.StatusServiceUnavailable, CodeServiceUnavailable},  // 503
 		{http.StatusGatewayTimeout, CodeInternalError},           // 504
 		{http.StatusOK, CodeGenericError},                        // unexpected fallback
 		{http.StatusMovedPermanently, CodeGenericError},          // 301
