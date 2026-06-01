@@ -74,6 +74,14 @@ func PrepareInternalJSONRequest(
 	// concept-hub localization leak that drove Sweep OOOO+PPPP).
 	ApplySupportLanguageQuery(req)
 	ApplySupportLanguageHeader(req)
+	// Sweep RRRR: forward the request's timezone-offset-minutes signal
+	// onto every internal hop. Pre-RRRR only kielo-content-service's
+	// user.Client (3/3 methods) explicitly stamped X-Timezone-Offset-
+	// Minutes; every other Go HTTP client that depended on day-boundary
+	// logic at the receiving side silently dropped the offset and
+	// inherited UTC. Same shared-helper-lift pattern as QQQQ for
+	// support_language_code.
+	ApplyTimezoneOffsetHeader(req)
 	// Forward the active trace context onto the outbound request so the
 	// downstream service can treat this call as a child span and the
 	// mobile-issued X-Client-Trace-Id flows end-to-end through every
