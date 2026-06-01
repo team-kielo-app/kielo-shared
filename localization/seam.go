@@ -144,9 +144,26 @@ func SourceVersionFromText(parts ...string) string {
 // `kielo_translation_total{namespace, target_locale, source}` increment
 // where source is one of english_passthrough, override, cache_hit,
 // cache_swr, cache_miss_share, provider_call, provider_error.
+//
+// Sweep TTTT-I: also bumps the per-request budget counter (when
+// WithBudget was called on ctx) so middleware can stamp response
+// headers + dashboards can detect N+1 fan-outs.
 func (s *Seam) Translate(ctx context.Context, ref SourceRef, targetLocale string) string {
 	source, value := s.resolve(ctx, ref, targetLocale)
 	s.metrics.Record(ctx, ref.Namespace, targetLocale, source)
+	RecordBudget(ctx, BudgetKindRefResolved, 1)
+	switch source {
+	case "override":
+		RecordBudget(ctx, BudgetKindOverrideLookup, 1)
+	case "cache_hit", "cache_swr":
+		RecordBudget(ctx, BudgetKindCacheGet, 1)
+	case "provider_call", "cache_miss_share":
+		// Override+cache miss path: 1 override probe + 1 cache probe
+		// + 1 provider call.
+		RecordBudget(ctx, BudgetKindOverrideLookup, 1)
+		RecordBudget(ctx, BudgetKindCacheGet, 1)
+		RecordBudget(ctx, BudgetKindProviderCall, 1)
+	}
 	return value
 }
 
@@ -196,8 +213,12 @@ func (s *Seam) TranslateBatch(ctx context.Context, refs []SourceRef, targetLocal
 		return out
 	}
 
+	// Sweep TTTT-I: count total refs resolved for the budget snapshot.
+	RecordBudget(ctx, BudgetKindRefResolved, len(refs))
+
 	// Phase 1: batch override lookup. One SQL round-trip when impl
 	// supports BatchOverrideStore; fallback to per-ref Lookup otherwise.
+	RecordBudget(ctx, BudgetKindOverrideLookup, 1)
 	overrideHits := s.batchOverrideLookup(ctx, residue, target)
 	remaining := residue[:0]
 	for _, r := range residue {
@@ -215,6 +236,7 @@ func (s *Seam) TranslateBatch(ctx context.Context, refs []SourceRef, targetLocal
 
 	// Phase 2: batch cache lookup. One Redis MGET pipeline when impl
 	// supports BatchCache; fallback to per-ref Get otherwise.
+	RecordBudget(ctx, BudgetKindCacheGet, 1)
 	cacheHits := s.batchCacheGet(ctx, remaining)
 	remaining2 := remaining[:0]
 	for _, r := range remaining {
@@ -245,6 +267,7 @@ func (s *Seam) TranslateBatch(ctx context.Context, refs []SourceRef, targetLocal
 	// single-flight via singleflight.Group preserves the dedup
 	// behavior — if two concurrent batch requests overlap on the same
 	// cache key, only one provider call fires.
+	RecordBudget(ctx, BudgetKindProviderCall, 1)
 	s.providerBatchCall(ctx, remaining2, target, out)
 	return out
 }
