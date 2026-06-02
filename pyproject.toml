@@ -91,7 +91,10 @@ ignore_errors = true
 # `Message` is the google.cloud.pubsub_v1 Message class — imported under
 # `if TYPE_CHECKING:` for string annotations in pubsub_consumer.py;
 # vulture's static walk doesn't follow forward refs so flags it unused.
-ignore_names = ["ex", "executemany", "session", "trace_config_ctx", "Message"]
+# `transaction` is the redis-py pipeline() kwarg — Protocol method
+# stub at cache_redis.py:77 declares it for typing parity with redis-py;
+# vulture flags the abstract param even though callers pass it.
+ignore_names = ["ex", "executemany", "session", "trace_config_ctx", "Message", "transaction"]
 
 [tool.setuptools.dynamic]
 version = {attr = "kielo_shared.__version__"}

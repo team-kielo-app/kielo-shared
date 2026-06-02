@@ -144,7 +144,9 @@ def process_pull_message(
     # run_coroutine_threadsafe's stricter Coroutine bound. Future is
     # typed explicitly so callers don't get Any.
     coro = cast("Coroutine[Any, Any, None]", handler(message, payload))
-    future: concurrent.futures.Future[None] = asyncio.run_coroutine_threadsafe(coro, loop)
+    future: concurrent.futures.Future[None] = asyncio.run_coroutine_threadsafe(
+        coro, loop
+    )
     try:
         future.result(timeout=handler_timeout)
     except asyncio.TimeoutError:
