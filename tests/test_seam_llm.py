@@ -88,7 +88,7 @@ class _FakeClient:
     @property
     def aio(self):
         class _AIO:
-            models = self._models  # noqa: F821 — closure
+            models = self._models
         return type("_AIO", (), {"models": self._models})()
 
 

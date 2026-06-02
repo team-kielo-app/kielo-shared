@@ -263,7 +263,7 @@ def test_seam_key_with_provider_id_in_source_id_does_not_collide():
     # because it doesn't start with `loc:`.
     assert ":openai-gpt-4:" in seam_key  # the provider_id IS embedded
     # But the canonical prefix is still kielo:i18n:.
-    assert seam_key != f"loc:openai-gpt-4:en:vi:ui:somehash"
+    assert seam_key != "loc:openai-gpt-4:en:vi:ui:somehash"
 
 
 # --- TTL semantics -----------------------------------------------------

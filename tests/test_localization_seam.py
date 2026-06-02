@@ -26,7 +26,6 @@ from kielo_shared.localization.seam import (
 from kielo_shared.localization.types import (
     TranslationItem,
     TranslationResult,
-    TranslationRole,
 )
 
 
@@ -421,7 +420,6 @@ async def test_aaaaa_translate_batch_records_one_per_phase_budget() -> None:
     seam.go:184-273 post-TTTT-B shape that YYYY budget headers
     expose on the wire."""
     from kielo_shared.localization.budget import (
-        BudgetKind,
         budget_snapshot,
         reset_budget,
         with_budget,

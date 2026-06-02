@@ -36,8 +36,8 @@ def _install_capture_listener(engine: Any) -> list[str]:
     from sqlalchemy import event
 
     @event.listens_for(engine, "before_cursor_execute")
-    def _capture(  # noqa: ANN001
-        conn, cursor, statement, parameters, context, executemany,  # noqa: ARG001
+    def _capture(
+        conn, cursor, statement, parameters, context, executemany,
     ):
         captured.append(statement)
 

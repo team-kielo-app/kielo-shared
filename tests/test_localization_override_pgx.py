@@ -89,7 +89,7 @@ asyncpg = pytest.importorskip("asyncpg")
 async def real_pool() -> AsyncIterator[Any]:
     try:
         pool = await asyncpg.create_pool(dsn=_dsn(), min_size=1, max_size=2)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         if os.environ.get("KIELO_TEST_PG_REQUIRED") == "1":
             pytest.fail(f"asyncpg.create_pool failed: {exc}")
         pytest.skip(f"postgres unreachable: {exc}")

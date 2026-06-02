@@ -40,7 +40,7 @@ propagated). Translation never fails because of Redis.
 from __future__ import annotations
 
 import logging
-from typing import Any, Awaitable, Protocol
+from typing import Any, Protocol
 
 from kielo_shared.localization.seam import CacheEntry
 

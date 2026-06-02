@@ -9,12 +9,13 @@ import pytest
 
 aiohttp = pytest.importorskip("aiohttp")
 
-from aiohttp import web
-
-from kielo_shared.aiohttp_hooks import internal_session, tracing_trace_config
-from kielo_shared.db_utils import reset_active_language, set_active_language
-from kielo_shared.http import INTERNAL_API_KEY_HEADER
-from kielo_shared.trace import (
+# E402: imports below the pytest.importorskip gate are intentional —
+# they would fail at collection time if aiohttp isn't installed.
+from aiohttp import web  # noqa: E402
+from kielo_shared.aiohttp_hooks import internal_session, tracing_trace_config  # noqa: E402
+from kielo_shared.db_utils import reset_active_language, set_active_language  # noqa: E402
+from kielo_shared.http import INTERNAL_API_KEY_HEADER  # noqa: E402
+from kielo_shared.trace import (  # noqa: E402
     TraceContext,
     reset_current_trace_context,
     set_current_trace_context,

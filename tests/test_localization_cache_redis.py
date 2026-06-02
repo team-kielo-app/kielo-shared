@@ -7,12 +7,11 @@ real Redis server. The protocol is the same shape as
 
 from __future__ import annotations
 
-import asyncio
 from typing import Any
 
 import pytest
 
-from kielo_shared.localization import BatchCache, Cache, CacheEntry, RedisCache
+from kielo_shared.localization import BatchCache, Cache, RedisCache
 
 
 class _FakePipeline:

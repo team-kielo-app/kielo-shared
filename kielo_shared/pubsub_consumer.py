@@ -45,9 +45,10 @@ Use from a streaming-pull callback:
 from __future__ import annotations
 
 import asyncio
+import concurrent.futures
 import json
 import logging
-from typing import Any, Awaitable, Callable, Optional, TYPE_CHECKING
+from typing import Any, Awaitable, Callable, Coroutine, Optional, TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
     # google.cloud.pubsub_v1 has a hefty import; only typed-import it.
@@ -138,7 +139,12 @@ def process_pull_message(
         pubsub_ack_emit(service=service, topic=topic_label, outcome="nack")
         return
 
-    future = asyncio.run_coroutine_threadsafe(handler(message, payload), loop)
+    # mypy: PullHandler returns Awaitable[None] which is structurally
+    # a Coroutine in practice (async def). Cast to satisfy
+    # run_coroutine_threadsafe's stricter Coroutine bound. Future is
+    # typed explicitly so callers don't get Any.
+    coro = cast("Coroutine[Any, Any, None]", handler(message, payload))
+    future: concurrent.futures.Future[None] = asyncio.run_coroutine_threadsafe(coro, loop)
     try:
         future.result(timeout=handler_timeout)
     except asyncio.TimeoutError:

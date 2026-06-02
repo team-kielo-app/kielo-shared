@@ -24,28 +24,22 @@ Returns:
 
 from __future__ import annotations
 
-import json
 import logging
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Optional
 from uuid import UUID
 
-import httpx
 
 from kielo_shared.http import internal_client_async
 
 from . import (
     CMS_WRITER_BASE_WORD_AUDIO_UPDATE,
-    CMS_WRITER_BASE_WORD_EMBEDDING_BATCH,
     CMS_WRITER_BASE_WORD_EMBEDDING_UPDATE,
     CMS_WRITER_BASE_WORD_MEANING_NULL,
     CMS_WRITER_BASE_WORD_TRANSLATION_UPSERT,
-    CMS_WRITER_DICTIONARY_ENRICHMENT_UPSERT,
     CMS_WRITER_DICTIONARY_SENSE_TRANSLATION_NULL,
-    CMS_WRITER_DICTIONARY_SENSE_UPSERT,
     CMS_WRITER_GRAMMAR_CONCEPT_EXAMPLES_UPDATE,
-    CMS_WRITER_WORD_FORMS_UPSERT,
 )
 
 logger = logging.getLogger(__name__)

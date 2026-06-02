@@ -10,7 +10,6 @@ Mirrors ``kielo-shared/sse/writer_test.go`` (Go).
 from __future__ import annotations
 
 import asyncio
-import json
 
 import pytest
 
