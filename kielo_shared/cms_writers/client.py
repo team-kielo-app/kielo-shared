@@ -38,6 +38,7 @@ from kielo_shared.http import internal_client_async
 from . import (
     CMS_WRITER_BASE_WORD_AUDIO_UPDATE,
     CMS_WRITER_BASE_WORD_MEANING_NULL,
+    CMS_WRITER_BASE_WORD_TRANSLATION_UPSERT,
     CMS_WRITER_DICTIONARY_SENSE_TRANSLATION_NULL,
     CMS_WRITER_GRAMMAR_CONCEPT_EXAMPLES_UPDATE,
 )
@@ -51,6 +52,15 @@ class CMSWriterUpdateResult(str, Enum):
 
     UPDATED = "updated"
     NOOP = "noop"
+
+
+@dataclass(frozen=True)
+class BaseWordTranslationResult:
+    """Sweep XXXXX-B return shape for upsert_base_word_translation.
+    Mirrors the cms-side repository.BaseWordTranslationResult."""
+
+    meaning_action: CMSWriterUpdateResult
+    senses_upserted: int
 
 
 @dataclass(frozen=True)
@@ -200,6 +210,64 @@ class CMSWritersClient:
         body = response.json()
         return CMSWriterUpdateResult(body["action"])
 
+    async def upsert_base_word_translation(
+        self,
+        base_word_id: UUID,
+        meaning: str,
+        *,
+        senses: Optional[list[dict[str, Any]]] = None,
+        only_if_blank: bool = False,
+    ) -> "BaseWordTranslationResult":
+        """POST /internal/klearn/base-words/{id}/translation.
+
+        Sweep XXXXX-B atomic-pair composite endpoint. UPDATEs
+        base_words.meaning + UPSERTs N dictionary_senses rows in a
+        single cms-side transaction.
+
+        Engine consumers:
+          - internal_router.py:enrich_words_by_ids sites 2+4, 3+4
+          - internal_router.py:enrich_words_with_translations sites 6+7
+          - dictionary_enrichment.py:enrich_dictionary_entries site 9
+
+        Args:
+          base_word_id: target cms_<lang>.base_words.base_word_id
+          meaning: the English gloss to write to base_words.meaning
+          senses: optional list of {language_code, sense_order,
+            translation, tags} dicts mirroring the pre-XXXXX-B
+            INSERT ... ON CONFLICT shape. Empty/omitted = no sense
+            writes (site 9 back-fill case).
+          only_if_blank: when True, the meaning UPDATE is conditional —
+            only writes when the current value is NULL or empty.
+            Site 9 (dictionary_enrichment back-fill) sets this True;
+            other call sites pass False.
+
+        Returns:
+          BaseWordTranslationResult with .meaning_action
+          (CMSWriterUpdateResult enum) + .senses_upserted (int).
+
+        Raises:
+          CMSWriterNotFoundError on 404
+          httpx.HTTPStatusError on other failures
+        """
+        url = f"{self.cms_service_url}/internal/klearn/base-words/{base_word_id}/translation"
+        payload: dict[str, Any] = {
+            "meaning": meaning,
+            "only_if_blank": only_if_blank,
+            "senses": senses or [],
+        }
+        response = await self._client.post(url, json=payload)
+        if response.status_code == 404:
+            raise CMSWriterNotFoundError(
+                endpoint=CMS_WRITER_BASE_WORD_TRANSLATION_UPSERT,
+                resource_id=str(base_word_id),
+            )
+        response.raise_for_status()
+        body = response.json()
+        return BaseWordTranslationResult(
+            meaning_action=CMSWriterUpdateResult(body["meaning_action"]),
+            senses_upserted=int(body.get("senses_upserted", 0)),
+        )
+
     async def null_dictionary_sense_translation_if(
         self,
         base_word_id: UUID,
@@ -245,4 +313,5 @@ __all__ = [
     "CMSWritersClient",
     "CMSWriterUpdateResult",
     "CMSWriterNotFoundError",
+    "BaseWordTranslationResult",
 ]

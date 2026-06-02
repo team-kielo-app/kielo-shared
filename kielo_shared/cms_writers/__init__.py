@@ -91,6 +91,44 @@ cms_<lang>.dictionary_senses.translation; key is
 """
 
 
+# Sweep XXXXX-B (2026-06-02) — atomic-pair composite endpoint
+# covering the dictionary-enrichment hot path. Replaces 4 engine
+# user-path sites (2+4, 3+4, 6+7, 9) with a single cms-side
+# composite transaction.
+
+CMS_WRITER_BASE_WORD_TRANSLATION_UPSERT: CMSWriterEndpoint = CMSWriterEndpoint(
+    "base_word.translation.upsert.v1"
+)
+"""POST /internal/klearn/base-words/{base_word_id}/translation
+
+Atomic composite: UPDATE base_words.meaning + UPSERT N dictionary_senses
+rows in a single cms-side transaction. Preserves the Sweep BBB tx-split
+invariant — the cms-side handler runs this composite as one tx, then
+the engine separately commits the embedding tx after.
+
+Request body:
+  {
+    "meaning": "...",                     # required string
+    "only_if_blank": False,               # optional; site 9 back-fill flag
+    "senses": [                           # optional list (may be empty)
+      {
+        "language_code": "en",
+        "sense_order": 1,
+        "translation": "...",
+        "tags": ["gemini_one_shot", "confidence:0.85", ...],
+      }
+    ]
+  }
+
+Response: {"meaning_action": "updated" | "noop", "senses_upserted": <int>}
+
+Engine consumers:
+  - internal_router.py:enrich_words_by_ids sites 2+4 (DDD primary), 3+4 (opus-mt fallback)
+  - internal_router.py:enrich_words_with_translations sites 6+7 (EEE-Gemini)
+  - dictionary_enrichment.py:enrich_dictionary_entries site 9 (back-fill, senses=[])
+"""
+
+
 # Canonical iteration order — MUST match Go-side AllCMSWriterEndpoints
 # byte-for-byte. Contract test enforces.
 ALL_CMS_WRITER_ENDPOINTS: tuple[CMSWriterEndpoint, ...] = (
@@ -99,7 +137,9 @@ ALL_CMS_WRITER_ENDPOINTS: tuple[CMSWriterEndpoint, ...] = (
     CMS_WRITER_BASE_WORD_AUDIO_UPDATE,
     CMS_WRITER_BASE_WORD_MEANING_NULL,
     CMS_WRITER_DICTIONARY_SENSE_TRANSLATION_NULL,
-    # XXXXX-B/C/D blocks queued; append in shipment order.
+    # XXXXX-B atomic-pair composite block:
+    CMS_WRITER_BASE_WORD_TRANSLATION_UPSERT,
+    # XXXXX-C/D blocks queued; append in shipment order.
 )
 
 # Frozen-set form for O(1) membership tests in the validator + the
@@ -122,6 +162,7 @@ __all__ = [
     "CMS_WRITER_BASE_WORD_AUDIO_UPDATE",
     "CMS_WRITER_BASE_WORD_MEANING_NULL",
     "CMS_WRITER_DICTIONARY_SENSE_TRANSLATION_NULL",
+    "CMS_WRITER_BASE_WORD_TRANSLATION_UPSERT",
     "ALL_CMS_WRITER_ENDPOINTS",
     "is_known_cms_writer_endpoint",
 ]

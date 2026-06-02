@@ -109,6 +109,37 @@ const (
 	// Engine consumer: sense_translation_checker.py site 11.
 	// CMS handler: DELETE /internal/klearn/base-words/:base_word_id/senses/:sense_order/translation?if_current_value=<v>
 	CMSWriterDictionarySenseTranslationNull CMSWriterEndpoint = "dictionary_sense.translation.null.v1"
+
+	// Sweep XXXXX-B (2026-06-02) — atomic-pair composite endpoint
+	// covering the dictionary-enrichment hot path. Single cms-side
+	// tx UPDATEs base_words.meaning + UPSERTs N dictionary_senses
+	// rows atomically. Preserves the Sweep BBB tx-split invariant
+	// (translation writes commit together BEFORE embedding writes).
+	//
+	// Request body shape:
+	//   {
+	//     "meaning": "...",                  // required string
+	//     "only_if_blank": false,            // optional bool — site 9 back-fill flag
+	//     "senses": [{                       // optional list
+	//       "language_code": "en",
+	//       "sense_order": 1,
+	//       "translation": "...",
+	//       "tags": ["gemini_one_shot", "confidence:0.85", "lemma:x", "pos:noun"]
+	//     }]
+	//   }
+	//
+	// Server response:
+	//   {
+	//     "meaning_action": "updated" | "noop",  // noop when only_if_blank=true + value already set
+	//     "senses_upserted": <int>
+	//   }
+	//
+	// Engine consumers:
+	//   - internal_router.py:enrich_words_by_ids sites 2+4 (DDD primary), 3+4 (opus-mt fallback)
+	//   - internal_router.py:enrich_words_with_translations sites 6+7 (EEE-Gemini)
+	//   - dictionary_enrichment.py:enrich_dictionary_entries site 9 (back-fill, senses=[])
+	// CMS handler: POST /internal/klearn/base-words/:base_word_id/translation
+	CMSWriterBaseWordTranslationUpsert CMSWriterEndpoint = "base_word.translation.upsert.v1"
 )
 
 // AllCMSWriterEndpoints is the canonical iteration order for the
@@ -123,7 +154,9 @@ var AllCMSWriterEndpoints = []CMSWriterEndpoint{
 	CMSWriterBaseWordAudioUpdate,
 	CMSWriterBaseWordMeaningNull,
 	CMSWriterDictionarySenseTranslationNull,
-	// XXXXX-B/C/D blocks queued; will append here as they ship.
+	// XXXXX-B atomic-pair composite block:
+	CMSWriterBaseWordTranslationUpsert,
+	// XXXXX-C/D blocks queued; will append here as they ship.
 }
 
 // IsKnownCMSWriterEndpoint returns true when wire is a registered
