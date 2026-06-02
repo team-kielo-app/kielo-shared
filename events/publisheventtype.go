@@ -145,11 +145,138 @@ const (
 
 // System events (direct-publish only — no outbox mirror).
 const (
-	// EventSystemNotification is a generic admin-triggered direct push
-	// (broadcasts, force-app-update prompts, scheduled maintenance
-	// warnings). Producer: admin handler. Consumer:
-	// kielo-communications-service push handler.
+	// EventSystemNotification was declared in anticipation of an
+	// admin-triggered direct push handler that was never built.
+	// Sweep ZH (2026-06-03) confirmed via empirical recon: ZERO
+	// producers of system.notification.v1 exist in the monorepo;
+	// the wire string is referenced only in this SoT, consumer
+	// switch-case, subscription wiring, contract test, ADR docs.
+	// Kept here for one more release cycle as Tier-1B vestigial
+	// scaffold; retirement queued (drop consumer + subscription +
+	// contract test refs + this constant) once product confirms
+	// no future admin-broadcast Pub/Sub use case planned.
 	EventSystemNotification PublishEventType = "system.notification.v1"
+)
+
+// Achievement events (direct-publish path, user-service producer).
+// Sweep ZI-B.1 (2026-06-03): typed constants for previously-untyped
+// wire strings surfaced by external recon (chatgpt Finding 2). The
+// IIII migration drained 10 of 11 publish sites in kielo-user-service/
+// internal/pubsub/client.go but missed this one. All other Publish*
+// helpers in that file use sharedevents.Event*.String().
+const (
+	// EventUserAchievementAwarded fires when a user earns an
+	// achievement. Producer: kielo-user-service achievement handler.
+	// Consumer: kielo-communications-service push handler
+	// (HandleAchievementAwardedEvent — Sweep OOOO PerDeviceContent
+	// wired for per-device localization).
+	EventUserAchievementAwarded PublishEventType = "user.achievement.awarded.v1"
+
+	// EventUserNotificationCreated fires after a notification inbox
+	// row is created. Producer: kielo-user-service notification path.
+	// Consumer: kielo-communications-service notification_events.go.
+	EventUserNotificationCreated PublishEventType = "user.notification.created.v1"
+)
+
+// Auth events (direct-publish path, auth-service producer).
+// Sweep ZI-B.1: typed constants for previously-untyped wire strings
+// emitted by kielo-auth-service. Pre-ZI all 3 were raw literals.
+const (
+	// EventUserPasswordResetRequested fires when a user requests a
+	// password-reset email. Producer: kielo-auth-service ForgotPassword.
+	// Consumer: kielo-communications-service email dispatch
+	// (HandlePasswordResetEvent at pubsub_handler.go:549).
+	EventUserPasswordResetRequested PublishEventType = "user.password.reset.requested.v1"
+
+	// EventUserAccountDeleted was declared by auth-service DeleteAccount
+	// but has NO Pub/Sub subscription anywhere — confirmed via empirical
+	// recon. Producer fires; no consumer routes. Vestigial dead-emit.
+	// Tier-1B retirement queued (remove publish call site + drop this
+	// constant + iteration slot) once product confirms no future
+	// account-deletion-event use case planned. See deflection comments
+	// at kielo-user-service/internal/service/user_event_handler.go:57
+	// and kielo-communications-service/internal/handlers/pubsub_handler.go:1039.
+	EventUserAccountDeleted PublishEventType = "user.account.deleted.v1"
+
+	// EventUserRegistrationConfirmed fires after a user verifies their
+	// email post-registration. Producer: kielo-auth-service VerifyEmail.
+	// Consumer: kielo-communications-service welcome-email dispatch
+	// (HandleRegistrationEvent at pubsub_handler.go:1081) + kielo-user-
+	// service post-registration provisioning hook (user_event_handler.go:59).
+	EventUserRegistrationConfirmed PublishEventType = "user.registration.confirmed.v1"
+)
+
+// Content + media events (direct-publish path, cms / media-upload-api /
+// media-processor producers). Sweep ZI-B.1: typed constants for the
+// content + media pipeline event wire strings. Pre-ZI all raw literals.
+const (
+	// EventContentArticleSubmitted fires when cms creates an article
+	// version pending ingest. Producer: kielo-cms article-create handler.
+	// Consumer: kielo-ingest-processor (Python; subscription
+	// `kielo-ingest-processor-pull-sub`).
+	EventContentArticleSubmitted PublishEventType = "content.article.submitted.v1"
+
+	// EventCMSMediaRelocate fires when cms requests media-processor to
+	// move a media asset between buckets. Producer: kielo-cms. Consumer:
+	// kielo-media-processor.
+	EventCMSMediaRelocate PublishEventType = "cms.media.relocate.v1"
+
+	// EventVideoCreated fires when cms creates a video content row
+	// pending media-processor pipeline. Producer: kielo-cms. Consumer:
+	// kielo-ingest-processor + kielo-media-processor.
+	EventVideoCreated PublishEventType = "video.created.v1"
+
+	// EventMediaUploaded fires when an upload completes + media row
+	// is created. Producer: kielo-cms media-create handler (post-
+	// processed upload). Consumer: kielo-media-processor.
+	EventMediaUploaded PublishEventType = "media.uploaded.v1"
+
+	// EventMediaProcessing fires when kielo-media-upload-api hands
+	// off a freshly-uploaded blob to the media-processor pipeline.
+	// Producer: kielo-media-upload-api. Consumer: kielo-media-processor.
+	EventMediaProcessing PublishEventType = "media.processing.v1"
+
+	// EventMediaProcessed fires when kielo-media-processor completes
+	// processing (transcoding/thumbnailing/etc.). Producer:
+	// kielo-media-processor. Consumer: kielo-cms + kielo-content-service.
+	EventMediaProcessed PublishEventType = "media.processed.v1"
+)
+
+// CMS outbox-drained events (mirror in PublishEventType SoT so the
+// kielo-cms direct-publish path can typed-reference them). These wire
+// strings ALSO appear in outboxeventtype.go because the canonical
+// emit path is via the outbox-drainer (Sweep SSS-C). Sweep ZI-B.1
+// adds direct-publish typed mirrors for the cms/internal/pubsub/
+// client.go raw literals — same Direct-suffix pattern as the
+// EventUserProfileUpdatedDirect / EventUserDeletedDirect mirrors.
+const (
+	// EventCMSContentPublishedDirect is the direct-publish mirror of
+	// EventCMSContentPublished (outboxeventtype.go). Same wire string.
+	// SSS-C AGENTS row documents the known at-most-once durability gap:
+	// kielo-cms emits this from internal/pubsub/client.go DIRECTLY (no
+	// outbox row). When outbox-drained becomes the canonical path,
+	// retire this constant.
+	EventCMSContentPublishedDirect PublishEventType = "cms.content.published.v1"
+
+	// EventCMSContentDeletedDirect is the direct-publish mirror of
+	// EventCMSContentDeleted (outboxeventtype.go). Same wire string.
+	// Same TTT-I durability gap as above.
+	EventCMSContentDeletedDirect PublishEventType = "cms.content.deleted.v1"
+)
+
+// Mobile-BFF dead-emit (vestigial). Sweep ZI-B.1: declared so the
+// existing gate catches future typo drift; iteration slot below
+// preserves the contract until ADR-011 spine evolution catches up
+// or product confirms removal.
+const (
+	// EventConversationStarted is emitted by kielo-mobile-bff per
+	// ADR-011 §D2 but has NO Pub/Sub subscription anywhere. ADR-011
+	// line 27 documents this as an intentional "blind spot in
+	// recommendation engine" — the producer fires for telemetry
+	// completeness but no consumer routes. When the spine-side
+	// conversation.session_completed lands per ADR-011 Phase 5, retire
+	// this constant + the producer call site together.
+	EventConversationStarted PublishEventType = "conversation.started.v1"
 )
 
 // AllPublishEventTypes is the canonical iteration order. Used by the
@@ -157,6 +284,7 @@ const (
 // code matches a value here, and by operator tooling that needs to
 // enumerate every event_type the system can directly publish.
 var AllPublishEventTypes = []PublishEventType{
+	// Purchase events (kielo-user-service → kielo-communications-service)
 	EventPurchaseConfirmation,
 	EventPurchaseIssue,
 	EventPurchaseCancellation,
@@ -164,10 +292,27 @@ var AllPublishEventTypes = []PublishEventType{
 	EventPurchaseUncanceled,
 	EventPurchaseProductChange,
 	EventPurchaseExpired,
+	// User events — direct-publish mirrors of outbox events
 	EventUserProfileUpdatedDirect,
 	EventUserDeletedDirect,
 	EventUserLearningItemSavedDirect,
+	// System events
 	EventSystemNotification,
+	// Sweep ZI-B.1 additions (chatgpt Finding 2 closure)
+	EventUserAchievementAwarded,
+	EventUserNotificationCreated,
+	EventUserPasswordResetRequested,
+	EventUserAccountDeleted,
+	EventUserRegistrationConfirmed,
+	EventContentArticleSubmitted,
+	EventCMSMediaRelocate,
+	EventVideoCreated,
+	EventMediaUploaded,
+	EventMediaProcessing,
+	EventMediaProcessed,
+	EventCMSContentPublishedDirect,
+	EventCMSContentDeletedDirect,
+	EventConversationStarted,
 }
 
 // IsKnownPublishEventType returns true when s matches a canonical
