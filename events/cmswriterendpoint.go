@@ -140,6 +140,60 @@ const (
 	//   - dictionary_enrichment.py:enrich_dictionary_entries site 9 (back-fill, senses=[])
 	// CMS handler: POST /internal/klearn/base-words/:base_word_id/translation
 	CMSWriterBaseWordTranslationUpsert CMSWriterEndpoint = "base_word.translation.upsert.v1"
+
+	// Sweep XXXXX-C (2026-06-02) — vector_embedding writes for
+	// cms_<lang>.base_words. Pre-XXXXX-C the engine issued a
+	// per-row `UPDATE cms_<lang>.base_words SET vector_embedding =
+	// CAST(:embedding AS vector)` from 4 sites (worker_router
+	// `enrich_words`, `enrich_words_by_ids` post-translation phase,
+	// `enrich_words_with_translations` post-translation phase,
+	// `word_enrichment._run_embedding_enrichment_for_active_language`).
+	// All 4 sites already iterate per-row inside a worker loop;
+	// XXXXX-C ships both a single-row and a batch endpoint so the
+	// per-row loops collapse into one HTTP call per batch (Sweep
+	// AAAAA-class N-RTT collapse opportunity).
+	//
+	// The single endpoint exists for parity with the per-row writer
+	// shape; the batch endpoint is the canonical hot path. Each
+	// composite batch commits cms-side in a SINGLE pgx tx (matches
+	// Sweep BBB tx-split: translation tx commits BEFORE embedding
+	// tx, but the batch shape itself doesn't split — all embeddings
+	// in the batch share atomicity).
+	//
+	// Engine consumers:
+	//   - internal_router.py:enrich_words site 1 (worker, loop over N rows)
+	//   - internal_router.py:enrich_words_by_ids site 5 (post-translation, loop)
+	//   - internal_router.py:enrich_words_with_translations site 8 (post-translation, loop)
+	//   - word_enrichment.py:_run_embedding_enrichment_for_active_language site 10 (periodic worker, loop)
+	// CMS handler (single): PATCH /internal/klearn/base-words/:base_word_id/embedding
+	// CMS handler (batch):  POST  /internal/klearn/base-words/embeddings/batch
+	CMSWriterBaseWordEmbeddingUpdate CMSWriterEndpoint = "base_word.embedding.update.v1"
+	CMSWriterBaseWordEmbeddingBatch  CMSWriterEndpoint = "base_word.embedding.batch.v1"
+
+	// Sweep XXXXX-D (2026-06-02) — large-payload upserts that
+	// previously executed via search-path-resolved unqualified SQL
+	// against cms_<lang>.dictionary_enrichments, .word_forms, and
+	// .dictionary_senses (the SSSSS "+1/+2/+3 stale lines" sites
+	// that the original 16-site grep missed). Each endpoint mirrors
+	// the pre-XXXXX-D _upsert_*() helper byte-for-byte: same UPSERT
+	// ON CONFLICT shape, same COALESCE-preserve semantics, same
+	// composite-PK convention.
+	//
+	// Engine consumers:
+	//   - dictionary_enrichment.py:_upsert_dictionary_enrichment (+1 site)
+	//   - dictionary_enrichment.py:_upsert_word_forms (+2 site)
+	//   - dictionary_enrichment.py:_upsert_dictionary_senses (+3 site)
+	// Site 13 (topic_list_generation INSERT cms_<target_lang>.base_words)
+	// migrates to the existing POST /internal/klearn/base-words
+	// CreateBaseWord endpoint — no new constant needed.
+	//
+	// CMS handlers:
+	//   PUT /internal/klearn/base-words/:base_word_id/enrichment
+	//   PUT /internal/klearn/base-words/:base_word_id/word-forms
+	//   PUT /internal/klearn/base-words/:base_word_id/senses
+	CMSWriterDictionaryEnrichmentUpsert CMSWriterEndpoint = "dictionary_enrichment.upsert.v1"
+	CMSWriterWordFormsUpsert            CMSWriterEndpoint = "word_forms.upsert.v1"
+	CMSWriterDictionarySenseUpsert      CMSWriterEndpoint = "dictionary_sense.upsert.v1"
 )
 
 // AllCMSWriterEndpoints is the canonical iteration order for the
@@ -156,7 +210,13 @@ var AllCMSWriterEndpoints = []CMSWriterEndpoint{
 	CMSWriterDictionarySenseTranslationNull,
 	// XXXXX-B atomic-pair composite block:
 	CMSWriterBaseWordTranslationUpsert,
-	// XXXXX-C/D blocks queued; will append here as they ship.
+	// XXXXX-C embedding endpoints block:
+	CMSWriterBaseWordEmbeddingUpdate,
+	CMSWriterBaseWordEmbeddingBatch,
+	// XXXXX-D large-payload upserts block:
+	CMSWriterDictionaryEnrichmentUpsert,
+	CMSWriterWordFormsUpsert,
+	CMSWriterDictionarySenseUpsert,
 }
 
 // IsKnownCMSWriterEndpoint returns true when wire is a registered

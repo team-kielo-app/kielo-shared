@@ -99,6 +99,87 @@ cms_<lang>.dictionary_senses.translation; key is
 CMS_WRITER_BASE_WORD_TRANSLATION_UPSERT: CMSWriterEndpoint = CMSWriterEndpoint(
     "base_word.translation.upsert.v1"
 )
+
+
+# Sweep XXXXX-C (2026-06-02) — embedding writes for cms_<lang>.base_words.
+# Single + batch shapes; engine consumers at 4 sites already iterate
+# per-row inside worker loops; batch endpoint collapses N RTTs to 1.
+
+CMS_WRITER_BASE_WORD_EMBEDDING_UPDATE: CMSWriterEndpoint = CMSWriterEndpoint(
+    "base_word.embedding.update.v1"
+)
+"""PATCH /internal/klearn/base-words/{base_word_id}/embedding
+
+Single-row vector_embedding UPDATE. Engine consumers prefer the batch
+shape below; this endpoint exists for parity.
+"""
+
+CMS_WRITER_BASE_WORD_EMBEDDING_BATCH: CMSWriterEndpoint = CMSWriterEndpoint(
+    "base_word.embedding.batch.v1"
+)
+"""POST /internal/klearn/base-words/embeddings/batch
+
+Batch vector_embedding UPDATE — all writes commit in a single cms-side
+transaction. Request body:
+  {"items": [{"base_word_id": "<uuid>", "vector": [float, ...]}]}
+Response:
+  {"updated": <int>, "missing": [<uuid>, ...]}
+
+Engine consumers (all worker loops, post-translation phase):
+  - internal_router.py:enrich_words (site 1)
+  - internal_router.py:enrich_words_by_ids (site 5)
+  - internal_router.py:enrich_words_with_translations (site 8)
+  - word_enrichment.py:_run_embedding_enrichment_for_active_language (site 10)
+"""
+
+
+# Sweep XXXXX-D (2026-06-02) — large-payload UPSERT endpoints that
+# previously executed via search-path-resolved unqualified SQL
+# against cms_<lang>.{dictionary_enrichments,word_forms,dictionary_senses}.
+# Site 13 (topic_list_generation INSERT cms_<target_lang>.base_words)
+# migrates to the existing POST /internal/klearn/base-words endpoint
+# — no new constant needed.
+
+CMS_WRITER_DICTIONARY_ENRICHMENT_UPSERT: CMSWriterEndpoint = CMSWriterEndpoint(
+    "dictionary_enrichment.upsert.v1"
+)
+"""PUT /internal/klearn/base-words/{base_word_id}/enrichment
+
+Upsert dictionary_enrichments row (synonyms / antonyms / confusables /
+mnemonic / paradigm / domain_tags / phrase_frames / word_cluster +
+their *_source provenance fields). COALESCE-preserve on conflict
+matches the pre-XXXXX-D engine helper byte-for-byte.
+
+Engine consumer: dictionary_enrichment.py:_upsert_dictionary_enrichment (+1).
+"""
+
+CMS_WRITER_WORD_FORMS_UPSERT: CMSWriterEndpoint = CMSWriterEndpoint(
+    "word_forms.upsert.v1"
+)
+"""PUT /internal/klearn/base-words/{base_word_id}/word-forms
+
+Batch upsert word_forms rows. Composite PK (base_word_id, language_code,
+surface_form, paradigm_slot). COALESCE-preserve on morphology; is_lemma
+unconditional EXCLUDED.
+
+Engine consumer: dictionary_enrichment.py:_upsert_word_forms (+2).
+"""
+
+CMS_WRITER_DICTIONARY_SENSE_UPSERT: CMSWriterEndpoint = CMSWriterEndpoint(
+    "dictionary_sense.upsert.v1"
+)
+"""PUT /internal/klearn/base-words/{base_word_id}/senses
+
+Batch upsert dictionary_senses rows. Composite PK (base_word_id,
+language_code, sense_order). COALESCE-preserve on translation /
+definition / usage_notes / examples / tags. Distinct from
+CMS_WRITER_BASE_WORD_TRANSLATION_UPSERT (XXXXX-B) which is the
+atomic-pair composite that bundles meaning + 1 sense; this XXXXX-D
+endpoint is the standalone N-sense UPSERT shape used by dictionary
+enrichment.
+
+Engine consumer: dictionary_enrichment.py:_upsert_dictionary_senses (+3).
+"""
 """POST /internal/klearn/base-words/{base_word_id}/translation
 
 Atomic composite: UPDATE base_words.meaning + UPSERT N dictionary_senses
@@ -139,7 +220,13 @@ ALL_CMS_WRITER_ENDPOINTS: tuple[CMSWriterEndpoint, ...] = (
     CMS_WRITER_DICTIONARY_SENSE_TRANSLATION_NULL,
     # XXXXX-B atomic-pair composite block:
     CMS_WRITER_BASE_WORD_TRANSLATION_UPSERT,
-    # XXXXX-C/D blocks queued; append in shipment order.
+    # XXXXX-C embedding endpoints block:
+    CMS_WRITER_BASE_WORD_EMBEDDING_UPDATE,
+    CMS_WRITER_BASE_WORD_EMBEDDING_BATCH,
+    # XXXXX-D large-payload upserts block:
+    CMS_WRITER_DICTIONARY_ENRICHMENT_UPSERT,
+    CMS_WRITER_WORD_FORMS_UPSERT,
+    CMS_WRITER_DICTIONARY_SENSE_UPSERT,
 )
 
 # Frozen-set form for O(1) membership tests in the validator + the
@@ -163,6 +250,11 @@ __all__ = [
     "CMS_WRITER_BASE_WORD_MEANING_NULL",
     "CMS_WRITER_DICTIONARY_SENSE_TRANSLATION_NULL",
     "CMS_WRITER_BASE_WORD_TRANSLATION_UPSERT",
+    "CMS_WRITER_BASE_WORD_EMBEDDING_UPDATE",
+    "CMS_WRITER_BASE_WORD_EMBEDDING_BATCH",
+    "CMS_WRITER_DICTIONARY_ENRICHMENT_UPSERT",
+    "CMS_WRITER_WORD_FORMS_UPSERT",
+    "CMS_WRITER_DICTIONARY_SENSE_UPSERT",
     "ALL_CMS_WRITER_ENDPOINTS",
     "is_known_cms_writer_endpoint",
 ]

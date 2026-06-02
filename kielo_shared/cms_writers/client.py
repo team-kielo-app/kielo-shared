@@ -37,10 +37,15 @@ from kielo_shared.http import internal_client_async
 
 from . import (
     CMS_WRITER_BASE_WORD_AUDIO_UPDATE,
+    CMS_WRITER_BASE_WORD_EMBEDDING_BATCH,
+    CMS_WRITER_BASE_WORD_EMBEDDING_UPDATE,
     CMS_WRITER_BASE_WORD_MEANING_NULL,
     CMS_WRITER_BASE_WORD_TRANSLATION_UPSERT,
+    CMS_WRITER_DICTIONARY_ENRICHMENT_UPSERT,
     CMS_WRITER_DICTIONARY_SENSE_TRANSLATION_NULL,
+    CMS_WRITER_DICTIONARY_SENSE_UPSERT,
     CMS_WRITER_GRAMMAR_CONCEPT_EXAMPLES_UPDATE,
+    CMS_WRITER_WORD_FORMS_UPSERT,
 )
 
 logger = logging.getLogger(__name__)
@@ -61,6 +66,15 @@ class BaseWordTranslationResult:
 
     meaning_action: CMSWriterUpdateResult
     senses_upserted: int
+
+
+@dataclass(frozen=True)
+class BaseWordEmbeddingBatchResult:
+    """Sweep XXXXX-C return shape for update_base_word_embeddings_batch.
+    Mirrors the cms-side repository.BaseWordEmbeddingBatchResult."""
+
+    updated: int
+    missing: list[str]  # base_word_ids that didn't resolve in cms_<lang>.base_words
 
 
 @dataclass(frozen=True)
@@ -268,6 +282,134 @@ class CMSWritersClient:
             senses_upserted=int(body.get("senses_upserted", 0)),
         )
 
+    async def update_base_word_embedding(
+        self,
+        base_word_id: UUID,
+        vector: list[float],
+    ) -> None:
+        """PATCH /internal/klearn/base-words/{id}/embedding (single).
+
+        Single-row vector_embedding write. Engine consumers prefer
+        the batch shape below; this method exists for parity.
+
+        CMSWriterEndpoint: base_word.embedding.update.v1
+        Raises CMSWriterNotFoundError on 404.
+        """
+        url = f"{self.cms_service_url}/internal/klearn/base-words/{base_word_id}/embedding"
+        response = await self._client.patch(url, json={"vector": vector})
+        if response.status_code == 404:
+            raise CMSWriterNotFoundError(
+                endpoint=CMS_WRITER_BASE_WORD_EMBEDDING_UPDATE,
+                resource_id=str(base_word_id),
+            )
+        response.raise_for_status()
+
+    async def update_base_word_embeddings_batch(
+        self,
+        items: list[dict[str, Any]],
+    ) -> "BaseWordEmbeddingBatchResult":
+        """POST /internal/klearn/base-words/embeddings/batch.
+
+        Sweep XXXXX-C N-RTT collapse — all writes commit atomically
+        in a single cms-side transaction. Engine consumers (4 worker
+        loops) replace per-row HTTP calls with one batch call.
+
+        Args:
+          items: list of {"base_word_id": str, "vector": list[float]}.
+            Empty items list is a valid no-op.
+
+        Returns BaseWordEmbeddingBatchResult with .updated count and
+        .missing list of base_word_ids that didn't resolve in
+        cms_<lang>.base_words. Missing IDs are NOT errors — engine
+        callers log them but the batch still commits successfully
+        for the items that DID resolve.
+
+        CMSWriterEndpoint: base_word.embedding.batch.v1
+        """
+        url = f"{self.cms_service_url}/internal/klearn/base-words/embeddings/batch"
+        response = await self._client.post(url, json={"items": items})
+        response.raise_for_status()
+        body = response.json()
+        return BaseWordEmbeddingBatchResult(
+            updated=int(body.get("updated", 0)),
+            missing=list(body.get("missing") or []),
+        )
+
+    async def upsert_dictionary_enrichment(
+        self,
+        base_word_id: UUID,
+        language_code: str,
+        payload: dict[str, Any],
+    ) -> None:
+        """PUT /internal/klearn/base-words/{id}/enrichment.
+
+        Sweep XXXXX-D — UPSERTs dictionary_enrichments row with
+        COALESCE-preserve semantics. The `payload` dict is the engine's
+        DictionaryEnrichmentPayload converted to JSON-shape (synonyms /
+        antonyms / confusables / mnemonic / paradigm / domain_tags /
+        phrase_frames / word_cluster + *_source provenance fields).
+
+        CMSWriterEndpoint: dictionary_enrichment.upsert.v1
+        """
+        url = f"{self.cms_service_url}/internal/klearn/base-words/{base_word_id}/enrichment"
+        body = {"language_code": language_code, **payload}
+        response = await self._client.put(url, json=body)
+        response.raise_for_status()
+
+    async def upsert_word_forms(
+        self,
+        base_word_id: UUID,
+        forms: list[dict[str, Any]],
+    ) -> int:
+        """PUT /internal/klearn/base-words/{id}/word-forms.
+
+        Sweep XXXXX-D — batch UPSERTs word_forms rows (composite PK
+        base_word_id, language_code, surface_form, paradigm_slot).
+        Each form dict: {language_code, surface_form, morphology?,
+        paradigm_slot, is_lemma}.
+
+        Returns the row count touched. Empty `forms` returns 0
+        without an HTTP call.
+
+        CMSWriterEndpoint: word_forms.upsert.v1
+        """
+        if not forms:
+            return 0
+        url = f"{self.cms_service_url}/internal/klearn/base-words/{base_word_id}/word-forms"
+        response = await self._client.put(url, json={"forms": forms})
+        response.raise_for_status()
+        body = response.json()
+        return int(body.get("updated", 0))
+
+    async def upsert_dictionary_senses(
+        self,
+        base_word_id: UUID,
+        senses: list[dict[str, Any]],
+    ) -> int:
+        """PUT /internal/klearn/base-words/{id}/senses.
+
+        Sweep XXXXX-D — batch UPSERTs dictionary_senses rows (composite
+        PK base_word_id, language_code, sense_order). Each sense dict:
+        {language_code, sense_order, translation?, definition?,
+         usage_notes?, examples?, tags?}. examples + tags are JSON-shape.
+
+        Distinct from upsert_base_word_translation (XXXXX-B) which is
+        the atomic-pair composite that ALSO writes base_words.meaning;
+        this XXXXX-D method writes ONLY the senses table.
+
+        Returns the row count touched. Empty `senses` returns 0
+        without an HTTP call.
+
+        CMSWriterEndpoint: dictionary_sense.upsert.v1
+        """
+        if not senses:
+            return 0
+        url = f"{self.cms_service_url}/internal/klearn/base-words/{base_word_id}/senses"
+        response = await self._client.put(url, json={"senses": senses})
+        response.raise_for_status()
+        body = response.json()
+        return int(body.get("updated", 0))
+
     async def null_dictionary_sense_translation_if(
         self,
         base_word_id: UUID,
@@ -314,4 +456,5 @@ __all__ = [
     "CMSWriterUpdateResult",
     "CMSWriterNotFoundError",
     "BaseWordTranslationResult",
+    "BaseWordEmbeddingBatchResult",
 ]
