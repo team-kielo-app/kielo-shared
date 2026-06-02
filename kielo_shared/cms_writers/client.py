@@ -211,7 +211,9 @@ class CMSWritersClient:
         data-quality engine should report the issue as already
         resolved). Raises CMSWriterNotFoundError on 404.
         """
-        url = f"{self.cms_service_url}/internal/klearn/base-words/{base_word_id}/meaning"
+        url = (
+            f"{self.cms_service_url}/internal/klearn/base-words/{base_word_id}/meaning"
+        )
         response = await self._client.delete(
             url, params={"if_current_value": if_current_value}
         )
