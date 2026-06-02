@@ -12,6 +12,7 @@ Usage:
         UpsertRequest,
         FetchRequest,
     )
+    from kielo_shared import resource_types as rt
 
     client = DynClient(
         base_url="http://kielo-localization:8080",
@@ -20,7 +21,7 @@ Usage:
     try:
         await client.upsert(
             UpsertRequest(
-                resource_type="article.paragraph",
+                resource_type=rt.ARTICLE_PARAGRAPH,
                 resource_id=str(paragraph_id),
                 source_version=source_version_from_text(english),
                 language_code="vi",

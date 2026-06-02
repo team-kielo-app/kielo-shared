@@ -43,6 +43,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import FrozenSet, Literal
 
+from kielo_shared import resource_types as rt
+
 # ---------------------------------------------------------------------------
 # Type aliases
 # ---------------------------------------------------------------------------
@@ -94,9 +96,7 @@ class LocalizableField:
     def __post_init__(self) -> None:
         # Cross-check that resource_type is a registered canonical
         # constant. Catches typos in the contract file itself.
-        from kielo_shared import resource_types
-
-        if not resource_types.is_valid_resource_type(self.resource_type):
+        if not rt.is_valid_resource_type(self.resource_type):
             raise ValueError(
                 f"LocalizableField.resource_type={self.resource_type!r} "
                 "is not registered in kielo_shared.resource_types."
@@ -114,28 +114,28 @@ class LocalizableField:
 #   (roadmap_lesson, lesson_id, "text") — curriculum track-roadmap
 # Sweep WW unified on title_llm so admin overrides surface uniformly.
 ROADMAP_LESSON_TITLE = LocalizableField(
-    resource_type="roadmap_lesson",
+    resource_type=rt.ROADMAP_LESSON,
     field_key="title_llm",
     seam_fn="localize_persisted_text_field",
     description="Lesson title shown in list, detail, and track-roadmap views.",
 )
 
 ROADMAP_LESSON_DESCRIPTION = LocalizableField(
-    resource_type="roadmap_lesson",
+    resource_type=rt.ROADMAP_LESSON,
     field_key="description_llm",
     seam_fn="localize_persisted_text_field",
     description="Lesson description shown in list, detail, and track-roadmap views.",
 )
 
 ROADMAP_LESSON_CONTENT_JSON = LocalizableField(
-    resource_type="roadmap_lesson",
+    resource_type=rt.ROADMAP_LESSON,
     field_key="lesson_content_json_llm",
     seam_fn="localize_persisted_json_field",
     description="Lesson content JSON tree (step content, options, etc.) — single cache row per lesson.",
 )
 
 ROADMAP_LESSON_CATEGORY = LocalizableField(
-    resource_type="roadmap_lesson",
+    resource_type=rt.ROADMAP_LESSON,
     field_key="category",
     seam_fn="localize_reusable_fields",
     description="Lesson category label (closed-vocabulary; list path).",
@@ -147,35 +147,35 @@ ROADMAP_LESSON_CATEGORY = LocalizableField(
 # ---------------------------------------------------------------------------
 
 CURRICULUM_TRACK_TITLE = LocalizableField(
-    resource_type="engine.curriculum.track_title",
+    resource_type=rt.ENGINE_CURRICULUM_TRACK_TITLE,
     field_key="title",
     seam_fn="localize_reusable_fields",
     description="Curriculum track title (e.g. 'Beginner Finnish A1-A2').",
 )
 
 CURRICULUM_TRACK_DESCRIPTION = LocalizableField(
-    resource_type="engine.curriculum.track_description",
+    resource_type=rt.ENGINE_CURRICULUM_TRACK_DESCRIPTION,
     field_key="description",
     seam_fn="localize_reusable_fields",
     description="Curriculum track description.",
 )
 
 CURRICULUM_LEVEL_TITLE = LocalizableField(
-    resource_type="engine.curriculum.level_title",
+    resource_type=rt.ENGINE_CURRICULUM_LEVEL_TITLE,
     field_key="title",
     seam_fn="localize_reusable_fields",
     description="Curriculum level title within a track.",
 )
 
 CURRICULUM_CHAPTER_TITLE = LocalizableField(
-    resource_type="engine.curriculum.chapter_title",
+    resource_type=rt.ENGINE_CURRICULUM_CHAPTER_TITLE,
     field_key="title",
     seam_fn="localize_reusable_fields",
     description="Curriculum chapter title.",
 )
 
 CURRICULUM_CHAPTER_DESCRIPTION = LocalizableField(
-    resource_type="engine.curriculum.chapter_description",
+    resource_type=rt.ENGINE_CURRICULUM_CHAPTER_DESCRIPTION,
     field_key="description",
     seam_fn="localize_reusable_fields",
     description="Curriculum chapter description.",
@@ -187,14 +187,14 @@ CURRICULUM_CHAPTER_DESCRIPTION = LocalizableField(
 # ---------------------------------------------------------------------------
 
 CONCEPT_HUB_TITLE = LocalizableField(
-    resource_type="engine.concept_hub.title",
+    resource_type=rt.ENGINE_CONCEPT_HUB_TITLE,
     field_key="",  # localize_text_via_seam uses empty field_key
     seam_fn="localize_text_via_seam",
     description="Concept-hub title (detail surface).",
 )
 
 CONCEPT_HUB_TITLE_PERSISTED = LocalizableField(
-    resource_type="concept_hub",
+    resource_type=rt.CONCEPT_HUB,
     field_key="title",
     seam_fn="localize_persisted_text_field",
     description=(
@@ -207,28 +207,28 @@ CONCEPT_HUB_TITLE_PERSISTED = LocalizableField(
 )
 
 CONCEPT_HUB_DESCRIPTION_PERSISTED = LocalizableField(
-    resource_type="concept_hub",
+    resource_type=rt.CONCEPT_HUB,
     field_key="description_llm",
     seam_fn="localize_persisted_text_field",
     description="Concept-hub description (persistent LLM-translated).",
 )
 
 CONCEPT_HUB_EXPLANATION_HTML = LocalizableField(
-    resource_type="concept_hub",
+    resource_type=rt.CONCEPT_HUB,
     field_key="explanation_html_llm",
     seam_fn="localize_persisted_text_field",
     description="Concept-hub explanation HTML (persistent LLM-translated).",
 )
 
 CONCEPT_HUB_COMMON_MISTAKES_JSON = LocalizableField(
-    resource_type="concept_hub",
+    resource_type=rt.CONCEPT_HUB,
     field_key="common_mistakes_json_llm",
     seam_fn="localize_persisted_json_field",
     description="Concept-hub common mistakes JSON array.",
 )
 
 CONCEPT_HUB_EXAMPLES_JSON = LocalizableField(
-    resource_type="concept_hub",
+    resource_type=rt.CONCEPT_HUB,
     field_key="examples_json",
     seam_fn="localize_reusable_json_field",
     description="Concept-hub examples JSON array.",
@@ -240,21 +240,21 @@ CONCEPT_HUB_EXAMPLES_JSON = LocalizableField(
 # ---------------------------------------------------------------------------
 
 EXERCISE_DECK_TITLE = LocalizableField(
-    resource_type="exercise_deck",
+    resource_type=rt.EXERCISE_DECK,
     field_key="title",
     seam_fn="localize_persisted_text_field",
     description="Exercise-deck title shown on concept-hub + practice-start surfaces.",
 )
 
 EXERCISE_DECK_DESCRIPTION = LocalizableField(
-    resource_type="exercise_deck",
+    resource_type=rt.EXERCISE_DECK,
     field_key="description",
     seam_fn="localize_persisted_text_field",
     description="Exercise-deck description.",
 )
 
 EXERCISE_DECK_SESSION_GOAL = LocalizableField(
-    resource_type="exercise_deck",
+    resource_type=rt.EXERCISE_DECK,
     field_key="session_goal",
     seam_fn="localize_persisted_text_field",
     description="Exercise-deck session-goal copy.",
@@ -266,14 +266,14 @@ EXERCISE_DECK_SESSION_GOAL = LocalizableField(
 # ---------------------------------------------------------------------------
 
 TOPIC_LIST_DISPLAY_NAME = LocalizableField(
-    resource_type="topic_list",
+    resource_type=rt.TOPIC_LIST,
     field_key="display_name",
     seam_fn="localize_persisted_text_field",
     description="Topic-list display name.",
 )
 
 TOPIC_LIST_DESCRIPTION = LocalizableField(
-    resource_type="topic_list",
+    resource_type=rt.TOPIC_LIST,
     field_key="description",
     seam_fn="localize_persisted_text_field",
     description="Topic-list description.",
@@ -285,14 +285,14 @@ TOPIC_LIST_DESCRIPTION = LocalizableField(
 # ---------------------------------------------------------------------------
 
 BASE_WORD_MEANING = LocalizableField(
-    resource_type="base_word",
+    resource_type=rt.BASE_WORD,
     field_key="meaning",
     seam_fn="localize_persisted_gloss_field",
     description="Base-word meaning shown in dictionary, topic-lists, reviews, etc.",
 )
 
 GRAMMAR_CONCEPT_SUPPORT_TEXT = LocalizableField(
-    resource_type="grammar_concept",
+    resource_type=rt.GRAMMAR_CONCEPT,
     field_key="support_text",
     seam_fn="localize_persisted_gloss_field",
     description="Grammar-concept meaning shown in dictionary, reviews, etc.",
@@ -304,14 +304,14 @@ GRAMMAR_CONCEPT_SUPPORT_TEXT = LocalizableField(
 # ---------------------------------------------------------------------------
 
 WORD_DECK_NAME = LocalizableField(
-    resource_type="word_deck",
+    resource_type=rt.WORD_DECK,
     field_key="name",
     seam_fn="localize_reusable_fields",
     description="Word-deck name (reusable-fields batched path).",
 )
 
 WORD_DECK_DESCRIPTION = LocalizableField(
-    resource_type="word_deck",
+    resource_type=rt.WORD_DECK,
     field_key="description",
     seam_fn="localize_reusable_fields",
     description="Word-deck description (reusable-fields batched path).",
@@ -326,35 +326,35 @@ WORD_DECK_DESCRIPTION = LocalizableField(
 # Used for closed-vocabulary translations and ad-hoc text.
 
 ENGINE_ROADMAP_LESSON_CATEGORY_SEAM = LocalizableField(
-    resource_type="engine.roadmap.lesson.category",
+    resource_type=rt.ENGINE_ROADMAP_LESSON_CATEGORY,
     field_key="",
     seam_fn="localize_text_via_seam",
     description="Lesson category (detail surface — text-as-resource_id).",
 )
 
 ENGINE_CONCEPT_HUB_SUMMARY = LocalizableField(
-    resource_type="engine.concept_hub.summary",
+    resource_type=rt.ENGINE_CONCEPT_HUB_SUMMARY,
     field_key="",
     seam_fn="localize_text_via_seam",
     description="Concept-hub summary teaser (text-as-resource_id).",
 )
 
 ENGINE_CONCEPT_HUB_DESCRIPTION_SEAM = LocalizableField(
-    resource_type="engine.concept_hub.description",
+    resource_type=rt.ENGINE_CONCEPT_HUB_DESCRIPTION,
     field_key="",
     seam_fn="localize_text_via_seam",
     description="Concept-hub description (summary surface — text-as-resource_id).",
 )
 
 ENGINE_CONCEPT_HUB_CATEGORY = LocalizableField(
-    resource_type="engine.concept_hub.category",
+    resource_type=rt.ENGINE_CONCEPT_HUB_CATEGORY,
     field_key="",
     seam_fn="localize_text_via_seam",
     description="Concept-hub category badge (text-as-resource_id).",
 )
 
 ENGINE_CHALLENGE_ERROR = LocalizableField(
-    resource_type="engine.challenge.error",
+    resource_type=rt.ENGINE_CHALLENGE_ERROR,
     field_key="",
     seam_fn="localize_text_via_seam",
     description="Daily-challenge non-fatal error messages (text-as-resource_id).",
@@ -364,7 +364,7 @@ ENGINE_CHALLENGE_ERROR = LocalizableField(
 # canonical constant pre-Sweep-WW; resurrected here for the
 # SubmissionResult.explanation seam routing (sessions.py).
 ENGINE_EXERCISE_EXPLANATION = LocalizableField(
-    resource_type="engine.exercise.explanation",
+    resource_type=rt.ENGINE_EXERCISE_EXPLANATION,
     field_key="",
     seam_fn="localize_text_via_seam",
     description="Exercise explanation shown as post-submission feedback.",
@@ -382,7 +382,7 @@ ENGINE_EXERCISE_EXPLANATION = LocalizableField(
 # curriculum.py:573 BUT uses an empty field_key. Both rows can
 # coexist; admin override on either row is independently applied.
 CURRICULUM_CHAPTER_TITLE_SEAM = LocalizableField(
-    resource_type="engine.curriculum.chapter_title",
+    resource_type=rt.ENGINE_CURRICULUM_CHAPTER_TITLE,
     field_key="",
     seam_fn="localize_text_via_seam",
     description="Chapter title emitted on the lesson list/detail surface.",
@@ -394,14 +394,14 @@ CURRICULUM_CHAPTER_TITLE_SEAM = LocalizableField(
 # ---------------------------------------------------------------------------
 
 KTV_VIDEO_TITLE = LocalizableField(
-    resource_type="kielotv.title",
+    resource_type=rt.KTV_VIDEO_TITLE,
     field_key="",
     seam_fn="localize_text_via_seam",
     description="kielotv video title (kielo-content-service writer).",
 )
 
 KTV_CAPTION_CUE_SUPPORT_TEXT = LocalizableField(
-    resource_type="kielotv.caption.cue",
+    resource_type=rt.KTV_CAPTION_CUE,
     field_key="support_text",
     seam_fn="localize_persisted_text_field",
     description="kielotv caption cue support-language translation.",
@@ -413,14 +413,14 @@ KTV_CAPTION_CUE_SUPPORT_TEXT = LocalizableField(
 # ---------------------------------------------------------------------------
 
 SCENARIO_TITLE = LocalizableField(
-    resource_type="scenario.title",
+    resource_type=rt.SCENARIO_TITLE,
     field_key="",
     seam_fn="localize_text_via_seam",
     description="Conversation-scenario title (dual-write keyspace).",
 )
 
 SCENARIO_DESCRIPTION = LocalizableField(
-    resource_type="scenario.description",
+    resource_type=rt.SCENARIO_DESCRIPTION,
     field_key="",
     seam_fn="localize_text_via_seam",
     description="Conversation-scenario description (Sweep WW unified read/write keyspace).",
@@ -432,7 +432,7 @@ SCENARIO_DESCRIPTION = LocalizableField(
 # ---------------------------------------------------------------------------
 
 UI_STRING = LocalizableField(
-    resource_type="ui.string",
+    resource_type=rt.UI_STRING,
     field_key="",
     seam_fn="localize_text_via_seam",
     description="UI string resolved via supportregistry seam (ADR-008).",
