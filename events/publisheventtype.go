@@ -188,15 +188,20 @@ const (
 	// (HandlePasswordResetEvent at pubsub_handler.go:549).
 	EventUserPasswordResetRequested PublishEventType = "user.password.reset.requested.v1"
 
-	// EventUserAccountDeleted was declared by auth-service DeleteAccount
-	// but has NO Pub/Sub subscription anywhere — confirmed via empirical
-	// recon. Producer fires; no consumer routes. Vestigial dead-emit.
-	// Tier-1B retirement queued (remove publish call site + drop this
-	// constant + iteration slot) once product confirms no future
-	// account-deletion-event use case planned. See deflection comments
-	// at kielo-user-service/internal/service/user_event_handler.go:57
-	// and kielo-communications-service/internal/handlers/pubsub_handler.go:1039.
-	EventUserAccountDeleted PublishEventType = "user.account.deleted.v1"
+	// Sweep ZJ-A.1 (2026-06-03): EventUserAccountDeleted RETIRED.
+	// The vestigial dead-emit declared on Sweep ZI-B.1 has been
+	// retired end-to-end:
+	//   - kielo-auth-service: publishAccountDeletedEmailEvent dropped;
+	//     DeleteAccount no longer publishes.
+	//   - SoT: this constant dropped; AllPublishEventTypes iteration
+	//     entry dropped.
+	//   - Contract tests: TestPublishEventTypeSoTNonEmpty expectedMin
+	//     decremented (24 from 25; ZJ-A.2 will further decrement when
+	//     EventConversationStarted retires in the same sweep).
+	// When the GDPR cleanup fan-out is scoped, follow the ADR-011
+	// user-action spine pattern instead of resurrecting this orphan
+	// event. The pre-retirement deflection comments at
+	// user_event_handler.go + pubsub_handler.go have been trimmed.
 
 	// EventUserRegistrationConfirmed fires after a user verifies their
 	// email post-registration. Producer: kielo-auth-service VerifyEmail.
@@ -264,20 +269,20 @@ const (
 	EventCMSContentDeletedDirect PublishEventType = "cms.content.deleted.v1"
 )
 
-// Mobile-BFF dead-emit (vestigial). Sweep ZI-B.1: declared so the
-// existing gate catches future typo drift; iteration slot below
-// preserves the contract until ADR-011 spine evolution catches up
-// or product confirms removal.
-const (
-	// EventConversationStarted is emitted by kielo-mobile-bff per
-	// ADR-011 §D2 but has NO Pub/Sub subscription anywhere. ADR-011
-	// line 27 documents this as an intentional "blind spot in
-	// recommendation engine" — the producer fires for telemetry
-	// completeness but no consumer routes. When the spine-side
-	// conversation.session_completed lands per ADR-011 Phase 5, retire
-	// this constant + the producer call site together.
-	EventConversationStarted PublishEventType = "conversation.started.v1"
-)
+// Sweep ZJ-A.2 (2026-06-03): EventConversationStarted RETIRED.
+// The mobile-bff vestigial dead-emit declared on Sweep ZI-B.1 has
+// been retired end-to-end per ADR-012 §D5 Phase 0 (line 130) +
+// Phase 6 (line 368). The replacement event is the ADR-011 spine
+// conversation.session_completed action emitted by the convo
+// orchestrator (Phase 5 work, separate sweep). Pre-ZJ chain:
+//   - kielo-mobile-bff: PublishConversationStarted method dropped;
+//     ConversationStartedEvent struct dropped; conversations handler
+//     no longer publishes after StartConversationSession.
+//   - SoT: this constant dropped; AllPublishEventTypes iteration
+//     entry dropped.
+//   - Contract tests: TestPublishEventTypeSoTNonEmpty expectedMin
+//     decremented to 23 (was 25; ZJ-A.1 already dropped
+//     EventUserAccountDeleted).
 
 // AllPublishEventTypes is the canonical iteration order. Used by the
 // contract test (Sweep IIII) to assert every literal in producer
@@ -302,7 +307,7 @@ var AllPublishEventTypes = []PublishEventType{
 	EventUserAchievementAwarded,
 	EventUserNotificationCreated,
 	EventUserPasswordResetRequested,
-	EventUserAccountDeleted,
+	// EventUserAccountDeleted retired Sweep ZJ-A.1
 	EventUserRegistrationConfirmed,
 	EventContentArticleSubmitted,
 	EventCMSMediaRelocate,
@@ -312,7 +317,7 @@ var AllPublishEventTypes = []PublishEventType{
 	EventMediaProcessed,
 	EventCMSContentPublishedDirect,
 	EventCMSContentDeletedDirect,
-	EventConversationStarted,
+	// EventConversationStarted retired Sweep ZJ-A.2
 }
 
 // IsKnownPublishEventType returns true when s matches a canonical
