@@ -65,3 +65,8 @@ __pycache__/
 *.py[cod]
 *$py.class
 .pytest_cache/
+
+# Sweep ZT: pytest-cov sqlite artifact, written by integration-test +
+# unit-test runs. Per-process binary file, never tracked.
+.coverage
+.coverage.*
