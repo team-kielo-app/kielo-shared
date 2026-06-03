@@ -136,11 +136,6 @@ const (
 	// EventUserDeleted (outboxeventtype.go). Same wire string;
 	// distinct constant for producer/consumer differentiation.
 	EventUserDeletedDirect PublishEventType = "user.deleted.v1"
-
-	// EventUserLearningItemSavedDirect is the direct-publish mirror of
-	// EventUserLearningItemSaved (outboxeventtype.go). Same wire
-	// string; distinct constant.
-	EventUserLearningItemSavedDirect PublishEventType = "user.learning_item.saved.v1"
 )
 
 // System events (direct-publish only — no outbox mirror).
@@ -300,7 +295,6 @@ var AllPublishEventTypes = []PublishEventType{
 	// User events — direct-publish mirrors of outbox events
 	EventUserProfileUpdatedDirect,
 	EventUserDeletedDirect,
-	EventUserLearningItemSavedDirect,
 	// System events
 	EventSystemNotification,
 	// Sweep ZI-B.1 additions (chatgpt Finding 2 closure)

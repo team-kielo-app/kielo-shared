@@ -88,11 +88,6 @@ const (
 	// preference refresh).
 	EventUserProfileUpdated OutboxEventType = "user.profile.updated.v1"
 
-	// EventUserLearningItemSaved fires when a user saves a word,
-	// article, or other learning item to their study list. Consumed
-	// by kielo-content-service (recommendation ranker signal).
-	EventUserLearningItemSaved OutboxEventType = "user.learning_item.saved.v1"
-
 	// EventUserDeleted fires on hard account deletion. Consumed by
 	// every downstream service for cascade cleanup.
 	EventUserDeleted OutboxEventType = "user.deleted.v1"
@@ -106,7 +101,6 @@ var AllOutboxEventTypes = []OutboxEventType{
 	EventCMSContentPublished,
 	EventCMSContentDeleted,
 	EventUserProfileUpdated,
-	EventUserLearningItemSaved,
 	EventUserDeleted,
 }
 
