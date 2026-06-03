@@ -11,9 +11,9 @@
 // webhook_processor.go), but it broke the typed-vocab SoT 3-anchor
 // completeness invariant (Sweep ZK-B Layer 31):
 //
-//   (a) Producer-side closed-set scan        ✗ missing
-//   (b) Go↔Python parity                     N/A (no Python writer)
-//   (c) DB CHECK + OpenAPI enum parity       ✗ missing
+//	(a) Producer-side closed-set scan        ✗ missing
+//	(b) Go↔Python parity                     N/A (no Python writer)
+//	(c) DB CHECK + OpenAPI enum parity       ✗ missing
 //
 // Both missing anchors stem from the typed alias living in-service:
 // the contract test in tests/contract/ can't easily import

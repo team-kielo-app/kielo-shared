@@ -17,9 +17,9 @@
 // Sweep ZQ Gap 3 closes this gap with the full Sweep-VVV-shape
 // 3-anchor ship:
 //
-//   (a) Producer-side closed-set scan ✓ TestScenarioSourceTypeNoStaleLiteralsInProducer
-//   (b) Go↔Python parity              ✓ TestScenarioSourceTypeGoPythonParity
-//   (c) DB CHECK + OpenAPI enum parity ✓ TestScenarioSourceTypeMatchesV084CHECK
+//	(a) Producer-side closed-set scan ✓ TestScenarioSourceTypeNoStaleLiteralsInProducer
+//	(b) Go↔Python parity              ✓ TestScenarioSourceTypeGoPythonParity
+//	(c) DB CHECK + OpenAPI enum parity ✓ TestScenarioSourceTypeMatchesV084CHECK
 //
 // (OpenAPI enum N/A today — source_type is response-only via the
 // /scenarios/by-source query; no writeable enum list exists.)
