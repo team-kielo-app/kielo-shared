@@ -130,8 +130,12 @@ EVENT_PARAGRAPH_TTS_PLAYED: Final[BehavioralEventType] = "paragraph_tts_played"
 EVENT_EXERCISE_ATTEMPTED: Final[BehavioralEventType] = "exercise_attempted"
 EVENT_LESSON_STARTED: Final[BehavioralEventType] = "lesson_started"
 EVENT_LESSON_COMPLETED: Final[BehavioralEventType] = "lesson_completed"
-EVENT_CONVERSATION_SESSION_COMPLETED: Final[BehavioralEventType] = "conversation_session_completed"
-EVENT_CONVERSATION_TURN_EVALUATED: Final[BehavioralEventType] = "conversation_turn_evaluated"
+EVENT_CONVERSATION_SESSION_COMPLETED: Final[BehavioralEventType] = (
+    "conversation_session_completed"
+)
+EVENT_CONVERSATION_TURN_EVALUATED: Final[BehavioralEventType] = (
+    "conversation_turn_evaluated"
+)
 EVENT_ITEM_UNSAVED: Final[BehavioralEventType] = "item_unsaved"
 EVENT_STUDY_LIST_CREATED: Final[BehavioralEventType] = "study_list_created"
 EVENT_STUDY_LIST_UPDATED: Final[BehavioralEventType] = "study_list_updated"
@@ -144,13 +148,27 @@ EVENT_RECOMMENDATION_DISMISSED: Final[BehavioralEventType] = "recommendation_dis
 # attributes. Producers: core/messaging.py and sibling generation paths.
 # ----------------------------------------------------------------------
 
-TOPIC_EVENT_BEHAVIORAL_EVENT_V1: Final[BehavioralEventType] = "klearn.behavioral_event.v1"
-TOPIC_EVENT_LESSON_GENERATION_V1: Final[BehavioralEventType] = "klearn.lesson.generation.requested.v1"
-TOPIC_EVENT_CHALLENGE_GENERATION_V1: Final[BehavioralEventType] = "klearn.challenge.generation.requested.v1"
-TOPIC_EVENT_CONCEPT_HUB_GENERATION_V1: Final[BehavioralEventType] = "klearn.concept_hub.generation.requested.v1"
-TOPIC_EVENT_TOPIC_LIST_GENERATION_V1: Final[BehavioralEventType] = "klearn.topic_list.generation.requested.v1"
-TOPIC_EVENT_EXERCISE_REVALIDATION_V1: Final[BehavioralEventType] = "kielo.exercise_revalidation.batch.v1"
-TOPIC_EVENT_DATA_QUALITY_SWEEP_V1: Final[BehavioralEventType] = "kielo.data_quality.sweep.v1"
+TOPIC_EVENT_BEHAVIORAL_EVENT_V1: Final[BehavioralEventType] = (
+    "klearn.behavioral_event.v1"
+)
+TOPIC_EVENT_LESSON_GENERATION_V1: Final[BehavioralEventType] = (
+    "klearn.lesson.generation.requested.v1"
+)
+TOPIC_EVENT_CHALLENGE_GENERATION_V1: Final[BehavioralEventType] = (
+    "klearn.challenge.generation.requested.v1"
+)
+TOPIC_EVENT_CONCEPT_HUB_GENERATION_V1: Final[BehavioralEventType] = (
+    "klearn.concept_hub.generation.requested.v1"
+)
+TOPIC_EVENT_TOPIC_LIST_GENERATION_V1: Final[BehavioralEventType] = (
+    "klearn.topic_list.generation.requested.v1"
+)
+TOPIC_EVENT_EXERCISE_REVALIDATION_V1: Final[BehavioralEventType] = (
+    "kielo.exercise_revalidation.batch.v1"
+)
+TOPIC_EVENT_DATA_QUALITY_SWEEP_V1: Final[BehavioralEventType] = (
+    "kielo.data_quality.sweep.v1"
+)
 
 # ----------------------------------------------------------------------
 # Tier E — concept-hub notification event_types (sibling vocabulary)
@@ -160,7 +178,9 @@ TOPIC_EVENT_DATA_QUALITY_SWEEP_V1: Final[BehavioralEventType] = "kielo.data_qual
 # ----------------------------------------------------------------------
 
 EVENT_CONCEPT_HUB_FAILED: Final[BehavioralEventType] = "kielolearn.concept_hub.failed"
-EVENT_CONCEPT_HUB_GENERATED: Final[BehavioralEventType] = "kielolearn.concept_hub.generated"
+EVENT_CONCEPT_HUB_GENERATED: Final[BehavioralEventType] = (
+    "kielolearn.concept_hub.generated"
+)
 
 # ----------------------------------------------------------------------
 # Content events — direct-publish wire strings emitted by
@@ -168,7 +188,9 @@ EVENT_CONCEPT_HUB_GENERATED: Final[BehavioralEventType] = "kielolearn.concept_hu
 # Disjoint from Tier A-E (different topic, different envelope class).
 # ----------------------------------------------------------------------
 
-EVENT_CONTENT_ARTICLE_PROCESSED: Final[ContentEventType] = "content.article.processed.v1"
+EVENT_CONTENT_ARTICLE_PROCESSED: Final[ContentEventType] = (
+    "content.article.processed.v1"
+)
 EVENT_CONTENT_VIDEO_PROCESSED: Final[ContentEventType] = "content.video.processed.v1"
 
 # ----------------------------------------------------------------------
@@ -190,73 +212,87 @@ ITEM_TYPE_VIDEO: Final[ItemType] = "Video"
 # Iteration containers
 # ----------------------------------------------------------------------
 
-ALL_TIER_A_BEHAVIORAL_EVENTS: Final[FrozenSet[BehavioralEventType]] = frozenset({
-    EVENT_REVIEW_OUTCOME,
-    EVENT_EXERCISE_COMPLETED,
-    EVENT_SESSION_SUMMARY,
-    EVENT_CONVERSATION_SIGNAL,
-    EVENT_ERROR_IDENTIFIED,
-})
+ALL_TIER_A_BEHAVIORAL_EVENTS: Final[FrozenSet[BehavioralEventType]] = frozenset(
+    {
+        EVENT_REVIEW_OUTCOME,
+        EVENT_EXERCISE_COMPLETED,
+        EVENT_SESSION_SUMMARY,
+        EVENT_CONVERSATION_SIGNAL,
+        EVENT_ERROR_IDENTIFIED,
+    }
+)
 
-ALL_TIER_B_BEHAVIORAL_EVENTS: Final[FrozenSet[BehavioralEventType]] = frozenset({
-    EVENT_ITEM_STATUS_CHANGED,
-    EVENT_ITEM_SAVED,
-    EVENT_CONTENT_VIEWED,
-    EVENT_RECOMMENDATION_SHOWN,
-    EVENT_RECOMMENDATION_TAPPED,
-    EVENT_LEARNING_VIEWED_ITEM_V1,
-})
+ALL_TIER_B_BEHAVIORAL_EVENTS: Final[FrozenSet[BehavioralEventType]] = frozenset(
+    {
+        EVENT_ITEM_STATUS_CHANGED,
+        EVENT_ITEM_SAVED,
+        EVENT_CONTENT_VIEWED,
+        EVENT_RECOMMENDATION_SHOWN,
+        EVENT_RECOMMENDATION_TAPPED,
+        EVENT_LEARNING_VIEWED_ITEM_V1,
+    }
+)
 
-ALL_TIER_C_BEHAVIORAL_EVENTS: Final[FrozenSet[BehavioralEventType]] = frozenset({
-    EVENT_ARTICLE_READ,
-    EVENT_ARTICLE_VIEWED,
-    EVENT_WORD_VIEWED,
-    EVENT_DICTIONARY_LOOKUP,
-    EVENT_GRAMMAR_CONCEPT_VIEWED,
-    EVENT_KIELOTV_VIDEO_WATCHED,
-    EVENT_KIELOTV_VIDEO_VIEWED,
-    EVENT_PARAGRAPH_TTS_PLAYED,
-    EVENT_EXERCISE_ATTEMPTED,
-    EVENT_LESSON_STARTED,
-    EVENT_LESSON_COMPLETED,
-    EVENT_CONVERSATION_SESSION_COMPLETED,
-    EVENT_CONVERSATION_TURN_EVALUATED,
-    EVENT_ITEM_UNSAVED,
-    EVENT_STUDY_LIST_CREATED,
-    EVENT_STUDY_LIST_UPDATED,
-    EVENT_FLASHCARD_DECK_CREATED,
-    EVENT_RECOMMENDATION_DISMISSED,
-})
+ALL_TIER_C_BEHAVIORAL_EVENTS: Final[FrozenSet[BehavioralEventType]] = frozenset(
+    {
+        EVENT_ARTICLE_READ,
+        EVENT_ARTICLE_VIEWED,
+        EVENT_WORD_VIEWED,
+        EVENT_DICTIONARY_LOOKUP,
+        EVENT_GRAMMAR_CONCEPT_VIEWED,
+        EVENT_KIELOTV_VIDEO_WATCHED,
+        EVENT_KIELOTV_VIDEO_VIEWED,
+        EVENT_PARAGRAPH_TTS_PLAYED,
+        EVENT_EXERCISE_ATTEMPTED,
+        EVENT_LESSON_STARTED,
+        EVENT_LESSON_COMPLETED,
+        EVENT_CONVERSATION_SESSION_COMPLETED,
+        EVENT_CONVERSATION_TURN_EVALUATED,
+        EVENT_ITEM_UNSAVED,
+        EVENT_STUDY_LIST_CREATED,
+        EVENT_STUDY_LIST_UPDATED,
+        EVENT_FLASHCARD_DECK_CREATED,
+        EVENT_RECOMMENDATION_DISMISSED,
+    }
+)
 
-ALL_TIER_D_TOPIC_EVENTS: Final[FrozenSet[BehavioralEventType]] = frozenset({
-    TOPIC_EVENT_BEHAVIORAL_EVENT_V1,
-    TOPIC_EVENT_LESSON_GENERATION_V1,
-    TOPIC_EVENT_CHALLENGE_GENERATION_V1,
-    TOPIC_EVENT_CONCEPT_HUB_GENERATION_V1,
-    TOPIC_EVENT_TOPIC_LIST_GENERATION_V1,
-    TOPIC_EVENT_EXERCISE_REVALIDATION_V1,
-    TOPIC_EVENT_DATA_QUALITY_SWEEP_V1,
-})
+ALL_TIER_D_TOPIC_EVENTS: Final[FrozenSet[BehavioralEventType]] = frozenset(
+    {
+        TOPIC_EVENT_BEHAVIORAL_EVENT_V1,
+        TOPIC_EVENT_LESSON_GENERATION_V1,
+        TOPIC_EVENT_CHALLENGE_GENERATION_V1,
+        TOPIC_EVENT_CONCEPT_HUB_GENERATION_V1,
+        TOPIC_EVENT_TOPIC_LIST_GENERATION_V1,
+        TOPIC_EVENT_EXERCISE_REVALIDATION_V1,
+        TOPIC_EVENT_DATA_QUALITY_SWEEP_V1,
+    }
+)
 
-ALL_TIER_E_NOTIFICATION_EVENTS: Final[FrozenSet[BehavioralEventType]] = frozenset({
-    EVENT_CONCEPT_HUB_FAILED,
-    EVENT_CONCEPT_HUB_GENERATED,
-})
+ALL_TIER_E_NOTIFICATION_EVENTS: Final[FrozenSet[BehavioralEventType]] = frozenset(
+    {
+        EVENT_CONCEPT_HUB_FAILED,
+        EVENT_CONCEPT_HUB_GENERATED,
+    }
+)
 
-ALL_CONTENT_EVENTS: Final[FrozenSet[ContentEventType]] = frozenset({
-    EVENT_CONTENT_ARTICLE_PROCESSED,
-    EVENT_CONTENT_VIDEO_PROCESSED,
-})
+ALL_CONTENT_EVENTS: Final[FrozenSet[ContentEventType]] = frozenset(
+    {
+        EVENT_CONTENT_ARTICLE_PROCESSED,
+        EVENT_CONTENT_VIDEO_PROCESSED,
+    }
+)
 
-ALL_ITEM_TYPES: Final[FrozenSet[ItemType]] = frozenset({
-    ITEM_TYPE_BASE_WORD,
-    ITEM_TYPE_GRAMMAR_CONCEPT,
-    ITEM_TYPE_CONCEPT_HUB,
-    ITEM_TYPE_ROADMAP_LESSON,
-    ITEM_TYPE_TOPIC_LIST,
-    ITEM_TYPE_ARTICLE,
-    ITEM_TYPE_VIDEO,
-})
+ALL_ITEM_TYPES: Final[FrozenSet[ItemType]] = frozenset(
+    {
+        ITEM_TYPE_BASE_WORD,
+        ITEM_TYPE_GRAMMAR_CONCEPT,
+        ITEM_TYPE_CONCEPT_HUB,
+        ITEM_TYPE_ROADMAP_LESSON,
+        ITEM_TYPE_TOPIC_LIST,
+        ITEM_TYPE_ARTICLE,
+        ITEM_TYPE_VIDEO,
+    }
+)
 
 
 def all_behavioral_event_types() -> FrozenSet[BehavioralEventType]:

@@ -120,36 +120,38 @@ ACHIEVEMENT_CODE_TOP_LEARNER_MONTHLY: Final[AchievementCode] = "top_learner_mont
 # (matches Go's AllAchievementCodes slice as a SET, not as an ordering).
 # ----------------------------------------------------------------------
 
-ALL_ACHIEVEMENT_CODES: Final[FrozenSet[AchievementCode]] = frozenset({
-    # Word mastery
-    ACHIEVEMENT_CODE_FIRST_WORD,
-    ACHIEVEMENT_CODE_WORDS_10,
-    ACHIEVEMENT_CODE_WORDS_50,
-    ACHIEVEMENT_CODE_WORDS_100,
-    ACHIEVEMENT_CODE_WORDS_500,
-    # Grammar mastery
-    ACHIEVEMENT_CODE_FIRST_GRAMMAR,
-    ACHIEVEMENT_CODE_GRAMMAR_10,
-    ACHIEVEMENT_CODE_GRAMMAR_500,
-    # Exercise completion
-    ACHIEVEMENT_CODE_EXERCISES_100,
-    ACHIEVEMENT_CODE_EXERCISES_500,
-    ACHIEVEMENT_CODE_EXERCISES_1000,
-    # Streak
-    ACHIEVEMENT_CODE_STREAK_3,
-    ACHIEVEMENT_CODE_STREAK_7,
-    ACHIEVEMENT_CODE_STREAK_30,
-    # Special
-    ACHIEVEMENT_CODE_CONCEPT_HUB_CREATOR,
-    ACHIEVEMENT_CODE_FIRST_PAYING_USER,
-    # Percentile rank (batch leaderboard)
-    ACHIEVEMENT_CODE_TOP_10_PERCENT,
-    ACHIEVEMENT_CODE_TOP_5_PERCENT,
-    ACHIEVEMENT_CODE_TOP_1_PERCENT,
-    # Leaderboard winner
-    ACHIEVEMENT_CODE_TOP_LEARNER_WEEKLY,
-    ACHIEVEMENT_CODE_TOP_LEARNER_MONTHLY,
-})
+ALL_ACHIEVEMENT_CODES: Final[FrozenSet[AchievementCode]] = frozenset(
+    {
+        # Word mastery
+        ACHIEVEMENT_CODE_FIRST_WORD,
+        ACHIEVEMENT_CODE_WORDS_10,
+        ACHIEVEMENT_CODE_WORDS_50,
+        ACHIEVEMENT_CODE_WORDS_100,
+        ACHIEVEMENT_CODE_WORDS_500,
+        # Grammar mastery
+        ACHIEVEMENT_CODE_FIRST_GRAMMAR,
+        ACHIEVEMENT_CODE_GRAMMAR_10,
+        ACHIEVEMENT_CODE_GRAMMAR_500,
+        # Exercise completion
+        ACHIEVEMENT_CODE_EXERCISES_100,
+        ACHIEVEMENT_CODE_EXERCISES_500,
+        ACHIEVEMENT_CODE_EXERCISES_1000,
+        # Streak
+        ACHIEVEMENT_CODE_STREAK_3,
+        ACHIEVEMENT_CODE_STREAK_7,
+        ACHIEVEMENT_CODE_STREAK_30,
+        # Special
+        ACHIEVEMENT_CODE_CONCEPT_HUB_CREATOR,
+        ACHIEVEMENT_CODE_FIRST_PAYING_USER,
+        # Percentile rank (batch leaderboard)
+        ACHIEVEMENT_CODE_TOP_10_PERCENT,
+        ACHIEVEMENT_CODE_TOP_5_PERCENT,
+        ACHIEVEMENT_CODE_TOP_1_PERCENT,
+        # Leaderboard winner
+        ACHIEVEMENT_CODE_TOP_LEARNER_WEEKLY,
+        ACHIEVEMENT_CODE_TOP_LEARNER_MONTHLY,
+    }
+)
 
 
 def is_valid_achievement_code(s: str) -> bool:
