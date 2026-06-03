@@ -3534,6 +3534,7 @@ class RecommendationLaunchParams(BaseModel):
 
 class RecordConversationSessionRequest(BaseModel):
     scenario_id: str
+    scenario_uuid: str | None = None
     session_id: str
     state: str
     user_id: str
@@ -3949,6 +3950,9 @@ class Scenario(BaseModel):
     scenario_content: dict[str, Any] | None = None
     slug: str
     sort_order: int
+    source_id: UUID_aliased | None = None
+    source_service: str
+    source_type: str
     status: str
     support_language_code: str | None = None
     tags: list[str] | None = None
@@ -4009,6 +4013,9 @@ class ScenarioListItem(BaseModel):
     scenario_content: dict[str, Any] | None = None
     scene_image_url: str | None = None
     slug: str
+    source_id: UUID_aliased | None = None
+    source_service: str | None = None
+    source_type: str | None = None
     support_language_code: str | None = None
     tags: list[str] | None = None
     thumbnail_url: str | None = None
@@ -6200,6 +6207,10 @@ class EffectiveUserLimitsResponse(BaseModel):
     effective_limits: list[FeatureLimitWithUsage]
     tier: str
     user_id: str
+
+
+class FindBySourceResponse(BaseModel):
+    scenarios: list[Scenario]
 
 
 class FollowUpActivities(BaseModel):
