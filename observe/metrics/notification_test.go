@@ -44,13 +44,17 @@ func TestNotificationMetrics_Names(t *testing.T) {
 		// Maintenance mode
 		{MaintenanceModeActive, "kielo_maintenance_mode_active"},
 		{MaintenanceStatusFetchTotal, "kielo_maintenance_status_fetch_total"},
+		// Sweep D3 (2026-06-05): dispatch dedup observability. Closes
+		// design doc §5 Tier-1B #13 TTL follow-up via Sub-agent B 2.4.
+		{NotificationJobDispatchSkippedTotal, "kielo_notification_job_dispatch_skipped_total"},
+		{NotificationJobDispatchPrunedTotal, "kielo_notification_job_dispatch_pruned_total"},
 	}
 
-	// Pin cardinality budget. Sweep B3 (2026-06-04) added 2 metrics
-	// closing design doc §5 Tier-2 #14 (16 → 18). Adding a new metric
+	// Pin cardinality budget. Sweep D3 (2026-06-05) added 2 dispatch
+	// dedup observability metrics (18 → 20). Adding a new metric
 	// requires updating this slice + the design doc in lockstep
 	// (Layer 43 doc-drift discipline).
-	const expectedCount = 18
+	const expectedCount = 20
 	if len(cases) != expectedCount {
 		t.Errorf("cases cardinality %d; expected %d. "+
 			"Update lockstep with design doc §6 + notification.go.",

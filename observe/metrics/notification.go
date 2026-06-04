@@ -390,3 +390,37 @@ var MaintenanceStatusFetchTotal = promauto.NewCounterVec(
 	},
 	[]string{"result"},
 )
+
+// ---------------------------------------------------------------------------
+// JobProcessor dispatch dedup (D3 — Sub-agent B finding 2.4).
+// ---------------------------------------------------------------------------
+
+// NotificationJobDispatchSkippedTotal counts per-(job_id, user_id)
+// idempotency skips when JobProcessor.processChunk's ClaimDispatch
+// returns false (the user was already dispatched in a prior worker
+// incarnation). Under B9 reaper revival load, this counter measures
+// dedup effectiveness.
+//
+// Sweep D3 (2026-06-05). Closes design doc §5 Tier-1B #13 follow-up.
+//
+// Labels: none — cardinality MUST stay low because dispatch skips
+// can be high-volume during reaper-driven re-processing. Operators
+// who need per-job breakdown query communications.notification_job_dispatch
+// directly via SQL.
+var NotificationJobDispatchSkippedTotal = promauto.NewCounter(
+	prometheus.CounterOpts{
+		Name: "kielo_notification_job_dispatch_skipped_total",
+		Help: "Per-(job_id, user_id) idempotency skips (already-dispatched in prior worker run; B9 reaper revival path).",
+	},
+)
+
+// NotificationJobDispatchPrunedTotal counts notification_job_dispatch
+// rows DELETEd by the periodic TTL sweep. Lifetime counter — operators
+// rate this over time to verify the TTL job is keeping the table
+// bounded (Sub-agent B finding 2.4 + Sweep D3).
+var NotificationJobDispatchPrunedTotal = promauto.NewCounter(
+	prometheus.CounterOpts{
+		Name: "kielo_notification_job_dispatch_pruned_total",
+		Help: "Lifetime count of notification_job_dispatch rows pruned by the periodic TTL sweep. Tracks the C2 dedup table size bound.",
+	},
+)
