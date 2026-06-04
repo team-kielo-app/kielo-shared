@@ -156,6 +156,40 @@ const (
 // admin-broadcast design that uses NotificationRule + rule-engine
 // dispatch + per-device DDDD resolver.
 
+// Admin events (rule-engine path — NEW post-ZH guidance).
+//
+// Sweep post-ZT-followup-docker Round H Follow-up B (2026-06-04)
+// registers admin.broadcast.v1 per the canonical replacement-path
+// recommended at retirement of system.notification.v1 (Sweep ZH +
+// D.2). This event_type flows through:
+//
+//	producer  → HTTP POST /api/v3/events/notifications
+//	          (internal API key gated; admin-UI compose-broadcast
+//	          panel OR scheduled job)
+//	consumer  → EventHandler.HandleNotificationEvent (allowDirect=true)
+//	          → looks up NotificationRule WHERE event_type=
+//	          'admin.broadcast.v1' → ResolveTemplate per device
+//	          language via DDDD per-token resolver → broadcast
+//	          with PerDeviceContent closure (Sweep ZG canonical).
+//
+// Use cases:
+//   - Soft-degradation maintenance banner (when backend is UP but
+//     a specific feature is degraded)
+//   - Admin announcement / new feature spotlight
+//   - One-off operator broadcast to user cohort or all users
+//
+// NOT to be used for:
+//   - Hard-outage maintenance blocker — use Tier M1 public GCS
+//     status.json instead (Sweep H Follow-up A, shipped 2026-06-04)
+//     because the GCS file must be reachable when the backend is
+//     fully down.
+//   - Per-user operational events (purchase / achievement) — those
+//     have their own typed event_types in the purchase.* and
+//     user.achievement.* namespaces.
+const (
+	EventAdminBroadcast PublishEventType = "admin.broadcast.v1"
+)
+
 // Achievement events (direct-publish path, user-service producer).
 // Sweep ZI-B.1 (2026-06-03): typed constants for previously-untyped
 // wire strings surfaced by external recon (chatgpt Finding 2). The
@@ -299,6 +333,10 @@ var AllPublishEventTypes = []PublishEventType{
 	EventUserProfileUpdatedDirect,
 	EventUserDeletedDirect,
 	// System events (none — Sweep D.2 retired EventSystemNotification)
+	// Admin events (Sweep Round H Follow-up B addition — rule-engine
+	// path; canonical replacement for the retired system.notification.v1
+	// per Sweep ZH guidance)
+	EventAdminBroadcast,
 	//
 	// Sweep ZI-B.1 additions (chatgpt Finding 2 closure)
 	EventUserAchievementAwarded,
