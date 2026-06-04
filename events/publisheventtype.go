@@ -190,6 +190,18 @@ const (
 	EventAdminBroadcast            PublishEventType = "admin.broadcast.v1"
 	EventAdminSubscriptionGrant    PublishEventType = "admin.subscription_grant.v1"
 	EventAdminNotificationRuleEdit PublishEventType = "admin.notification_rule.edit.v1"
+	// Sweep F2+F4-merged (2026-06-05): 5 sibling admin endpoints
+	// extended to emit operator-action audit per Sub-agent F3.D
+	// Tier-1A #1 finding. Each shares the architectural pattern
+	// established by EventAdminSubscriptionGrant — typed constant
+	// + V099 CHECK extension + handler.SetAuditPublisher wire +
+	// emit AFTER mutation succeeds + best-effort goroutine + JWT
+	// claims OR X-Admin-Operator-Id header (F3.C-fix pattern).
+	EventAdminSubscriptionRevoke   PublishEventType = "admin.subscription_revoke.v1"
+	EventAdminAchievementAward     PublishEventType = "admin.achievement_award.v1"
+	EventAdminAchievementRevoke    PublishEventType = "admin.achievement_revoke.v1"
+	EventAdminFeatureLimitSet      PublishEventType = "admin.feature_limit_set.v1"
+	EventAdminFeatureLimitDelete   PublishEventType = "admin.feature_limit_delete.v1"
 )
 
 // Achievement events (direct-publish path, user-service producer).
@@ -345,6 +357,12 @@ var AllPublishEventTypes = []PublishEventType{
 	// the canonical admin-actions topic + AdminActionPublisher.
 	EventAdminSubscriptionGrant,
 	EventAdminNotificationRuleEdit,
+	// Sweep F2+F4-merged additions (Sub-agent F3.D Tier-1A #1 drain)
+	EventAdminSubscriptionRevoke,
+	EventAdminAchievementAward,
+	EventAdminAchievementRevoke,
+	EventAdminFeatureLimitSet,
+	EventAdminFeatureLimitDelete,
 	//
 	// Sweep ZI-B.1 additions (chatgpt Finding 2 closure)
 	EventUserAchievementAwarded,
