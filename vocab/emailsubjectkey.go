@@ -29,12 +29,12 @@ func (k EmailSubjectKey) String() string {
 //
 // Sweep post-multibucket-arc Bucket B6 (2026-06-04).
 const (
-	EmailSubjectKeyPasswordReset                 EmailSubjectKey = "ui.email.subject.password_reset"
-	EmailSubjectKeyWelcome                       EmailSubjectKey = "ui.email.subject.welcome"
-	EmailSubjectKeyPurchaseConfirmation          EmailSubjectKey = "ui.email.subject.purchase_confirmation"
-	EmailSubjectKeySubscriptionEnded             EmailSubjectKey = "ui.email.subject.subscription_ended"
-	EmailSubjectKeyAccountDeleted                EmailSubjectKey = "ui.email.subject.account_deleted"
-	EmailSubjectKeyAchievementFirstPayingUser    EmailSubjectKey = "ui.email.subject.achievement_first_paying_user"
+	EmailSubjectKeyPasswordReset              EmailSubjectKey = "ui.email.subject.password_reset"
+	EmailSubjectKeyWelcome                    EmailSubjectKey = "ui.email.subject.welcome"
+	EmailSubjectKeyPurchaseConfirmation       EmailSubjectKey = "ui.email.subject.purchase_confirmation"
+	EmailSubjectKeySubscriptionEnded          EmailSubjectKey = "ui.email.subject.subscription_ended"
+	EmailSubjectKeyAccountDeleted             EmailSubjectKey = "ui.email.subject.account_deleted"
+	EmailSubjectKeyAchievementFirstPayingUser EmailSubjectKey = "ui.email.subject.achievement_first_paying_user"
 )
 
 // AllEmailSubjectKeys is the iteration set for the email subject key
