@@ -187,7 +187,9 @@ const (
 //     have their own typed event_types in the purchase.* and
 //     user.achievement.* namespaces.
 const (
-	EventAdminBroadcast PublishEventType = "admin.broadcast.v1"
+	EventAdminBroadcast            PublishEventType = "admin.broadcast.v1"
+	EventAdminSubscriptionGrant    PublishEventType = "admin.subscription_grant.v1"
+	EventAdminNotificationRuleEdit PublishEventType = "admin.notification_rule.edit.v1"
 )
 
 // Achievement events (direct-publish path, user-service producer).
@@ -337,6 +339,12 @@ var AllPublishEventTypes = []PublishEventType{
 	// path; canonical replacement for the retired system.notification.v1
 	// per Sweep ZH guidance)
 	EventAdminBroadcast,
+	// Sweep E3 (2026-06-05): operator-action vocabulary expansion.
+	// Closes D4 future-work + sub-agent B 1B.1 reframe extended
+	// scope. Each operator action emits a distinct event_type via
+	// the canonical admin-actions topic + AdminActionPublisher.
+	EventAdminSubscriptionGrant,
+	EventAdminNotificationRuleEdit,
 	//
 	// Sweep ZI-B.1 additions (chatgpt Finding 2 closure)
 	EventUserAchievementAwarded,
