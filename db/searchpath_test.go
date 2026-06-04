@@ -85,7 +85,7 @@ func TestBuildSearchPath_DefaultTemplate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("BuildSearchPath: %v", err)
 	}
-	want := "klearn_sv,cms_sv,klearn,cms,users,localization,communications,convo,media,public"
+	want := "klearn_sv,cms_sv,users,localization,communications,convo,media,public"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
@@ -152,8 +152,8 @@ func TestIssueSearchPathForContext_PerLanguage(t *testing.T) {
 	}
 
 	want := []string{
-		"SET LOCAL search_path TO klearn_fi,cms_fi,klearn,cms,users,localization,communications,convo,media,public",
-		"SET LOCAL search_path TO klearn_sv,cms_sv,klearn,cms,users,localization,communications,convo,media,public",
+		"SET LOCAL search_path TO klearn_fi,cms_fi,users,localization,communications,convo,media,public",
+		"SET LOCAL search_path TO klearn_sv,cms_sv,users,localization,communications,convo,media,public",
 	}
 	if len(exec.queries) != len(want) {
 		t.Fatalf("got %d queries, want %d", len(exec.queries), len(want))
@@ -208,7 +208,7 @@ func TestApplySearchPathToTxRequired_IssuesSetLocal(t *testing.T) {
 	if len(exec.queries) != 1 {
 		t.Fatalf("got %d queries, want 1", len(exec.queries))
 	}
-	if exec.queries[0] != "SET LOCAL search_path TO klearn_sv,cms_sv,klearn,cms,users,localization,communications,convo,media,public" {
+	if exec.queries[0] != "SET LOCAL search_path TO klearn_sv,cms_sv,users,localization,communications,convo,media,public" {
 		t.Errorf("got %q", exec.queries[0])
 	}
 }

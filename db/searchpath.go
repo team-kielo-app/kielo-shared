@@ -34,13 +34,38 @@ import (
 var _ = errors.Is // ensure errors is used for ApplySearchPathToTx
 
 // DefaultPerLanguageSearchPathTemplate is the canonical schema layout
-// during the M3 transition window. Per-language schemas (klearn_<lang>,
-// cms_<lang>) come first; legacy klearn / cms stay on the path until
-// M6 cutover so reads of not-yet-partitioned tables still resolve.
-// users / localization / communications / convo / media stay where they
-// are — already cross-language by construction. public is last for
-// pgvector and other extensions.
-const DefaultPerLanguageSearchPathTemplate = "klearn_{lang}, cms_{lang}, klearn, cms, " +
+// for per-language queries post-M6 cutover.
+//
+// Sweep post-ZT-followup-docker Round E (2026-06-04) DROPPED the legacy
+// `klearn, cms` fallback per Sweep LLL Phase 7 NNN.4 + ZE.5 empirical
+// gate proof. Pre-Round-E this template included `klearn, cms` after
+// the per-language schemas as a transition-window safety net for reads
+// of not-yet-partitioned tables. Post-Round-E:
+//
+//   - Sweep ZE.5 `_lint-implicit-cross-language-read` static gate runs
+//     at baseline 0 hard-fail — proves NO production code relies on
+//     the implicit cross-language read via the fallback path.
+//   - Every production cross-language table read explicitly qualifies
+//     the schema (`klearn.outbox_events`, `cms.api_keys`, etc.) OR uses
+//     ORM `__table_args__ = {"schema": "klearn"}` declarations.
+//   - The 22 cross-language tables cataloged in
+//     `scripts/diag-implicit-cross-language-read.py` ALL appear
+//     explicitly-qualified in production source.
+//
+// Per-language schemas (klearn_<lang>, cms_<lang>) come first so reads
+// of per-language tables resolve via search_path. users / localization /
+// communications / convo / media stay where they are — already
+// cross-language by construction. public is last for pgvector and other
+// extensions.
+//
+// IF a new cross-language table is added to klearn or cms WITHOUT
+// explicit schema qualification at every production read site, the
+// `_lint-implicit-cross-language-read` gate will catch it at PR time
+// and surface the qualification gap before merge. Operators relying
+// on the pre-Round-E implicit fallback behavior must explicitly add
+// `klearn.` / `cms.` prefixes to their SQL OR add the table to the
+// gate's ALLOWED_IMPLICIT_TABLES list with a one-line rationale.
+const DefaultPerLanguageSearchPathTemplate = "klearn_{lang}, cms_{lang}, " +
 	"users, localization, communications, convo, media, public"
 
 // ErrNoActiveLanguage is returned by IssueSearchPathForContext when the

@@ -65,7 +65,7 @@ func TestApply_IssuesSetLocalWhenLanguageInContext(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, tx.queries, 1)
 	assert.Equal(t,
-		"SET LOCAL search_path TO klearn_sv,cms_sv,klearn,cms,users,localization,communications,convo,media,public",
+		"SET LOCAL search_path TO klearn_sv,cms_sv,users,localization,communications,convo,media,public",
 		tx.queries[0],
 	)
 }
@@ -92,7 +92,7 @@ func TestApplyRequired_IssuesSetLocalWhenLanguageInContext(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, tx.queries, 1)
 	assert.Equal(t,
-		"SET LOCAL search_path TO klearn_sv,cms_sv,klearn,cms,users,localization,communications,convo,media,public",
+		"SET LOCAL search_path TO klearn_sv,cms_sv,users,localization,communications,convo,media,public",
 		tx.queries[0],
 	)
 }
