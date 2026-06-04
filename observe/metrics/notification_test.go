@@ -33,6 +33,9 @@ func TestNotificationMetrics_Names(t *testing.T) {
 		// Dispatch-side (email + inbox + SSE)
 		{NotificationEmailSentTotal, "kielo_notification_email_sent_total"},
 		{NotificationInboxInsertedTotal, "kielo_notification_inbox_inserted_total"},
+		// Sweep B3 (2026-06-04): closes design doc §5 Tier-2 #14 gaps.
+		{NotificationInboxUnreadCount, "kielo_notification_inbox_unread_count"},
+		{NotificationDispatchLatencySeconds, "kielo_notification_dispatch_latency_seconds"},
 		{NotificationSSESubscriberActive, "kielo_notification_sse_subscriber_active"},
 		{NotificationSSEDropTotal, "kielo_notification_sse_drop_total"},
 		// Locale resolution
@@ -43,11 +46,11 @@ func TestNotificationMetrics_Names(t *testing.T) {
 		{MaintenanceStatusFetchTotal, "kielo_maintenance_status_fetch_total"},
 	}
 
-	// Pin cardinality budget (design doc §6 enumerates 12 notification +
-	// 4 maintenance = 16 metrics). Adding a new metric requires updating
-	// this slice + the design doc in lockstep (Layer 43 doc-drift
-	// discipline).
-	const expectedCount = 16
+	// Pin cardinality budget. Sweep B3 (2026-06-04) added 2 metrics
+	// closing design doc §5 Tier-2 #14 (16 → 18). Adding a new metric
+	// requires updating this slice + the design doc in lockstep
+	// (Layer 43 doc-drift discipline).
+	const expectedCount = 18
 	if len(cases) != expectedCount {
 		t.Errorf("cases cardinality %d; expected %d. "+
 			"Update lockstep with design doc §6 + notification.go.",

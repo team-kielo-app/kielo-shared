@@ -227,6 +227,62 @@ var NotificationInboxInsertedTotal = promauto.NewCounterVec(
 	[]string{"type"},
 )
 
+// NotificationInboxUnreadCount is a gauge of unread inbox notification
+// rows in users.notifications. Sampled periodically by user-service via
+// a query against users.notifications WHERE read=false. Bucketed by
+// user_segment to bound cardinality.
+//
+// Sweep post-multibucket-arc Bucket B3 (2026-06-04). Closes design doc
+// §5 Tier-2 #14 missing metric. Pairs with NotificationInboxInserted
+// Total (rate) to surface inbox-pipeline health: high insert + flat
+// unread = users are reading; flat insert + climbing unread = pipeline
+// not flushing OR users aren't engaging.
+//
+// Labels:
+//   - user_segment: bucketed user identifier (NEVER raw user_id).
+//     Same buckets as NotificationSSESubscriberActive for dashboard
+//     consistency: "authenticated" | "anonymous" | future tiers.
+//
+// Recommended dashboards:
+//   - Stacked area: unread count per user_segment over time
+//   - Ratio: unread / inserted_total — engagement-rate proxy
+var NotificationInboxUnreadCount = promauto.NewGaugeVec(
+	prometheus.GaugeOpts{
+		Name: "kielo_notification_inbox_unread_count",
+		Help: "Unread notification inbox rows by user_segment (gauge; sampled periodically).",
+	},
+	[]string{"user_segment"},
+)
+
+// NotificationDispatchLatencySeconds buckets per-channel dispatch
+// wall-clock latency (handler-invoke → channel-confirm). Distinct
+// from NotificationProduceLatencySeconds (producer-side overhead) +
+// NotificationJobDurationSeconds (end-to-end job lifecycle). This
+// metric isolates the channel-API latency so operators can spot
+// upstream-API degradation (Expo / SMTP / Pub/Sub publish).
+//
+// Sweep post-multibucket-arc Bucket B3 (2026-06-04). Closes design doc
+// §5 Tier-2 #14 missing metric.
+//
+// Labels:
+//   - type: NotificationType wire string
+//   - channel: "push" | "email" | "inbox"
+//
+// Recommended alerts:
+//   - p99 > 30s on push: Expo API degradation
+//   - p99 > 10s on email: SMTP outage or rate-limited
+//   - p99 > 1s on inbox: Pub/Sub publish slow
+//
+// Buckets matched to kielo_llm_latency_seconds for dashboard parity.
+var NotificationDispatchLatencySeconds = promauto.NewHistogramVec(
+	prometheus.HistogramOpts{
+		Name:    "kielo_notification_dispatch_latency_seconds",
+		Help:    "Per-channel dispatch wall-clock latency by notification type + channel.",
+		Buckets: []float64{0.01, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 60.0},
+	},
+	[]string{"type", "channel"},
+)
+
 // NotificationSSESubscriberActive is a gauge of currently-connected SSE
 // subscribers per (rough) user segment. Used to size buffer pools and
 // detect mass-disconnect events.
