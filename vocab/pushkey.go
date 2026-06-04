@@ -3,14 +3,14 @@
 // Sweep post-ZT-followup-docker Bucket 7 (2026-06-04). Per
 // docs/architecture/notification-system-design.md §8 Round H Follow-up
 // D.2: lift `push.*` registry keys to typed constants so:
-//   1. A new locale addition can be statically checked against the
-//      complete key set (no silent missing-translation drift).
-//   2. A typo'd key at the call site (e.g.
-//      `push.achievment.unlocked_title`) fails compile-time instead
-//      of producing the raw key as the rendered push body.
-//   3. Sibling SDKs (admin-ui rule-engine panel, mobile reactive UI)
-//      can import the same typed vocabulary instead of re-declaring
-//      strings.
+//  1. A new locale addition can be statically checked against the
+//     complete key set (no silent missing-translation drift).
+//  2. A typo'd key at the call site (e.g.
+//     `push.achievment.unlocked_title`) fails compile-time instead
+//     of producing the raw key as the rendered push body.
+//  3. Sibling SDKs (admin-ui rule-engine panel, mobile reactive UI)
+//     can import the same typed vocabulary instead of re-declaring
+//     strings.
 //
 // PATTERN: same shape as Sweep ZK-B (AchievementCode SoT) +
 // Sweep WW (LocalizableField). Typed alias `PushKey` over `string`;
