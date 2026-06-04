@@ -202,6 +202,16 @@ const (
 	EventAdminAchievementRevoke    PublishEventType = "admin.achievement_revoke.v1"
 	EventAdminFeatureLimitSet      PublishEventType = "admin.feature_limit_set.v1"
 	EventAdminFeatureLimitDelete   PublishEventType = "admin.feature_limit_delete.v1"
+	// Sweep FF8 (2026-06-05): feature-voting moderation audit closure.
+	// Pre-FF8 admin operators could change feature request status
+	// (planned/in-progress/completed/rejected) + reassign category +
+	// flip privacy without any audit trail anywhere (cms proxies
+	// through proxyToUserService; user-service feedback_handler had
+	// NO audit emit). Closes Sub-agent F-followup B Finding 2 by
+	// adding the 3 missing event_types.
+	EventAdminFeatureRequestStatusUpdate   PublishEventType = "admin.feature_request_status_update.v1"
+	EventAdminFeatureRequestCategoryUpdate PublishEventType = "admin.feature_request_category_update.v1"
+	EventAdminFeatureRequestPrivacyUpdate  PublishEventType = "admin.feature_request_privacy_update.v1"
 )
 
 // Achievement events (direct-publish path, user-service producer).
@@ -363,6 +373,10 @@ var AllPublishEventTypes = []PublishEventType{
 	EventAdminAchievementRevoke,
 	EventAdminFeatureLimitSet,
 	EventAdminFeatureLimitDelete,
+	// Sweep FF8 additions (Sub-agent F-followup B Finding 2 drain)
+	EventAdminFeatureRequestStatusUpdate,
+	EventAdminFeatureRequestCategoryUpdate,
+	EventAdminFeatureRequestPrivacyUpdate,
 	//
 	// Sweep ZI-B.1 additions (chatgpt Finding 2 closure)
 	EventUserAchievementAwarded,
