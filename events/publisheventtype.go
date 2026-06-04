@@ -138,20 +138,23 @@ const (
 	EventUserDeletedDirect PublishEventType = "user.deleted.v1"
 )
 
-// System events (direct-publish only — no outbox mirror).
-const (
-	// EventSystemNotification was declared in anticipation of an
-	// admin-triggered direct push handler that was never built.
-	// Sweep ZH (2026-06-03) confirmed via empirical recon: ZERO
-	// producers of system.notification.v1 exist in the monorepo;
-	// the wire string is referenced only in this SoT, consumer
-	// switch-case, subscription wiring, contract test, ADR docs.
-	// Kept here for one more release cycle as Tier-1B vestigial
-	// scaffold; retirement queued (drop consumer + subscription +
-	// contract test refs + this constant) once product confirms
-	// no future admin-broadcast Pub/Sub use case planned.
-	EventSystemNotification PublishEventType = "system.notification.v1"
-)
+// System events — historical, intentionally empty.
+//
+// Sweep post-ZT-followup-docker Round D.2 (2026-06-04) retired
+// EventSystemNotification + its iteration entry + the
+// handleSystemNotificationEvent consumer + Pub/Sub subscription +
+// terraform filter + contract test spot-check. Sweep ZH (2026-06-03)
+// established the vestigial-scaffold reframe (ZERO producers of
+// system.notification.v1 in monorepo); Round D.2 completes the drain
+// per ADR-006 amendment line 153 "Optional Tier-2 deferred dead-code
+// drain" recommendation.
+//
+// If a future admin-broadcast Pub/Sub use case surfaces, the
+// canonical path is a NEW event_type (e.g. admin.broadcast.v1) NOT
+// resurrecting system.notification.v1 — this wire string carries
+// pre-retirement semantics that would conflict with any new
+// admin-broadcast design that uses NotificationRule + rule-engine
+// dispatch + per-device DDDD resolver.
 
 // Achievement events (direct-publish path, user-service producer).
 // Sweep ZI-B.1 (2026-06-03): typed constants for previously-untyped
@@ -295,8 +298,8 @@ var AllPublishEventTypes = []PublishEventType{
 	// User events — direct-publish mirrors of outbox events
 	EventUserProfileUpdatedDirect,
 	EventUserDeletedDirect,
-	// System events
-	EventSystemNotification,
+	// System events (none — Sweep D.2 retired EventSystemNotification)
+	//
 	// Sweep ZI-B.1 additions (chatgpt Finding 2 closure)
 	EventUserAchievementAwarded,
 	EventUserNotificationCreated,
