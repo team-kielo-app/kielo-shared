@@ -571,6 +571,33 @@ class CommsCreateJobRequest(BaseModel):
     title: str
 
 
+class CommsDLQAuditListItem(BaseModel):
+    attributes: dict[str, str] | None = None
+    classification: str
+    created_at: str
+    diagnosis: str | None = None
+    dlq_subscription: str
+    dlq_topic: str
+    event_type: str | None = None
+    id: str
+    message_id: str | None = None
+    operator_notes: str | None = None
+    payload: dict[str, Any] | None = None
+    resolved_at: str | None = None
+    resolved_by: str | None = None
+    updated_at: str
+
+
+class CommsDLQAuditListResponse(BaseModel):
+    items: list[CommsDLQAuditListItem]
+    next_cursor: str | None = None
+
+
+class CommsDLQAuditResolveRequest(BaseModel):
+    operator_notes: str | None = None
+    resolved_by: str
+
+
 class CommsNotificationJob(BaseModel):
     body: str
     created_by: str | None = None
@@ -1559,6 +1586,19 @@ class CurriculumTreeLesson(BaseModel):
 class CursorPageAchievementV3(BaseModel):
     items: list[AchievementV3]
     next_page_key: str | None = None
+
+
+class DLQAuditListItem(CommsDLQAuditListItem):
+    pass
+
+
+class DLQAuditListResponse(BaseModel):
+    items: list[DLQAuditListItem]
+    next_cursor: str | None = None
+
+
+class DLQAuditResolveRequest(CommsDLQAuditResolveRequest):
+    pass
 
 
 class DailyChallengeGenerationAccepted(BaseModel):
