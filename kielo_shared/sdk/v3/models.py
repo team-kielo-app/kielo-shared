@@ -520,6 +520,10 @@ class CommonMistake(BaseModel):
     mistake_html: str | None = None
 
 
+class CommsAdminBroadcastRequest(AdminBroadcastRequest):
+    pass
+
+
 class CommsBatchEmailRequest(BatchEmailRequest):
     pass
 
