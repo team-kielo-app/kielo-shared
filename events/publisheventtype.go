@@ -231,12 +231,17 @@ const (
 // internal/pubsub/client.go but missed this one. All other Publish*
 // helpers in that file use sharedevents.Event*.String().
 const (
-	// EventUserAchievementAwarded fires when a user earns an
-	// achievement. Producer: kielo-user-service achievement handler.
-	// Consumer: kielo-communications-service push handler
-	// (HandleAchievementAwardedEvent — Sweep OOOO PerDeviceContent
-	// wired for per-device localization).
-	EventUserAchievementAwarded PublishEventType = "user.achievement.awarded.v1"
+	// EventUserAchievementAwardedDirect mirrors the outbox-side
+	// EventUserAchievementAwarded (Sweep FH.4 Phase 1, 2026-06-05).
+	// Same wire string; cross-vocabulary intentional sibling like
+	// EventUserProfileUpdatedDirect. Pre-FH.4 this was the canonical
+	// direct-publish path; post-FH.4 the producer transitioned to
+	// the outbox path so client retries on ON CONFLICT no longer
+	// silently lose the envelope. Constant retained for downstream
+	// consumers (HandleAchievementAwardedEvent) that dispatch on
+	// the wire string — they don't care which producer path emitted
+	// the event.
+	EventUserAchievementAwardedDirect PublishEventType = "user.achievement.awarded.v1"
 
 	// EventUserNotificationCreated fires after a notification inbox
 	// row is created. Producer: kielo-user-service notification path.
@@ -394,7 +399,7 @@ var AllPublishEventTypes = []PublishEventType{
 	EventAdminRecommendationCampaignRunNow,
 	//
 	// Sweep ZI-B.1 additions (chatgpt Finding 2 closure)
-	EventUserAchievementAwarded,
+	EventUserAchievementAwardedDirect,
 	EventUserNotificationCreated,
 	EventUserPasswordResetRequested,
 	// EventUserAccountDeleted retired Sweep ZJ-A.1

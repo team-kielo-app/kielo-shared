@@ -91,6 +91,23 @@ const (
 	// EventUserDeleted fires on hard account deletion. Consumed by
 	// every downstream service for cascade cleanup.
 	EventUserDeleted OutboxEventType = "user.deleted.v1"
+
+	// EventUserAchievementAwarded fires when a user earns an
+	// achievement. Sweep FH.4 Phase 1 (2026-06-05) lifted this
+	// from publisheventtype.go (Sweep IIII direct-publish vocabulary)
+	// to the outbox path so client retries that hit ON CONFLICT
+	// DO NOTHING no longer permanently lose the
+	// user.achievement.awarded.v1 envelope. Same wire string; the
+	// publish-side constant at publisheventtype.go:239 is preserved
+	// for back-compat (consumer dispatch is by wire string regardless
+	// of producer path). Downstream consumers (notification rule
+	// engine + comms-service push/email/inbox) dispatch on the
+	// shared wire string. Language NULL — achievements are
+	// language-agnostic (first_word, streak_3, etc. apply per user
+	// regardless of fi/sv learning context); enforced by the V102
+	// learning_language_code IS NULL semantics on
+	// users.outbox_events.
+	EventUserAchievementAwarded OutboxEventType = "user.achievement.awarded.v1"
 )
 
 // AllOutboxEventTypes is the canonical iteration order. Used by the
@@ -102,6 +119,7 @@ var AllOutboxEventTypes = []OutboxEventType{
 	EventCMSContentDeleted,
 	EventUserProfileUpdated,
 	EventUserDeleted,
+	EventUserAchievementAwarded,
 }
 
 // IsKnownOutboxEventType returns true when s matches a canonical
