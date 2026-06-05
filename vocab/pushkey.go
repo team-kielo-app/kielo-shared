@@ -47,6 +47,15 @@ const (
 	PushKeyAchievementNamedFormatBody PushKey = "push.achievement.body.named_format"
 )
 
+// FH.6 design decision: feedback voter notifications use the
+// rule-engine path with translation_keys+translations DB seeding
+// (V105) rather than the in-process pushNotificationRegistry. The
+// vocab.PushKey alias is reserved for direct-dispatch paths
+// (achievement_awarded, purchase_confirmation) where the producer
+// has full data shape locally. Rule-engine templates are stored in
+// localization.translation_keys with `rule.<rule_id>.title` /
+// `rule.<rule_id>.body` keying. See V105 for the FH.6 seed.
+
 // AllPushKeys is the iteration set for the push key vocabulary.
 // Contract tests assert this slice's cardinality matches the registry
 // seed block + the cross-language parity test set.

@@ -222,6 +222,24 @@ const (
 	EventAdminRecommendationCampaignUpdate PublishEventType = "admin.recommendation_campaign_update.v1"
 	EventAdminRecommendationCampaignDelete PublishEventType = "admin.recommendation_campaign_delete.v1"
 	EventAdminRecommendationCampaignRunNow PublishEventType = "admin.recommendation_campaign_run_now.v1"
+	// Sweep FH.6 (2026-06-05): voter notification language fix.
+	// Pre-FH.6 the kielo-user-service FeedbackHandler emitted
+	// pre-rendered English title/body via the legacy
+	// `/api/v3/notifications/broadcast` direct-dispatch endpoint
+	// (sendBroadcastNotification). Every vi/sv learner who voted
+	// on a feature received English notifications regardless of
+	// their support_language_code or device locale.
+	//
+	// Post-FH.6 the producer emits one of these 3 typed event_types
+	// to `/api/v3/events/notifications` with a `data` payload
+	// carrying the dynamic fields (feature title, commenter name,
+	// status text). V105 seeds the canonical NotificationRule for
+	// each event_type with per-locale title/body translation keys.
+	// Sweep ZG canonical PerDeviceContent closure (event_handler.go:
+	// 523-538) renders per-device-language at dispatch time.
+	EventFeedbackFeatureStatusChanged PublishEventType = "feedback.feature_status_changed.v1"
+	EventFeedbackFeatureComment       PublishEventType = "feedback.feature_comment.v1"
+	EventFeedbackFeatureVote          PublishEventType = "feedback.feature_vote.v1"
 )
 
 // Achievement events (direct-publish path, user-service producer).
@@ -397,6 +415,10 @@ var AllPublishEventTypes = []PublishEventType{
 	EventAdminRecommendationCampaignUpdate,
 	EventAdminRecommendationCampaignDelete,
 	EventAdminRecommendationCampaignRunNow,
+	// Sweep FH.6 additions (voter notification language fix)
+	EventFeedbackFeatureStatusChanged,
+	EventFeedbackFeatureComment,
+	EventFeedbackFeatureVote,
 	//
 	// Sweep ZI-B.1 additions (chatgpt Finding 2 closure)
 	EventUserAchievementAwardedDirect,
