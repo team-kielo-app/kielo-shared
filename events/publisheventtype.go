@@ -197,11 +197,11 @@ const (
 	// + V099 CHECK extension + handler.SetAuditPublisher wire +
 	// emit AFTER mutation succeeds + best-effort goroutine + JWT
 	// claims OR X-Admin-Operator-Id header (F3.C-fix pattern).
-	EventAdminSubscriptionRevoke   PublishEventType = "admin.subscription_revoke.v1"
-	EventAdminAchievementAward     PublishEventType = "admin.achievement_award.v1"
-	EventAdminAchievementRevoke    PublishEventType = "admin.achievement_revoke.v1"
-	EventAdminFeatureLimitSet      PublishEventType = "admin.feature_limit_set.v1"
-	EventAdminFeatureLimitDelete   PublishEventType = "admin.feature_limit_delete.v1"
+	EventAdminSubscriptionRevoke PublishEventType = "admin.subscription_revoke.v1"
+	EventAdminAchievementAward   PublishEventType = "admin.achievement_award.v1"
+	EventAdminAchievementRevoke  PublishEventType = "admin.achievement_revoke.v1"
+	EventAdminFeatureLimitSet    PublishEventType = "admin.feature_limit_set.v1"
+	EventAdminFeatureLimitDelete PublishEventType = "admin.feature_limit_delete.v1"
 	// Sweep FF8 (2026-06-05): feature-voting moderation audit closure.
 	// Pre-FF8 admin operators could change feature request status
 	// (planned/in-progress/completed/rejected) + reassign category +
@@ -212,6 +212,16 @@ const (
 	EventAdminFeatureRequestStatusUpdate   PublishEventType = "admin.feature_request_status_update.v1"
 	EventAdminFeatureRequestCategoryUpdate PublishEventType = "admin.feature_request_category_update.v1"
 	EventAdminFeatureRequestPrivacyUpdate  PublishEventType = "admin.feature_request_privacy_update.v1"
+	// Sweep FF9 (2026-06-05): recommendation campaign audit closure.
+	// Pre-FF9 admin operators could create/update/delete/run-now
+	// notification cohort campaigns without any audit anywhere
+	// (comms-service has no local audit table — spine emit only).
+	// Closes Sub-agent F-followup B Finding 3 by adding the 4
+	// missing event_types.
+	EventAdminRecommendationCampaignCreate PublishEventType = "admin.recommendation_campaign_create.v1"
+	EventAdminRecommendationCampaignUpdate PublishEventType = "admin.recommendation_campaign_update.v1"
+	EventAdminRecommendationCampaignDelete PublishEventType = "admin.recommendation_campaign_delete.v1"
+	EventAdminRecommendationCampaignRunNow PublishEventType = "admin.recommendation_campaign_run_now.v1"
 )
 
 // Achievement events (direct-publish path, user-service producer).
@@ -377,6 +387,11 @@ var AllPublishEventTypes = []PublishEventType{
 	EventAdminFeatureRequestStatusUpdate,
 	EventAdminFeatureRequestCategoryUpdate,
 	EventAdminFeatureRequestPrivacyUpdate,
+	// Sweep FF9 additions (Sub-agent F-followup B Finding 3 drain)
+	EventAdminRecommendationCampaignCreate,
+	EventAdminRecommendationCampaignUpdate,
+	EventAdminRecommendationCampaignDelete,
+	EventAdminRecommendationCampaignRunNow,
 	//
 	// Sweep ZI-B.1 additions (chatgpt Finding 2 closure)
 	EventUserAchievementAwarded,
