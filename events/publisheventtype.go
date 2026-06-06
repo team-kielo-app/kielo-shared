@@ -436,6 +436,41 @@ const (
 	// mobile routes to /(main)/exercises/conversation-transcript
 	// with sessionId param.
 	EventConversationFollowupReady PublishEventType = "conversation.followup_ready.v1"
+
+	// EventLearningSavedItemBacklog is the canonical R4 (2026-06-07)
+	// "Saved Item Backlog" trigger per
+	// docs/architecture/notification-voice-and-content-design.md
+	// §R5 (renumbered R4 in producer-shipping order).
+	//
+	// Honors a small commitment the learner made to themselves:
+	// they saved a word or grammar concept because they wanted to
+	// come back to it. R4 is the bookmark that surfaced.
+	//
+	// Producer: kielolearn-engine SavedItemBacklogNotificationService
+	// (periodic scanner, default 6h cadence). Consumer:
+	// kielo-communications-service EventHandler → rule-engine path
+	// → V111 floor rule + V112 profile-aware NotificationRule update
+	// with per-locale title/body rendered via the same per-device
+	// language-name override + DDDD per-token resolver as R1/R2/R3.
+	//
+	// Conservative eligibility (per voice doc R5 design contract):
+	//   1. ≥3 reviewable BaseWord/GrammarConcept saved items in
+	//      the learner's active learning_language. Reviewable means
+	//      never-practiced-since-save OR review-schedule/SR due.
+	//   2. Skip if R1/R2/R3 fired for this user in the last 24h
+	//      OR a previous R4 was read/tapped in the last 72h.
+	//   3. Per-week throttle: at most 1 nudge per
+	//      (user, language, ISO week) via users.processed_events
+	//      claim, consumer = 'saved_item_backlog_scanner'
+	//   4. Active-user filter: users.users.last_active_date >= 30d ago
+	//      (we don't nudge truly dormant users)
+	//
+	// Dedupe key (R1/R2 pattern, ISO-week scope):
+	//   learning.saved_item_backlog.v1:<user>:<lang>:<iso_week>
+	//
+	// Deep link: kielo://saved-items → mobile routes to
+	// /(main)/saved-items overview screen.
+	EventLearningSavedItemBacklog PublishEventType = "learning.saved_item_backlog.v1"
 )
 
 // Sweep ZJ-A.2 (2026-06-03): EventConversationStarted RETIRED.
@@ -514,6 +549,13 @@ var AllPublishEventTypes = []PublishEventType{
 	// V109-seeded NotificationRule. Closes
 	// notification-relevance-design.md R3 spec.
 	EventConversationFollowupReady,
+	// R4 (2026-06-07): Saved-item backlog scanner. Conservative
+	// eligibility (≥3 reviewable BaseWord/GrammarConcept items in
+	// active learning language, 30-day-active user, weekly throttle,
+	// R1/R2/R3 + recent-R4 suppression). V111 floor + V112 profile-
+	// aware update.
+	// Closes notification-voice-and-content-design.md R5 spec.
+	EventLearningSavedItemBacklog,
 	//
 	// Sweep ZI-B.1 additions (chatgpt Finding 2 closure)
 	EventUserAchievementAwardedDirect,
