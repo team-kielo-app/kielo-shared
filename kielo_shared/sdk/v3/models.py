@@ -1024,23 +1024,6 @@ class ConversationPersona(BaseModel):
     style: str
 
 
-class ConversationRecommendation(BaseModel):
-    attempts: int
-    avg_score: float | None = None
-    gap_skills: list[str] | None = None
-    match_reason: str | None = None
-    reason: str
-    scenario_id: str
-    scenario_title: str | None = None
-    target_cefr: str | None = None
-
-
-class ConversationRecommendationsResponse(BaseModel):
-    items: list[ConversationRecommendation]
-    recommendations: list[ConversationRecommendation]
-    total: int
-
-
 class ConversationScenario(BaseModel):
     agent_avatar_url: str | None = None
     ambient_audio_url: str | None = None
@@ -1594,7 +1577,7 @@ class DLQAuditListItem(CommsDLQAuditListItem):
 
 class DLQAuditListResponse(BaseModel):
     items: list[DLQAuditListItem]
-    next_cursor: str | None = None
+    next_page_key: str | None = None
 
 
 class DLQAuditResolveRequest(CommsDLQAuditResolveRequest):
@@ -5900,7 +5883,7 @@ class ArticleVersionSnippet(BaseModel):
 
 
 class BaseWord(BaseModel):
-    audio_pronunciation_url: str | None = None
+    audio_url: str | None = None
     base_word_id: UUID_aliased
     cefr_level: str | None = None
     created_at: AwareDatetime
