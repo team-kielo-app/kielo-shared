@@ -405,6 +405,37 @@ const (
 	// from R1 Phase 3. The only meaningful difference is the
 	// eligibility query + the V108 NotificationRule copy.
 	EventLearningStreakAtRisk PublishEventType = "learning.streak_at_risk.v1"
+
+	// EventConversationFollowupReady is the canonical R3 (2026-06-07)
+	// "Conversation Follow-Up Ready" trigger per
+	// docs/architecture/notification-relevance-design.md §"Proposed
+	// Implementation Order" R3. Unlike R1 + R2 (scheduled scanners),
+	// R3 is EVENT-DRIVEN — emitted inline by user-service's
+	// UpdateConversationEvaluation handler after the evaluation
+	// persist commits AND a durable practiceable follow-up exists
+	// (drills[] non-empty OR corrections[] non-empty in the
+	// evaluation JSONB).
+	//
+	// Producer: kielo-user-service UserRepository (called from
+	// /internal/api/v3/conversations/sessions/{id}/evaluation
+	// handler, which is hit by kielo-convo orchestrator after the
+	// Python eval-worker generates the structured evaluation).
+	// Consumer: kielo-communications-service EventHandler
+	// → rule-engine path → V109-seeded NotificationRule with
+	// per-locale title/body rendered via the same per-device
+	// language-name override + DDDD per-token resolver as R1/R2.
+	//
+	// Dedupe key: notify once per (user_id, session_id) via
+	// users.processed_events claim with consumer
+	// 'conversation_followup_emitter'. ONE nudge per session — the
+	// deep link goes to the session summary which displays ALL
+	// practice targets together, so per-target dedupe would
+	// fragment into noisy duplicates.
+	//
+	// Deep link: kielo://conversation/<session_id>/summary →
+	// mobile routes to /(main)/exercises/conversation-transcript
+	// with sessionId param.
+	EventConversationFollowupReady PublishEventType = "conversation.followup_ready.v1"
 )
 
 // Sweep ZJ-A.2 (2026-06-03): EventConversationStarted RETIRED.
@@ -473,10 +504,16 @@ var AllPublishEventTypes = []PublishEventType{
 	// kielo-communications-service rule-engine path via V106-seeded
 	// NotificationRule. Closes notification-relevance-design.md R1 spec.
 	EventLearningReviewDue,
-	// R2 (this round): Streak at risk scanner. Same wire shape +
+	// R2 (2026-06-07): Streak at risk scanner. Same wire shape +
 	// rule-engine path as R1 Phase 2; V108-seeded NotificationRule.
 	// Closes notification-relevance-design.md R2 spec.
 	EventLearningStreakAtRisk,
+	// R3 (this round): Conversation follow-up ready emitter. Event-
+	// driven (not scheduled scanner — emitted inline by
+	// UpdateConversationEvaluation after persist commits).
+	// V109-seeded NotificationRule. Closes
+	// notification-relevance-design.md R3 spec.
+	EventConversationFollowupReady,
 	//
 	// Sweep ZI-B.1 additions (chatgpt Finding 2 closure)
 	EventUserAchievementAwardedDirect,
