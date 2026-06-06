@@ -356,6 +356,30 @@ const (
 	// EventCMSContentDeleted (outboxeventtype.go). Same wire string.
 	// Same TTT-I durability gap as above.
 	EventCMSContentDeletedDirect PublishEventType = "cms.content.deleted.v1"
+
+	// EventLearningReviewDue is the canonical R1 Phase 2 (this round)
+	// "Daily Review Due" trigger per
+	// docs/architecture/notification-relevance-design.md §"Proposed
+	// Implementation Order" R1. Producer: kielolearn-engine scheduled
+	// review scanner (see services/review_due_notification_service.py).
+	// Consumer: kielo-communications-service EventHandler.HandleNotificationEvent
+	// → rule-engine path → V106-seeded NotificationRule with per-locale
+	// title/body templates rendered via DDDD per-token resolver.
+	//
+	// Eligibility (engine-side): user has due NSR review items for a
+	// learning language AND has not completed today's daily challenge
+	// for that learning language (klearn.exercise_runs WHERE
+	// mode='daily_challenge' AND status='completed' AND DATE(completed_at)
+	// = today UTC). Dedupe key: notify once per (user_id,
+	// learning_language_code, local_date_utc, notification_type) via
+	// users.processed_events claim.
+	//
+	// Phase 2 ship is intentionally UTC-only — no per-user timezone is
+	// persisted in users.users today (only X-Timezone-Offset-Minutes
+	// per-request header per Sweep RRRR + QQQQ). When operator-side
+	// tz storage lands, the producer can switch to a local-time send
+	// window per the design-doc R1 spec (08:00-21:00 local).
+	EventLearningReviewDue PublishEventType = "learning.review_due.v1"
 )
 
 // Sweep ZJ-A.2 (2026-06-03): EventConversationStarted RETIRED.
@@ -419,6 +443,11 @@ var AllPublishEventTypes = []PublishEventType{
 	EventFeedbackFeatureStatusChanged,
 	EventFeedbackFeatureComment,
 	EventFeedbackFeatureVote,
+	// R1 Phase 2 (this round): canonical "Daily Review Due" relevance
+	// trigger. Producer: kielolearn-engine scheduled scanner. Consumer:
+	// kielo-communications-service rule-engine path via V106-seeded
+	// NotificationRule. Closes notification-relevance-design.md R1 spec.
+	EventLearningReviewDue,
 	//
 	// Sweep ZI-B.1 additions (chatgpt Finding 2 closure)
 	EventUserAchievementAwardedDirect,
