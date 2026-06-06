@@ -87,6 +87,32 @@ func TimezoneOffsetMinutesFromContext(ctx context.Context) int {
 	return offsetMinutes
 }
 
+// LookupTimezoneOffsetMinutesFromContext returns the offset and a
+// "found" boolean. This is the disambiguating sibling for callers
+// that need to distinguish "header not present" (write nothing —
+// preserve any prior persisted value) from "header present and is
+// literally 0" (UTC — write 0 explicitly to overwrite a stale
+// value).
+//
+// R1 Phase 4 (2026-06-07): user-service write paths
+// (UpdateProfile, UpdateDevicePreferences) need this distinction
+// when persisting `users.users.timezone_offset_minutes` from the
+// X-Timezone-Offset-Minutes request header. Pre-Phase-4 callers
+// (streak / day-boundary logic) only needed the numeric offset
+// and treated 0/missing identically — adding the sibling here
+// keeps both call patterns clean.
+func LookupTimezoneOffsetMinutesFromContext(ctx context.Context) (int, bool) {
+	value := ctx.Value(timezoneOffsetMinutesCtxKey)
+	if value == nil {
+		return 0, false
+	}
+	offsetMinutes, ok := value.(int)
+	if !ok {
+		return 0, false
+	}
+	return offsetMinutes, true
+}
+
 func timezoneOffsetDuration(ctx context.Context) time.Duration {
 	return time.Duration(TimezoneOffsetMinutesFromContext(ctx)) * time.Minute
 }
