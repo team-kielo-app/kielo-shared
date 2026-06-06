@@ -2935,6 +2935,29 @@ class LinkRevenueCatUserResponse(BaseModel):
     success: bool
 
 
+class ListVideoItem(BaseModel):
+    audio_url: str | None = None
+    brand_id: UUID_aliased
+    carousel_images: list[str] | None = None
+    created_at: AwareDatetime
+    duration_seconds: int
+    format_type: str | None = None
+    id: UUID_aliased
+    learning_language_code: str | None = None
+    locale: str | None = None
+    original_title: str | None = None
+    published_at: AwareDatetime
+    source_locale: str | None = None
+    thumbnail_url: str
+    title: str
+    title_translation_fallback: bool | None = None
+    title_translation_locale: str | None = None
+    title_translation_source_locale: str | None = None
+    transcription_status: str | None = None
+    updated_at: AwareDatetime
+    video_url: str
+
+
 class ListeningComprehensionExercise(BaseModel):
     audio_text: str | None = Field("", title="Audio Text")
     audio_url: str | None = Field(None, title="Audio Url")
@@ -5583,6 +5606,23 @@ class Video(BaseModel):
     video_url: str
 
 
+class VideoFeatureQuota(BaseModel):
+    allowed: bool
+    feature: str | None = None
+    limit: int | None = None
+    remaining: int | None = None
+    reset_at: str | None = None
+    tier: str | None = None
+    unavailable: bool | None = None
+    used_today: int | None = None
+
+
+class VideoListPage(BaseModel):
+    feature_quota: dict[str, VideoFeatureQuota] | None = None
+    items: list[ListVideoItem]
+    next_page_key: str | None = None
+
+
 class VoiceAgent(BaseModel):
     avatar_url: str | None = None
     created_at: AwareDatetime
@@ -6205,11 +6245,6 @@ class CursorPageUserNotification(BaseModel):
 
 class CursorPageUserNotificationV3(BaseModel):
     items: list[UserNotificationV3]
-    next_page_key: str | None = None
-
-
-class CursorPageVideo(BaseModel):
-    items: list[Video]
     next_page_key: str | None = None
 
 
