@@ -380,6 +380,31 @@ const (
 	// tz storage lands, the producer can switch to a local-time send
 	// window per the design-doc R1 spec (08:00-21:00 local).
 	EventLearningReviewDue PublishEventType = "learning.review_due.v1"
+
+	// EventLearningStreakAtRisk is the canonical R2 (2026-06-07)
+	// "Streak At Risk" trigger per
+	// docs/architecture/notification-relevance-design.md §"Proposed
+	// Implementation Order" R2. Producer: kielolearn-engine scheduled
+	// streak scanner (see services/streak_at_risk_notification_service.py).
+	// Consumer: kielo-communications-service EventHandler.HandleNotificationEvent
+	// → rule-engine path → V108-seeded NotificationRule with per-locale
+	// title/body templates rendered via the same per-device language-
+	// name override + DDDD per-token resolver as R1 Phase 3.
+	//
+	// Eligibility (engine-side): user has current_streak_days > 0 for
+	// the learning language AND has not been active today (local-date
+	// via users.users.timezone_offset_minutes) AND the user's local
+	// hour is in the configurable evening window
+	// (STREAK_AT_RISK_LOCAL_HOUR_{START,END}, default 19:00-21:00).
+	// Dedupe key: notify once per (user_id, learning_language_code,
+	// local_date_utc) via users.processed_events claim with consumer
+	// 'streak_at_risk_scanner'.
+	//
+	// R2 reuses the same wire shape + deep link
+	// (kielo://daily-challenge) + per-device language-name override
+	// from R1 Phase 3. The only meaningful difference is the
+	// eligibility query + the V108 NotificationRule copy.
+	EventLearningStreakAtRisk PublishEventType = "learning.streak_at_risk.v1"
 )
 
 // Sweep ZJ-A.2 (2026-06-03): EventConversationStarted RETIRED.
@@ -448,6 +473,10 @@ var AllPublishEventTypes = []PublishEventType{
 	// kielo-communications-service rule-engine path via V106-seeded
 	// NotificationRule. Closes notification-relevance-design.md R1 spec.
 	EventLearningReviewDue,
+	// R2 (this round): Streak at risk scanner. Same wire shape +
+	// rule-engine path as R1 Phase 2; V108-seeded NotificationRule.
+	// Closes notification-relevance-design.md R2 spec.
+	EventLearningStreakAtRisk,
 	//
 	// Sweep ZI-B.1 additions (chatgpt Finding 2 closure)
 	EventUserAchievementAwardedDirect,
