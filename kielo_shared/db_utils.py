@@ -19,21 +19,45 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from kielo_shared.locale_constants import SUPPORTED_LEARNING_LANGUAGES
 
 VECTOR_DB_SEARCH_PATH = "cms, klearn, public"
-KLEARN_DB_SEARCH_PATH = "public, users, klearn, cms"
 
-# Default per-language template for the M3 transition window.
+# Connection-level search_path for non-request-scoped sessions
+# (background workers, alembic migrations, startup probes). Sweep LLL
+# Phase 7 NNN.4 closure (2026-06-08; Python sibling of post-ZT-
+# followup-docker Round E 2026-06-04 Go drop): pre-NNN.4 this string
+# was "public, users, klearn, cms" — included the legacy
+# single-schema entries as fallback for not-yet-partitioned tables.
+# Post-NNN.4 the legacy entries are DROPPED. Empirical proof the
+# drop is safe:
+#   - scripts/diag-implicit-cross-language-read.py at baseline 0
+#     hard-fail (ZE.5 gate, 2026-06-03). Every cross-language table
+#     read in production explicitly schema-qualifies (klearn.foo,
+#     cms.foo) OR uses ORM __table_args__ schema=... declarations.
+#     Zero production code paths rely on the implicit fallback.
+#   - Alembic migrations write to legacy klearn.*/cms.* via explicit
+#     SQL like `UPDATE klearn.curriculum_tracks SET ...` — not via
+#     search_path resolution.
+# Inverted invariant: any non-request-scoped session that needs a
+# cross-language table read MUST qualify it explicitly. The ZE.5
+# gate enforces this at PR time.
+KLEARN_DB_SEARCH_PATH = "public, users"
+
+# Default per-language template for request-scoped queries.
 #
-# The per-language schemas (klearn_<lang>, cms_<lang>) come first so reads
-# of partitioned tables resolve there. The legacy klearn / cms schemas
-# stay on the path during M3-M5 because not every table is partitioned at
-# once; once a table moves, the per-language entry shadows the legacy one
-# automatically. After M6 cutover the legacy entries can be dropped.
+# The per-language schemas (klearn_<lang>, cms_<lang>) come first so
+# reads of partitioned tables resolve there. users / localization /
+# communications / convo / media stay on the path — they're already
+# cross-language by construction. public is last for pgvector and
+# other extensions.
 #
-# users / localization / communications / convo / media stay where they
-# are (no _shared umbrella) — they're already cross-language by
-# construction. public is last for pgvector and other extensions.
+# Sweep LLL Phase 7 NNN.4 closure (2026-06-08; Python sibling of
+# post-ZT-followup-docker Round E 2026-06-04 Go drop of the same
+# legacy entries from kielo-shared/db/searchpath.go's
+# DefaultPerLanguageSearchPathTemplate): pre-NNN.4 this template
+# included `klearn, cms` after the per-language schemas as fallback.
+# Post-NNN.4 the legacy entries are DROPPED — empirical proof via
+# the same ZE.5 gate documented on KLEARN_DB_SEARCH_PATH above.
 DEFAULT_PER_LANGUAGE_SEARCH_PATH_TEMPLATE = (
-    "klearn_{lang}, cms_{lang}, klearn, cms, "
+    "klearn_{lang}, cms_{lang}, "
     "users, localization, communications, convo, media, public"
 )
 
