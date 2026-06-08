@@ -19,21 +19,61 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from kielo_shared.locale_constants import SUPPORTED_LEARNING_LANGUAGES
 
 VECTOR_DB_SEARCH_PATH = "cms, klearn, public"
-KLEARN_DB_SEARCH_PATH = "public, users, klearn, cms"
 
-# Default per-language template for the M3 transition window.
+# Connection-level search_path for non-request-scoped sessions
+# (background workers, alembic migrations, startup probes).
 #
-# The per-language schemas (klearn_<lang>, cms_<lang>) come first so reads
-# of partitioned tables resolve there. The legacy klearn / cms schemas
-# stay on the path during M3-M5 because not every table is partitioned at
-# once; once a table moves, the per-language entry shadows the legacy one
-# automatically. After M6 cutover the legacy entries can be dropped.
+# Sweep LLL Phase 7 NNN.4 retry (2026-06-08; Python sibling of
+# post-ZT-followup-docker Round E 2026-06-04 Go-side drop, plus
+# the NNN.5 admin-endpoint precondition shipped same day):
+# pre-NNN.4 this string was "public, users, klearn, cms" — included
+# the legacy single-schema entries as fallback for not-yet-
+# partitioned tables. Post-NNN.4 the legacy entries are DROPPED.
 #
-# users / localization / communications / convo / media stay where they
-# are (no _shared umbrella) — they're already cross-language by
-# construction. public is last for pgvector and other extensions.
+# Empirical proof the drop is safe:
+#   - scripts/diag-implicit-cross-language-read.py at baseline 0
+#     hard-fail (ZE.5 gate, 2026-06-03). Every cross-language table
+#     read in production explicitly schema-qualifies (klearn.foo,
+#     cms.foo) OR uses ORM __table_args__ schema=... declarations.
+#   - Sweep LLL Phase 7 NNN.5 (2026-06-08) made admin curriculum +
+#     roadmap endpoints REJECT empty-language requests, so the
+#     request-scoped resolver always has language when these
+#     endpoints hit per-language ORMs.
+#   - Empirical 2026-06-08 audit of 17 engine background services:
+#     all 7 actively-spawned scanners (review_due_notification_service,
+#     streak_at_risk, saved_item_backlog, return_after_silence,
+#     observation_grounded, exercise_cache_warmup,
+#     session_localization_prewarm) either use active_language_scope
+#     directly OR delegate to learner_observation_service.observe()
+#     which wraps active_language_scope internally.
+#   - All raw SQL in scanner code uses explicit schema-qualification
+#     (FROM users.users, FROM users.notifications, FROM users.feature_usage).
+#   - Alembic migrations explicitly write 'ALTER TABLE klearn.X' /
+#     'UPDATE klearn.X' — no reliance on search_path resolution.
+#   - 17 services that delegate to request-scoped flows inherit the
+#     active_language contextvar from the parent request's
+#     ActiveLanguageMiddleware.
+#
+# Inverted invariant post-NNN.4: any non-request-scoped session that
+# needs a cross-language table read MUST qualify it explicitly. The
+# ZE.5 gate enforces this at PR time.
+KLEARN_DB_SEARCH_PATH = "public, users"
+
+# Default per-language template for request-scoped queries.
+#
+# The per-language schemas (klearn_<lang>, cms_<lang>) come first so
+# reads of partitioned tables resolve there. users / localization /
+# communications / convo / media stay on the path — they're already
+# cross-language by construction. public is last for pgvector and
+# other extensions.
+#
+# Sweep LLL Phase 7 NNN.4 retry (2026-06-08): pre-NNN.4 this template
+# included `klearn, cms` after the per-language schemas as fallback.
+# Post-NNN.4 the legacy entries are DROPPED — same empirical proof as
+# KLEARN_DB_SEARCH_PATH above, plus NNN.5's strict admin-endpoint gate
+# ensures admin requests never hit per-language ORMs without language.
 DEFAULT_PER_LANGUAGE_SEARCH_PATH_TEMPLATE = (
-    "klearn_{lang}, cms_{lang}, klearn, cms, "
+    "klearn_{lang}, cms_{lang}, "
     "users, localization, communications, convo, media, public"
 )
 
