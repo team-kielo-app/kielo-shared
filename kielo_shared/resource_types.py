@@ -70,6 +70,12 @@ WORD_DECK = "word_deck"
 # docs/architecture/adr-007-localization-canonical-english.md.
 ENGINE_CURRICULUM_TRACK_TITLE = "engine.curriculum.track_title"
 ENGINE_CURRICULUM_TRACK_DESCRIPTION = "engine.curriculum.track_description"
+# Arc 1A 2026-06-07: track audience surfaces on the picker card
+# ("Nurses + healthcare workers learning Finnish") and was emitted
+# raw English pre-Arc-1A. Added to the seam so vi/sv learners see
+# the audience localized through the same TTTT-F batch path as
+# title + description.
+ENGINE_CURRICULUM_TRACK_AUDIENCE = "engine.curriculum.track_audience"
 ENGINE_CURRICULUM_LEVEL_TITLE = "engine.curriculum.level_title"
 ENGINE_CURRICULUM_CHAPTER_TITLE = "engine.curriculum.chapter_title"
 ENGINE_CURRICULUM_CHAPTER_DESCRIPTION = "engine.curriculum.chapter_description"
@@ -113,6 +119,7 @@ ALL_RESOURCE_TYPES: FrozenSet[str] = frozenset(
         ENGINE_CONCEPT_HUB_CATEGORY,
         ENGINE_CURRICULUM_TRACK_TITLE,
         ENGINE_CURRICULUM_TRACK_DESCRIPTION,
+        ENGINE_CURRICULUM_TRACK_AUDIENCE,
         ENGINE_CURRICULUM_LEVEL_TITLE,
         ENGINE_CURRICULUM_CHAPTER_TITLE,
         ENGINE_CURRICULUM_CHAPTER_DESCRIPTION,

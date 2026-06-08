@@ -8,7 +8,15 @@ from enum import StrEnum
 from typing import Annotated, Any, Literal
 from uuid import UUID as UUID_aliased
 
-from pydantic import AwareDatetime, BaseModel, Field, confloat, conint, constr
+from pydantic import (
+    AwareDatetime,
+    BaseModel,
+    ConfigDict,
+    Field,
+    confloat,
+    conint,
+    constr,
+)
 
 
 class APIKey(BaseModel):
@@ -284,6 +292,15 @@ class BatchEmailResultItem(BaseModel):
     error: str | None = None
     recipient: str
     status: str
+
+
+class BatchLookupRequest(BaseModel):
+    distinct_by_surface_entry_id: bool | None = None
+    exclude_surface_entry_ids: list[UUID_aliased] | None = None
+    item_ids: list[UUID_aliased]
+    learning_language_code: str
+    per_item_limit: int | None = None
+    surface_types: list[str] | None = None
 
 
 class BatchSaveTranslationsResponse(BaseModel):
@@ -590,7 +607,7 @@ class CommsDLQAuditListItem(BaseModel):
 
 class CommsDLQAuditListResponse(BaseModel):
     items: list[CommsDLQAuditListItem]
-    next_cursor: str | None = None
+    next_page_key: str | None = None
 
 
 class CommsDLQAuditResolveRequest(BaseModel):
@@ -1221,6 +1238,13 @@ class CoreContent(BaseModel):
     in_the_wild: list[ConceptHubSentenceExample] | None = Field(
         [], title="In The Wild", validate_default=True
     )
+
+
+class CountResponse(BaseModel):
+    counts_by_surface: dict[str, int]
+    item_id: UUID_aliased
+    language_code: str
+    total: int
 
 
 class CreateAuditLogRequest(BaseModel):
@@ -2251,6 +2275,25 @@ class ImportJob(BaseModel):
     status: str
 
 
+class InAppNudgeData(BaseModel):
+    model_config = ConfigDict(
+        extra="allow",
+    )
+
+
+class InAppNudgeStateTransition(BaseModel):
+    snoozed_until: AwareDatetime | None = Field(
+        None,
+        description="Required when transition='snoozed'. Ignored for other transitions. Server clamps to max 7 days from now.",
+        title="Snoozed Until",
+    )
+    transition: str = Field(
+        ...,
+        description="One of: 'seen' | 'dismissed' | 'snoozed' | 'acted_on'. Validated server-side; unknown values rejected as 400.",
+        title="Transition",
+    )
+
+
 class Inflection(DictionaryInflection):
     pass
 
@@ -3152,8 +3195,14 @@ class ModelManifest(BaseModel):
     models: list[ModelDescriptor]
 
 
-class Morphology(DictionaryMorphology):
-    pass
+class Morphology(BaseModel):
+    case: str | None = None
+    clitics: list[str] | None = None
+    mood: str | None = None
+    number: str | None = None
+    person: str | None = None
+    tense: str | None = None
+    voice: str | None = None
 
 
 class MultipleChoiceTranslationExercise(BaseModel):
@@ -4868,6 +4917,31 @@ class SuggestedConceptHub(BaseModel):
     title: str
 
 
+class SurfaceReference(BaseModel):
+    caption_index: int | None = None
+    inflected_form_details_raw: str | None = None
+    language_code: str
+    morphology: Morphology | None = None
+    original_token_phrase: str | None = None
+    paragraph_id: UUID_aliased | None = None
+    prompt_segment_index: int | None = None
+    published_at: AwareDatetime
+    snippet_text: str | None = None
+    start_word_index: int | None = None
+    surface_entry_id: UUID_aliased
+    surface_id: UUID_aliased
+    surface_title: str | None = None
+    surface_type: str
+    timestamp_start_seconds: float | None = None
+    token_count: int
+    turn_index: int | None = None
+
+
+class SurfacesResponse(BaseModel):
+    items: list[SurfaceReference]
+    next_page_key: str | None = None
+
+
 class TTSBaseWordStreamSessionResponse(BaseModel):
     cache_hit: bool | None = Field(False, title="Cache Hit")
     expires_at: AwareDatetime = Field(..., title="Expires At")
@@ -5926,6 +6000,12 @@ class BatchEmailResult(BaseModel):
     total: int
 
 
+class BatchLookupResponse(BaseModel):
+    counts_by_item: dict[str, dict[str, int]]
+    language_code: str
+    surfaces_by_item: dict[str, list[SurfaceReference]]
+
+
 class BatchSaveTranslationsRequest(BaseModel):
     defer_export: bool | None = None
     translations: list[BatchTranslationItem]
@@ -6328,6 +6408,53 @@ class HTTPValidationError(BaseModel):
     detail: list[ValidationError] | None = Field(None, title="Detail")
 
 
+class InAppNudge(BaseModel):
+    anchor_target: str = Field(
+        ...,
+        description="Where on the nav bar the tooltip points. Mobile resolves to TutorialContext registered ID via anchor_target_to_tutorial_id helper. tab_settings is desktop-only — server suppresses this anchor for phone clients.",
+        title="Anchor Target",
+    )
+    context: str = Field(
+        ...,
+        description="Canonical context this nudge fires in. Echoes the request param so mobile can verify the response matches the request (defense against stale cached responses across context transitions).",
+        title="Context",
+    )
+    cooldown_seconds: conint(ge=0) | None = Field(
+        14400,
+        description="Mobile MAY use this to throttle re-poll within the same context. Server enforces cooldown at the eligibility-query layer; this is an advisory for client-side polling.",
+        title="Cooldown Seconds",
+    )
+    data: InAppNudgeData | None = Field(
+        None,
+        description="Structured data for mobile i18n interpolation. Server populates per-nudge-type fields (e.g. due_count for review_backlog). Mobile interpolates via the i18n key template like ''{{due_count}} reviews waiting''.",
+    )
+    deep_link: str = Field(
+        ...,
+        description="kielo://path the mobile CTA tap routes to. Resolved by the existing notificationRouting.parseRecommendationDeepLink parser. Routes to existing screens only — no new mobile navigation required for Arc G3.",
+        title="Deep Link",
+    )
+    expires_at: AwareDatetime | None = Field(
+        None,
+        description="Optional. If set, mobile MUST stop rendering after this timestamp (covers e.g. flash-sale-style nudges). Not used by the 4 v1 nudges; reserved for future types.",
+        title="Expires At",
+    )
+    nudge_id: UUID_aliased = Field(
+        ...,
+        description="Stable per-(user, nudge_type, context) composite ID. Server generates deterministically from the composite PK so mobile can dedupe optimistically when the same nudge re-fires across polls. Used as the dismiss_id in POST state transitions.",
+        title="Nudge Id",
+    )
+    nudge_type: str = Field(
+        ...,
+        description="Canonical nudge category from Arc G1 SoT. Mobile uses this as the i18n key prefix (e.g. nudge_type='review_backlog_idle' → i18n key 'in_app_nudge_review_backlog_title'). Pinned by V117 CHECK constraint + cross-language SoT parity.",
+        title="Nudge Type",
+    )
+    required_feature_type: str | None = Field(
+        None,
+        description="Optional cross-check when anchor_target='tab_quick_feature'. Values: 'news' | 'ktv' | 'juka'. Mobile suppresses render if useLastUsedFeature() doesn't match. Defends against the quick-feature slot-swap race (Arc G1 brittleness defense #1).",
+        title="Required Feature Type",
+    )
+
+
 class KLearnArticleInjection(BaseModel):
     action: str
     base_word_id: NullUUID | None = None
@@ -6701,6 +6828,10 @@ class SingletonConversationBrowseResponse(BaseModel):
 
 class SingletonConversationDiscoveryResponse(BaseModel):
     data: ConversationDiscoveryResponse
+
+
+class SingletonInAppNudge(BaseModel):
+    data: InAppNudge
 
 
 class SingletonKTVCaptionGenerateResponse(BaseModel):
@@ -7363,6 +7494,7 @@ class ArticleVersion(BaseModel):
     ) = None
     difficulty_score: NullFloat64 | None = None
     estimated_reading_time_minutes: NullInt32 | None = None
+    familiar_word_count: int | None = None
     id: UUID_aliased
     learning_language_code: str | None = None
     original_article_version_id: UUID_aliased | None = None
@@ -7379,6 +7511,7 @@ class ArticleVersion(BaseModel):
     title_support_language_code: str | None = None
     title_translation_fallback: bool | None = None
     title_translation_source_locale: str | None = None
+    tracked_word_count: int | None = None
     translation_fallback: bool | None = None
 
 

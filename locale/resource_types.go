@@ -113,6 +113,12 @@ const (
 	// docs/architecture/adr-007-localization-canonical-english.md.
 	ResourceTypeEngineCurriculumTrackTitle         = "engine.curriculum.track_title"
 	ResourceTypeEngineCurriculumTrackDescription   = "engine.curriculum.track_description"
+	// Arc 1A 2026-06-07: track audience surfaces on the picker card
+	// ("Nurses + healthcare workers learning Finnish") and was emitted
+	// raw English pre-Arc-1A. Added to the seam so vi/sv learners see
+	// the audience localized through the same TTTT-F batch path as
+	// title + description.
+	ResourceTypeEngineCurriculumTrackAudience      = "engine.curriculum.track_audience"
 	ResourceTypeEngineCurriculumLevelTitle         = "engine.curriculum.level_title"
 	ResourceTypeEngineCurriculumChapterTitle       = "engine.curriculum.chapter_title"
 	ResourceTypeEngineCurriculumChapterDescription = "engine.curriculum.chapter_description"
@@ -156,6 +162,7 @@ var allResourceTypes = map[string]struct{}{
 	ResourceTypeEngineConceptHubCategory:           {},
 	ResourceTypeEngineCurriculumTrackTitle:         {},
 	ResourceTypeEngineCurriculumTrackDescription:   {},
+	ResourceTypeEngineCurriculumTrackAudience:      {},
 	ResourceTypeEngineCurriculumLevelTitle:         {},
 	ResourceTypeEngineCurriculumChapterTitle:       {},
 	ResourceTypeEngineCurriculumChapterDescription: {},
