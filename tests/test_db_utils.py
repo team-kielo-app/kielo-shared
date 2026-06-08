@@ -177,18 +177,15 @@ def test_register_search_path_listener_sync_engine_uses_cursor():
 
     dbapi_conn = MagicMock(spec=["cursor"])
     by_event["connect"][1](dbapi_conn, MagicMock())
-    # Sweep LLL Phase 7 NNN.4 (2026-06-08): legacy klearn,cms dropped from
-    # KLEARN_DB_SEARCH_PATH per the same empirical proof Round E used for
-    # the Go template (ZE.5 gate at baseline 0).
     dbapi_conn.cursor.return_value.execute.assert_called_once_with(
-        "SET search_path TO public,users"
+        "SET search_path TO public,users,klearn,cms"
     )
     dbapi_conn.cursor.return_value.close.assert_called_once()
 
     sa_conn = MagicMock()
     by_event["begin"][1](sa_conn)
     sa_conn.exec_driver_sql.assert_called_once_with(
-        "SET LOCAL search_path TO public,users"
+        "SET LOCAL search_path TO public,users,klearn,cms"
     )
 
 
@@ -258,13 +255,10 @@ def test_active_language_contextvar_roundtrip():
 
 
 def test_make_per_language_search_path_default_template():
-    # Sweep LLL Phase 7 NNN.4 (2026-06-08): legacy klearn,cms dropped per
-    # the same empirical proof Round E used for the Go template (ZE.5
-    # gate at baseline 0).
     resolver = db_utils.make_per_language_search_path()
     token = db_utils.set_active_language("sv")
     try:
-        assert resolver() == "klearn_sv, cms_sv, users, localization, communications, convo, media, public"
+        assert resolver() == "klearn_sv, cms_sv, klearn, cms, users, localization, communications, convo, media, public"
     finally:
         db_utils.reset_active_language(token)
 
@@ -326,12 +320,9 @@ def test_register_search_path_listener_callable_resolves_per_transaction():
         db_utils.reset_active_language(token_sv)
 
     calls = [c.args[0] for c in sa_conn.exec_driver_sql.call_args_list]
-    # Sweep LLL Phase 7 NNN.4 (2026-06-08): legacy klearn,cms dropped from
-    # DEFAULT_PER_LANGUAGE_SEARCH_PATH_TEMPLATE per the same empirical
-    # proof Round E used for the Go template (ZE.5 gate at baseline 0).
     assert calls == [
-        "SET LOCAL search_path TO klearn_fi,cms_fi,users,localization,communications,convo,media,public",
-        "SET LOCAL search_path TO klearn_sv,cms_sv,users,localization,communications,convo,media,public",
+        "SET LOCAL search_path TO klearn_fi,cms_fi,klearn,cms,users,localization,communications,convo,media,public",
+        "SET LOCAL search_path TO klearn_sv,cms_sv,klearn,cms,users,localization,communications,convo,media,public",
     ]
 
 
