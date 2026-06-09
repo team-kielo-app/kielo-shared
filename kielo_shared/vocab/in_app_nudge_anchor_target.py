@@ -66,9 +66,7 @@ via this tab)."""
 IN_APP_NUDGE_ANCHOR_TARGET_TAB_PROFILE: Final[InAppNudgeAnchorTarget] = "tab_profile"
 """Profile tab."""
 
-IN_APP_NUDGE_ANCHOR_TARGET_TAB_SETTINGS: Final[InAppNudgeAnchorTarget] = (
-    "tab_settings"
-)
+IN_APP_NUDGE_ANCHOR_TARGET_TAB_SETTINGS: Final[InAppNudgeAnchorTarget] = "tab_settings"
 """DESKTOP-ONLY. SideNavBar mounts; FloatingTabBar filters out.
 Engine MUST suppress nudges with this anchor for phone users."""
 

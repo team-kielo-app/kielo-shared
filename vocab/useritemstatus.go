@@ -7,31 +7,31 @@
 // Pre-Arc-1B-v2 the status string was a free-form column carrying 6
 // distinct values produced by 4 writers across 2 languages:
 //
-//   PascalCase (engine-derived):  "Known" (218), "Learning" (1649), "Unknown" (87)
-//   lowercase (mobile + user-svc): "learning" (45803), "new" (9644), "mastered" (137)
+//	PascalCase (engine-derived):  "Known" (218), "Learning" (1649), "Unknown" (87)
+//	lowercase (mobile + user-svc): "learning" (45803), "new" (9644), "mastered" (137)
 //
 // 98%+ of production rows are lowercase. Arc 1B v1 normalized the
 // CAMModule reader (one of ~8 reader sites) to handle both cases.
 // Empirical recon found 2 OTHER reader sites still broken:
 //
-//   * services/weakness_analyzer.py:60 — `current_status == "Unknown"`
+//   - services/weakness_analyzer.py:60 — `current_status == "Unknown"`
 //     PascalCase-only check misses 98%+ of production rows. Wrong
 //     weakness ranking, system-wide.
-//   * services/skill_assessment.py:31-49 — `WHERE uis.status IN
+//   - services/skill_assessment.py:31-49 — `WHERE uis.status IN
 //     ('learning', 'known')` lowercase-only misses 1649 "Learning" +
 //     218 "Known" + 137 "mastered" = 2.9% under-count system-wide.
 //
 // Arc 1B v2 closes the structural drift class end-to-end:
-//   1. This SoT module — closed-set canonical lowercase 3-value vocab
-//      + a 4th "ignored" forward-compat value.
-//   2. Cross-language Python mirror at
-//      `kielo-shared/kielo_shared/vocab/user_item_status.py`.
-//   3. V116 migration — backfill all 6 values to canonical lowercase
-//      3-set + CHECK constraint enforcing the closed vocabulary.
-//   4. Writer-side normalization at every producer site.
-//   5. Reader-side fixes at the 2 Tier-1A bug sites.
-//   6. Cross-language parity gate at
-//      tests/contract/user_item_status_vocabulary_contract_test.go.
+//  1. This SoT module — closed-set canonical lowercase 3-value vocab
+//     + a 4th "ignored" forward-compat value.
+//  2. Cross-language Python mirror at
+//     `kielo-shared/kielo_shared/vocab/user_item_status.py`.
+//  3. V116 migration — backfill all 6 values to canonical lowercase
+//     3-set + CHECK constraint enforcing the closed vocabulary.
+//  4. Writer-side normalization at every producer site.
+//  5. Reader-side fixes at the 2 Tier-1A bug sites.
+//  6. Cross-language parity gate at
+//     tests/contract/user_item_status_vocabulary_contract_test.go.
 //
 // Pattern: Sweep WW / SSS-B / SSS-C / IIII / DDDDD-B3 / ZK-B canonical
 // typed-vocabulary SoT, with V116 CHECK constraint as the deploy-time
@@ -52,13 +52,13 @@ package vocab
 //
 // Three canonical bands + one forward-compat:
 //
-//   "unknown"  — learner has not yet engaged or proficiency below 0.3
-//   "learning" — learner has engaged (mobile tap + saved-item) or
-//                proficiency in [0.3, 0.7); the active practice band
-//   "known"    — learner has demonstrated retention via review-outcome
-//                or proficiency ≥ 0.7
-//   "ignored"  — learner explicitly opted out of practicing this item
-//                (forward-compat slot; no writer fires today)
+//	"unknown"  — learner has not yet engaged or proficiency below 0.3
+//	"learning" — learner has engaged (mobile tap + saved-item) or
+//	             proficiency in [0.3, 0.7); the active practice band
+//	"known"    — learner has demonstrated retention via review-outcome
+//	             or proficiency ≥ 0.7
+//	"ignored"  — learner explicitly opted out of practicing this item
+//	             (forward-compat slot; no writer fires today)
 //
 // The lowercase canonical form is empirically the dominant production
 // shape (98%+ of rows). Pre-Arc-1B-v2 the column also carried legacy

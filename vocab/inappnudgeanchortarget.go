@@ -51,18 +51,18 @@ func (a InAppNudgeAnchorTarget) String() string { return string(a) }
 //
 // Mapping to mobile `TutorialContext` registered IDs:
 //
-//   navbar           → 'navbar' (whole nav bar — used for non-specific
-//                      "discovery" nudges that don't point at one tab)
-//   tab_home         → 'tab-index' (note: id is 'index' not 'home' —
-//                      asymmetry documented at recon)
-//   tab_quick_feature → 'tab-quick-feature' (stable across the
-//                       news/ktv/juka swap; consumer cross-checks
-//                       `useLastUsedFeature()` against any
-//                       requiredFeatureType filter)
-//   tab_exercises    → 'tab-exercises' (the roadmap tab in code)
-//   tab_profile      → 'tab-profile'
-//   tab_settings     → 'tab-settings' (DESKTOP-ONLY — SideNavBar
-//                      mounts; FloatingTabBar filters out)
+//	navbar           → 'navbar' (whole nav bar — used for non-specific
+//	                   "discovery" nudges that don't point at one tab)
+//	tab_home         → 'tab-index' (note: id is 'index' not 'home' —
+//	                   asymmetry documented at recon)
+//	tab_quick_feature → 'tab-quick-feature' (stable across the
+//	                    news/ktv/juka swap; consumer cross-checks
+//	                    `useLastUsedFeature()` against any
+//	                    requiredFeatureType filter)
+//	tab_exercises    → 'tab-exercises' (the roadmap tab in code)
+//	tab_profile      → 'tab-profile'
+//	tab_settings     → 'tab-settings' (DESKTOP-ONLY — SideNavBar
+//	                   mounts; FloatingTabBar filters out)
 const (
 	// InAppNudgeAnchorTargetNavbar — whole nav bar. Used when no
 	// specific tab is the "right" anchor (e.g. discovery_browse

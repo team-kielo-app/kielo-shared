@@ -12,10 +12,10 @@
 // Initial v1 vocabulary derived empirically from a 10-user recon
 // (52.7% population coverage in the 30-80% target band):
 //
-//   try_scenarios_first_time      — Loop C entry; 13.5% of active users
-//   review_backlog_idle           — Loop B re-entry; 37.8% (largest)
-//   roadmap_completionist_explore — Loop A/C entry post-Loop-E; 16.2%
-//   convo_user_try_reading        — Loop F transfer entry; 8.1%
+//	try_scenarios_first_time      — Loop C entry; 13.5% of active users
+//	review_backlog_idle           — Loop B re-entry; 37.8% (largest)
+//	roadmap_completionist_explore — Loop A/C entry post-Loop-E; 16.2%
+//	convo_user_try_reading        — Loop F transfer entry; 8.1%
 //
 // 17th typed-vocab SoT module in kielo-shared/vocab/ (after
 // useritemstatus + content_bridge + scenarioSourceType + emailSubjectKey
@@ -54,11 +54,11 @@ func (t InAppNudgeType) String() string { return string(t) }
 // Canonical InAppNudgeType vocabulary (4 values).
 //
 // Each value maps to:
-//   * one engine-side `InAppNudgeAuthor` class (Arc G2)
-//   * one set of eligibility predicates against existing tables
-//   * one anchor target (typed `InAppNudgeAnchorTarget`)
-//   * one set of trigger contexts (typed `InAppNudgeContext`)
-//   * 4 locale-localized copy strings (en/fi/sv/vi) via
+//   - one engine-side `InAppNudgeAuthor` class (Arc G2)
+//   - one set of eligibility predicates against existing tables
+//   - one anchor target (typed `InAppNudgeAnchorTarget`)
+//   - one set of trigger contexts (typed `InAppNudgeContext`)
+//   - 4 locale-localized copy strings (en/fi/sv/vi) via
 //     `localization.translations` SoT
 const (
 	// InAppNudgeTypeTryScenariosFirstTime — roadmap-engaged learners
@@ -99,10 +99,10 @@ const (
 // Priority order (left-to-right, higher = render-first when multiple
 // nudges are eligible for the same context):
 //
-//   1. review_backlog_idle (highest leverage — actionable retention)
-//   2. roadmap_completionist_explore (clear "what next" moment)
-//   3. try_scenarios_first_time (Loop C entry — exploratory)
-//   4. convo_user_try_reading (lowest population — long-tail)
+//  1. review_backlog_idle (highest leverage — actionable retention)
+//  2. roadmap_completionist_explore (clear "what next" moment)
+//  3. try_scenarios_first_time (Loop C entry — exploratory)
+//  4. convo_user_try_reading (lowest population — long-tail)
 var AllInAppNudgeTypes = []InAppNudgeType{
 	InAppNudgeTypeReviewBacklogIdle,
 	InAppNudgeTypeRoadmapCompletionistExplore,

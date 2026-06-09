@@ -111,8 +111,8 @@ const (
 	// `title: "New Track"` (canonical English) regardless of the
 	// caller's support_language_code. See
 	// docs/architecture/adr-007-localization-canonical-english.md.
-	ResourceTypeEngineCurriculumTrackTitle         = "engine.curriculum.track_title"
-	ResourceTypeEngineCurriculumTrackDescription   = "engine.curriculum.track_description"
+	ResourceTypeEngineCurriculumTrackTitle       = "engine.curriculum.track_title"
+	ResourceTypeEngineCurriculumTrackDescription = "engine.curriculum.track_description"
 	// Arc 1A 2026-06-07: track audience surfaces on the picker card
 	// ("Nurses + healthcare workers learning Finnish") and was emitted
 	// raw English pre-Arc-1A. Added to the seam so vi/sv learners see
