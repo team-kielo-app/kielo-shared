@@ -68,27 +68,34 @@ func TestConversationCategorySeed_ReturnsRegistry(t *testing.T) {
 	}
 }
 
-// TestConversationCategoryRegistry_DefaultResolvesViaSeed: pre-Set
-// state returns the static vi translation.
+// TestConversationCategoryRegistry_DefaultResolvesViaSeed: post-Round-10C
+// the bare seed has only English entries; non-en locales fall back to
+// English. Admin curation + LLM autotranslate land at runtime via the
+// dynamicregistry wrap in consumer main.go.
 func TestConversationCategoryRegistry_DefaultResolvesViaSeed(t *testing.T) {
-	got := ConversationCategoryLabel("food-dining", "vi")
-	assert.Equal(t, "Ẩm thực & ăn uống", got)
-	got = ConversationBucketLabel("main", "vi")
-	assert.Equal(t, "Chính", got)
+	// English canonical resolves to seed.
+	assert.Equal(t, "Food & dining", ConversationCategoryLabel("food-dining", "en"))
+	assert.Equal(t, "Main", ConversationBucketLabel("main", "en"))
+	// Non-en locales fall back to English (post-Round-10C contract).
+	assert.Equal(t, "Food & dining", ConversationCategoryLabel("food-dining", "vi"))
+	assert.Equal(t, "Main", ConversationBucketLabel("main", "vi"))
 }
 
 // TestSetConversationCategoryRegistry_NilIsNoOp verifies that
 // passing nil to SetConversationCategoryRegistry preserves the
-// current registry rather than clobbering it.
+// current registry rather than clobbering it. Post-Round-10C this
+// is asserted via the English-fallback path (non-en seed values
+// were retired in V134).
 func TestSetConversationCategoryRegistry_NilIsNoOp(t *testing.T) {
 	restoreConversationCategorySeed(t)
 
-	// Sanity: initial state resolves correctly.
-	assert.Equal(t, "Khác", ConversationCategoryLabel("other", "vi"))
+	// Sanity: initial state resolves correctly (English fallback for vi
+	// post-Round-10C).
+	assert.Equal(t, "Other", ConversationCategoryLabel("other", "vi"))
 
 	// nil swap must not clobber the existing registry.
 	SetConversationCategoryRegistry(nil)
-	assert.Equal(t, "Khác", ConversationCategoryLabel("other", "vi"))
+	assert.Equal(t, "Other", ConversationCategoryLabel("other", "vi"))
 }
 
 // restoreConversationCategorySeed restores the package registry to

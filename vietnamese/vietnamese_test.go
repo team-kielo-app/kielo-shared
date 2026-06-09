@@ -67,9 +67,13 @@ func TestKnownLemmaOverride_MissingReturnsEmpty(t *testing.T) {
 // variants are the canonical API.
 
 func TestGlossOverrideFor_ResolvesViWhenLocaleIsVi(t *testing.T) {
-	assert.Equal(t, "tôi", GlossOverrideFor("I", "vi"))
-	assert.Equal(t, "cửa hàng, tiệm", GlossOverrideFor("shop, store", "vi"))
-	assert.Equal(t, "tàu hỏa", GlossOverrideFor("TRAIN", "vi"))
+	// Post-Round-10C: bare seed has English-only entries. Vi values
+	// come from localization.dynamic_translations via the dynamicregistry
+	// wrap (admin curation + Round 10D autotranslate fill); the bare-
+	// seed path returns English as fallback.
+	assert.Equal(t, "I", GlossOverrideFor("I", "vi"))
+	assert.Equal(t, "shop, store", GlossOverrideFor("shop, store", "vi"))
+	assert.Equal(t, "train", GlossOverrideFor("TRAIN", "vi"))
 }
 
 func TestGlossOverrideFor_FallsBackToEnglishForOtherLocales(t *testing.T) {
@@ -95,14 +99,19 @@ func TestGlossOverrideFor_MissReturnsEmpty(t *testing.T) {
 
 func TestGlossOverrideFor_CaseInsensitive(t *testing.T) {
 	// Same case-insensitivity contract as the legacy DictionaryGlossOverride.
-	assert.Equal(t, "tôi", GlossOverrideFor("i", "vi"))
-	assert.Equal(t, "họ", GlossOverrideFor("They", "vi"))
+	// Post-Round-10C: bare seed returns English (vi via dynamicregistry).
+	assert.Equal(t, "I", GlossOverrideFor("i", "vi"))
+	assert.Equal(t, "they", GlossOverrideFor("They", "vi"))
 }
 
 func TestGrammarConceptOverrideFor_ResolvesViWhenLocaleIsVi(t *testing.T) {
-	assert.Equal(t, "cách sở hữu", GrammarConceptOverrideFor("Genetiivi (-n)", "vi"))
-	assert.Equal(t, "thì hiện tại", GrammarConceptOverrideFor("Preesens", "vi"))
-	assert.Equal(t, "thức mệnh lệnh", GrammarConceptOverrideFor("Imperatiivi", "vi"))
+	// Post-Round-10C: bare seed has English-only entries. Vi values
+	// come from localization.dynamic_translations via the dynamicregistry
+	// wrap; the bare-seed path returns the canonical (which IS the
+	// English seed value, since the key === English for grammar concepts).
+	assert.Equal(t, "Genetiivi (-n)", GrammarConceptOverrideFor("Genetiivi (-n)", "vi"))
+	assert.Equal(t, "Preesens", GrammarConceptOverrideFor("Preesens", "vi"))
+	assert.Equal(t, "Imperatiivi", GrammarConceptOverrideFor("Imperatiivi", "vi"))
 }
 
 func TestGrammarConceptOverrideFor_FallsBackToCanonicalForOtherLocales(t *testing.T) {
@@ -127,19 +136,19 @@ func TestGrammarConceptOverrideFor_MissReturnsEmpty(t *testing.T) {
 }
 
 func TestTermOverrideFor_ResolvesViWhenLocaleIsVi(t *testing.T) {
-	// MUST produce the same VI strings as the legacy DictionaryTermOverride
-	// for every Finnish pronoun — this is the no-regression contract that
-	// lets us migrate callers without behavior change.
-	assert.Equal(t, "tôi", TermOverrideFor("minä", "vi"))
-	assert.Equal(t, "bạn", TermOverrideFor("sinä", "vi"))
-	assert.Equal(t, "anh ấy/cô ấy", TermOverrideFor("hän", "vi"))
-	assert.Equal(t, "nó", TermOverrideFor("se", "vi"))
-	assert.Equal(t, "chúng tôi/chúng ta", TermOverrideFor("me", "vi"))
-	// "te" is the plural "you" — pre-registry returned "các bạn/quý vị"
-	// to preserve the formal/plural form. The new registry has a
-	// separate "you (plural)" key for this exact reason.
-	assert.Equal(t, "các bạn/quý vị", TermOverrideFor("te", "vi"))
-	assert.Equal(t, "họ", TermOverrideFor("he", "vi"))
+	// Post-Round-10C: bare seed has English-only gloss entries; vi
+	// values come from localization.dynamic_translations via the
+	// dynamicregistry wrap. The bare-seed path returns the English
+	// canonical that termOverrides routes to.
+	assert.Equal(t, "I", TermOverrideFor("minä", "vi"))
+	assert.Equal(t, "you", TermOverrideFor("sinä", "vi"))
+	assert.Equal(t, "he/she", TermOverrideFor("hän", "vi"))
+	assert.Equal(t, "it", TermOverrideFor("se", "vi"))
+	assert.Equal(t, "we", TermOverrideFor("me", "vi"))
+	// "te" is the plural "you" — the registry has a separate
+	// "you (plural)" key.
+	assert.Equal(t, "you (plural)", TermOverrideFor("te", "vi"))
+	assert.Equal(t, "they", TermOverrideFor("he", "vi"))
 }
 
 func TestTermOverrideFor_FallsBackToEnglishForOtherLocales(t *testing.T) {
@@ -162,45 +171,47 @@ func TestTermOverrideFor_MissReturnsEmpty(t *testing.T) {
 }
 
 func TestTermOverrideFor_CaseInsensitive(t *testing.T) {
-	assert.Equal(t, "tôi", TermOverrideFor("MINÄ", "vi"))
-	assert.Equal(t, "anh ấy/cô ấy", TermOverrideFor(" Hän ", "vi"))
+	// Post-Round-10C: bare seed returns English canonical.
+	assert.Equal(t, "I", TermOverrideFor("MINÄ", "vi"))
+	assert.Equal(t, "he/she", TermOverrideFor(" Hän ", "vi"))
 }
 
 func TestTermOverrideFor_FiPronounsHaveCorrespondingGlossSeeds(t *testing.T) {
-	// Invariant: every FI key in termOverrides MUST appear in
-	// finnishPronounToEnglish, AND the English value MUST have a
-	// gloss seed (i.e. GlossOverrideFor with locale="en" returns
-	// non-empty). Without this, a future seed change in one map
-	// silently desyncs the other, and TermOverrideFor starts
-	// returning "" for valid pronouns.
-	for fi := range termOverrides {
-		english, ok := finnishPronounToEnglish[fi]
-		if !ok {
-			t.Errorf("termOverrides has key %q but finnishPronounToEnglish does not", fi)
-			continue
-		}
-		// Sanity: the English form must round-trip through the
-		// gloss registry with a VI seed.
+	// Post-Round-10C invariant: every FI key in finnishPronounToEnglish
+	// MUST round-trip through the gloss registry with both en and
+	// (post-Round-10C) the en-fallback path for vi — non-empty results
+	// in both cases prove the canonical English glosses are seeded.
+	// Vi values land in localization.dynamic_translations via the
+	// dynamicregistry wrap at runtime; they are NOT in the bare seed.
+	for fi, english := range finnishPronounToEnglish {
+		// Vi-path: post-Round-10C this is the English fallback. Must
+		// be non-empty so the dynamicregistry override probe has a
+		// source_version to derive (per dynamicregistry.sourceVersionFor:
+		// empty English → silently disable probe).
 		viGot := GlossOverrideFor(english, "vi")
 		if viGot == "" {
-			t.Errorf("FI pronoun %q → English %q has no VI gloss seed", fi, english)
+			t.Errorf("FI pronoun %q → English %q has no gloss seed (vi-path fallback empty)", fi, english)
 		}
-		// And it must round-trip with English fallback.
+		// And the EN-direct path.
 		enGot := GlossOverrideFor(english, "en")
 		if enGot == "" {
-			t.Errorf("FI pronoun %q → English %q has no EN gloss seed", fi, english)
+			t.Errorf("FI pronoun %q → English %q has no gloss seed (en-direct path empty)", fi, english)
 		}
 	}
 }
 
-func TestTermOverrideFor_TableInvariant_EveryFiKeyResolvesToItsViValue(t *testing.T) {
-	// Invariant: every entry in termOverrides MUST resolve via
-	// TermOverrideFor(fi, "vi") to that same value. If this fails,
-	// the supportregistry lookup is silently diverging from the
-	// hand-curated table.
-	for fi, expectedVi := range termOverrides {
+func TestTermOverrideFor_TableInvariant_EveryFiKeyResolvesToEnglish(t *testing.T) {
+	// Post-Round-10C invariant: every entry in finnishPronounToEnglish
+	// (the canonical English mapping) MUST resolve via
+	// TermOverrideFor(fi, "vi") to the SAME English string (not the
+	// retired vi-seed value). Vi values come from
+	// localization.dynamic_translations via the dynamicregistry wrap;
+	// the bare-seed path returns the English canonical.
+	for fi, expectedEn := range finnishPronounToEnglish {
 		got := TermOverrideFor(fi, "vi")
-		assert.Equal(t, expectedVi, got, "FI pronoun %q: table=%q registry=%q", fi, expectedVi, got)
+		assert.Equal(t, expectedEn, got,
+			"FI pronoun %q: en-canonical=%q registry=%q (post-Round-10C bare seed returns en)",
+			fi, expectedEn, got)
 	}
 }
 
@@ -227,12 +238,13 @@ func TestDictionarySeed_ReturnsRegistry(t *testing.T) {
 }
 
 func TestDictionaryRegistry_DefaultResolvesViaSeed(t *testing.T) {
-	// Pre-Set the package var IS the seed; helpers return canonical
-	// vi values for known glosses.
+	// Post-Round-10C: bare seed has English-only entries. Vi values
+	// come from localization.dynamic_translations via the dynamicregistry
+	// wrap; the bare-seed path returns the English canonical.
 	got := GlossOverrideFor("train", "vi")
-	assert.Equal(t, "tàu hỏa", got)
+	assert.Equal(t, "train", got)
 	got = GrammarConceptOverrideFor("Genitive", "vi")
-	assert.Equal(t, "sở hữu", got)
+	assert.Equal(t, "Genitive", got)
 }
 
 func TestSetDictionaryRegistry_SwapsRegistry(t *testing.T) {
@@ -252,13 +264,14 @@ func TestSetDictionaryRegistry_SwapsRegistry(t *testing.T) {
 func TestSetDictionaryRegistry_NilIsNoOp(t *testing.T) {
 	restoreDictionarySeed(t)
 
-	// Sanity: starting state is the seed.
-	assert.Equal(t, "tàu hỏa", GlossOverrideFor("train", "vi"))
+	// Sanity: starting state is the seed. Post-Round-10C bare seed
+	// returns the English canonical.
+	assert.Equal(t, "train", GlossOverrideFor("train", "vi"))
 
 	// nil swap MUST NOT clobber the existing registry.
 	SetDictionaryRegistry(nil)
 
-	assert.Equal(t, "tàu hỏa", GlossOverrideFor("train", "vi"),
+	assert.Equal(t, "train", GlossOverrideFor("train", "vi"),
 		"SetDictionaryRegistry(nil) must preserve current registry")
 }
 

@@ -31,7 +31,14 @@ type Seam struct {
 	cache     Cache
 	overrides OverrideStore
 	metrics   Metrics
-	group     singleflight.Group
+	// persister is the seam's write-through to
+	// localization.dynamic_translations. Round 10D. Default
+	// NoopPersister preserves pre-Round-10D cache-only behaviour.
+	persister TranslationPersister
+	// guard rejects suspicious provider output. Round 10D. Default
+	// NoopGuard accepts everything (pre-Round-10D de-facto behaviour).
+	guard SuspiciousTranslationGuard
+	group singleflight.Group
 
 	// freshTTL is how long cached values are considered fresh.
 	// Lookups within this window are served straight from cache.
@@ -61,7 +68,40 @@ type SeamConfig struct {
 // NewSeam constructs a Seam. Pass Noop* implementations for any
 // dependency that isn't wired yet — the seam still functions, just
 // without caching / overrides / telemetry coverage.
+//
+// Round 10D back-compat: this constructor defaults persister to
+// NoopPersister and guard to NoopGuard so existing callers continue
+// to work without code change. Production wires persister + guard via
+// NewSeamWith.
 func NewSeam(registry *Registry, cache Cache, overrides OverrideStore, metrics Metrics, cfg SeamConfig) *Seam {
+	return NewSeamWith(registry, cache, overrides, metrics, nil, nil, cfg)
+}
+
+// NewSeamWith constructs a Seam with the full Round 10D dependency set.
+// Pass nil for any optional component (cache, overrides, metrics,
+// persister, guard) to substitute the Noop* default.
+//
+// Production wiring (kielo-mobile-bff, kielo-user-service,
+// kielo-content-service, kielo-communications-service, kielo-convo):
+//
+//	seam := localization.NewSeamWith(
+//	    registry,
+//	    cacheredis.New(redisClient),
+//	    overridepgx.New(pgxPool),
+//	    metrics.NewPrometheus(),
+//	    localization.NewDynClientPersister(dynclient, "seam_autotranslate"),
+//	    localization.NewCanonicalGuard(),
+//	    localization.SeamConfig{},
+//	)
+func NewSeamWith(
+	registry *Registry,
+	cache Cache,
+	overrides OverrideStore,
+	metrics Metrics,
+	persister TranslationPersister,
+	guard SuspiciousTranslationGuard,
+	cfg SeamConfig,
+) *Seam {
 	if cfg.FreshTTL <= 0 {
 		cfg.FreshTTL = 24 * time.Hour
 	}
@@ -77,11 +117,19 @@ func NewSeam(registry *Registry, cache Cache, overrides OverrideStore, metrics M
 	if metrics == nil {
 		metrics = NoopMetrics{}
 	}
+	if persister == nil {
+		persister = NoopPersister{}
+	}
+	if guard == nil {
+		guard = NoopGuard{}
+	}
 	return &Seam{
 		registry:  registry,
 		cache:     cache,
 		overrides: overrides,
 		metrics:   metrics,
+		persister: persister,
+		guard:     guard,
 		freshTTL:  cfg.FreshTTL,
 		staleTTL:  cfg.StaleTTL,
 	}
@@ -384,7 +432,11 @@ func (s *Seam) providerBatchCall(
 	}
 
 	// Persist + assign. Build a write-set for BatchSet when available.
+	// Round 10D: parallel persistList tracks (ref, value) pairs that
+	// pass the guard so we can write through to dynamic_translations
+	// AFTER cache write. Siblings unaffected when one item rejects.
 	writeSet := make(map[string]string, len(remaining))
+	persistList := make([]persistItem, 0, len(remaining))
 	for i, r := range remaining {
 		value := strings.TrimSpace(results[i].Text)
 		if value == "" {
@@ -392,8 +444,19 @@ func (s *Seam) providerBatchCall(
 			s.metrics.Record(ctx, r.ref.Namespace, target, "provider_error")
 			continue
 		}
+		// Round 10D: per-item guard. Reject suspicious output BEFORE
+		// cache + persist so junk doesn't poison either store.
+		// Siblings continue unaffected — provider_error metric tag
+		// matches the natural-failure code path so dashboards
+		// distinguish rejection volume via log spelunking.
+		if s.guard.IsSuspicious(r.ref.SourceText, value, target) {
+			out[r.idx] = r.ref.SourceText
+			s.metrics.Record(ctx, r.ref.Namespace, target, "provider_error")
+			continue
+		}
 		out[r.idx] = value
 		writeSet[r.key] = value
+		persistList = append(persistList, persistItem{ref: r.ref, value: value})
 		s.metrics.Record(ctx, r.ref.Namespace, target, "provider_call")
 	}
 	if len(writeSet) > 0 {
@@ -405,6 +468,20 @@ func (s *Seam) providerBatchCall(
 			}
 		}
 	}
+	// Round 10D: dynamic_translations write-through, per-item. Persister
+	// failures swallowed at impl layer (translation succeeded; losing
+	// the row only re-runs LLM on next request).
+	for _, p := range persistList {
+		_ = s.persister.Persist(ctx, p.ref, target, p.value)
+	}
+}
+
+// persistItem is the in-flight bookkeeping shape for Round 10D
+// per-item batch persistence. Decouples the BatchSet cache write (keyed
+// by cacheKey) from the dynamic_translations write (keyed by ref).
+type persistItem struct {
+	ref   SourceRef
+	value string
 }
 
 // resolve runs the resolution chain and returns (telemetry-source-tag, value).
@@ -458,9 +535,17 @@ func (s *Seam) kickoffSWR(ctx context.Context, ref SourceRef, target, cacheKey s
 	}()
 }
 
-// callProvider routes through the registry, persists the result to
-// cache, and returns the translated value. On any provider error or
-// empty result, returns SourceText so the UI never renders blank.
+// callProvider routes through the registry, applies the suspicious-
+// translation guard, persists the result to cache + the dynamic
+// translations table, and returns the translated value. On any provider
+// error / empty result / guard rejection, returns SourceText so the UI
+// never renders blank.
+//
+// Round 10D: applies guard before cache write + persistence; persists
+// successful translations to localization.dynamic_translations via
+// the TranslationPersister so the next request for the same (namespace,
+// source_id, source_version, target) tuple sees the row without
+// re-invoking the LLM.
 func (s *Seam) callProvider(ctx context.Context, ref SourceRef, target, cacheKey string) string {
 	provider, err := s.registry.Resolve(TierASupportLocale, target)
 	if err != nil {
@@ -489,7 +574,19 @@ func (s *Seam) callProvider(ctx context.Context, ref SourceRef, target, cacheKey
 		s.metrics.Record(ctx, ref.Namespace, target, "provider_error")
 		return ref.SourceText
 	}
+	// Round 10D: quality gate. Reject suspicious output BEFORE cache
+	// write + persistence so junk doesn't poison either store.
+	if s.guard.IsSuspicious(ref.SourceText, value, target) {
+		s.metrics.Record(ctx, ref.Namespace, target, "provider_error")
+		return ref.SourceText
+	}
 	_ = s.cache.Set(ctx, cacheKey, value, s.freshTTL+s.staleTTL)
+	// Round 10D: dynamic_translations write-through. Persister failures
+	// must NOT bubble — the translation was successful, losing the
+	// persistence row only means the next request re-runs the LLM
+	// (degraded but correct). NoopPersister no-ops; production
+	// DynClientPersister logs + returns silently.
+	_ = s.persister.Persist(ctx, ref, target, value)
 	return value
 }
 

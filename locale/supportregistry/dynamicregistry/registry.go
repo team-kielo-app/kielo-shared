@@ -94,6 +94,16 @@ type Registry struct {
 	resType       string
 	keyPrefx      string
 
+	// translator is the Round 10D autotranslate-on-miss hook. Default
+	// NoopTranslator (set in newWithProbe) preserves pre-Round-10D
+	// behaviour. Production wires SeamTranslator via WithTranslator.
+	translator Translator
+
+	// autotranslateInflight is the process-local dedupe map for
+	// Round 10D background autotranslate goroutines. Mirror of
+	// Seam.swrInFlight pattern. Keyed by "<resource_id>|<locale>".
+	autotranslateInflight sync.Map
+
 	// Source-version memo: english seed → sha256[:16]. Lazily filled on
 	// first lookup per key. RWMutex because Resolve is a hot path and
 	// the memo write is rare-after-warmup.
@@ -149,6 +159,7 @@ func newWithProbe(seed supportregistry.Registry, cache Cache, opts ...Option) *R
 		hitTTL:       DefaultHitTTL,
 		missTTL:      DefaultMissTTL,
 		resType:      locale.ResourceTypeUIString,
+		translator:   NoopTranslator{},
 		sourceVerMap: make(map[string]string),
 	}
 	r.keyPrefx = "dynreg:v1:" + r.resType + ":"
@@ -247,6 +258,20 @@ func (r *Registry) Resolve(ctx context.Context, key supportregistry.Key, support
 		// after missTTL anyway).
 		if r.cache != nil {
 			_ = r.cache.SetNegative(ctx, cacheKey, r.missTTL)
+		}
+		// Round 10D: queue an autotranslate fill in the background.
+		// Only on the true "no override row" case (not on dbErr —
+		// retrying when the DB is down would spam the LLM). The
+		// goroutine is fire-and-forget; the current request still
+		// returns seed English. The NEXT request for the same (key,
+		// locale) — after missTTL expires (30s default) — re-probes
+		// the DB and finds the row the goroutine persisted.
+		// Concurrent misses for the same (key, locale) within this
+		// process dedupe via autotranslateInflight; cross-process
+		// dedupe is bounded by missTTL (≤1 extra LLM call per
+		// process per missTTL window).
+		if dbErr == nil {
+			r.queueAutotranslate(ctx, string(key), sv, sourceText, normLocale)
 		}
 		return r.seed.Resolve(ctx, key, supportLocale)
 	}

@@ -86,62 +86,66 @@ var dictionarySeed = func() *supportregistry.MapRegistry {
 	// as curatable.
 	r := supportregistry.New(locale.AllSupportLocales())
 
-	// Glosses: English phrase → VI translation. Key is lower-cased
+	// Glosses: canonical English phrases. Key is lower-cased
 	// (consistent with the previous glossOverrides[strings.ToLower(...)]
 	// lookup). English seed is the phrase itself (identity), which
-	// becomes the natural fallback for non-VI support locales.
+	// becomes the natural fallback for non-VI support locales until
+	// admin curates / Round 10D autotranslate fills the locale.
+	//
+	// Round 10C (2026-06-09) retired the inline vi seed values; they
+	// now live in localization.dynamic_translations as status='approved'
+	// rows from V134 hand-curated migration. Round 10D autotranslate
+	// will fill any new locale on first miss via the seam persister.
 	//
 	// NOTE on "you (plural)" vs "you": Finnish distinguishes singular
 	// "sinä" from plural "te"; English collapses both to "you". To
-	// preserve the pre-registry VI plural form ("các bạn/quý vị") for
-	// "te" without conflating it with singular "sinä", we register an
-	// explicit "you (plural)" key — the FI→EN map in
-	// finnishPronounToEnglish below routes "te" to it.
-	for _, e := range []struct {
-		en string
-		vi string
-	}{
-		{"I", "tôi"},
-		{"me", "tôi"},
-		{"you", "bạn"},
-		{"you (plural)", "các bạn/quý vị"},
-		{"for you / to you", "cho bạn"},
-		{"he/she", "anh ấy/cô ấy"},
-		{"he / she", "anh ấy/cô ấy"},
-		{"it", "nó"},
-		{"we", "chúng tôi/chúng ta"},
-		{"they", "họ"},
-		{"to be", "là"},
-		{"shop, store", "cửa hàng, tiệm"},
-		{"train", "tàu hỏa"},
+	// preserve the per-pronoun-form distinction at the gloss layer
+	// (so admin-curated vi can render "các bạn/quý vị" for plural and
+	// "bạn" for singular), we register an explicit "you (plural)" key
+	// — the FI→EN map in finnishPronounToEnglish below routes "te" to
+	// it.
+	for _, en := range []string{
+		"I",
+		"me",
+		"you",
+		"you (plural)",
+		"for you / to you",
+		"he/she",
+		"he / she",
+		"it",
+		"we",
+		"they",
+		"to be",
+		"shop, store",
+		"train",
 	} {
-		key := glossKey(e.en)
-		r.Set(key, "en", e.en)
+		r.Set(glossKey(en), "en", en)
 	}
 
-	// Grammar concepts: case-sensitive canonical name → VI translation.
-	// Two sets of keys (Finnish + English forms) intentionally map to
-	// the same VI value — callers may pass either depending on origin.
-	for _, e := range []struct {
-		canonical string
-		vi        string
-	}{
-		{"Genetiivi (-n)", "cách sở hữu"},
-		{"Genitive Case", "cách sở hữu"},
-		{"Genitive", "sở hữu"},
-		{"Partitiivi", "cách bộ phận"},
-		{"Partitive Case", "cách bộ phận"},
-		{"Imperatiivi", "thức mệnh lệnh"},
-		{"Imperative Mood", "thức mệnh lệnh"},
-		{"Preesens", "thì hiện tại"},
-		{"Present Tense", "thì hiện tại"},
-		{"Perfekti", "thì hoàn thành"},
-		{"Perfect Tense", "thì hoàn thành"},
-		{"Imperfekti", "thì quá khứ"},
-		{"Past Tense", "thì quá khứ"},
+	// Grammar concepts: case-sensitive canonical name. Two sets of
+	// keys (Finnish + English forms) intentionally use the canonical
+	// name as the English seed value — admin-curated vi translations
+	// land via the dynamicregistry wrap at runtime.
+	//
+	// Round 10C (2026-06-09) retired the inline vi seed values; they
+	// now live in localization.dynamic_translations as status='approved'
+	// rows from V134 hand-curated migration.
+	for _, canonical := range []string{
+		"Genetiivi (-n)",
+		"Genitive Case",
+		"Genitive",
+		"Partitiivi",
+		"Partitive Case",
+		"Imperatiivi",
+		"Imperative Mood",
+		"Preesens",
+		"Present Tense",
+		"Perfekti",
+		"Perfect Tense",
+		"Imperfekti",
+		"Past Tense",
 	} {
-		key := grammarKey(e.canonical)
-		r.Set(key, "en", e.canonical)
+		r.Set(grammarKey(canonical), "en", canonical)
 	}
 
 	r.Finalize()
@@ -285,16 +289,19 @@ func TermOverrideFor(term, supportLocale string) string {
 	return GlossOverrideFor(english, supportLocale)
 }
 
-// finnishPronounToEnglish maps the same FI keys as termOverrides above
-// to their canonical English form, which is then resolved through the
-// supportregistry. Kept as a separate map (rather than refactoring
-// termOverrides) so the deprecated DictionaryTermOverride keeps its
-// original VI-direct semantics for one release cycle.
+// finnishPronounToEnglish maps Finnish pronouns to their canonical
+// English form, which is then resolved through the supportregistry.
+// Round 10C (2026-06-09) retired the sibling termOverrides map (which
+// held vi-direct values) — the canonical resolution path is now
+// FI → finnishPronounToEnglish → English seed → dynamicregistry wrap
+// → per-locale admin-curated row (with English fallback when no row
+// exists).
 //
-// MUST stay in sync with termOverrides: every termOverrides key MUST
-// appear here with an English value that corresponds to a glossKey
-// seed. The TestTermOverrideFor_FiPronounsHaveCorrespondingGlossSeeds
-// test enforces this invariant.
+// Every key MUST have a glossKey seed entry above so the
+// dynamicregistry override probe has a non-empty English to derive
+// source_version from. The
+// TestTermOverrideFor_FiPronounsHaveCorrespondingGlossSeeds test
+// enforces this invariant.
 var finnishPronounToEnglish = map[string]string{
 	"minä": "I",
 	"sinä": "you",
@@ -316,15 +323,11 @@ func KnownLemmaOverride(term string) string {
 	return knownLemmas[strings.ToLower(strings.TrimSpace(term))]
 }
 
-var termOverrides = map[string]string{
-	"minä": "tôi",
-	"sinä": "bạn",
-	"hän":  "anh ấy/cô ấy",
-	"se":   "nó",
-	"me":   "chúng tôi/chúng ta",
-	"te":   "các bạn/quý vị",
-	"he":   "họ",
-}
+// (Round 10C 2026-06-09 retired the termOverrides var that held vi-
+// direct values. The canonical FI→vi resolution now flows through
+// finnishPronounToEnglish + the dynamicregistry wrap; vi values land
+// in localization.dynamic_translations as status='approved' rows from
+// V134 hand-curated migration.)
 
 var knownLemmas = map[string]string{
 	"minä": "minä",
