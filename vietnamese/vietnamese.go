@@ -38,11 +38,13 @@ package vietnamese
 import (
 	"context"
 	"strings"
+	"sync"
 
+	"github.com/team-kielo-app/kielo-shared/locale"
 	"github.com/team-kielo-app/kielo-shared/locale/supportregistry"
 )
 
-// dictionaryRegistry is the ADR-008 supportregistry holding the
+// dictionarySeed is the ADR-008 supportregistry holding the
 // English-keyed gloss + grammar-concept overrides. Constructed once at
 // package init and Finalize()d so any drift in seeds during runtime
 // fails loud.
@@ -63,8 +65,26 @@ import (
 //     does not. This is intentional — grammar concept names are
 //     canonical tokens, not free text, and a lowercase variant likely
 //     indicates the caller passed a generic word.
-var dictionaryRegistry = func() *supportregistry.MapRegistry {
-	r := supportregistry.New([]string{"en", "vi"})
+//
+// Round 6 (2026-06-09 C3): wrapped with dynamicregistry via the
+// consumer-side SetDictionaryRegistry hook so admins can curate
+// non-vi gloss + grammar-concept translations
+// (resource_type='ui.string') via the kielo-localization admin UI.
+// The pre-Round-6 pattern hard-coded vi-only; admin curation for
+// other support locales (pt, ja, ko, ...) required a code change +
+// redeploy. IMPORTANT: this file does NOT import dynamicregistry —
+// that would create an import cycle (dynamicregistry imports locale
+// for ResourceTypeUIString). Init is consumer-side; this package
+// only exposes the SEED + SET hooks. Mirrors the canonical
+// SetConversationCategoryRegistry pattern at
+// kielo-shared/locale/conversation_category.go.
+var dictionarySeed = func() *supportregistry.MapRegistry {
+	// Round 6 C6 (2026-06-09): widened from {en, vi} hardcoded to
+	// the platform-wide locale set. Seed entries below only populate
+	// en + vi; SupportedLocales() now reports all 23 platform locales,
+	// so admin UI for kielo-localization will surface every locale
+	// as curatable.
+	r := supportregistry.New(locale.AllSupportLocales())
 
 	// Glosses: English phrase → VI translation. Key is lower-cased
 	// (consistent with the previous glossOverrides[strings.ToLower(...)]
@@ -130,6 +150,61 @@ var dictionaryRegistry = func() *supportregistry.MapRegistry {
 	return r
 }()
 
+// DictionarySeed returns the finalized in-memory MapRegistry holding
+// the canonical English source-of-truth + vi hand-curated translations
+// for gloss + grammar-concept overrides.
+//
+// Consumers (kielo-content-service main.go, kielo-user-service
+// main.go) call this + pass it to dynamicregistry.New(seed, pool,
+// cache) + register the resulting wrapper via
+// SetDictionaryRegistry. Round 6 (2026-06-09 C3).
+//
+// Exposed so tests + offline callers (admin scripts) can resolve
+// directly against the seed without DB/Redis dependencies.
+func DictionarySeed() supportregistry.Registry {
+	return dictionarySeed
+}
+
+// dictionaryRegistry is the registry callers Resolve() against. At
+// package load it points to the seed-only MapRegistry; consumers
+// (kielo-content-service, kielo-user-service) call
+// SetDictionaryRegistry(wrapped) at startup to swap in a
+// dynamicregistry.Registry that consults
+// localization.dynamic_translations on every Resolve.
+//
+// Concurrent-safe via RWMutex (defensive — production reads happen
+// after the swap, which happens once at startup).
+var (
+	dictionaryRegistryMu sync.RWMutex
+	dictionaryRegistry   supportregistry.Registry = dictionarySeed
+)
+
+// SetDictionaryRegistry swaps in a caller-constructed
+// dynamicregistry-wrapped registry. The seed registry is preserved
+// as fallback. nil is a no-op (preserves current registry).
+//
+// MUST be called from main.go BEFORE any handler is registered.
+// Mirrors the canonical SetConversationCategoryRegistry shape.
+// Round 6 (2026-06-09 C3).
+func SetDictionaryRegistry(r supportregistry.Registry) {
+	if r == nil {
+		return
+	}
+	dictionaryRegistryMu.Lock()
+	dictionaryRegistry = r
+	dictionaryRegistryMu.Unlock()
+}
+
+// resolveDictionary is the single read-path the package's public
+// helpers funnel through. Centralizes the RWMutex acquisition so
+// callers don't have to think about the swap-at-startup race.
+func resolveDictionary(ctx context.Context, key supportregistry.Key, supportLocale string) string {
+	dictionaryRegistryMu.RLock()
+	r := dictionaryRegistry
+	dictionaryRegistryMu.RUnlock()
+	return r.Resolve(ctx, key, supportLocale)
+}
+
 func glossKey(english string) supportregistry.Key {
 	return supportregistry.Key("vi.dict.gloss." + strings.ToLower(strings.TrimSpace(english)))
 }
@@ -151,7 +226,7 @@ func GlossOverrideFor(value, supportLocale string) string {
 		return ""
 	}
 	key := glossKey(value)
-	got := dictionaryRegistry.Resolve(context.Background(), key, supportLocale)
+	got := resolveDictionary(context.Background(), key, supportLocale)
 	if got == string(key) {
 		// Registry miss: no seed at all for this gloss. Returning ""
 		// preserves the pre-registry contract where missing entries
@@ -173,7 +248,7 @@ func GrammarConceptOverrideFor(value, supportLocale string) string {
 		return ""
 	}
 	key := grammarKey(value)
-	got := dictionaryRegistry.Resolve(context.Background(), key, supportLocale)
+	got := resolveDictionary(context.Background(), key, supportLocale)
 	if got == string(key) {
 		return ""
 	}

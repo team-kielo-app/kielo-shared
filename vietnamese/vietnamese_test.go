@@ -1,9 +1,12 @@
 package vietnamese
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/team-kielo-app/kielo-shared/locale/supportregistry"
 )
 
 // Tests for the hardcoded Vietnamese override tables used by the
@@ -199,4 +202,143 @@ func TestTermOverrideFor_TableInvariant_EveryFiKeyResolvesToItsViValue(t *testin
 		got := TermOverrideFor(fi, "vi")
 		assert.Equal(t, expectedVi, got, "FI pronoun %q: table=%q registry=%q", fi, expectedVi, got)
 	}
+}
+
+// Round 6 C3 (2026-06-09): wrap dictionarySeed with
+// dynamicregistry.Registry via SetDictionaryRegistry. These tests
+// pin:
+//
+//   1. DictionarySeed() returns the canonical MapRegistry so
+//      consumers can wrap it.
+//   2. The default (pre-Set) state resolves via the seed.
+//   3. SetDictionaryRegistry swaps the registry; subsequent
+//      Resolve calls go through the new registry.
+//   4. SetDictionaryRegistry(nil) is a no-op (preserves current).
+//   5. The English-seed invariant — every gloss + grammar key has
+//      an English row, so the dynamicregistry override probe will
+//      fire (and not silently short-circuit per the inert-wrap
+//      defect class documented in Round 5).
+
+func TestDictionarySeed_ReturnsRegistry(t *testing.T) {
+	seed := DictionarySeed()
+	if seed == nil {
+		t.Fatal("DictionarySeed() returned nil")
+	}
+}
+
+func TestDictionaryRegistry_DefaultResolvesViaSeed(t *testing.T) {
+	// Pre-Set the package var IS the seed; helpers return canonical
+	// vi values for known glosses.
+	got := GlossOverrideFor("train", "vi")
+	assert.Equal(t, "tàu hỏa", got)
+	got = GrammarConceptOverrideFor("Genitive", "vi")
+	assert.Equal(t, "sở hữu", got)
+}
+
+func TestSetDictionaryRegistry_SwapsRegistry(t *testing.T) {
+	restoreDictionarySeed(t)
+
+	// Swap in a sentinel registry that returns a known marker for
+	// any (key, locale). The helpers funnel through the registry,
+	// so GlossOverrideFor should now return the sentinel.
+	sentinel := &sentinelRegistry{marker: "SENTINEL_XYZ"}
+	SetDictionaryRegistry(sentinel)
+
+	got := GlossOverrideFor("train", "vi")
+	assert.Equal(t, "SENTINEL_XYZ", got,
+		"after SetDictionaryRegistry, helpers must go through new registry")
+}
+
+func TestSetDictionaryRegistry_NilIsNoOp(t *testing.T) {
+	restoreDictionarySeed(t)
+
+	// Sanity: starting state is the seed.
+	assert.Equal(t, "tàu hỏa", GlossOverrideFor("train", "vi"))
+
+	// nil swap MUST NOT clobber the existing registry.
+	SetDictionaryRegistry(nil)
+
+	assert.Equal(t, "tàu hỏa", GlossOverrideFor("train", "vi"),
+		"SetDictionaryRegistry(nil) must preserve current registry")
+}
+
+func TestDictionarySeed_EnglishIsSeededForAllKeys(t *testing.T) {
+	// Round 5 / Round 6 invariant — every key in the seed MUST have
+	// an English row. The dynamicregistry override probe uses the
+	// English seed text to derive source_version; missing English
+	// silently disables the probe (per
+	// kielo-shared/locale/supportregistry/dynamicregistry/
+	// registry.go:sourceVersionFor).
+	//
+	// Cover both gloss + grammar namespaces by walking the same
+	// hand-curated tables the seed init walks.
+
+	// Glosses — empirical pin against a sample of canonical keys
+	// from the seed init (lines 84-95 in vietnamese.go).
+	for _, en := range []string{
+		"I", "me", "you", "you (plural)", "for you / to you",
+		"he/she", "he / she", "it", "we", "they",
+		"to be", "shop, store", "train",
+	} {
+		key := glossKey(en)
+		// Resolve against EN should NOT return the key string —
+		// that would mean the English row is missing.
+		got := dictionarySeed.Resolve(t.Context(), key, "en")
+		if got == string(key) {
+			t.Errorf("English seed missing for gloss key %q (would "+
+				"silently disable dynamicregistry override probe)", en)
+		}
+	}
+
+	// Grammar concepts — same pin.
+	for _, canonical := range []string{
+		"Genetiivi (-n)", "Genitive Case", "Genitive",
+		"Partitiivi", "Partitive Case",
+		"Imperatiivi", "Imperative Mood",
+		"Preesens", "Present Tense",
+		"Perfekti", "Perfect Tense",
+		"Imperfekti", "Past Tense",
+	} {
+		key := grammarKey(canonical)
+		got := dictionarySeed.Resolve(t.Context(), key, "en")
+		if got == string(key) {
+			t.Errorf("English seed missing for grammar key %q "+
+				"(would silently disable dynamicregistry override "+
+				"probe)", canonical)
+		}
+	}
+}
+
+// restoreDictionarySeed restores the package registry to its seed
+// state at test cleanup so tests are order-independent.
+func restoreDictionarySeed(t *testing.T) {
+	t.Helper()
+	t.Cleanup(func() {
+		dictionaryRegistryMu.Lock()
+		dictionaryRegistry = dictionarySeed
+		dictionaryRegistryMu.Unlock()
+	})
+}
+
+// sentinelRegistry is a test-only registry that always returns
+// `marker` regardless of (key, locale). Used to prove
+// SetDictionaryRegistry actually swaps the registry.
+type sentinelRegistry struct {
+	marker string
+}
+
+func (s *sentinelRegistry) Resolve(_ context.Context, _ supportregistry.Key, _ string) string {
+	return s.marker
+}
+
+func (s *sentinelRegistry) ResolveTemplate(_ context.Context, _ supportregistry.Key, _ string, _ map[string]any) string {
+	return s.marker
+}
+
+func (s *sentinelRegistry) SupportedLocales() []string {
+	return []string{"en", "vi"}
+}
+
+func (s *sentinelRegistry) CoverageReport() map[string]supportregistry.CoverageStats {
+	return map[string]supportregistry.CoverageStats{}
 }

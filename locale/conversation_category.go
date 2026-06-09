@@ -51,7 +51,12 @@ func ConversationCategorySeed() supportregistry.Registry {
 var conversationCategorySeed = buildConversationCategorySeed()
 
 func buildConversationCategorySeed() *supportregistry.MapRegistry {
-	r := supportregistry.New([]string{"en", "vi"})
+	// Round 6 C6 (2026-06-09): widened from {en, vi} hardcoded to
+	// the platform-wide locale set. Seed entries below only populate
+	// en + vi; SupportedLocales() now reports all 23, so admin UI
+	// for kielo-localization will surface every platform locale as
+	// curatable (vs blocking on a code change to add ar/pt/ja/...).
+	r := supportregistry.New(AllSupportLocales())
 
 	for _, e := range []struct {
 		categoryKey string
