@@ -151,6 +151,179 @@ class Metrics(Protocol):
     def record(self, namespace: str, target_locale: str, source: str) -> None: ...
 
 
+# ──────────────────── Round 10A: persistence + guard protocols ───────────
+
+
+@runtime_checkable
+class TranslationPersister(Protocol):
+    """Round 10A: write-through persistence for fresh provider calls.
+
+    The seam invokes ``persist`` after every successful provider_call
+    so the (ref, target, value) tuple lands in
+    ``localization.dynamic_translations`` as ``status='machine'``.
+    The next request for the same (namespace, source_id,
+    source_version, target_locale) sees the row via the OverrideStore
+    path (when admin promotes to ``approved``/``override``) or via
+    the cache (Redis MGET) — either way the LLM is NOT re-invoked.
+
+    Pre-Round-10A the seam wrote only to Redis cache. Operator
+    intent (Round 10) was "treat ui-strings as data" via the
+    autotranslate-callback path documented at engine main.py:660 +
+    seam.translate's docstring (line 619). The wire was missing.
+    Persistence had to be added at the seam layer, not at the
+    autotranslate-callback layer, because:
+
+      1. The seam is the single chokepoint every consumer goes
+         through (single-item ``translate`` + batched
+         ``translate_batch`` + autotranslate-callback all flow
+         through ``_call_provider`` / ``_provider_batch_call``).
+         Adding it at the callback only would skip the structured
+         content localizer + reusable-field-localizer code paths.
+
+      2. The seam's source_version + namespace already match the
+         persistence row shape — the callback would have had to
+         re-derive both from the ``(resource_id, english, _)``
+         tuple it receives.
+
+      3. Errors are seam-layer concerns (cache failure already
+         no-ops); same shape lets persistence failures degrade
+         gracefully without bubbling to the user-facing request.
+
+    Implementations: production wires
+    ``DynClientPersister`` (HTTP to kielo-localization) in the
+    engine + Go services. Tests use ``MapPersister`` for assertions.
+    Default ``NoopPersister`` preserves pre-Round-10A behaviour
+    for tests that don't care.
+
+    All implementations MUST swallow internal errors — the seam
+    falls back to source on provider error; it must NOT additionally
+    fall back when persistence fails (the translation was successful;
+    losing the persistence row only means the next request re-runs
+    the LLM, which is degraded but still correct).
+    """
+
+    async def persist(
+        self,
+        ref: SourceRef,
+        target_locale: str,
+        translated_text: str,
+    ) -> None: ...
+
+
+@runtime_checkable
+class SuspiciousTranslationGuard(Protocol):
+    """Round 10A: quality gate for fresh provider output.
+
+    Mirrors the canonical Sweep PP/QQ/KKK guard at
+    ``content_localizer.ContentLocalizer._is_suspicious_translation``
+    (Layer 2 in Sweep QQ Pattern B). Pre-Round-10A the guard ran
+    only at ``_via_registry`` + ``_via_registry_batch``
+    (structured_content_localizer.py lines 785 + 870). The seam
+    path ``_call_provider`` had no guard hook — the
+    autotranslate-callback shipping junk into ``dynamic_translations``
+    would have silently landed.
+
+    Guard implementations decide per (source, candidate, target) tuple
+    whether the candidate is acceptable. Rule names mirror Sweep
+    PP / QQ / KKK (1=identity, 2=foreign-text-injection, 3=repeated-
+    token loop, 3a=short-output frequency, 3b=consecutive-run, 4=
+    truncation, 5=single-source-token degeneracy, 5b=premature 1-char,
+    6=glyph-replacement, 7=negation-injection for en/fi/sv/vi).
+
+    Returns True when the candidate IS suspicious (callers fall back
+    to source). False means accept.
+    """
+
+    def is_suspicious(
+        self,
+        source_text: str,
+        candidate: str,
+        target_locale: str,
+    ) -> bool: ...
+
+
+class NoopPersister:
+    """Persistence that swallows every call. Use in tests + envs
+    where kielo-localization is unreachable.
+
+    Round 10A pre-existing services (kielo-shared seam consumers
+    that haven't wired a real persister yet) default to this — same
+    backward-compat contract as ``NoopCache`` / ``NoopOverrideStore``.
+    """
+
+    async def persist(
+        self,
+        ref: SourceRef,
+        target_locale: str,
+        translated_text: str,
+    ) -> None:
+        return None
+
+
+class NoopGuard:
+    """Guard that accepts everything. Use in tests + envs where the
+    guard's domain knowledge (Vietnamese negation injection, Finnish
+    morphology) isn't applicable.
+
+    Pre-Round-10A this is the de-facto seam behaviour — every
+    provider output was accepted unconditionally. Round 10A makes
+    that explicit and pluggable.
+    """
+
+    def is_suspicious(
+        self,
+        source_text: str,
+        candidate: str,
+        target_locale: str,
+    ) -> bool:
+        return False
+
+
+class MapPersister:
+    """Deterministic in-memory persister for unit tests. Tests assert
+    on ``.calls`` to verify the seam invoked persistence with the
+    expected (ref, target, value) tuple.
+
+    The tuple shape mirrors the persistence row that would land
+    in ``localization.dynamic_translations``: (namespace, source_id,
+    source_version, target_locale, translated_text). source_text /
+    role are dropped because the row doesn't carry them — the
+    source_version hash IS the de-facto reference to source_text.
+    """
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, str, str, str, str]] = []
+
+    async def persist(
+        self,
+        ref: SourceRef,
+        target_locale: str,
+        translated_text: str,
+    ) -> None:
+        self.calls.append(
+            (
+                ref.namespace,
+                ref.source_id,
+                ref.source_version,
+                target_locale,
+                translated_text,
+            )
+        )
+
+
+class AlwaysSuspiciousGuard:
+    """Test guard that rejects every candidate. Lets tests assert the
+    fall-back-to-source path fires when the guard fires."""
+
+    def is_suspicious(
+        self,
+        source_text: str,
+        candidate: str,
+        target_locale: str,
+    ) -> bool:
+        return True
+
+
 # Sweep AAAAA: Python sibling of Go TTTT-B BatchCache / BatchOverrideStore.
 # When the seam's cache / override store satisfy these batch-aware
 # protocols, translate_batch collapses N round-trips to 1 (composite
@@ -327,12 +500,20 @@ class Seam:
         overrides: OverrideStore | None = None,
         metrics: Metrics | None = None,
         config: SeamConfig | None = None,
+        # Round 10A: optional write-through to dynamic_translations
+        # + suspicious-translation guard at provider-call boundary.
+        # Default Noop impls preserve pre-Round-10A behaviour for
+        # tests + dev envs without kielo-localization.
+        persister: TranslationPersister | None = None,
+        guard: SuspiciousTranslationGuard | None = None,
     ) -> None:
         self._registry = registry
         self._cache = cache or NoopCache()
         self._overrides = overrides or NoopOverrideStore()
         self._metrics = metrics or NoopMetrics()
         self._config = config or SeamConfig()
+        self._persister = persister or NoopPersister()
+        self._guard = guard or NoopGuard()
         self._inflight: dict[str, asyncio.Future[str]] = {}
         self._swr_inflight: set[str] = set()
         self._lock = asyncio.Lock()
@@ -560,33 +741,69 @@ class Seam:
                 self._metrics.record(ref.namespace, target, "provider_error")
             return
 
+        # Round 10A: guard + persist contracts mirror _call_provider.
+        # write_set is cache-writes; persist_set is dynamic_translations
+        # writes. Guard rejection at this layer falls back to source +
+        # records provider_error metric (visible to operators in the
+        # same dashboard as natural provider failures).
         write_set: dict[str, str] = {}
+        persist_set: list[tuple[SourceRef, str]] = []
         for (idx, ref, key), result in zip(remaining, results):
             value = (result.text or "").strip()
             if not value:
                 out[idx] = ref.source_text
                 self._metrics.record(ref.namespace, target, "provider_error")
                 continue
+            if self._guard.is_suspicious(ref.source_text, value, target):
+                logger.warning(
+                    "seam batch guard rejected provider output",
+                    extra={
+                        "namespace": ref.namespace,
+                        "source_id": ref.source_id,
+                        "target": target,
+                    },
+                )
+                out[idx] = ref.source_text
+                self._metrics.record(ref.namespace, target, "provider_error")
+                continue
             out[idx] = value
             write_set[key] = value
+            persist_set.append((ref, value))
             self._metrics.record(ref.namespace, target, "provider_call")
 
-        if not write_set:
-            return
-        ttl = self._config.fresh_ttl_seconds + self._config.stale_ttl_seconds
-        if isinstance(self._cache, BatchCache):
+        # Cache write-back.
+        if write_set:
+            ttl = self._config.fresh_ttl_seconds + self._config.stale_ttl_seconds
+            cache_ok = False
+            if isinstance(self._cache, BatchCache):
+                try:
+                    await self._cache.batch_set(write_set, ttl)
+                    cache_ok = True
+                except Exception:
+                    logger.exception("seam batch_set failed; falling back to per-key")
+            if not cache_ok:
+                try:
+                    await asyncio.gather(
+                        *(self._cache.set(k, v, ttl) for k, v in write_set.items())
+                    )
+                except Exception:
+                    logger.exception("seam batch cache write-back fallback failed")
+
+        # Round 10A: dynamic_translations write-through for the batch.
+        # Per-item persister.persist gathered concurrently. Each impl
+        # is responsible for swallowing its own errors so one failed
+        # row doesn't abort the rest of the batch.
+        if persist_set:
             try:
-                await self._cache.batch_set(write_set, ttl)
-                return
+                await asyncio.gather(
+                    *(
+                        self._persister.persist(ref, target, value)
+                        for ref, value in persist_set
+                    ),
+                    return_exceptions=True,
+                )
             except Exception:
-                logger.exception("seam batch_set failed; falling back to per-key")
-        # Fallback: per-key gather over Cache.set
-        try:
-            await asyncio.gather(
-                *(self._cache.set(k, v, ttl) for k, v in write_set.items())
-            )
-        except Exception:
-            logger.exception("seam batch cache write-back fallback failed")
+                logger.exception("seam batch persister gather failed")
 
     # ──────────────────── resolution chain ───────────────────────────
 
@@ -709,11 +926,46 @@ class Seam:
         value = (results[0].text or "").strip()
         if not value:
             return ref.source_text
+        # Round 10A: suspicious-translation guard at the seam layer.
+        # Pre-Round-10A the guard ran only at _via_registry — every
+        # other seam consumer (autotranslate-callback, structured
+        # content localizer batch helpers, reusable-field localizer)
+        # accepted provider output blindly. Now every cache-miss that
+        # comes through the seam gets quality-checked before we
+        # persist OR cache it.
+        if self._guard.is_suspicious(ref.source_text, value, target):
+            logger.warning(
+                "seam guard rejected provider output",
+                extra={
+                    "namespace": ref.namespace,
+                    "source_id": ref.source_id,
+                    "target": target,
+                },
+            )
+            return ref.source_text
+        # Cache write-through. Cache failures swallowed at impl layer
+        # (NoopCache no-op; production RedisCache logs + returns).
         await self._cache.set(
             cache_key,
             value,
             self._config.fresh_ttl_seconds + self._config.stale_ttl_seconds,
         )
+        # Round 10A: dynamic_translations write-through. Persister
+        # failures must NOT bubble — the translation was successful,
+        # losing the persistence row only means the next request re-
+        # runs the LLM (degraded but correct). NoopPersister swallows;
+        # production DynClientPersister logs + returns silently.
+        try:
+            await self._persister.persist(ref, target, value)
+        except Exception:
+            logger.exception(
+                "seam persister failed (degrading to cache-only)",
+                extra={
+                    "namespace": ref.namespace,
+                    "source_id": ref.source_id,
+                    "target": target,
+                },
+            )
         return value
 
     def _kickoff_swr(self, ref: SourceRef, target: str, cache_key: str) -> None:
