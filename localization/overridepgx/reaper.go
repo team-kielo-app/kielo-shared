@@ -75,6 +75,18 @@ type Reaper struct {
 	// rows of that resource_type. Useful when callers wire one
 	// reaper per resource family. Empty = scan all resource types.
 	resourceTypeFilter string
+
+	// resourceIDPrefix, when non-empty, restricts the scan to rows
+	// whose resource_id starts with this string (SQL LIKE 'prefix%').
+	// Sweep Round 7 (2026-06-09): added for test-fixture scoping
+	// after the Round 6 C3 verification probe left a stray
+	// `ui.engine_string.Learn` row in the dev DB that contaminated
+	// the reaper's own test suite via the shared `ui.string`
+	// resource_type. Production wirings leave this empty; tests can
+	// scope to `WithResourceIDPrefix("test-")` to avoid
+	// cross-fixture interference. Same shape as Sweep TTTTT's
+	// scenario test cleanup hooks at the registry-scan layer.
+	resourceIDPrefix string
 }
 
 // New constructs a Reaper. Pool must be non-nil in production;
@@ -112,6 +124,25 @@ func WithScanBatchSize(n int) ReaperOption {
 func WithResourceTypeFilter(resourceType string) ReaperOption {
 	return func(r *Reaper) {
 		r.resourceTypeFilter = resourceType
+	}
+}
+
+// WithResourceIDPrefix restricts the scan to rows whose resource_id
+// starts with the given prefix. Useful for test fixtures that share
+// a resource_type with other writers (e.g. tests for the `ui.string`
+// reaper should scope to a unique resource_id prefix to avoid being
+// affected by stray rows from manual probes or other test fixtures).
+//
+// Sweep Round 7 (2026-06-09): added after the Round 6 C3 verification
+// probe left a stray `ui.engine_string.Learn` row in the dev DB,
+// contaminating the reaper's own test suite. Production wirings
+// leave this empty; tests can pass `WithResourceIDPrefix("test-")`
+// to scope to test-namespaced rows only.
+//
+// Empty string = no prefix filter (scan all matching rows).
+func WithResourceIDPrefix(prefix string) ReaperOption {
+	return func(r *Reaper) {
+		r.resourceIDPrefix = prefix
 	}
 }
 
@@ -258,6 +289,15 @@ func (r *Reaper) scanBatch(ctx context.Context, cursor scanCursor) ([]scanRow, e
 	if r.resourceTypeFilter != "" {
 		query += fmt.Sprintf(" AND resource_type = $%d", argIdx)
 		args = append(args, r.resourceTypeFilter)
+		argIdx++
+	}
+	if r.resourceIDPrefix != "" {
+		// PostgreSQL LIKE pattern: append '%' wildcard at runtime so
+		// callers don't have to think about it. Standard SQL escape
+		// rules apply to the prefix; per-caller it's typically a
+		// constant ("test-") so no user-input injection vector.
+		query += fmt.Sprintf(" AND resource_id LIKE $%d", argIdx)
+		args = append(args, r.resourceIDPrefix+"%")
 		argIdx++
 	}
 	if !cursor.isZero() {

@@ -124,7 +124,7 @@ func TestReaper_FlipsStaleRowsToPendingReview(t *testing.T) {
 		pendingRID: "new-v2",
 	})
 
-	reaper := NewReaper(pool, current, WithResourceTypeFilter(namespace))
+	reaper := NewReaper(pool, current, WithResourceTypeFilter(namespace), WithResourceIDPrefix("test-"))
 	stats, err := reaper.Reap(context.Background())
 	if err != nil {
 		t.Fatalf("Reap: %v", err)
@@ -182,7 +182,7 @@ func TestReaper_UnknownResourcesAreSkipped(t *testing.T) {
 		// unknownRID intentionally omitted → CurrentSourceVersionFunc
 		// returns (_, false) for it.
 	})
-	reaper := NewReaper(pool, current, WithResourceTypeFilter(namespace))
+	reaper := NewReaper(pool, current, WithResourceTypeFilter(namespace), WithResourceIDPrefix("test-"))
 	stats, err := reaper.Reap(context.Background())
 	if err != nil {
 		t.Fatalf("Reap: %v", err)
@@ -211,7 +211,7 @@ func TestReaper_IsIdempotent(t *testing.T) {
 	seedReaperRow(t, pool, namespace, rid, "old", "vi", "machine")
 
 	current := staticCurrentSourceVersion(map[string]string{rid: "new"})
-	reaper := NewReaper(pool, current, WithResourceTypeFilter(namespace))
+	reaper := NewReaper(pool, current, WithResourceTypeFilter(namespace), WithResourceIDPrefix("test-"))
 
 	stats1, err := reaper.Reap(context.Background())
 	if err != nil {
@@ -248,7 +248,7 @@ func TestReaper_RespectsResourceTypeFilter(t *testing.T) {
 	seedReaperRow(t, pool, namespace2, rid, "old", "vi", "machine")
 
 	current := staticCurrentSourceVersion(map[string]string{rid: "new"})
-	reaper := NewReaper(pool, current, WithResourceTypeFilter(namespace1))
+	reaper := NewReaper(pool, current, WithResourceTypeFilter(namespace1), WithResourceIDPrefix("test-"))
 	stats, err := reaper.Reap(context.Background())
 	if err != nil {
 		t.Fatalf("Reap: %v", err)
