@@ -206,6 +206,56 @@ func normalize(locale string) string {
 	return strings.ToLower(strings.TrimSpace(locale))
 }
 
+// Keys returns every Key registered in the seed, sorted lexicographically.
+// Production callers should rarely need this — Resolve(key, locale) is
+// the canonical read path. Use Keys when the caller must enumerate the
+// full registered set (coverage reports, cross-language parity gates,
+// one-shot extractors for V*-migrations).
+//
+// Concurrent-safe; takes a snapshot under RLock.
+func (r *MapRegistry) Keys() []Key {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	out := make([]Key, 0, len(r.seeds))
+	for k := range r.seeds {
+		out = append(out, k)
+	}
+	// Stable ordering for deterministic migrations + diff-friendly output.
+	sortKeys(out)
+	return out
+}
+
+// Entries returns a snapshot of the full registry contents:
+// key → locale → text. Same use case as Keys but returns the full
+// data instead of forcing the caller to round-trip through Resolve.
+//
+// Mutating the returned map does NOT affect the registry — it's a
+// deep-copy snapshot.
+//
+// Concurrent-safe; takes a snapshot under RLock.
+func (r *MapRegistry) Entries() map[Key]map[string]string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	out := make(map[Key]map[string]string, len(r.seeds))
+	for k, locales := range r.seeds {
+		inner := make(map[string]string, len(locales))
+		for loc, text := range locales {
+			inner[loc] = text
+		}
+		out[k] = inner
+	}
+	return out
+}
+
+func sortKeys(keys []Key) {
+	// Inline-sort to avoid importing sort just for one helper.
+	for i := 1; i < len(keys); i++ {
+		for j := i; j > 0 && keys[j-1] > keys[j]; j-- {
+			keys[j-1], keys[j] = keys[j], keys[j-1]
+		}
+	}
+}
+
 // MaterializeByLocale returns a {locale → text} map for a single
 // Registry key across every supported locale. Useful when a caller
 // must hand a map[locale]string to a downstream API that doesn't

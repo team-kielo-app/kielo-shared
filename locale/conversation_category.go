@@ -79,7 +79,6 @@ func buildConversationCategorySeed() *supportregistry.MapRegistry {
 	} {
 		key := supportregistry.Key("ui.conversation.category." + e.categoryKey)
 		r.Set(key, "en", e.en)
-		r.Set(key, "vi", e.vi)
 	}
 
 	for _, e := range []struct {
@@ -92,7 +91,6 @@ func buildConversationCategorySeed() *supportregistry.MapRegistry {
 	} {
 		key := supportregistry.Key("ui.conversation.bucket." + e.bucketKey)
 		r.Set(key, "en", e.en)
-		r.Set(key, "vi", e.vi)
 	}
 
 	r.Finalize()

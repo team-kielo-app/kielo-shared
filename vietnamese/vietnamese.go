@@ -117,7 +117,6 @@ var dictionarySeed = func() *supportregistry.MapRegistry {
 	} {
 		key := glossKey(e.en)
 		r.Set(key, "en", e.en)
-		r.Set(key, "vi", e.vi)
 	}
 
 	// Grammar concepts: case-sensitive canonical name → VI translation.
@@ -143,7 +142,6 @@ var dictionarySeed = func() *supportregistry.MapRegistry {
 	} {
 		key := grammarKey(e.canonical)
 		r.Set(key, "en", e.canonical)
-		r.Set(key, "vi", e.vi)
 	}
 
 	r.Finalize()
