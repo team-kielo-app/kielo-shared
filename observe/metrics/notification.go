@@ -227,6 +227,30 @@ var NotificationInboxInsertedTotal = promauto.NewCounterVec(
 	[]string{"type"},
 )
 
+// NotificationInboxPublishFailedTotal counts publish failures on the
+// notification.created.v1 Pub/Sub topic. Pre-e2e recon round
+// (2026-06-09) found a 21-minute window where 80 notifications were
+// produced but ZERO inbox rows landed — root cause was the publisher
+// silently returning early when nil (config.GCPProjectID="" /
+// NotificationEventsTopicID=""). Pre-fix only logged ERROR on
+// publishErr != nil, with no metric counter, so dashboards had no
+// signal. Post-fix the silent-nil + actual publish errors increment
+// distinct reason labels.
+//
+// reason values:
+//   - "publisher_nil": s.notificationPublisher is nil (config/wiring gap)
+//   - "publish_error": PublishNotificationCreated returned non-nil error
+//
+// Recommended alert: any non-zero rate of either reason for 5min
+// → page on-call.
+var NotificationInboxPublishFailedTotal = promauto.NewCounterVec(
+	prometheus.CounterOpts{
+		Name: "kielo_notification_inbox_publish_failed_total",
+		Help: "Notification.created.v1 publish failures (silent-nil OR publish errors). Pre-e2e recon round (2026-06-09).",
+	},
+	[]string{"reason", "type"},
+)
+
 // NotificationInboxUnreadCount is a gauge of unread inbox notification
 // rows in users.notifications. Sampled periodically by user-service via
 // a query against users.notifications WHERE read=false. Bucketed by
