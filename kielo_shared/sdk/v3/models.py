@@ -828,9 +828,12 @@ class CommsUserSearchHit(BaseModel):
 
 class CommunicationLog(BaseModel):
     CreatedAt: AwareDatetime
+    EventType: str
     ID: UUID_aliased
     Metadata: dict[str, Any]
     Recipient: str
+    RuleID: UUID_aliased | None = None
+    Source: str
     Status: str
     TemplateID: str
     Type: str
@@ -979,26 +982,6 @@ class ConversationCommandRequest(BaseModel):
     type: str
 
 
-class ConversationDiscoveryScenario(BaseModel):
-    agent_avatar_url: str | None = None
-    avatar_wave_reversed: bool | None = None
-    category: str | None = None
-    cefr_level: str | None = None
-    character_position: str | None = None
-    description: str
-    difficulty: str
-    estimated_duration: int
-    id: str
-    is_featured: bool
-    sample_transcript: list[str] | None = None
-    scene_image_url: str | None = None
-    show_avatar: bool | None = None
-    tags: list[str] | None = None
-    text_mode: str | None = None
-    thumbnail_url: str | None = None
-    title: str
-
-
 class ConversationDrillCorrection(BaseModel):
     skill: str | None = Field(None, title="Skill")
     try_this: str = Field(..., title="Try This")
@@ -1041,29 +1024,6 @@ class ConversationPersona(BaseModel):
     style: str
 
 
-class ConversationScenario(BaseModel):
-    agent_avatar_url: str | None = None
-    ambient_audio_url: str | None = None
-    avatar_wave_reversed: bool | None = None
-    category: str | None = None
-    cefr_level: str | None = None
-    character_position: str | None = None
-    description: str
-    difficulty: str
-    estimated_duration: int
-    id: str
-    is_featured: bool
-    learning_language_code: str | None = None
-    sample_transcript: list[str] | None = None
-    scene_image_url: str | None = None
-    show_avatar: bool | None = None
-    support_language_code: str | None = None
-    tags: list[str]
-    text_mode: str | None = None
-    thumbnail_url: str | None = None
-    title: str
-
-
 class ConversationScenarioStep(BaseModel):
     state: str
     step_summary: str | None = None
@@ -1071,11 +1031,6 @@ class ConversationScenarioStep(BaseModel):
 
 class ConversationScenarioStepsResponse(BaseModel):
     steps: list[ConversationScenarioStep]
-    total: int
-
-
-class ConversationScenariosResponse(BaseModel):
-    scenarios: list[ConversationScenario]
     total: int
 
 
@@ -3039,6 +2994,16 @@ class LocalizationLanguage(BaseModel):
     native_name: str | None = None
 
 
+class Status4(StrEnum):
+    pending = "pending"
+    ready = "ready"
+
+
+class LocalizationStatus(BaseModel):
+    locale: str | None = Field(None, title="Locale")
+    status: Status4 = Field(..., title="Status")
+
+
 class LoginRequest(BaseModel):
     email: str
     password: str
@@ -3336,6 +3301,7 @@ class NotificationJob(BaseModel):
     created_at: AwareDatetime
     created_by: UUID_aliased | None = None
     data: dict[str, Any]
+    dedup_key: str | None = None
     deferred_render_rule_id: UUID_aliased | None = None
     failed_count: int
     job_id: UUID_aliased
@@ -4054,7 +4020,6 @@ class Scenario(BaseModel):
     is_featured: bool
     learning_language_code: str | None = None
     localized_descriptions: dict[str, str] | None = None
-    localized_titles: dict[str, str] | None = None
     sample_transcript: list[str] | None = None
     scenario_content: dict[str, Any] | None = None
     slug: str
@@ -4118,7 +4083,6 @@ class ScenarioListItem(BaseModel):
     is_featured: bool
     learning_language_code: str | None = None
     localized_descriptions: dict[str, str] | None = None
-    localized_titles: dict[str, str] | None = None
     scenario_content: dict[str, Any] | None = None
     scene_image_url: str | None = None
     slug: str
@@ -4246,7 +4210,7 @@ class SessionProgressSummary(BaseModel):
     total_stages: int | None = Field(0, title="Total Stages")
 
 
-class Status4(StrEnum):
+class Status5(StrEnum):
     applied = "applied"
     duplicate = "duplicate"
     skipped = "skipped"
@@ -4257,7 +4221,7 @@ class SessionReconcileRequest(BaseModel):
     submissions: list[ExerciseSubmission] | None = Field(None, title="Submissions")
 
 
-class Status5(StrEnum):
+class Status6(StrEnum):
     not_started = "not_started"
     in_progress = "in_progress"
     completed = "completed"
@@ -4268,7 +4232,7 @@ class SessionResumeState(BaseModel):
     current_exercise_index: int | None = Field(0, title="Current Exercise Index")
     current_stage_key: str | None = Field(None, title="Current Stage Key")
     current_stage_title: str | None = Field(None, title="Current Stage Title")
-    status: Status5 | None = Field("not_started", title="Status")
+    status: Status6 | None = Field("not_started", title="Status")
     total_exercises: int | None = Field(0, title="Total Exercises")
 
 
@@ -4411,16 +4375,8 @@ class SingletonConversationLooseResponse(BaseModel):
     data: dict[str, Any]
 
 
-class SingletonConversationScenario(BaseModel):
-    data: ConversationScenario
-
-
 class SingletonConversationScenarioStepsResponse(BaseModel):
     data: ConversationScenarioStepsResponse
-
-
-class SingletonConversationScenariosResponse(BaseModel):
-    data: ConversationScenariosResponse
 
 
 class SingletonConvoScenario(BaseModel):
@@ -4913,6 +4869,7 @@ class SubscriptionInfo(BaseModel):
 
 class SuggestedConceptHub(BaseModel):
     grammar_concept_id: str
+    localization: LocalizationStatus | None = None
     reason: str
     title: str
 
@@ -4956,7 +4913,7 @@ class TTSGenerateRequest(BaseModel):
     language_code: str | None = Field("", title="Language Code")
 
 
-class Status6(StrEnum):
+class Status7(StrEnum):
     ready = "ready"
     generating = "generating"
     failed = "failed"
@@ -4970,7 +4927,7 @@ class TTSGenerateResponse(BaseModel):
     job_status: Status | None = Field(None, title="Job Status")
     media_id: UUID_aliased | None = Field(None, title="Media Id")
     stage: str | None = Field(None, title="Stage")
-    status: Status6 = Field(..., title="Status")
+    status: Status7 = Field(..., title="Status")
 
 
 class TTSJobStatusResponse(BaseModel):
@@ -4998,7 +4955,7 @@ class TTSParagraphGenerateResponse(BaseModel):
     media_id: UUID_aliased | None = Field(None, title="Media Id")
     paragraph_id: UUID_aliased = Field(..., title="Paragraph Id")
     stage: str | None = Field(None, title="Stage")
-    status: Status6 = Field(..., title="Status")
+    status: Status7 = Field(..., title="Status")
 
 
 class TTSParagraphJobStatusResponse(BaseModel):
@@ -5023,6 +4980,10 @@ class Tag(BaseModel):
 
 class TargetedLearningSuggestion(BaseModel):
     grammar_concept_id: UUID_aliased = Field(..., title="Grammar Concept Id")
+    localization: LocalizationStatus | None = Field(
+        None,
+        description="readiness of the lazily-localized title; pending = title is source fallback, refetch when warm",
+    )
     reason: str = Field(..., title="Reason")
     title: str = Field(..., title="Title")
 
@@ -5108,7 +5069,7 @@ class TopicListResponse(BaseModel):
     word_count: int | None = Field(0, title="Word Count")
 
 
-class Status11(StrEnum):
+class Status12(StrEnum):
     found = "found"
     generating = "generating"
     draft_pending = "draft_pending"
@@ -5159,7 +5120,7 @@ class TrackListResponse(BaseModel):
     tracks: list[TrackListItem] = Field(..., title="Tracks")
 
 
-class Status12(StrEnum):
+class Status13(StrEnum):
     completed = "completed"
     active = "active"
     locked = "locked"
@@ -5168,7 +5129,7 @@ class Status12(StrEnum):
 class TrackRoadmapLesson(BaseModel):
     lesson_id: UUID_aliased = Field(..., title="Lesson Id")
     order_index: int = Field(..., title="Order Index")
-    state: Status12 = Field(..., title="State")
+    state: Status13 = Field(..., title="State")
     thumbnail_url: str | None = Field(None, title="Thumbnail Url")
     title: str = Field(..., title="Title")
 
@@ -6184,25 +6145,54 @@ class ConversationBrowseFacets(BaseModel):
     levels: list[ConversationInterestOption]
 
 
-class ConversationBrowseResponse(BaseModel):
-    facets: ConversationBrowseFacets
-    items: list[ConversationScenario]
-    next_page_key: str | None = None
+class ConversationDiscoveryScenario(BaseModel):
+    agent_avatar_url: str | None = None
+    avatar_wave_reversed: bool | None = None
+    category: str | None = None
+    cefr_level: str | None = None
+    character_position: str | None = None
+    description: str
+    difficulty: str
+    estimated_duration: int
+    id: str
+    is_featured: bool
+    localization: LocalizationStatus | None = None
+    sample_transcript: list[str] | None = None
+    scene_image_url: str | None = None
+    show_avatar: bool | None = None
+    tags: list[str] | None = None
+    text_mode: str | None = None
+    thumbnail_url: str | None = None
+    title: str
 
 
-class ConversationDiscoveryCard(BaseModel):
-    badges: list[str] | None = None
-    level_match: str | None = None
-    reason: str
-    scenario: ConversationScenario
+class ConversationScenario(BaseModel):
+    agent_avatar_url: str | None = None
+    ambient_audio_url: str | None = None
+    avatar_wave_reversed: bool | None = None
+    category: str | None = None
+    cefr_level: str | None = None
+    character_position: str | None = None
+    description: str
+    difficulty: str
+    estimated_duration: int
+    id: str
+    is_featured: bool
+    learning_language_code: str | None = None
+    localization: LocalizationStatus | None = None
+    sample_transcript: list[str] | None = None
+    scene_image_url: str | None = None
+    show_avatar: bool | None = None
+    support_language_code: str | None = None
+    tags: list[str]
+    text_mode: str | None = None
+    thumbnail_url: str | None = None
+    title: str
 
 
-class ConversationDiscoveryResponse(BaseModel):
-    cards: list[ConversationDiscoveryCard]
-    interest_options: list[ConversationInterestOption]
-    next_page_key: str | None = None
-    selected_interests: list[str]
-    user_level: ConversationUserLevel
+class ConversationScenariosResponse(BaseModel):
+    scenarios: list[ConversationScenario]
+    total: int
 
 
 class CreateTranslationKeyRequest(BaseModel):
@@ -6798,7 +6788,7 @@ class SentenceConstructionExercise(BaseModel):
 class SessionReconcileItemResult(BaseModel):
     exercise_id: UUID_aliased = Field(..., title="Exercise Id")
     result: SubmissionResult | None = None
-    status: Status4 | None = Field("applied", title="Status")
+    status: Status5 | None = Field("applied", title="Status")
     submission_id: str | None = Field(None, title="Submission Id")
 
 
@@ -6822,12 +6812,12 @@ class SingletonConceptHubCoreContent(BaseModel):
     data: ConceptHubCoreContent
 
 
-class SingletonConversationBrowseResponse(BaseModel):
-    data: ConversationBrowseResponse
+class SingletonConversationScenario(BaseModel):
+    data: ConversationScenario
 
 
-class SingletonConversationDiscoveryResponse(BaseModel):
-    data: ConversationDiscoveryResponse
+class SingletonConversationScenariosResponse(BaseModel):
+    data: ConversationScenariosResponse
 
 
 class SingletonInAppNudge(BaseModel):
@@ -7040,7 +7030,7 @@ class TopicListStatusResponse(BaseModel):
     preview: TopicListPreview | None = None
     seed_word_id: UUID_aliased = Field(..., title="Seed Word Id")
     stage: str | None = Field(None, title="Stage")
-    status: Status11 = Field(..., title="Status")
+    status: Status12 = Field(..., title="Status")
     topic_lists: list[TopicListTeaser] | None = Field(None, title="Topic Lists")
 
 
@@ -7051,7 +7041,7 @@ class TrackRoadmapChapter(BaseModel):
     id: UUID_aliased = Field(..., title="Id")
     lesson_count: int | None = Field(0, title="Lesson Count")
     lessons: list[TrackRoadmapLesson] | None = Field(None, title="Lessons")
-    status: Status12 = Field(..., title="Status")
+    status: Status13 = Field(..., title="Status")
     thumbnail_url: str | None = Field(None, title="Thumbnail Url")
     title: str = Field(..., title="Title")
 
@@ -7064,7 +7054,7 @@ class TrackRoadmapLevel(BaseModel):
     icon_emoji: str | None = Field(None, title="Icon Emoji")
     id: UUID_aliased = Field(..., title="Id")
     progress_percent: float | None = Field(0.0, title="Progress Percent")
-    status: Status12 = Field(..., title="Status")
+    status: Status13 = Field(..., title="Status")
     thumbnail_url: str | None = Field(None, title="Thumbnail Url")
     title: str = Field(..., title="Title")
 
@@ -7282,6 +7272,27 @@ class ConceptHubResponse(BaseModel):
     title: str = Field(..., title="Title")
 
 
+class ConversationBrowseResponse(BaseModel):
+    facets: ConversationBrowseFacets
+    items: list[ConversationScenario]
+    next_page_key: str | None = None
+
+
+class ConversationDiscoveryCard(BaseModel):
+    badges: list[str] | None = None
+    level_match: str | None = None
+    reason: str
+    scenario: ConversationScenario
+
+
+class ConversationDiscoveryResponse(BaseModel):
+    cards: list[ConversationDiscoveryCard]
+    interest_options: list[ConversationInterestOption]
+    next_page_key: str | None = None
+    selected_interests: list[str]
+    user_level: ConversationUserLevel
+
+
 class CurriculumTreeResponse(BaseModel):
     tracks: list[CurriculumTreeTrack] = Field(..., title="Tracks")
 
@@ -7414,6 +7425,7 @@ class Paragraph(BaseModel):
     audio_url: str | None = None
     content_locale: str | None = None
     grammar_occurrences: list[ArticleVersionOccurrence] | None = None
+    localization: LocalizationStatus | None = None
     paragraph_id: UUID_aliased
     paragraph_index: int
     support_language_code: str | None = None
@@ -7431,6 +7443,14 @@ class SessionReconcileResponse(BaseModel):
 
 class SingletonConceptHub(BaseModel):
     data: ConceptHub
+
+
+class SingletonConversationBrowseResponse(BaseModel):
+    data: ConversationBrowseResponse
+
+
+class SingletonConversationDiscoveryResponse(BaseModel):
+    data: ConversationDiscoveryResponse
 
 
 class SingletonDevicePreferences(BaseModel):
