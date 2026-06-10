@@ -27,6 +27,42 @@ const (
 	RoleHTML TranslationRole = "html"
 )
 
+// LocalizationFieldStatus enumerates the readiness states a lazily-localized
+// field can report to API clients.
+type LocalizationFieldStatus string
+
+const (
+	// LocalizationPending means the accompanying text is a temporary
+	// source-locale fallback and a background translation has been dispatched.
+	// The client should render a loading/skeleton state and re-request the
+	// resource; a subsequent fetch returns the localized text with the status
+	// object absent (= ready).
+	LocalizationPending LocalizationFieldStatus = "pending"
+
+	// LocalizationReady means the text is final. Normally signaled implicitly
+	// by the ABSENCE of the status object; producers may set it explicitly
+	// when an unambiguous positive signal is preferred.
+	LocalizationReady LocalizationFieldStatus = "ready"
+)
+
+// LocalizationStatus is the shared API-contract type signaling per-field
+// localization readiness for lazily-translated content (scenario
+// descriptions, roadmap-lesson copy, ...). It rides alongside the localized
+// field and is OMITTED (json omitempty on a pointer) when the field is final
+// — cache hit, no translation needed, or no fill dispatched — so a missing
+// object means "ready" and pre-existing clients that ignore the field keep
+// rendering the source text (no breaking change).
+//
+// Defined once here so the generated SDK emits a single reused
+// `#/components/schemas/LocalizationStatus` component across every service
+// and surface — type safety + consistent coverage rather than a per-endpoint
+// inline shape. New lazy-localized responses embed *LocalizationStatus on the
+// item that carries the translatable field.
+type LocalizationStatus struct {
+	Status LocalizationFieldStatus `json:"status"`
+	Locale string                  `json:"locale,omitempty"`
+}
+
 // TranslationItem is one input to translate.
 type TranslationItem struct {
 	Text     string          `json:"text"`
