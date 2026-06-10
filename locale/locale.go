@@ -183,6 +183,30 @@ func LanguageFlag(code string) string {
 	return languageFlags[normalized]
 }
 
+// rtlLanguages lists the canonical base codes that render right-to-left.
+// Only codes also present in languageDisplayNames matter in practice;
+// the others are kept so a future platform locale gets the correct
+// direction the moment it's added to the support set. Single source of
+// truth for text direction so localization.languages.direction can be
+// reconciled FROM code rather than hand-maintained (the seam fans
+// autotranslate to AllSupportLocales — every one must be a valid,
+// correctly-shaped languages row).
+var rtlLanguages = map[string]bool{
+	"ar": true, // Arabic
+	"fa": true, // Persian
+	"he": true, // Hebrew
+	"ur": true, // Urdu
+}
+
+// LanguageDirection returns "rtl" for right-to-left scripts and "ltr"
+// otherwise (including unknown codes — ltr is the safe default).
+func LanguageDirection(code string) string {
+	if rtlLanguages[NormalizeLocaleCode(code)] {
+		return "rtl"
+	}
+	return "ltr"
+}
+
 // IsSupportedSupportLanguage reports whether code is one of the platform's
 // recognized UI / support-language codes. Use this to gate user input on
 // /me/device-preferences and similar endpoints — a code outside this set

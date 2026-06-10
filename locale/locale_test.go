@@ -6,6 +6,29 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestLanguageDirection(t *testing.T) {
+	for _, code := range []string{"ar", "fa", "he", "ur", "AR", "ar-SA"} {
+		assert.Equal(t, "rtl", LanguageDirection(code), "expected rtl for %q", code)
+	}
+	for _, code := range []string{"en", "fi", "sv", "vi", "ja", "zh", "bn", "hi", "th", "sr", "", "xx"} {
+		assert.Equal(t, "ltr", LanguageDirection(code), "expected ltr for %q", code)
+	}
+}
+
+// TestAllSupportLocalesAreReconcilable guards the invariant the localization
+// service relies on at boot: every code the platform declares supported must
+// be shapeable into a valid localization.languages row (non-empty name +
+// a valid text direction). If this fails, ReconcileSupportedLanguages would
+// register a malformed row and the dynamic_translations FK drift returns.
+func TestAllSupportLocalesAreReconcilable(t *testing.T) {
+	for _, code := range AllSupportLocales() {
+		assert.NotEmpty(t, DisplayName(code, ""), "no display name for declared support locale %q", code)
+		dir := LanguageDirection(code)
+		assert.Contains(t, []string{"ltr", "rtl"}, dir, "invalid direction %q for %q", dir, code)
+		assert.True(t, IsSupportedSupportLanguage(code), "AllSupportLocales returned non-supported %q", code)
+	}
+}
+
 func TestNormalizeLocaleCode(t *testing.T) {
 	assert.Equal(t, "vi", NormalizeLocaleCode(" vn "))
 	assert.Equal(t, "vi", NormalizeLocaleCode("vi_VN"))
