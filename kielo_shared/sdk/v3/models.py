@@ -3861,7 +3861,7 @@ class RoadmapLessonGenerationSettings(BaseModel):
     )
     shape: str | None = Field(None, title="Shape")
     step_count: conint(ge=4, le=14) | None = Field(12, title="Step Count")
-    tts_language: str | None = Field("fi", title="Tts Language")
+    tts_language: str | None = Field(None, title="Tts Language")
 
 
 class RoadmapLessonProgressSnapshot(BaseModel):

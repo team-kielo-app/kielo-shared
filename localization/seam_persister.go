@@ -40,7 +40,7 @@ import "context"
 //
 // Production wires DynClientPersister (HTTP to kielo-localization) at
 // every dynamicregistry call site. Tests use MapPersister for
-// assertions. Default NoopPersister preserves pre-Round-10D behaviour
+// assertions. Default NoopPersister preserves pre-Round-10D behavior
 // for tests + envs that haven't wired the new contract yet.
 type TranslationPersister interface {
 	Persist(ctx context.Context, ref SourceRef, targetLocale, translatedText string) error

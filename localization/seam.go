@@ -33,10 +33,10 @@ type Seam struct {
 	metrics   Metrics
 	// persister is the seam's write-through to
 	// localization.dynamic_translations. Round 10D. Default
-	// NoopPersister preserves pre-Round-10D cache-only behaviour.
+	// NoopPersister preserves pre-Round-10D cache-only behavior.
 	persister TranslationPersister
 	// guard rejects suspicious provider output. Round 10D. Default
-	// NoopGuard accepts everything (pre-Round-10D de-facto behaviour).
+	// NoopGuard accepts everything (pre-Round-10D de-facto behavior).
 	guard SuspiciousTranslationGuard
 	group singleflight.Group
 
@@ -191,7 +191,11 @@ func SourceVersionFromText(parts ...string) string {
 // Telemetry: every call records exactly one
 // `kielo_translation_total{namespace, target_locale, source}` increment
 // where source is one of english_passthrough, override, cache_hit,
-// cache_swr, cache_miss_share, provider_call, provider_error.
+// cache_swr, cache_miss_share, provider_call, provider_error,
+// empty_translation (provider answered with an empty string), or
+// guard_rejected (suspicious-translation guard refused the output).
+// The last two fall back to English source text — a non-zero rate on
+// either means users are silently seeing English.
 //
 // Sweep TTTT-I: also bumps the per-request budget counter (when
 // WithBudget was called on ctx) so middleware can stamp response
@@ -440,18 +444,21 @@ func (s *Seam) providerBatchCall(
 	for i, r := range remaining {
 		value := strings.TrimSpace(results[i].Text)
 		if value == "" {
+			// Distinct tag from provider_error: the provider answered
+			// but produced nothing. A non-zero empty_translation rate
+			// means users silently see English — alertable on its own.
 			out[r.idx] = r.ref.SourceText
-			s.metrics.Record(ctx, r.ref.Namespace, target, "provider_error")
+			s.metrics.Record(ctx, r.ref.Namespace, target, "empty_translation")
 			continue
 		}
 		// Round 10D: per-item guard. Reject suspicious output BEFORE
 		// cache + persist so junk doesn't poison either store.
-		// Siblings continue unaffected — provider_error metric tag
-		// matches the natural-failure code path so dashboards
-		// distinguish rejection volume via log spelunking.
+		// Siblings continue unaffected. Distinct guard_rejected tag so
+		// dashboards separate rejection volume from provider failures
+		// without log spelunking.
 		if s.guard.IsSuspicious(r.ref.SourceText, value, target) {
 			out[r.idx] = r.ref.SourceText
-			s.metrics.Record(ctx, r.ref.Namespace, target, "provider_error")
+			s.metrics.Record(ctx, r.ref.Namespace, target, "guard_rejected")
 			continue
 		}
 		out[r.idx] = value
@@ -571,13 +578,15 @@ func (s *Seam) callProvider(ctx context.Context, ref SourceRef, target, cacheKey
 	}
 	value := strings.TrimSpace(results[0].Text)
 	if value == "" {
-		s.metrics.Record(ctx, ref.Namespace, target, "provider_error")
+		// Provider answered but produced nothing — users silently see
+		// English. Distinct tag so the rate is alertable on its own.
+		s.metrics.Record(ctx, ref.Namespace, target, "empty_translation")
 		return ref.SourceText
 	}
 	// Round 10D: quality gate. Reject suspicious output BEFORE cache
 	// write + persistence so junk doesn't poison either store.
 	if s.guard.IsSuspicious(ref.SourceText, value, target) {
-		s.metrics.Record(ctx, ref.Namespace, target, "provider_error")
+		s.metrics.Record(ctx, ref.Namespace, target, "guard_rejected")
 		return ref.SourceText
 	}
 	_ = s.cache.Set(ctx, cacheKey, value, s.freshTTL+s.staleTTL)

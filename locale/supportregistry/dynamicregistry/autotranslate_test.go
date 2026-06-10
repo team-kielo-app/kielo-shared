@@ -14,7 +14,7 @@ import (
 )
 
 // Round 10D regression tests for the autotranslate-on-miss hook in
-// dynamicregistry.Registry. Each test pins one observable behaviour
+// dynamicregistry.Registry. Each test pins one observable behavior
 // of the WithTranslator wiring + queueAutotranslate dedupe path.
 
 // recordingTranslator captures each Translate call for assertions.
@@ -34,8 +34,8 @@ type translatorCall struct {
 	targetLocale  string
 }
 
-func newRecordingTranslator(buffer int) *recordingTranslator {
-	return &recordingTranslator{done: make(chan struct{}, buffer)}
+func newRecordingTranslator() *recordingTranslator {
+	return &recordingTranslator{done: make(chan struct{}, 4)}
 }
 
 func (r *recordingTranslator) Translate(_ context.Context, resourceType, resourceID, sourceVersion, sourceText, targetLocale string) {
@@ -110,7 +110,7 @@ func (b *blockingTranslator) Release() {
 	close(b.released)
 }
 
-// ---------- T1: nil/Noop translator preserves pre-Round-10D behaviour ----------
+// ---------- T1: nil/Noop translator preserves pre-Round-10D behavior ----------
 
 func TestRound10D_T1_NoopTranslatorIsDefault(t *testing.T) {
 	seed := buildSeed(t)
@@ -124,7 +124,7 @@ func TestRound10D_T1_NoopTranslatorIsDefault(t *testing.T) {
 	got := r.Resolve(context.Background(), "ui.greeting", "vi")
 	assert.Equal(t, "Xin chào", got, "vi seed value should fall through")
 	// No way to assert "no goroutine spawned" externally — the
-	// observable behaviour is "no panic + correct return + no
+	// observable behavior is "no panic + correct return + no
 	// background side effect". Pre-Round-10D Resolve had no goroutine
 	// path; the NoopTranslator short-circuit guarantees the same.
 }
@@ -135,7 +135,7 @@ func TestRound10D_T2_DBMissQueuesAutotranslate(t *testing.T) {
 	seed := buildSeed(t)
 	probe := newStubProbe()
 	cache := newStubCache()
-	rec := newRecordingTranslator(4)
+	rec := newRecordingTranslator()
 
 	r := buildRegistry(t, seed, probe, cache)
 	WithTranslator(rec)(r)
@@ -196,7 +196,7 @@ func TestRound10D_T4_DistinctKeysDoNotDedupe(t *testing.T) {
 	seed := buildSeed(t)
 	probe := newStubProbe()
 	cache := newStubCache()
-	rec := newRecordingTranslator(4)
+	rec := newRecordingTranslator()
 	r := buildRegistry(t, seed, probe, cache)
 	WithTranslator(rec)(r)
 	probe.setMiss("ui.greeting", "", "vi")
@@ -214,7 +214,7 @@ func TestRound10D_T5_DBHitDoesNotQueueTranslate(t *testing.T) {
 	seed := buildSeed(t)
 	probe := newStubProbe()
 	cache := newStubCache()
-	rec := newRecordingTranslator(4)
+	rec := newRecordingTranslator()
 	r := buildRegistry(t, seed, probe, cache)
 	WithTranslator(rec)(r)
 	// Compute the source_version the Registry will derive from "Hello".
@@ -234,7 +234,7 @@ func TestRound10D_T6_DBErrorDoesNotQueueTranslate(t *testing.T) {
 	seed := buildSeed(t)
 	probe := newStubProbe()
 	cache := newStubCache()
-	rec := newRecordingTranslator(4)
+	rec := newRecordingTranslator()
 	r := buildRegistry(t, seed, probe, cache)
 	WithTranslator(rec)(r)
 	probe.setError("ui.greeting", sourceVersion("Hello"), "vi", assertedDBError)
@@ -251,7 +251,7 @@ func TestRound10D_T7_EmptyLocaleDoesNotQueueTranslate(t *testing.T) {
 	seed := buildSeed(t)
 	probe := newStubProbe()
 	cache := newStubCache()
-	rec := newRecordingTranslator(4)
+	rec := newRecordingTranslator()
 	r := buildRegistry(t, seed, probe, cache)
 	WithTranslator(rec)(r)
 
@@ -267,7 +267,7 @@ func TestRound10D_T8_EnglishTargetDoesNotQueueTranslate(t *testing.T) {
 	seed := buildSeed(t)
 	probe := newStubProbe()
 	cache := newStubCache()
-	rec := newRecordingTranslator(4)
+	rec := newRecordingTranslator()
 	r := buildRegistry(t, seed, probe, cache)
 	WithTranslator(rec)(r)
 
@@ -283,7 +283,7 @@ func TestRound10D_T9_NegativeCacheHitDoesNotRequeue(t *testing.T) {
 	seed := buildSeed(t)
 	probe := newStubProbe()
 	cache := newStubCache()
-	rec := newRecordingTranslator(4)
+	rec := newRecordingTranslator()
 	r := buildRegistry(t, seed, probe, cache)
 	WithTranslator(rec)(r)
 	probe.setMiss("ui.greeting", "", "vi")

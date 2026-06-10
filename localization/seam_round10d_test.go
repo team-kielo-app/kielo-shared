@@ -14,7 +14,7 @@ import (
 // kielo-shared/tests/test_localization_seam_round10a.py.
 //
 // Each test pins ONE invariant; combinations produce the 9 distinct
-// observable behaviours of the Round 10D persister + guard wire.
+// observable behaviors of the Round 10D persister + guard wire.
 
 // newRound10dHarness builds a seam wired with a MapPersister + the
 // supplied guard. Tests assert on the persister's Calls slice + the
@@ -30,11 +30,11 @@ func newRound10dHarness(t *testing.T, guard SuspiciousTranslationGuard) (
 	provider := &seamStubProvider{
 		id: "stub-vi",
 		translations: map[string]string{
-			"vi|Save":            "Lưu",
-			"vi|Order a coffee":  "Gọi một ly cà phê",
-			"vi|Hello":           "Xin chào",
-			"ja|Save":            "保存",
-			"de|Save":            "Speichern",
+			"vi|Save":           "Lưu",
+			"vi|Order a coffee": "Gọi một ly cà phê",
+			"vi|Hello":          "Xin chào",
+			"ja|Save":           "保存",
+			"de|Save":           "Speichern",
 		},
 	}
 	registry := NewRegistry()
@@ -123,10 +123,10 @@ func TestSeamRound10D_T2_PersisterCalledNTimesOnBatch(t *testing.T) {
 	// Order is not asserted (batch may parallelize) — assert by set.
 	got0 := persister.Calls[0].SourceID
 	got1 := persister.Calls[1].SourceID
-	if !(got0 == "ui.engine_string.Save" || got1 == "ui.engine_string.Save") {
+	if got0 != "ui.engine_string.Save" && got1 != "ui.engine_string.Save" {
 		t.Errorf("expected Save in persister calls, got [%s,%s]", got0, got1)
 	}
-	if !(got0 == "ui.engine_string.Hello" || got1 == "ui.engine_string.Hello") {
+	if got0 != "ui.engine_string.Hello" && got1 != "ui.engine_string.Hello" {
 		t.Errorf("expected Hello in persister calls, got [%s,%s]", got0, got1)
 	}
 }
@@ -191,7 +191,7 @@ func TestSeamRound10D_T4_GuardRejectionBatchSiblingsUnaffected(t *testing.T) {
 
 // T5: backward-compat — NewSeam (the legacy constructor that doesn't
 // take persister/guard) defaults to NoopPersister + NoopGuard so
-// existing callers preserve pre-Round-10D behaviour.
+// existing callers preserve pre-Round-10D behavior.
 func TestSeamRound10D_T5_LegacyConstructorPreservesBehaviour(t *testing.T) {
 	clk := &fakeClock{now: time.Date(2026, 6, 9, 12, 0, 0, 0, time.UTC)}
 	provider := &seamStubProvider{
@@ -309,19 +309,22 @@ func TestSeamRound10D_T8_PersisterFailureSwallowed(t *testing.T) {
 	}
 }
 
-// T9: provider_error metric records when guard rejects in batch path,
-// matching the natural-failure code path so dashboards can see
-// rejection volume via the same source tag.
-func TestSeamRound10D_T9_GuardRejectionBatchRecordsProviderError(t *testing.T) {
+// T9: guard_rejected metric records when guard rejects in batch path —
+// a dedicated source tag (split from provider_error 2026-06-10) so
+// dashboards separate rejection volume from provider failures.
+func TestSeamRound10D_T9_GuardRejectionBatchRecordsGuardRejected(t *testing.T) {
 	seam, _, _, metrics := newRound10dHarness(t, AlwaysSuspiciousGuard{})
 	refs := []SourceRef{
 		{Namespace: "ui.string", SourceID: "k1", SourceVersion: "v1", SourceText: "Save"},
 		{Namespace: "ui.string", SourceID: "k2", SourceVersion: "v2", SourceText: "Hello"},
 	}
 	_ = seam.TranslateBatch(context.Background(), refs, "vi")
-	got := metrics.Count("ui.string", "vi", "provider_error")
+	got := metrics.Count("ui.string", "vi", "guard_rejected")
 	if got != 2 {
-		t.Errorf("expected 2 provider_error counters (one per rejected sibling), got %d", got)
+		t.Errorf("expected 2 guard_rejected counters (one per rejected sibling), got %d", got)
+	}
+	if pe := metrics.Count("ui.string", "vi", "provider_error"); pe != 0 {
+		t.Errorf("guard rejection must not count as provider_error, got %d", pe)
 	}
 }
 

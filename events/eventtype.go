@@ -70,9 +70,10 @@ const (
 const (
 	EventAppHeartbeat            EventType = "app.heartbeat"
 	EventAppSessionResumed       EventType = "app.session_resumed"
-	EventStreakAdvanced          EventType = "streak.advanced"      // server-emitted
-	EventStreakLost              EventType = "streak.lost"          // server-emitted
-	EventGoalDailyCompleted      EventType = "goal.daily_completed" // server-emitted
+	EventStreakAdvanced          EventType = "streak.advanced"       // server-emitted
+	EventStreakLost              EventType = "streak.lost"           // server-emitted
+	EventGoalDailyCompleted      EventType = "goal.daily_completed"  // server-emitted
+	EventFeatureLimitReached     EventType = "feature_limit.reached" // server-emitted
 	EventRecommendationShown     EventType = "recommendation.shown"
 	EventRecommendationTapped    EventType = "recommendation.tapped"
 	EventRecommendationDismissed EventType = "recommendation.dismissed"
@@ -110,6 +111,7 @@ var AllEventTypes = []EventType{
 	EventStreakAdvanced,
 	EventStreakLost,
 	EventGoalDailyCompleted,
+	EventFeatureLimitReached,
 	EventRecommendationShown,
 	EventRecommendationTapped,
 	EventRecommendationDismissed,

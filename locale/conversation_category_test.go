@@ -11,7 +11,7 @@ import "testing"
 //
 // These tests pin the bare-seed contract (no dynamicregistry wrap,
 // no admin overrides): English wins always; non-en locales fall back
-// to English. Wrap behaviour (vi/sv/ja/etc.) is tested at the
+// to English. Wrap behavior (vi/sv/ja/etc.) is tested at the
 // consumer service level where dynamicregistry is actually wired.
 
 func TestConversationCategoryLabel_EnglishCanonical(t *testing.T) {
@@ -34,7 +34,7 @@ func TestConversationCategoryLabel_NonEnglishFallsBackToEnglish(t *testing.T) {
 		{"food-dining", "vi"},
 		{"food-dining", "vi-VN"},
 		{"everyday-life", "vi"},
-		{"food-dining", "de"},  // unknown locale also falls back
+		{"food-dining", "de"}, // unknown locale also falls back
 		{"food-dining", "ja"},
 		{"food-dining", "fi"},
 	}

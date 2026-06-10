@@ -96,12 +96,14 @@ func newStubProbe() *stubProbe {
 	return &stubProbe{results: make(map[string]probeResult)}
 }
 
+//nolint:unparam // locale param kept for symmetry with setMiss/setError + probe-key shape; tests currently only exercise "vi"
 func (p *stubProbe) setHit(resourceID, sourceVersion, locale, value string) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.results[resourceID+"|"+sourceVersion+"|"+locale] = probeResult{value: value, found: true}
 }
 
+//nolint:unparam // locale param kept for symmetry with setHit/setError + probe-key shape; tests currently only exercise "vi"
 func (p *stubProbe) setMiss(resourceID, sourceVersion, locale string) {
 	p.mu.Lock()
 	defer p.mu.Unlock()

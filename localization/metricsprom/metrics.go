@@ -55,7 +55,9 @@ func New(registerer prometheus.Registerer) (*Metrics, error) {
 			Help: "Localization seam resolution counter. " +
 				"Labels: namespace (resource type), target_locale (BCP-47 base), " +
 				"source (english_passthrough|override|cache_hit|cache_swr|" +
-				"cache_miss_share|provider_call|provider_error).",
+				"cache_miss_share|provider_call|provider_error|" +
+				"empty_translation|guard_rejected). The last two fall back to " +
+				"English source text — a non-zero rate means users silently see English.",
 		},
 		LabelNames,
 	)

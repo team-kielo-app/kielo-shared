@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/redis/go-redis/v9"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -11,6 +12,7 @@ import (
 	"github.com/team-kielo-app/kielo-shared/localization"
 	"github.com/team-kielo-app/kielo-shared/localization/cacheredis"
 	"github.com/team-kielo-app/kielo-shared/localization/dynclient"
+	"github.com/team-kielo-app/kielo-shared/localization/metricsprom"
 	"github.com/team-kielo-app/kielo-shared/localization/overridepgx"
 	"github.com/team-kielo-app/kielo-shared/localization/translateprovider"
 	sharedtranslation "github.com/team-kielo-app/kielo-shared/translation"
@@ -178,11 +180,28 @@ func NewProductionSeam(inputs SeamBuilderInputs) *localization.Seam {
 
 	guard := localization.NewCanonicalGuard()
 
+	// 2026-06-10: wire Prometheus metrics into every production seam.
+	// Previously NoopMetrics{} was hardcoded with a "services wire their
+	// own" comment — but all four services route through this factory,
+	// so the kielo_translation_total counter (incl. the H1 split tags
+	// empty_translation / guard_rejected / provider_error) recorded to
+	// nowhere. metricsprom registers against the default registry, which
+	// promhttp scrapes; re-registration across seam instances is
+	// tolerated. Fail-soft: a registration error degrades to Noop +
+	// loud log rather than aborting the seam.
+	var metrics localization.Metrics = localization.NoopMetrics{}
+	if m, err := metricsprom.New(prometheus.DefaultRegisterer); err != nil {
+		logger.Error("seam metrics registration failed; telemetry degraded to noop",
+			slog.String("err", err.Error()))
+	} else {
+		metrics = m
+	}
+
 	seam := localization.NewSeamWith(
 		registry,
 		cache,
 		overrides,
-		localization.NoopMetrics{}, // services that want Prometheus wire their own at top-level
+		metrics,
 		persister,
 		guard,
 		localization.SeamConfig{},

@@ -40,7 +40,7 @@ type Translator interface {
 
 // NoopTranslator is the dynamicregistry's default Translator. Use in
 // tests + envs where the autotranslate-on-miss path is not wired.
-// Pre-Round-10D this is the de-facto behaviour — the Registry just
+// Pre-Round-10D this is the de-facto behavior — the Registry just
 // returned seed English on DB-miss without queuing any LLM fill.
 //
 // Backward-compat default. Wired automatically when WithTranslator is

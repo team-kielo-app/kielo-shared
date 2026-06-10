@@ -96,7 +96,7 @@ type Registry struct {
 
 	// translator is the Round 10D autotranslate-on-miss hook. Default
 	// NoopTranslator (set in newWithProbe) preserves pre-Round-10D
-	// behaviour. Production wires SeamTranslator via WithTranslator.
+	// behavior. Production wires SeamTranslator via WithTranslator.
 	translator Translator
 
 	// autotranslateInflight is the process-local dedupe map for

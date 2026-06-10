@@ -16,21 +16,21 @@ package localization
 //
 //   - 1  identity              candidate == source for non-trivial src
 //   - 2  foreign-text-injection candidate contains non-Latin glyphs the
-//        target locale doesn't use, OR contains source-language tokens
-//        verbatim mid-sentence (en in vi output, etc.)
+//     target locale doesn't use, OR contains source-language tokens
+//     verbatim mid-sentence (en in vi output, etc.)
 //   - 3  repeated-token loop   any 3-token n-gram repeats ≥ N times
 //   - 3a short-output frequency single-token candidates with high
-//        document frequency in the rejected output pool
+//     document frequency in the rejected output pool
 //   - 3b consecutive-run       3+ identical consecutive tokens
 //   - 4  truncation            candidate shorter than source by > 50%
-//        for non-CJK targets
+//     for non-CJK targets
 //   - 5  single-source-token degeneracy 1-token source → multi-word
-//        candidate that's a hallucination pattern
+//     candidate that's a hallucination pattern
 //   - 5b premature 1-char      candidate is a single character for a
-//        non-CJK target with multi-char source
+//     non-CJK target with multi-char source
 //   - 6  glyph-replacement     candidate contains placeholders (?, □)
 //   - 7  negation-injection    target=en/fi/sv/vi negation marker
-//        absent from source candidate
+//     absent from source candidate
 //
 // Returns true when the candidate IS suspicious (callers fall back to
 // source). False means accept.
@@ -50,7 +50,7 @@ type SuspiciousTranslationGuard interface {
 // Use in tests + envs where the guard's domain knowledge isn't
 // applicable.
 //
-// Pre-Round-10D this is the de-facto seam behaviour — every provider
+// Pre-Round-10D this is the de-facto seam behavior — every provider
 // output was accepted unconditionally. Round 10D makes that explicit
 // and pluggable.
 type NoopGuard struct{}
