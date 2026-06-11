@@ -548,8 +548,14 @@ func structSchema(t reflect.Type, r *Registry) any {
 		// emitted as required string, which forced TS consumers to
 		// invent placeholder values for fields the server treats as
 		// optional (e.g. ConvoCreateVoiceAgentRequest.gender).
+		// omitzero (Go 1.24 encoding/json) fields can be absent on
+		// the wire exactly like omitempty ones — without this the
+		// generator emitted e.g. GrammarConcept.created_at (omitzero
+		// because subset queries serve concepts without timestamps)
+		// as a required string, so generated TS clients read
+		// undefined on legitimately-omitted fields.
 		isPointer := f.Type.Kind() == reflect.Ptr
-		if !contains(opts, "omitempty") && !isPointer {
+		if !contains(opts, "omitempty") && !contains(opts, "omitzero") && !isPointer {
 			required = append(required, name)
 		}
 	}
