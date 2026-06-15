@@ -1538,6 +1538,23 @@ class CurriculumTrackUpsertRequest(BaseModel):
     track_type: str | None = Field("general", title="Track Type")
 
 
+class CurriculumTrackV3(BaseModel):
+    audience: str | None = None
+    description: str | None = None
+    icon_emoji: str | None = None
+    id: str
+    is_recommended: bool | None = None
+    level_count: int | None = None
+    slug: str | None = None
+    thumbnail_url: str | None = None
+    title: str | None = None
+    total_lessons: int | None = None
+
+
+class CurriculumTracksV3(BaseModel):
+    tracks: list[CurriculumTrackV3]
+
+
 class CurriculumTreeLesson(BaseModel):
     id: UUID_aliased = Field(..., title="Id")
     order_index: int = Field(..., title="Order Index")
@@ -1613,6 +1630,7 @@ class DecisionReason(BaseModel):
 class Definition(BaseModel):
     primary: str | None = None
     secondary: list[str] | None = None
+    support_language_code: str | None = None
 
 
 class DeleteTierLimitResponse(BaseModel):
@@ -1646,10 +1664,8 @@ class DictionaryConfusable(Confusable):
     pass
 
 
-class DictionaryDefinition(BaseModel):
-    primary: str | None = None
-    secondary: list[str] | None = None
-    support_language_code: str | None = None
+class DictionaryDefinition(Definition):
+    pass
 
 
 class DictionaryExample(ConceptHubExample):
@@ -2116,7 +2132,7 @@ class GrammarConcept(BaseModel):
     category: str | None = None
     cefr_level: str | None = None
     common_mistakes: str | None = None
-    created_at: AwareDatetime
+    created_at: AwareDatetime | None = None
     description: str | None = None
     example_structures: Any | None = None
     examples: list[ExampleSentencePair] | None = None
@@ -2125,7 +2141,7 @@ class GrammarConcept(BaseModel):
     notes: str | None = None
     related_concepts: Any | None = None
     term: str | None = None
-    updated_at: AwareDatetime
+    updated_at: AwareDatetime | None = None
     user_status: str | None = None
 
 
@@ -2735,16 +2751,6 @@ class KieloTVVideoUpsertRequest(BaseModel):
     video_url: str | None = None
 
 
-class LLLLLNullFloat64(BaseModel):
-    Float64: float
-    Valid: bool
-
-
-class LLLLLNullInt32(BaseModel):
-    Int32: int
-    Valid: bool
-
-
 class Language(BaseModel):
     code: str
     created_at: AwareDatetime
@@ -2874,10 +2880,30 @@ class LearningSessionState(BaseModel):
 
 
 class LearningSessionV3(BaseModel):
+    checkpoint_metadata: dict[str, Any] | None = None
+    completion_summary: dict[str, Any] | None = None
+    created_at: str | None = None
+    description: str | None = None
+    exercise_step_map: dict[str, Any] | None = None
     exercises: list[Any] | None = None
+    learning_language_code: str | None = None
+    learning_objectives: list[dict[str, Any]] | None = None
+    next_step_recommendations: list[dict[str, Any]] | None = None
+    personalization_signals: dict[str, Any] | None = None
+    primary_next_step: dict[str, Any] | None = None
+    primary_objective: dict[str, Any] | None = None
+    progress_summary: dict[str, Any] | None = None
+    resume_state: dict[str, Any] | None = None
+    secondary_next_steps: list[dict[str, Any]] | None = None
+    session_backend: str | None = None
+    session_goal: str | None = None
     session_id: str | None = None
     session_mode: str | None = None
+    session_type: str | None = None
+    stages: list[dict[str, Any]] | None = None
+    title: str | None = None
     user_id: str | None = None
+    version: int | None = None
 
 
 class LearningStatusUpdateRequest(BaseModel):
@@ -2927,7 +2953,7 @@ class ListVideoItem(BaseModel):
     learning_language_code: str | None = None
     locale: str | None = None
     original_title: str | None = None
-    published_at: AwareDatetime
+    published_at: AwareDatetime | None = None
     source_locale: str | None = None
     thumbnail_url: str
     title: str
@@ -3291,6 +3317,14 @@ class Notification(BaseModel):
     user_id: UUID_aliased | None = None
 
 
+class NotificationEngagementRequest(BaseModel):
+    action: str
+
+
+class NotificationEngagementRequestV3(NotificationEngagementRequest):
+    pass
+
+
 class NotificationInboxPreferences(BaseModel):
     enabled: bool
 
@@ -3359,14 +3393,6 @@ class NotificationSegmentList(BaseModel):
 
 
 class NotifyUploadCompleteResponse(CancelSubscriptionResponse):
-    pass
-
-
-class NullFloat64(LLLLLNullFloat64):
-    pass
-
-
-class NullInt32(LLLLLNullInt32):
     pass
 
 
@@ -3454,6 +3480,23 @@ class PhraseFrame(BaseModel):
     example_translation: str | None = None
     text: str | None = None
     translation: str | None = None
+
+
+class PlacementItemV3(BaseModel):
+    base_word_id: str | None = None
+    cefr_level: str | None = None
+    display_text: str | None = None
+    grammar_concept_id: str | None = None
+    item_id: str
+    item_type: str
+    learning_language_code: str | None = None
+    support_language_code: str | None = None
+    support_text: str | None = None
+
+
+class PlacementItemsV3(BaseModel):
+    grammar_items: list[PlacementItemV3]
+    vocabulary_items: list[PlacementItemV3]
 
 
 class PlacementTestItem(BaseModel):
@@ -3760,12 +3803,23 @@ class ReviewItem(BaseModel):
     item_type: str = Field(..., title="Item Type")
 
 
+class ReviewItemV3(BaseModel):
+    display_text: str | None = None
+    item_id: str
+    item_type: str
+
+
 class ReviewScheduleResponse(BaseModel):
     items_to_review: list[ReviewItem] = Field(..., title="Items To Review")
     next_batch_available_at: AwareDatetime | None = Field(
         None, title="Next Batch Available At"
     )
     user_id: UUID_aliased = Field(..., title="User Id")
+
+
+class ReviewScheduleV3(BaseModel):
+    items_to_review: list[ReviewItemV3]
+    user_id: str | None = None
 
 
 class RevokeAchievementResponse(BaseModel):
@@ -3839,6 +3893,30 @@ class RoadmapLessonProgressSnapshot(BaseModel):
     total_steps: int | None = Field(0, title="Total Steps")
 
 
+class RoadmapLessonProgressV3(BaseModel):
+    completed_steps: int | None = None
+    current_step_index: int | None = None
+    is_completed: bool | None = None
+    progress_percent: float | None = None
+    step_states: dict[str, Any] | None = None
+    total_steps: int | None = None
+
+
+class RoadmapLessonSummaryV3(BaseModel):
+    category: str | None = None
+    cefr_level: str | None = None
+    chapter_title: str | None = None
+    description: str | None = None
+    difficulty_level: str | None = None
+    estimated_duration_minutes: int | None = None
+    lesson_id: str
+    order_index: int | None = None
+    progress: RoadmapLessonProgressV3 | None = None
+    state: str | None = None
+    thumbnail_url: str | None = None
+    title: str | None = None
+
+
 class RoadmapLessonUpsertRequest(BaseModel):
     category: str | None = Field("Getting Started", title="Category")
     cefr_level: str | None = Field(None, title="Cefr Level")
@@ -3855,6 +3933,11 @@ class RoadmapLessonUpsertRequest(BaseModel):
     order_index: int | None = Field(0, title="Order Index")
     thumbnail_url: str | None = Field(None, title="Thumbnail Url")
     title: str = Field(..., title="Title")
+
+
+class RoadmapLessonsV3(BaseModel):
+    lessons: list[RoadmapLessonSummaryV3]
+    user_id: str | None = None
 
 
 class RoadmapPracticeTargetBackfillRequest(BaseModel):
@@ -3879,6 +3962,14 @@ class RoadmapPracticeTargetBackfillResponse(BaseModel):
     updated_lesson_ids: list[UUID_aliased] | None = Field(
         None, title="Updated Lesson Ids"
     )
+
+
+class RoadmapProgressV3(BaseModel):
+    active_lesson_id: str | None = None
+    completed_lessons: int | None = None
+    progress_percent: float | None = None
+    total_lessons: int | None = None
+    user_id: str | None = None
 
 
 class RoadmapSpeechSegment(BaseModel):
@@ -4395,6 +4486,10 @@ class SingletonConvoVoiceAgentList(BaseModel):
     data: list[ConvoVoiceAgent]
 
 
+class SingletonCurriculumTracksV3(BaseModel):
+    data: CurriculumTracksV3
+
+
 class SingletonDailyChallengeV3(BaseModel):
     data: DailyChallengeV3
 
@@ -4635,6 +4730,10 @@ class SingletonNotifyUploadCompleteResponse(BaseModel):
     data: NotifyUploadCompleteResponse
 
 
+class SingletonPlacementItemsV3(BaseModel):
+    data: PlacementItemsV3
+
+
 class SingletonQueueStatus(BaseModel):
     data: QueueStatus
 
@@ -4657,6 +4756,18 @@ class SingletonRestoreAccessResponse(BaseModel):
 
 class SingletonRevenueCatUserResponse(BaseModel):
     data: RevenueCatUserResponse
+
+
+class SingletonReviewScheduleV3(BaseModel):
+    data: ReviewScheduleV3
+
+
+class SingletonRoadmapLessonsV3(BaseModel):
+    data: RoadmapLessonsV3
+
+
+class SingletonRoadmapProgressV3(BaseModel):
+    data: RoadmapProgressV3
 
 
 class SingletonSavedItem(BaseModel):
@@ -5144,6 +5255,10 @@ class Transaction(BaseModel):
     transaction_id: str
 
 
+class TransactionEntry(Transaction):
+    pass
+
+
 class TransactionHistoryResponse(BaseModel):
     total_count: int
     transactions: list[Transaction]
@@ -5157,15 +5272,6 @@ class TranscriptResponse(BaseModel):
     has_transcript: bool
     srt: str | None = None
     status: str
-
-
-class TransferPreviewResponse(BaseModel):
-    can_transfer: bool
-    expires_at: str
-    from_user: str
-    reason: str | None = None
-    tier: str
-    to_user: str
 
 
 class TransferSubscriptionRequest(BaseModel):
@@ -5563,18 +5669,6 @@ class UsersWithOverridesResponse(BaseModel):
     users: list[UserWithOverride]
 
 
-class ValidateDiscountRequest(BaseModel):
-    code: str
-
-
-class ValidateDiscountResponse(BaseModel):
-    discount_id: str | None = None
-    message: str | None = None
-    type: str | None = None
-    valid: bool
-    value: float | None = None
-
-
 class ValidationError(BaseModel):
     loc: list[str | int] = Field(..., title="Location")
     msg: str = Field(..., title="Message")
@@ -5612,7 +5706,7 @@ class Video(BaseModel):
     locale: str | None = None
     original_description: str | None = None
     original_title: str | None = None
-    published_at: AwareDatetime
+    published_at: AwareDatetime | None = None
     source_locale: str | None = None
     thumbnail_url: str
     title: str
@@ -5901,8 +5995,8 @@ class AllFeatureLimitsResponse(BaseModel):
 class ArticleVersionSnippet(BaseModel):
     article_type: str | None = None
     brand: Brand
-    difficulty_score: NullFloat64 | None = None
-    estimated_reading_time_minutes: NullInt32 | None = None
+    difficulty_score: float | None = None
+    estimated_reading_time_minutes: int | None = None
     id: UUID_aliased
     learning_language_code: str | None = None
     original_title: str | None = None
@@ -6912,10 +7006,6 @@ class SingletonTranscriptResponse(BaseModel):
     data: TranscriptResponse
 
 
-class SingletonTransferPreviewResponse(BaseModel):
-    data: TransferPreviewResponse
-
-
 class SingletonTransferSubscriptionResponse(BaseModel):
     data: TransferSubscriptionResponse
 
@@ -6978,10 +7068,6 @@ class SingletonUserSubscriptionGrantResponse(BaseModel):
 
 class SingletonUserSubscriptionRevokeResponse(BaseModel):
     data: UserSubscriptionRevokeResponse
-
-
-class SingletonValidateDiscountResponse(BaseModel):
-    data: ValidateDiscountResponse
 
 
 class SingletonWebIngestTarget(BaseModel):
@@ -7445,10 +7531,6 @@ class SingletonConceptHub(BaseModel):
     data: ConceptHub
 
 
-class SingletonConversationBrowseResponse(BaseModel):
-    data: ConversationBrowseResponse
-
-
 class SingletonConversationDiscoveryResponse(BaseModel):
     data: ConversationDiscoveryResponse
 
@@ -7512,8 +7594,8 @@ class ArticleVersion(BaseModel):
     contextual_learning_opportunities: (
         list[KLearnContextualLearningOpportunity] | None
     ) = None
-    difficulty_score: NullFloat64 | None = None
-    estimated_reading_time_minutes: NullInt32 | None = None
+    difficulty_score: float | None = None
+    estimated_reading_time_minutes: int | None = None
     familiar_word_count: int | None = None
     id: UUID_aliased
     learning_language_code: str | None = None
