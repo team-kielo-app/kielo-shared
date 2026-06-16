@@ -5172,6 +5172,16 @@ class StudyList(BaseModel):
     user_id: UUID_aliased
 
 
+class StudyListItem(BaseModel):
+    added_at: AwareDatetime
+    base_word_id: UUID_aliased
+    cefr_level: str | None = None
+    list_id: UUID_aliased
+    meaning: str | None = None
+    position: int
+    term: str | None = None
+
+
 class StudyListV3(BaseModel):
     contains_word: bool | None = None
     created_at: str
@@ -5185,6 +5195,11 @@ class StudyListV3(BaseModel):
     source_id: str | None = None
     updated_at: str
     user_id: str
+
+
+class StudyListWithItems(BaseModel):
+    StudyList_1: StudyList = Field(..., alias="StudyList")
+    items: list[StudyListItem]
 
 
 class SubmissionResult(BaseModel):
@@ -7329,6 +7344,10 @@ class SingletonStudyList(BaseModel):
 
 class SingletonStudyListV3(BaseModel):
     data: StudyListV3
+
+
+class SingletonStudyListWithItems(BaseModel):
+    data: StudyListWithItems
 
 
 class SingletonSubmitAnswerResponseV3(BaseModel):

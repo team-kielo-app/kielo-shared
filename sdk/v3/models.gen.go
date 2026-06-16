@@ -7972,6 +7972,11 @@ type SingletonStudyListV3 struct {
 	Data StudyListV3 `json:"data"`
 }
 
+// SingletonStudyListWithItems defines model for SingletonStudyListWithItems.
+type SingletonStudyListWithItems struct {
+	Data StudyListWithItems `json:"data"`
+}
+
 // SingletonSubmitAnswerResponseV3 defines model for SingletonSubmitAnswerResponseV3.
 type SingletonSubmitAnswerResponseV3 struct {
 	Data SubmitAnswerResponseV3 `json:"data"`
@@ -8362,6 +8367,17 @@ type StudyList struct {
 	UserId       uuid.UUID  `json:"user_id"`
 }
 
+// StudyListItem defines model for StudyListItem.
+type StudyListItem struct {
+	AddedAt    time.Time `json:"added_at"`
+	BaseWordId uuid.UUID `json:"base_word_id"`
+	CefrLevel  *string   `json:"cefr_level,omitempty"`
+	ListId     uuid.UUID `json:"list_id"`
+	Meaning    *string   `json:"meaning,omitempty"`
+	Position   int       `json:"position"`
+	Term       *string   `json:"term,omitempty"`
+}
+
 // StudyListV3 defines model for StudyListV3.
 type StudyListV3 struct {
 	ContainsWord *bool   `json:"contains_word,omitempty"`
@@ -8376,6 +8392,12 @@ type StudyListV3 struct {
 	SourceId     *string `json:"source_id,omitempty"`
 	UpdatedAt    string  `json:"updated_at"`
 	UserId       string  `json:"user_id"`
+}
+
+// StudyListWithItems defines model for StudyListWithItems.
+type StudyListWithItems struct {
+	StudyList StudyList       `json:"StudyList"`
+	Items     []StudyListItem `json:"items"`
 }
 
 // SubmissionResult defines model for SubmissionResult.
