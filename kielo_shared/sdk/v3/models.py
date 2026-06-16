@@ -954,6 +954,14 @@ class Confusable(BaseModel):
     translation: str | None = None
 
 
+class ContentBrand(BaseModel):
+    brand_id: UUID_aliased
+    created_at: AwareDatetime
+    display_name: str
+    source_identifier: str
+    updated_at: AwareDatetime
+
+
 class ContentEntrySummary(BaseModel):
     content_type: str
     created_at: AwareDatetime
@@ -4488,10 +4496,6 @@ class SingletonBatchSaveTranslationsResponse(BaseModel):
     data: BatchSaveTranslationsResponse
 
 
-class SingletonBrandList(BaseModel):
-    data: list[Brand]
-
-
 class SingletonCacheInvalidateResponse(BaseModel):
     data: CacheInvalidateResponse
 
@@ -4574,6 +4578,10 @@ class SingletonConceptHubSentenceExampleList(BaseModel):
 
 class SingletonConceptHubSummaryList(BaseModel):
     data: list[ConceptHubSummary]
+
+
+class SingletonContentBrandList(BaseModel):
+    data: list[ContentBrand]
 
 
 class SingletonContentEntrySummary(BaseModel):

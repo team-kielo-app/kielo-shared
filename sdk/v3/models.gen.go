@@ -2106,6 +2106,15 @@ type Confusable struct {
 	Translation     *string  `json:"translation,omitempty"`
 }
 
+// ContentBrand defines model for ContentBrand.
+type ContentBrand struct {
+	BrandId          uuid.UUID `json:"brand_id"`
+	CreatedAt        time.Time `json:"created_at"`
+	DisplayName      string    `json:"display_name"`
+	SourceIdentifier string    `json:"source_identifier"`
+	UpdatedAt        time.Time `json:"updated_at"`
+}
+
 // ContentDiscoveryResponse defines model for ContentDiscoveryResponse.
 type ContentDiscoveryResponse struct {
 	Categories []ConceptHubCategory `json:"categories"`
@@ -7004,11 +7013,6 @@ type SingletonBatchSaveTranslationsResponse struct {
 	Data BatchSaveTranslationsResponse `json:"data"`
 }
 
-// SingletonBrandList defines model for SingletonBrandList.
-type SingletonBrandList struct {
-	Data []Brand `json:"data"`
-}
-
 // SingletonCAMArticleContent defines model for SingletonCAMArticleContent.
 type SingletonCAMArticleContent struct {
 	Data CAMArticleContent `json:"data"`
@@ -7162,6 +7166,11 @@ type SingletonConceptHubSentenceExampleList struct {
 // SingletonConceptHubSummaryList defines model for SingletonConceptHubSummaryList.
 type SingletonConceptHubSummaryList struct {
 	Data []ConceptHubSummary `json:"data"`
+}
+
+// SingletonContentBrandList defines model for SingletonContentBrandList.
+type SingletonContentBrandList struct {
+	Data []ContentBrand `json:"data"`
 }
 
 // SingletonContentEntrySummary defines model for SingletonContentEntrySummary.
