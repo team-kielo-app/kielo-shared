@@ -524,6 +524,18 @@ class CheckFeatureUniqueRequest(BaseModel):
     item_id: str | None = None
 
 
+class ClaimContentVersionForProcessingRequest(BaseModel):
+    claimant_id: str
+    ttl_minutes: int
+
+
+class ClaimResult(BaseModel):
+    claimed_at: AwareDatetime
+    claimed_by: str
+    outcome: str
+    status: str
+
+
 class ClusterWord(BaseModel):
     pos: str | None = None
     term: str | None = None
@@ -948,6 +960,10 @@ class ContentEntrySummary(BaseModel):
 class ContentUploadURLs(BaseModel):
     subtitle_upload_url: str
     video_upload_url: str
+
+
+class ContentVersionStatusResponse(AppFeedbackUpdateStatusRequest):
+    pass
 
 
 class ItemTypeFk(StrEnum):
@@ -4475,6 +4491,10 @@ class SingletonCheckAndAwardResponse(BaseModel):
     data: CheckAndAwardResponse
 
 
+class SingletonClaimResult(BaseModel):
+    data: ClaimResult
+
+
 class SingletonCommsCampaignValidateResult(BaseModel):
     data: CommsCampaignValidateResult
 
@@ -4545,6 +4565,10 @@ class SingletonContentEntrySummaryList(BaseModel):
 
 class SingletonContentUploadURLs(BaseModel):
     data: ContentUploadURLs
+
+
+class SingletonContentVersionStatusResponse(BaseModel):
+    data: ContentVersionStatusResponse
 
 
 class SingletonConversationHistoryResponse(BaseModel):

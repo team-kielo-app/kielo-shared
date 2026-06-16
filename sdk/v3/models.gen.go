@@ -1478,6 +1478,20 @@ type CheckFeatureUniqueRequest struct {
 	ItemId *string `json:"item_id,omitempty"`
 }
 
+// ClaimContentVersionForProcessingRequest defines model for ClaimContentVersionForProcessingRequest.
+type ClaimContentVersionForProcessingRequest struct {
+	ClaimantId string `json:"claimant_id"`
+	TtlMinutes int    `json:"ttl_minutes"`
+}
+
+// ClaimResult defines model for ClaimResult.
+type ClaimResult struct {
+	ClaimedAt time.Time `json:"claimed_at"`
+	ClaimedBy string    `json:"claimed_by"`
+	Outcome   string    `json:"outcome"`
+	Status    string    `json:"status"`
+}
+
 // ClusterWord defines model for ClusterWord.
 type ClusterWord struct {
 	Pos         *string `json:"pos,omitempty"`
@@ -2107,6 +2121,11 @@ type ContentEntrySummary struct {
 type ContentUploadURLs struct {
 	SubtitleUploadUrl string `json:"subtitle_upload_url"`
 	VideoUploadUrl    string `json:"video_upload_url"`
+}
+
+// ContentVersionStatusResponse defines model for ContentVersionStatusResponse.
+type ContentVersionStatusResponse struct {
+	Status string `json:"status"`
 }
 
 // ContextMatchingExercise defines model for ContextMatchingExercise.
@@ -7010,6 +7029,11 @@ type SingletonCheckAndAwardResponse struct {
 	Data CheckAndAwardResponse `json:"data"`
 }
 
+// SingletonClaimResult defines model for SingletonClaimResult.
+type SingletonClaimResult struct {
+	Data ClaimResult `json:"data"`
+}
+
 // SingletonCommsBatchEmailResult defines model for SingletonCommsBatchEmailResult.
 type SingletonCommsBatchEmailResult struct {
 	Data CommsBatchEmailResult `json:"data"`
@@ -7133,6 +7157,11 @@ type SingletonContentEntrySummaryList struct {
 // SingletonContentUploadURLs defines model for SingletonContentUploadURLs.
 type SingletonContentUploadURLs struct {
 	Data ContentUploadURLs `json:"data"`
+}
+
+// SingletonContentVersionStatusResponse defines model for SingletonContentVersionStatusResponse.
+type SingletonContentVersionStatusResponse struct {
+	Data ContentVersionStatusResponse `json:"data"`
 }
 
 // SingletonConversationDiscoveryResponse defines model for SingletonConversationDiscoveryResponse.
@@ -12540,6 +12569,9 @@ type PostInternalApiV3UsersUserIdSubscriptionTransferJSONRequestBody = TransferS
 
 // PostInternalContentBridgeItemsLookupJSONRequestBody defines body for PostInternalContentBridgeItemsLookup for application/json ContentType.
 type PostInternalContentBridgeItemsLookupJSONRequestBody = BatchLookupRequest
+
+// PostInternalContentVersionsVersionIdClaimForProcessingJSONRequestBody defines body for PostInternalContentVersionsVersionIdClaimForProcessing for application/json ContentType.
+type PostInternalContentVersionsVersionIdClaimForProcessingJSONRequestBody = ClaimContentVersionForProcessingRequest
 
 // EnrichDictionaryByIdsInternalDictionaryEnrichByIdsPostJSONRequestBody defines body for EnrichDictionaryByIdsInternalDictionaryEnrichByIdsPost for application/json ContentType.
 type EnrichDictionaryByIdsInternalDictionaryEnrichByIdsPostJSONRequestBody = EnrichDictionaryByIdsInternalDictionaryEnrichByIdsPostJSONBody
