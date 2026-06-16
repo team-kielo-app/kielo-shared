@@ -114,18 +114,23 @@ class AdminBroadcastRequest(BaseModel):
 
 
 class AdminContentItem(BaseModel):
-    created_at: str
+    content_source: str
+    content_type: str
+    created_at: str | None = None
+    created_by: str | None = None
     description: str | None = None
     external_id: str
     id: str | None = None
     learning_language_code: str | None = None
-    metadata: dict[str, Any]
+    metadata: dict[str, Any] | None = None
     published_at: str | None = None
-    source: str
+    slug: str | None = None
     status: str
     title: str
-    type: str
-    updated_at: str
+    updated_at: str | None = None
+    updated_by: str | None = None
+    version_count: int
+    view_count: int
 
 
 class AdminContentListResponse(BaseModel):

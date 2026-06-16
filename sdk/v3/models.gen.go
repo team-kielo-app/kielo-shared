@@ -726,18 +726,23 @@ type AdminBroadcastRequest struct {
 
 // AdminContentItem defines model for AdminContentItem.
 type AdminContentItem struct {
-	CreatedAt            string                 `json:"created_at"`
-	Description          *string                `json:"description,omitempty"`
-	ExternalId           string                 `json:"external_id"`
-	Id                   *string                `json:"id,omitempty"`
-	LearningLanguageCode *string                `json:"learning_language_code,omitempty"`
-	Metadata             map[string]interface{} `json:"metadata"`
-	PublishedAt          *string                `json:"published_at,omitempty"`
-	Source               string                 `json:"source"`
-	Status               string                 `json:"status"`
-	Title                string                 `json:"title"`
-	Type                 string                 `json:"type"`
-	UpdatedAt            string                 `json:"updated_at"`
+	ContentSource        string                  `json:"content_source"`
+	ContentType          string                  `json:"content_type"`
+	CreatedAt            *string                 `json:"created_at,omitempty"`
+	CreatedBy            *string                 `json:"created_by,omitempty"`
+	Description          *string                 `json:"description,omitempty"`
+	ExternalId           string                  `json:"external_id"`
+	Id                   *string                 `json:"id,omitempty"`
+	LearningLanguageCode *string                 `json:"learning_language_code,omitempty"`
+	Metadata             *map[string]interface{} `json:"metadata,omitempty"`
+	PublishedAt          *string                 `json:"published_at,omitempty"`
+	Slug                 *string                 `json:"slug,omitempty"`
+	Status               string                  `json:"status"`
+	Title                string                  `json:"title"`
+	UpdatedAt            *string                 `json:"updated_at,omitempty"`
+	UpdatedBy            *string                 `json:"updated_by,omitempty"`
+	VersionCount         int                     `json:"version_count"`
+	ViewCount            int                     `json:"view_count"`
 }
 
 // AdminContentListResponse defines model for AdminContentListResponse.
