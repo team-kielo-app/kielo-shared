@@ -3490,8 +3490,13 @@ type FeatureCheckAndIncrementResponse struct {
 
 // FeatureCheckResponse defines model for FeatureCheckResponse.
 type FeatureCheckResponse struct {
-	Allowed   bool `json:"allowed"`
-	Remaining *int `json:"remaining,omitempty"`
+	Allowed   bool    `json:"allowed"`
+	Feature   *string `json:"feature,omitempty"`
+	Limit     *int    `json:"limit,omitempty"`
+	Remaining *int    `json:"remaining,omitempty"`
+	ResetAt   *string `json:"reset_at,omitempty"`
+	Tier      *string `json:"tier,omitempty"`
+	UsedToday *int    `json:"used_today,omitempty"`
 }
 
 // FeatureCheckUniqueResponse defines model for FeatureCheckUniqueResponse.

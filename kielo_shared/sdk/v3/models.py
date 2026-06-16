@@ -1901,7 +1901,12 @@ class FeatureCheckAndIncrementResponse(BaseModel):
 
 class FeatureCheckResponse(BaseModel):
     allowed: bool
+    feature: str | None = None
+    limit: int | None = None
     remaining: int | None = None
+    reset_at: str | None = None
+    tier: str | None = None
+    used_today: int | None = None
 
 
 class FeatureCheckUniqueResponse(BaseModel):
