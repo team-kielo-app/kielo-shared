@@ -234,6 +234,31 @@ class ArticleParagraphTranslationsResponse(BaseModel):
     translations: list[ArticleParagraphTranslationItem]
 
 
+class ArticleVersionIngestionWire(BaseModel):
+    article_metadata_id: UUID_aliased
+    article_type: str
+    article_version_id: UUID_aliased
+    brand_id: UUID_aliased
+    content_data: Any
+    content_hash: str
+    difficulty_score: float | None = None
+    fetched_at: AwareDatetime | None = None
+    is_latest: bool
+    is_premium: bool
+    learning_language_code: str
+    locale: str
+    original_content_text: str
+    processing_status: str
+    publication_date: AwareDatetime | None = None
+    source_url: str
+    support_language_code: str
+    thumbnail_media_id: UUID_aliased | None = None
+    title: str
+    translation: Any
+    translation_fallback: bool
+    version_number: int
+
+
 class AuditLog(BaseModel):
     action: str
     entity_id: UUID_aliased
@@ -4454,6 +4479,10 @@ class SingletonAppFeedback(BaseModel):
 
 class SingletonArticleParagraphTranslationsResponse(BaseModel):
     data: ArticleParagraphTranslationsResponse
+
+
+class SingletonArticleVersionIngestionWire(BaseModel):
+    data: ArticleVersionIngestionWire
 
 
 class SingletonAuditLogsListResponse(BaseModel):

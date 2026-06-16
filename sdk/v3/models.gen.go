@@ -953,6 +953,32 @@ type ArticleVersion struct {
 	TranslationFallback             *bool                                  `json:"translation_fallback,omitempty"`
 }
 
+// ArticleVersionIngestionWire defines model for ArticleVersionIngestionWire.
+type ArticleVersionIngestionWire struct {
+	ArticleMetadataId    uuid.UUID   `json:"article_metadata_id"`
+	ArticleType          string      `json:"article_type"`
+	ArticleVersionId     uuid.UUID   `json:"article_version_id"`
+	BrandId              uuid.UUID   `json:"brand_id"`
+	ContentData          interface{} `json:"content_data"`
+	ContentHash          string      `json:"content_hash"`
+	DifficultyScore      *float32    `json:"difficulty_score,omitempty"`
+	FetchedAt            *time.Time  `json:"fetched_at,omitempty"`
+	IsLatest             bool        `json:"is_latest"`
+	IsPremium            bool        `json:"is_premium"`
+	LearningLanguageCode string      `json:"learning_language_code"`
+	Locale               string      `json:"locale"`
+	OriginalContentText  string      `json:"original_content_text"`
+	ProcessingStatus     string      `json:"processing_status"`
+	PublicationDate      *time.Time  `json:"publication_date,omitempty"`
+	SourceUrl            string      `json:"source_url"`
+	SupportLanguageCode  string      `json:"support_language_code"`
+	ThumbnailMediaId     *uuid.UUID  `json:"thumbnail_media_id,omitempty"`
+	Title                string      `json:"title"`
+	Translation          interface{} `json:"translation"`
+	TranslationFallback  bool        `json:"translation_fallback"`
+	VersionNumber        int         `json:"version_number"`
+}
+
 // ArticleVersionOccurrence defines model for ArticleVersionOccurrence.
 type ArticleVersionOccurrence struct {
 	BaseWordDetail          *BaseWord       `json:"base_word_detail,omitempty"`
@@ -6946,6 +6972,11 @@ type SingletonArticleParagraphTranslationsResponse struct {
 // SingletonArticleVersion defines model for SingletonArticleVersion.
 type SingletonArticleVersion struct {
 	Data ArticleVersion `json:"data"`
+}
+
+// SingletonArticleVersionIngestionWire defines model for SingletonArticleVersionIngestionWire.
+type SingletonArticleVersionIngestionWire struct {
+	Data ArticleVersionIngestionWire `json:"data"`
 }
 
 // SingletonAuditLogsListResponse defines model for SingletonAuditLogsListResponse.
