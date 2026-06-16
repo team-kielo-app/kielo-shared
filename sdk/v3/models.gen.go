@@ -8,8 +8,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/oapi-codegen/runtime"
-	openapi_types "github.com/oapi-codegen/runtime/types"
+	"github.com/google/uuid"
 )
 
 const (
@@ -618,13 +617,13 @@ type AIConversation struct {
 
 // APIKey defines model for APIKey.
 type APIKey struct {
-	CreatedAt time.Time          `json:"created_at"`
-	ExpiresAt time.Time          `json:"expires_at"`
-	Id        openapi_types.UUID `json:"id"`
-	IsActive  bool               `json:"is_active"`
-	KeyHash   string             `json:"key_hash"`
-	Name      string             `json:"name"`
-	Role      string             `json:"role"`
+	CreatedAt time.Time `json:"created_at"`
+	ExpiresAt time.Time `json:"expires_at"`
+	Id        uuid.UUID `json:"id"`
+	IsActive  bool      `json:"is_active"`
+	KeyHash   string    `json:"key_hash"`
+	Name      string    `json:"name"`
+	Role      string    `json:"role"`
 }
 
 // APIKeyCreateRequest defines model for APIKeyCreateRequest.
@@ -641,17 +640,17 @@ type APIKeyCreateResult struct {
 
 // AchievementDefinition defines model for AchievementDefinition.
 type AchievementDefinition struct {
-	AchievementId  openapi_types.UUID `json:"achievement_id"`
-	Category       *string            `json:"category,omitempty"`
-	Code           string             `json:"code"`
-	CriteriaConfig *string            `json:"criteria_config,omitempty"`
-	CriteriaType   string             `json:"criteria_type"`
-	Description    *string            `json:"description,omitempty"`
-	DisplayOrder   int                `json:"display_order"`
-	IconName       *string            `json:"icon_name,omitempty"`
-	IsActive       bool               `json:"is_active"`
-	Name           string             `json:"name"`
-	Points         int                `json:"points"`
+	AchievementId  uuid.UUID `json:"achievement_id"`
+	Category       *string   `json:"category,omitempty"`
+	Code           string    `json:"code"`
+	CriteriaConfig *string   `json:"criteria_config,omitempty"`
+	CriteriaType   string    `json:"criteria_type"`
+	Description    *string   `json:"description,omitempty"`
+	DisplayOrder   int       `json:"display_order"`
+	IconName       *string   `json:"icon_name,omitempty"`
+	IsActive       bool      `json:"is_active"`
+	Name           string    `json:"name"`
+	Points         int       `json:"points"`
 }
 
 // AchievementDefinitionList defines model for AchievementDefinitionList.
@@ -688,21 +687,21 @@ type ActivateAgentResponse struct {
 
 // ActiveLearningItem defines model for ActiveLearningItem.
 type ActiveLearningItem struct {
-	CefrLevel   *string            `json:"cefr_level"`
-	DisplayText *string            `json:"display_text"`
-	ItemId      openapi_types.UUID `json:"item_id"`
-	ItemType    string             `json:"item_type"`
+	CefrLevel   *string   `json:"cefr_level"`
+	DisplayText *string   `json:"display_text"`
+	ItemId      uuid.UUID `json:"item_id"`
+	ItemType    string    `json:"item_type"`
 }
 
 // ActiveLearningItemsResponse defines model for ActiveLearningItemsResponse.
 type ActiveLearningItemsResponse struct {
 	Items  []ActiveLearningItem `json:"items"`
-	UserId openapi_types.UUID   `json:"user_id"`
+	UserId uuid.UUID            `json:"user_id"`
 }
 
 // AddToStudyListRequest defines model for AddToStudyListRequest.
 type AddToStudyListRequest struct {
-	BaseWordIds []openapi_types.UUID `json:"base_word_ids"`
+	BaseWordIds []uuid.UUID `json:"base_word_ids"`
 }
 
 // AddToStudyListRequestV3 defines model for AddToStudyListRequestV3.
@@ -838,7 +837,7 @@ type AppFeedback struct {
 	Category                 string                  `json:"category"`
 	Context                  *map[string]interface{} `json:"context,omitempty"`
 	CreatedAt                time.Time               `json:"created_at"`
-	FeedbackId               openapi_types.UUID      `json:"feedback_id"`
+	FeedbackId               uuid.UUID               `json:"feedback_id"`
 	Locale                   *string                 `json:"locale,omitempty"`
 	Message                  string                  `json:"message"`
 	Platform                 *string                 `json:"platform,omitempty"`
@@ -846,7 +845,7 @@ type AppFeedback struct {
 	Status                   string                  `json:"status"`
 	UpdatedAt                time.Time               `json:"updated_at"`
 	UserEmail                *string                 `json:"user_email,omitempty"`
-	UserId                   *openapi_types.UUID     `json:"user_id,omitempty"`
+	UserId                   *uuid.UUID              `json:"user_id,omitempty"`
 	UserLearningLanguageCode *string                 `json:"user_learning_language_code,omitempty"`
 	UserName                 *string                 `json:"user_name,omitempty"`
 }
@@ -860,7 +859,7 @@ type AppFeedbackCreateRequest struct {
 	Message    string                  `json:"message"`
 	Platform   *string                 `json:"platform,omitempty"`
 	Rating     *int                    `json:"rating,omitempty"`
-	UserId     openapi_types.UUID      `json:"user_id"`
+	UserId     uuid.UUID               `json:"user_id"`
 }
 
 // AppFeedbackListResponse defines model for AppFeedbackListResponse.
@@ -894,7 +893,7 @@ type ArticleParagraph struct {
 	ContentLocale       *string                     `json:"content_locale,omitempty"`
 	GrammarOccurrences  *[]ArticleVersionOccurrence `json:"grammar_occurrences,omitempty"`
 	Localization        *LocalizationStatus         `json:"localization,omitempty"`
-	ParagraphId         openapi_types.UUID          `json:"paragraph_id"`
+	ParagraphId         uuid.UUID                   `json:"paragraph_id"`
 	ParagraphIndex      int                         `json:"paragraph_index"`
 	SupportLanguageCode *string                     `json:"support_language_code,omitempty"`
 	Text                *string                     `json:"text,omitempty"`
@@ -934,14 +933,14 @@ type ArticleVersion struct {
 	DifficultyScore                 *float32                               `json:"difficulty_score,omitempty"`
 	EstimatedReadingTimeMinutes     *int                                   `json:"estimated_reading_time_minutes,omitempty"`
 	FamiliarWordCount               *int                                   `json:"familiar_word_count,omitempty"`
-	Id                              openapi_types.UUID                     `json:"id"`
+	Id                              uuid.UUID                              `json:"id"`
 	LearningLanguageCode            *string                                `json:"learning_language_code,omitempty"`
-	OriginalArticleVersionId        *openapi_types.UUID                    `json:"original_article_version_id,omitempty"`
+	OriginalArticleVersionId        *uuid.UUID                             `json:"original_article_version_id,omitempty"`
 	OriginalTitle                   *string                                `json:"original_title,omitempty"`
 	Paragraphs                      *[]Paragraph                           `json:"paragraphs,omitempty"`
 	PersonalizedContent             *KLearnPersonalizedArticleResponse     `json:"personalized_content,omitempty"`
 	PublicationDate                 *time.Time                             `json:"publication_date,omitempty"`
-	SimplifiedArticleVersionId      *openapi_types.UUID                    `json:"simplified_article_version_id,omitempty"`
+	SimplifiedArticleVersionId      *uuid.UUID                             `json:"simplified_article_version_id,omitempty"`
 	SourceUrl                       *string                                `json:"source_url,omitempty"`
 	SupportLanguageCode             *string                                `json:"support_language_code,omitempty"`
 	Tags                            *[]string                              `json:"tags,omitempty"`
@@ -956,26 +955,26 @@ type ArticleVersion struct {
 
 // ArticleVersionOccurrence defines model for ArticleVersionOccurrence.
 type ArticleVersionOccurrence struct {
-	BaseWordDetail          *BaseWord           `json:"base_word_detail,omitempty"`
-	BaseWordId              *openapi_types.UUID `json:"base_word_id,omitempty"`
-	EndCharOffset           int                 `json:"end_char_offset"`
-	EndWordIndex            *int                `json:"end_word_index,omitempty"`
-	GrammarConceptId        *openapi_types.UUID `json:"grammar_concept_id,omitempty"`
-	GrammarDetail           *GrammarConcept     `json:"grammar_detail,omitempty"`
-	InflectedFormDetails    *interface{}        `json:"inflected_form_details,omitempty"`
-	IsKptChangeExample      *bool               `json:"is_kpt_change_example,omitempty"`
-	KptOriginalStem         *string             `json:"kpt_original_stem,omitempty"`
-	KptRuleApplied          *string             `json:"kpt_rule_applied,omitempty"`
-	OccurrenceId            openapi_types.UUID  `json:"occurrence_id"`
-	OccurrenceType          string              `json:"occurrence_type"`
-	OriginalTokenPhrase     *string             `json:"original_token_phrase,omitempty"`
-	ParagraphId             openapi_types.UUID  `json:"paragraph_id"`
-	SentenceText            *string             `json:"sentence_text,omitempty"`
-	SentenceTranslation     *string             `json:"sentence_translation,omitempty"`
-	SpecificExplanation     *string             `json:"specific_explanation,omitempty"`
-	SpecificExplanationHtml *string             `json:"specific_explanation_html,omitempty"`
-	StartCharOffset         int                 `json:"start_char_offset"`
-	StartWordIndex          *int                `json:"start_word_index,omitempty"`
+	BaseWordDetail          *BaseWord       `json:"base_word_detail,omitempty"`
+	BaseWordId              *uuid.UUID      `json:"base_word_id,omitempty"`
+	EndCharOffset           int             `json:"end_char_offset"`
+	EndWordIndex            *int            `json:"end_word_index,omitempty"`
+	GrammarConceptId        *uuid.UUID      `json:"grammar_concept_id,omitempty"`
+	GrammarDetail           *GrammarConcept `json:"grammar_detail,omitempty"`
+	InflectedFormDetails    *interface{}    `json:"inflected_form_details,omitempty"`
+	IsKptChangeExample      *bool           `json:"is_kpt_change_example,omitempty"`
+	KptOriginalStem         *string         `json:"kpt_original_stem,omitempty"`
+	KptRuleApplied          *string         `json:"kpt_rule_applied,omitempty"`
+	OccurrenceId            uuid.UUID       `json:"occurrence_id"`
+	OccurrenceType          string          `json:"occurrence_type"`
+	OriginalTokenPhrase     *string         `json:"original_token_phrase,omitempty"`
+	ParagraphId             uuid.UUID       `json:"paragraph_id"`
+	SentenceText            *string         `json:"sentence_text,omitempty"`
+	SentenceTranslation     *string         `json:"sentence_translation,omitempty"`
+	SpecificExplanation     *string         `json:"specific_explanation,omitempty"`
+	SpecificExplanationHtml *string         `json:"specific_explanation_html,omitempty"`
+	StartCharOffset         int             `json:"start_char_offset"`
+	StartWordIndex          *int            `json:"start_word_index,omitempty"`
 }
 
 // ArticleVersionSnippet defines model for ArticleVersionSnippet.
@@ -984,7 +983,7 @@ type ArticleVersionSnippet struct {
 	Brand                        Brand               `json:"brand"`
 	DifficultyScore              *float32            `json:"difficulty_score,omitempty"`
 	EstimatedReadingTimeMinutes  *int                `json:"estimated_reading_time_minutes,omitempty"`
-	Id                           openapi_types.UUID  `json:"id"`
+	Id                           uuid.UUID           `json:"id"`
 	LearningLanguageCode         *string             `json:"learning_language_code,omitempty"`
 	OriginalTitle                *string             `json:"original_title,omitempty"`
 	PublicationDate              *time.Time          `json:"publication_date,omitempty"`
@@ -1000,16 +999,16 @@ type ArticleVersionSnippet struct {
 
 // AuditLog defines model for AuditLog.
 type AuditLog struct {
-	Action      string              `json:"action"`
-	EntityId    openapi_types.UUID  `json:"entity_id"`
-	EntityType  string              `json:"entity_type"`
-	Id          openapi_types.UUID  `json:"id"`
-	IpAddress   *string             `json:"ip_address,omitempty"`
-	NewValue    *interface{}        `json:"new_value,omitempty"`
-	OldValue    *interface{}        `json:"old_value,omitempty"`
-	PerformedAt time.Time           `json:"performed_at"`
-	PerformedBy *openapi_types.UUID `json:"performed_by,omitempty"`
-	UserAgent   *string             `json:"user_agent,omitempty"`
+	Action      string       `json:"action"`
+	EntityId    uuid.UUID    `json:"entity_id"`
+	EntityType  string       `json:"entity_type"`
+	Id          uuid.UUID    `json:"id"`
+	IpAddress   *string      `json:"ip_address,omitempty"`
+	NewValue    *interface{} `json:"new_value,omitempty"`
+	OldValue    *interface{} `json:"old_value,omitempty"`
+	PerformedAt time.Time    `json:"performed_at"`
+	PerformedBy *uuid.UUID   `json:"performed_by,omitempty"`
+	UserAgent   *string      `json:"user_agent,omitempty"`
 }
 
 // AuditLogsListResponse defines model for AuditLogsListResponse.
@@ -1039,16 +1038,16 @@ type AwardAchievementRequest struct {
 
 // AwardAchievementResponse defines model for AwardAchievementResponse.
 type AwardAchievementResponse struct {
-	AchievementId *openapi_types.UUID `json:"achievement_id,omitempty"`
-	Awarded       bool                `json:"awarded"`
-	EarnedAt      *time.Time          `json:"earned_at,omitempty"`
-	Reason        *string             `json:"reason,omitempty"`
+	AchievementId *uuid.UUID `json:"achievement_id,omitempty"`
+	Awarded       bool       `json:"awarded"`
+	EarnedAt      *time.Time `json:"earned_at,omitempty"`
+	Reason        *string    `json:"reason,omitempty"`
 }
 
 // BaseWord defines model for BaseWord.
 type BaseWord struct {
 	AudioUrl          *string                `json:"audio_url,omitempty"`
-	BaseWordId        openapi_types.UUID     `json:"base_word_id"`
+	BaseWordId        uuid.UUID              `json:"base_word_id"`
 	CefrLevel         *string                `json:"cefr_level,omitempty"`
 	CreatedAt         time.Time              `json:"created_at"`
 	Examples          *[]ExampleSentencePair `json:"examples,omitempty"`
@@ -1067,7 +1066,7 @@ type BaseWord struct {
 // BaseWordResponse defines model for BaseWordResponse.
 type BaseWordResponse struct {
 	AudioPronunciationUrl *string                        `json:"audio_pronunciation_url"`
-	BaseWordId            openapi_types.UUID             `json:"base_word_id"`
+	BaseWordId            uuid.UUID                      `json:"base_word_id"`
 	CefrLevel             *string                        `json:"cefr_level"`
 	CreatedAt             time.Time                      `json:"created_at"`
 	Description           *string                        `json:"description"`
@@ -1086,8 +1085,8 @@ type BaseWordResponse struct {
 
 // BaseWordTTSRequest defines model for BaseWordTTSRequest.
 type BaseWordTTSRequest struct {
-	BaseWordId openapi_types.UUID `json:"base_word_id"`
-	Force      bool               `json:"force"`
+	BaseWordId uuid.UUID `json:"base_word_id"`
+	Force      bool      `json:"force"`
 }
 
 // BatchEmailRequest defines model for BatchEmailRequest.
@@ -1116,12 +1115,12 @@ type BatchEmailResultItem struct {
 
 // BatchLookupRequest defines model for BatchLookupRequest.
 type BatchLookupRequest struct {
-	DistinctBySurfaceEntryId *bool                 `json:"distinct_by_surface_entry_id,omitempty"`
-	ExcludeSurfaceEntryIds   *[]openapi_types.UUID `json:"exclude_surface_entry_ids,omitempty"`
-	ItemIds                  []openapi_types.UUID  `json:"item_ids"`
-	LearningLanguageCode     string                `json:"learning_language_code"`
-	PerItemLimit             *int                  `json:"per_item_limit,omitempty"`
-	SurfaceTypes             *[]string             `json:"surface_types,omitempty"`
+	DistinctBySurfaceEntryId *bool        `json:"distinct_by_surface_entry_id,omitempty"`
+	ExcludeSurfaceEntryIds   *[]uuid.UUID `json:"exclude_surface_entry_ids,omitempty"`
+	ItemIds                  []uuid.UUID  `json:"item_ids"`
+	LearningLanguageCode     string       `json:"learning_language_code"`
+	PerItemLimit             *int         `json:"per_item_limit,omitempty"`
+	SurfaceTypes             *[]string    `json:"surface_types,omitempty"`
 }
 
 // BatchLookupResponse defines model for BatchLookupResponse.
@@ -1191,7 +1190,7 @@ type BehavioralEventRequest struct {
 
 // BodyEvaluateRoadmapStepSpeechKlearnApiV3RoadmapLessonsLessonIdStepsStepIndexSpeechEvaluatePost defines model for Body_evaluate_roadmap_step_speech_klearn_api_v3_roadmap_lessons__lesson_id__steps__step_index__speech_evaluate_post.
 type BodyEvaluateRoadmapStepSpeechKlearnApiV3RoadmapLessonsLessonIdStepsStepIndexSpeechEvaluatePost struct {
-	File openapi_types.File `json:"file"`
+	File File `json:"file"`
 }
 
 // Brand defines model for Brand.
@@ -1239,7 +1238,7 @@ type BrowseScenariosResponse struct {
 
 // BulkCreateTranslationKeysRequest defines model for BulkCreateTranslationKeysRequest.
 type BulkCreateTranslationKeysRequest struct {
-	CreatedBy *openapi_types.UUID           `json:"created_by,omitempty"`
+	CreatedBy *uuid.UUID                    `json:"created_by,omitempty"`
 	Keys      []CreateTranslationKeyRequest `json:"keys"`
 }
 
@@ -1265,38 +1264,38 @@ type BulkUpsertDynamicTranslationsResponse struct {
 
 // BulkUpsertTranslationsItem defines model for BulkUpsertTranslationsItem.
 type BulkUpsertTranslationsItem struct {
-	KeyId            openapi_types.UUID `json:"key_id"`
-	LanguageCode     string             `json:"language_code"`
-	Status           *string            `json:"status,omitempty"`
-	TranslatorSource *string            `json:"translator_source,omitempty"`
-	Value            string             `json:"value"`
+	KeyId            uuid.UUID `json:"key_id"`
+	LanguageCode     string    `json:"language_code"`
+	Status           *string   `json:"status,omitempty"`
+	TranslatorSource *string   `json:"translator_source,omitempty"`
+	Value            string    `json:"value"`
 }
 
 // BulkUpsertTranslationsRequest defines model for BulkUpsertTranslationsRequest.
 type BulkUpsertTranslationsRequest struct {
-	CreatedBy *openapi_types.UUID          `json:"created_by,omitempty"`
+	CreatedBy *uuid.UUID                   `json:"created_by,omitempty"`
 	Items     []BulkUpsertTranslationsItem `json:"items"`
 }
 
 // CAMArticleContent defines model for CAMArticleContent.
 type CAMArticleContent struct {
-	ArticleVersionId      openapi_types.UUID `json:"article_version_id"`
-	Occurrences           []CAMOccurrence    `json:"occurrences"`
-	UniqueBaseWords       *[]BaseWord        `json:"unique_base_words,omitempty"`
-	UniqueGrammarConcepts *[]GrammarConcept  `json:"unique_grammar_concepts,omitempty"`
+	ArticleVersionId      uuid.UUID         `json:"article_version_id"`
+	Occurrences           []CAMOccurrence   `json:"occurrences"`
+	UniqueBaseWords       *[]BaseWord       `json:"unique_base_words,omitempty"`
+	UniqueGrammarConcepts *[]GrammarConcept `json:"unique_grammar_concepts,omitempty"`
 }
 
 // CAMOccurrence defines model for CAMOccurrence.
 type CAMOccurrence struct {
-	EndOffset               int                `json:"end_offset"`
-	InflectedFormDetails    *string            `json:"inflected_form_details,omitempty"`
-	ItemId                  openapi_types.UUID `json:"item_id"`
-	ItemType                string             `json:"item_type"`
-	OccurrenceId            openapi_types.UUID `json:"occurrence_id"`
-	ParagraphText           string             `json:"paragraph_text"`
-	SpecificExplanation     *string            `json:"specific_explanation,omitempty"`
-	SpecificExplanationHtml *string            `json:"specific_explanation_html,omitempty"`
-	StartOffset             int                `json:"start_offset"`
+	EndOffset               int       `json:"end_offset"`
+	InflectedFormDetails    *string   `json:"inflected_form_details,omitempty"`
+	ItemId                  uuid.UUID `json:"item_id"`
+	ItemType                string    `json:"item_type"`
+	OccurrenceId            uuid.UUID `json:"occurrence_id"`
+	ParagraphText           string    `json:"paragraph_text"`
+	SpecificExplanation     *string   `json:"specific_explanation,omitempty"`
+	SpecificExplanationHtml *string   `json:"specific_explanation_html,omitempty"`
+	StartOffset             int       `json:"start_offset"`
 }
 
 // CacheInvalidateResponse defines model for CacheInvalidateResponse.
@@ -1344,7 +1343,7 @@ type CampaignPreviewItem struct {
 
 // CampaignPreviewResult defines model for CampaignPreviewResult.
 type CampaignPreviewResult struct {
-	CampaignId openapi_types.UUID     `json:"campaign_id"`
+	CampaignId uuid.UUID              `json:"campaign_id"`
 	Preview    CampaignPreviewDetails `json:"preview"`
 }
 
@@ -1384,18 +1383,18 @@ type CanonicalError struct {
 
 // Captions defines model for Captions.
 type Captions struct {
-	ContentVersionId     *openapi_types.UUID `json:"content_version_id,omitempty"`
-	CreatedAt            time.Time           `json:"created_at"`
-	Cues                 interface{}         `json:"cues"`
-	Id                   openapi_types.UUID  `json:"id"`
-	IsFallback           bool                `json:"is_fallback"`
-	LearningLanguageCode *string             `json:"learning_language_code,omitempty"`
-	Locale               string              `json:"locale"`
-	SourceLocale         string              `json:"source_locale"`
-	TranslationSource    *string             `json:"translation_source,omitempty"`
-	TranslationStatus    interface{}         `json:"translation_status"`
-	UpdatedAt            time.Time           `json:"updated_at"`
-	VideoId              openapi_types.UUID  `json:"video_id"`
+	ContentVersionId     *uuid.UUID  `json:"content_version_id,omitempty"`
+	CreatedAt            time.Time   `json:"created_at"`
+	Cues                 interface{} `json:"cues"`
+	Id                   uuid.UUID   `json:"id"`
+	IsFallback           bool        `json:"is_fallback"`
+	LearningLanguageCode *string     `json:"learning_language_code,omitempty"`
+	Locale               string      `json:"locale"`
+	SourceLocale         string      `json:"source_locale"`
+	TranslationSource    *string     `json:"translation_source,omitempty"`
+	TranslationStatus    interface{} `json:"translation_status"`
+	UpdatedAt            time.Time   `json:"updated_at"`
+	VideoId              uuid.UUID   `json:"video_id"`
 }
 
 // Card defines model for Card.
@@ -1423,7 +1422,7 @@ type ChallengeSection struct {
 	BonusXp                  *int                              `json:"bonus_xp,omitempty"`
 	Exercises                []ChallengeSection_Exercises_Item `json:"exercises"`
 	LearningObjectiveSummary *string                           `json:"learning_objective_summary"`
-	ObjectiveId              *openapi_types.UUID               `json:"objective_id"`
+	ObjectiveId              *uuid.UUID                        `json:"objective_id"`
 	SectionType              ChallengeSectionSectionType       `json:"section_type"`
 	SelectionSourceLabel     *string                           `json:"selection_source_label"`
 	Subtitle                 *string                           `json:"subtitle"`
@@ -1912,15 +1911,15 @@ type CommunicationHistoryListResponse struct {
 type CommunicationLog struct {
 	CreatedAt  time.Time              `json:"CreatedAt"`
 	EventType  string                 `json:"EventType"`
-	ID         openapi_types.UUID     `json:"ID"`
+	ID         uuid.UUID              `json:"ID"`
 	Metadata   map[string]interface{} `json:"Metadata"`
 	Recipient  string                 `json:"Recipient"`
-	RuleID     *openapi_types.UUID    `json:"RuleID,omitempty"`
+	RuleID     *uuid.UUID             `json:"RuleID,omitempty"`
 	Source     string                 `json:"Source"`
 	Status     string                 `json:"Status"`
 	TemplateID string                 `json:"TemplateID"`
 	Type       string                 `json:"Type"`
-	UserID     *openapi_types.UUID    `json:"UserID,omitempty"`
+	UserID     *uuid.UUID             `json:"UserID,omitempty"`
 }
 
 // CompleteRoadmapStepRequest defines model for CompleteRoadmapStepRequest.
@@ -1991,10 +1990,10 @@ type ConceptHubFollowUps struct {
 
 // ConceptHubGenerationJobResponse defines model for ConceptHubGenerationJobResponse.
 type ConceptHubGenerationJobResponse struct {
-	ConceptHubId *openapi_types.UUID                     `json:"concept_hub_id"`
-	ConceptId    openapi_types.UUID                      `json:"concept_id"`
+	ConceptHubId *uuid.UUID                              `json:"concept_hub_id"`
+	ConceptId    uuid.UUID                               `json:"concept_id"`
 	ErrorMessage *string                                 `json:"error_message"`
-	JobId        openapi_types.UUID                      `json:"job_id"`
+	JobId        uuid.UUID                               `json:"job_id"`
 	JobType      *ConceptHubGenerationJobResponseJobType `json:"job_type,omitempty"`
 	Preview      *ConceptHubPreview                      `json:"preview"`
 	Stage        *string                                 `json:"stage"`
@@ -2012,7 +2011,7 @@ type ConceptHubPreview struct {
 	CoreContent        *CoreContent        `json:"core_content"`
 	Description        *string             `json:"description"`
 	FollowUpActivities *FollowUpActivities `json:"follow_up_activities"`
-	GrammarConceptId   openapi_types.UUID  `json:"grammar_concept_id"`
+	GrammarConceptId   uuid.UUID           `json:"grammar_concept_id"`
 	Title              *string             `json:"title"`
 }
 
@@ -2027,8 +2026,8 @@ type ConceptHubResponse struct {
 	EnrichmentStartedAt    *time.Time                          `json:"enrichment_started_at"`
 	EnrichmentStatus       *ConceptHubResponseEnrichmentStatus `json:"enrichment_status,omitempty"`
 	FollowUpActivities     FollowUpActivities                  `json:"follow_up_activities"`
-	GrammarConceptId       openapi_types.UUID                  `json:"grammar_concept_id"`
-	Id                     openapi_types.UUID                  `json:"id"`
+	GrammarConceptId       uuid.UUID                           `json:"grammar_concept_id"`
+	Id                     uuid.UUID                           `json:"id"`
 	Title                  string                              `json:"title"`
 }
 
@@ -2044,13 +2043,13 @@ type ConceptHubSentenceExample struct {
 
 // ConceptHubSummary defines model for ConceptHubSummary.
 type ConceptHubSummary struct {
-	Category         *string            `json:"category,omitempty"`
-	CefrLevel        *string            `json:"cefr_level,omitempty"`
-	Description      *string            `json:"description,omitempty"`
-	EnrichmentStatus *string            `json:"enrichment_status,omitempty"`
-	GrammarConceptId openapi_types.UUID `json:"grammar_concept_id"`
-	Id               openapi_types.UUID `json:"id"`
-	Title            string             `json:"title"`
+	Category         *string   `json:"category,omitempty"`
+	CefrLevel        *string   `json:"cefr_level,omitempty"`
+	Description      *string   `json:"description,omitempty"`
+	EnrichmentStatus *string   `json:"enrichment_status,omitempty"`
+	GrammarConceptId uuid.UUID `json:"grammar_concept_id"`
+	Id               uuid.UUID `json:"id"`
+	Title            string    `json:"title"`
 }
 
 // ConceptHubSummaryResponse defines model for ConceptHubSummaryResponse.
@@ -2059,8 +2058,8 @@ type ConceptHubSummaryResponse struct {
 	CefrLevel        *string                                    `json:"cefr_level"`
 	Description      *string                                    `json:"description"`
 	EnrichmentStatus *ConceptHubSummaryResponseEnrichmentStatus `json:"enrichment_status,omitempty"`
-	GrammarConceptId openapi_types.UUID                         `json:"grammar_concept_id"`
-	Id               openapi_types.UUID                         `json:"id"`
+	GrammarConceptId uuid.UUID                                  `json:"grammar_concept_id"`
+	Id               uuid.UUID                                  `json:"id"`
 	Title            string                                     `json:"title"`
 }
 
@@ -2069,13 +2068,13 @@ type ConceptHubSummaryResponseEnrichmentStatus string
 
 // ConceptHubTeaser defines model for ConceptHubTeaser.
 type ConceptHubTeaser struct {
-	CefrLevel            *string            `json:"cefr_level"`
-	Description          string             `json:"description"`
-	GrammarConceptId     openapi_types.UUID `json:"grammar_concept_id"`
-	Id                   openapi_types.UUID `json:"id"`
-	ThumbnailUrl         *string            `json:"thumbnail_url"`
-	Title                string             `json:"title"`
-	UserProficiencyScore *float32           `json:"user_proficiency_score"`
+	CefrLevel            *string   `json:"cefr_level"`
+	Description          string    `json:"description"`
+	GrammarConceptId     uuid.UUID `json:"grammar_concept_id"`
+	Id                   uuid.UUID `json:"id"`
+	ThumbnailUrl         *string   `json:"thumbnail_url"`
+	Title                string    `json:"title"`
+	UserProficiencyScore *float32  `json:"user_proficiency_score"`
 }
 
 // Confusable defines model for Confusable.
@@ -2092,19 +2091,19 @@ type Confusable struct {
 // ContentDiscoveryResponse defines model for ContentDiscoveryResponse.
 type ContentDiscoveryResponse struct {
 	Categories []ConceptHubCategory `json:"categories"`
-	UserId     openapi_types.UUID   `json:"user_id"`
+	UserId     uuid.UUID            `json:"user_id"`
 }
 
 // ContentEntrySummary defines model for ContentEntrySummary.
 type ContentEntrySummary struct {
 	ContentType          string                  `json:"content_type"`
 	CreatedAt            time.Time               `json:"created_at"`
-	CreatedBy            *openapi_types.UUID     `json:"created_by,omitempty"`
+	CreatedBy            *uuid.UUID              `json:"created_by,omitempty"`
 	Description          *string                 `json:"description,omitempty"`
-	Id                   openapi_types.UUID      `json:"id"`
+	Id                   uuid.UUID               `json:"id"`
 	LearningLanguageCode *string                 `json:"learning_language_code,omitempty"`
 	Locale               *string                 `json:"locale,omitempty"`
-	MediaId              *openapi_types.UUID     `json:"media_id,omitempty"`
+	MediaId              *uuid.UUID              `json:"media_id,omitempty"`
 	PublishedAt          *time.Time              `json:"published_at,omitempty"`
 	Slug                 string                  `json:"slug"`
 	SourceLocale         *string                 `json:"source_locale,omitempty"`
@@ -2114,7 +2113,7 @@ type ContentEntrySummary struct {
 	TranslationFallback  *bool                   `json:"translation_fallback,omitempty"`
 	TranslationStatus    *map[string]interface{} `json:"translation_status,omitempty"`
 	UpdatedAt            time.Time               `json:"updated_at"`
-	UpdatedBy            *openapi_types.UUID     `json:"updated_by,omitempty"`
+	UpdatedBy            *uuid.UUID              `json:"updated_by,omitempty"`
 }
 
 // ContentUploadURLs defines model for ContentUploadURLs.
@@ -2140,13 +2139,13 @@ type ContextMatchingExercise struct {
 	ErrorPatternTag *string           `json:"error_pattern_tag"`
 
 	// ExerciseId Unique ID for this specific exercise instance.
-	ExerciseId      *openapi_types.UUID               `json:"exercise_id,omitempty"`
+	ExerciseId      *uuid.UUID                        `json:"exercise_id,omitempty"`
 	ExerciseType    string                            `json:"exercise_type"`
-	GenerationJobId *openapi_types.UUID               `json:"generation_job_id"`
+	GenerationJobId *uuid.UUID                        `json:"generation_job_id"`
 	GenerationModel *string                           `json:"generation_model"`
-	ItemIdFk        openapi_types.UUID                `json:"item_id_fk"`
+	ItemIdFk        uuid.UUID                         `json:"item_id_fk"`
 	ItemTypeFk      ContextMatchingExerciseItemTypeFk `json:"item_type_fk"`
-	ObjectiveId     *openapi_types.UUID               `json:"objective_id"`
+	ObjectiveId     *uuid.UUID                        `json:"objective_id"`
 
 	// Options List of scenario options with keys: id, scenario_name
 	Options             []map[string]string                `json:"options"`
@@ -2171,15 +2170,15 @@ type ContextMatchingExerciseSourceType string
 
 // ContextualLearningOpportunity defines model for ContextualLearningOpportunity.
 type ContextualLearningOpportunity struct {
-	ArticleId              openapi_types.UUID                          `json:"article_id"`
+	ArticleId              uuid.UUID                                   `json:"article_id"`
 	ContextSnippet         *string                                     `json:"context_snippet"`
-	OpportunityId          *openapi_types.UUID                         `json:"opportunity_id,omitempty"`
+	OpportunityId          *uuid.UUID                                  `json:"opportunity_id,omitempty"`
 	Reason                 string                                      `json:"reason"`
 	SuggestedExerciseTypes *[]string                                   `json:"suggested_exercise_types"`
 	TargetItemDisplayText  string                                      `json:"target_item_display_text"`
-	TargetItemId           openapi_types.UUID                          `json:"target_item_id"`
+	TargetItemId           uuid.UUID                                   `json:"target_item_id"`
 	TargetItemType         ContextualLearningOpportunityTargetItemType `json:"target_item_type"`
-	UserId                 openapi_types.UUID                          `json:"user_id"`
+	UserId                 uuid.UUID                                   `json:"user_id"`
 }
 
 // ContextualLearningOpportunityTargetItemType defines model for ContextualLearningOpportunity.TargetItemType.
@@ -2254,17 +2253,17 @@ type ConversationDrillCorrection struct {
 
 // ConversationHistory defines model for ConversationHistory.
 type ConversationHistory struct {
-	DurationSeconds       *int               `json:"duration_seconds,omitempty"`
-	EndedAt               *time.Time         `json:"ended_at,omitempty"`
-	EvaluationGeneratedAt *time.Time         `json:"evaluation_generated_at,omitempty"`
-	Focus                 *string            `json:"focus,omitempty"`
-	ScenarioId            string             `json:"scenario_id"`
-	ScenarioTitle         *string            `json:"scenario_title,omitempty"`
-	Score                 *float32           `json:"score,omitempty"`
-	SessionId             openapi_types.UUID `json:"session_id"`
-	StartedAt             time.Time          `json:"started_at"`
-	State                 string             `json:"state"`
-	TranscriptAvailable   bool               `json:"transcript_available"`
+	DurationSeconds       *int       `json:"duration_seconds,omitempty"`
+	EndedAt               *time.Time `json:"ended_at,omitempty"`
+	EvaluationGeneratedAt *time.Time `json:"evaluation_generated_at,omitempty"`
+	Focus                 *string    `json:"focus,omitempty"`
+	ScenarioId            string     `json:"scenario_id"`
+	ScenarioTitle         *string    `json:"scenario_title,omitempty"`
+	Score                 *float32   `json:"score,omitempty"`
+	SessionId             uuid.UUID  `json:"session_id"`
+	StartedAt             time.Time  `json:"started_at"`
+	State                 string     `json:"state"`
+	TranscriptAvailable   bool       `json:"transcript_available"`
 }
 
 // ConversationHistoryResponse defines model for ConversationHistoryResponse.
@@ -2510,47 +2509,47 @@ type CoreContent struct {
 
 // CountResponse defines model for CountResponse.
 type CountResponse struct {
-	CountsBySurface map[string]int     `json:"counts_by_surface"`
-	ItemId          openapi_types.UUID `json:"item_id"`
-	LanguageCode    string             `json:"language_code"`
-	Total           int                `json:"total"`
+	CountsBySurface map[string]int `json:"counts_by_surface"`
+	ItemId          uuid.UUID      `json:"item_id"`
+	LanguageCode    string         `json:"language_code"`
+	Total           int            `json:"total"`
 }
 
 // CreateAuditLogRequest defines model for CreateAuditLogRequest.
 type CreateAuditLogRequest struct {
-	Action      string              `json:"action"`
-	EntityId    openapi_types.UUID  `json:"entity_id"`
-	EntityType  string              `json:"entity_type"`
-	IpAddress   *string             `json:"ip_address,omitempty"`
-	NewValue    *interface{}        `json:"new_value,omitempty"`
-	OldValue    *interface{}        `json:"old_value,omitempty"`
-	PerformedBy *openapi_types.UUID `json:"performed_by,omitempty"`
-	UserAgent   *string             `json:"user_agent,omitempty"`
+	Action      string       `json:"action"`
+	EntityId    uuid.UUID    `json:"entity_id"`
+	EntityType  string       `json:"entity_type"`
+	IpAddress   *string      `json:"ip_address,omitempty"`
+	NewValue    *interface{} `json:"new_value,omitempty"`
+	OldValue    *interface{} `json:"old_value,omitempty"`
+	PerformedBy *uuid.UUID   `json:"performed_by,omitempty"`
+	UserAgent   *string      `json:"user_agent,omitempty"`
 }
 
 // CreateAuthUserRequest defines model for CreateAuthUserRequest.
 type CreateAuthUserRequest struct {
-	Email            string             `json:"email"`
-	FirebaseUid      *string            `json:"firebase_uid,omitempty"`
-	Id               openapi_types.UUID `json:"id"`
-	LearningLanguage *string            `json:"learning_language,omitempty"`
-	Name             string             `json:"name"`
+	Email            string    `json:"email"`
+	FirebaseUid      *string   `json:"firebase_uid,omitempty"`
+	Id               uuid.UUID `json:"id"`
+	LearningLanguage *string   `json:"learning_language,omitempty"`
+	Name             string    `json:"name"`
 }
 
 // CreateAuthUserResponse defines model for CreateAuthUserResponse.
 type CreateAuthUserResponse struct {
-	Email       string             `json:"email"`
-	FirebaseUid *string            `json:"firebase_uid,omitempty"`
-	Id          openapi_types.UUID `json:"id"`
+	Email       string    `json:"email"`
+	FirebaseUid *string   `json:"firebase_uid,omitempty"`
+	Id          uuid.UUID `json:"id"`
 }
 
 // CreateBaseWordResponse defines model for CreateBaseWordResponse.
 type CreateBaseWordResponse struct {
-	BaseWordId           openapi_types.UUID `json:"base_word_id"`
-	IsNew                bool               `json:"is_new"`
-	LearningLanguageCode *string            `json:"learning_language_code,omitempty"`
-	PartOfSpeech         *string            `json:"part_of_speech,omitempty"`
-	Term                 *string            `json:"term,omitempty"`
+	BaseWordId           uuid.UUID `json:"base_word_id"`
+	IsNew                bool      `json:"is_new"`
+	LearningLanguageCode *string   `json:"learning_language_code,omitempty"`
+	PartOfSpeech         *string   `json:"part_of_speech,omitempty"`
+	Term                 *string   `json:"term,omitempty"`
 }
 
 // CreateBaseWordTTSSessionRequest defines model for CreateBaseWordTTSSessionRequest.
@@ -2560,13 +2559,13 @@ type CreateBaseWordTTSSessionRequest struct {
 
 // CreateContentRequest defines model for CreateContentRequest.
 type CreateContentRequest struct {
-	BrandId              *openapi_types.UUID     `json:"brand_id,omitempty"`
+	BrandId              *uuid.UUID              `json:"brand_id,omitempty"`
 	Category             *string                 `json:"category,omitempty"`
 	ContentType          string                  `json:"content_type"`
 	Data                 interface{}             `json:"data"`
 	Description          *string                 `json:"description,omitempty"`
 	LearningLanguageCode *string                 `json:"learning_language_code,omitempty"`
-	MediaId              *openapi_types.UUID     `json:"media_id,omitempty"`
+	MediaId              *uuid.UUID              `json:"media_id,omitempty"`
 	Slug                 string                  `json:"slug"`
 	Status               *string                 `json:"status,omitempty"`
 	Title                string                  `json:"title"`
@@ -2595,7 +2594,7 @@ type CreateCustomDeckRequest struct {
 	Intent *CreateCustomDeckRequestIntent `json:"intent,omitempty"`
 
 	// ItemIds List of item IDs (BaseWord or GrammarConcept) to include in deck
-	ItemIds []openapi_types.UUID `json:"item_ids"`
+	ItemIds []uuid.UUID `json:"item_ids"`
 }
 
 // CreateCustomDeckRequestExerciseTypes defines model for CreateCustomDeckRequest.ExerciseTypes.
@@ -2675,13 +2674,13 @@ type CreateNamespaceRequest struct {
 
 // CreateOrUpdateTranslationRequest defines model for CreateOrUpdateTranslationRequest.
 type CreateOrUpdateTranslationRequest struct {
-	CreatedBy        *openapi_types.UUID `json:"created_by,omitempty"`
-	KeyId            openapi_types.UUID  `json:"key_id"`
-	LanguageCode     string              `json:"language_code"`
-	QualityScore     *float32            `json:"quality_score,omitempty"`
-	Status           *string             `json:"status,omitempty"`
-	TranslatorSource *string             `json:"translator_source,omitempty"`
-	Value            string              `json:"value"`
+	CreatedBy        *uuid.UUID `json:"created_by,omitempty"`
+	KeyId            uuid.UUID  `json:"key_id"`
+	LanguageCode     string     `json:"language_code"`
+	QualityScore     *float32   `json:"quality_score,omitempty"`
+	Status           *string    `json:"status,omitempty"`
+	TranslatorSource *string    `json:"translator_source,omitempty"`
+	Value            string     `json:"value"`
 }
 
 // CreateParagraphTTSSessionRequest defines model for CreateParagraphTTSSessionRequest.
@@ -2705,11 +2704,11 @@ type CreateScheduleRequest struct {
 
 // CreateStudyListRequest defines model for CreateStudyListRequest.
 type CreateStudyListRequest struct {
-	Description *string             `json:"description,omitempty"`
-	Icon        *string             `json:"icon,omitempty"`
-	Name        string              `json:"name"`
-	Source      *string             `json:"source,omitempty"`
-	SourceId    *openapi_types.UUID `json:"source_id,omitempty"`
+	Description *string    `json:"description,omitempty"`
+	Icon        *string    `json:"icon,omitempty"`
+	Name        string     `json:"name"`
+	Source      *string    `json:"source,omitempty"`
+	SourceId    *uuid.UUID `json:"source_id,omitempty"`
 }
 
 // CreateStudyListRequestV3 defines model for CreateStudyListRequestV3.
@@ -2731,11 +2730,11 @@ type CreateTierLimitRequest struct {
 // CreateTranslationKeyRequest defines model for CreateTranslationKeyRequest.
 type CreateTranslationKeyRequest struct {
 	ContextScreenshotUrl *string                      `json:"context_screenshot_url,omitempty"`
-	CreatedBy            *openapi_types.UUID          `json:"created_by,omitempty"`
+	CreatedBy            *uuid.UUID                   `json:"created_by,omitempty"`
 	Description          *string                      `json:"description,omitempty"`
 	Key                  string                       `json:"key"`
 	MaxLength            *int                         `json:"max_length,omitempty"`
-	NamespaceId          openapi_types.UUID           `json:"namespace_id"`
+	NamespaceId          uuid.UUID                    `json:"namespace_id"`
 	Placeholders         *[]TranslationKeyPlaceholder `json:"placeholders,omitempty"`
 	SourceText           string                       `json:"source_text"`
 	Tags                 *[]string                    `json:"tags,omitempty"`
@@ -2743,91 +2742,91 @@ type CreateTranslationKeyRequest struct {
 
 // CreateTranslationRequest defines model for CreateTranslationRequest.
 type CreateTranslationRequest struct {
-	KeyId            openapi_types.UUID `json:"key_id"`
-	LanguageCode     string             `json:"language_code"`
-	QualityScore     *float32           `json:"quality_score,omitempty"`
-	Status           *string            `json:"status,omitempty"`
-	TranslatorSource *string            `json:"translator_source,omitempty"`
-	Value            string             `json:"value"`
+	KeyId            uuid.UUID `json:"key_id"`
+	LanguageCode     string    `json:"language_code"`
+	QualityScore     *float32  `json:"quality_score,omitempty"`
+	Status           *string   `json:"status,omitempty"`
+	TranslatorSource *string   `json:"translator_source,omitempty"`
+	Value            string    `json:"value"`
 }
 
 // CreateWordClusterSessionRequest defines model for CreateWordClusterSessionRequest.
 type CreateWordClusterSessionRequest struct {
-	ContextSentence      *string            `json:"context_sentence"`
-	ItemId               openapi_types.UUID `json:"item_id"`
-	LearningLanguageCode *string            `json:"learning_language_code,omitempty"`
-	SupportLanguageCode  *string            `json:"support_language_code,omitempty"`
+	ContextSentence      *string   `json:"context_sentence"`
+	ItemId               uuid.UUID `json:"item_id"`
+	LearningLanguageCode *string   `json:"learning_language_code,omitempty"`
+	SupportLanguageCode  *string   `json:"support_language_code,omitempty"`
 }
 
 // CurriculumChapterLessonsRequest defines model for CurriculumChapterLessonsRequest.
 type CurriculumChapterLessonsRequest struct {
-	LessonIds []openapi_types.UUID `json:"lesson_ids"`
+	LessonIds []uuid.UUID `json:"lesson_ids"`
 }
 
 // CurriculumChapterResponse defines model for CurriculumChapterResponse.
 type CurriculumChapterResponse struct {
-	ColorHex           *string            `json:"color_hex"`
-	CreatedAt          time.Time          `json:"created_at"`
-	Description        *string            `json:"description"`
-	IconEmoji          *string            `json:"icon_emoji"`
-	Id                 openapi_types.UUID `json:"id"`
-	LearningObjectives *[]string          `json:"learning_objectives,omitempty"`
-	LessonCount        *int               `json:"lesson_count,omitempty"`
-	LevelId            openapi_types.UUID `json:"level_id"`
-	OrderIndex         int                `json:"order_index"`
-	Status             string             `json:"status"`
-	ThumbnailUrl       *string            `json:"thumbnail_url"`
-	Title              string             `json:"title"`
-	UpdatedAt          time.Time          `json:"updated_at"`
+	ColorHex           *string   `json:"color_hex"`
+	CreatedAt          time.Time `json:"created_at"`
+	Description        *string   `json:"description"`
+	IconEmoji          *string   `json:"icon_emoji"`
+	Id                 uuid.UUID `json:"id"`
+	LearningObjectives *[]string `json:"learning_objectives,omitempty"`
+	LessonCount        *int      `json:"lesson_count,omitempty"`
+	LevelId            uuid.UUID `json:"level_id"`
+	OrderIndex         int       `json:"order_index"`
+	Status             string    `json:"status"`
+	ThumbnailUrl       *string   `json:"thumbnail_url"`
+	Title              string    `json:"title"`
+	UpdatedAt          time.Time `json:"updated_at"`
 }
 
 // CurriculumChapterUpsertRequest defines model for CurriculumChapterUpsertRequest.
 type CurriculumChapterUpsertRequest struct {
-	ColorHex           *string            `json:"color_hex"`
-	Description        *string            `json:"description"`
-	IconEmoji          *string            `json:"icon_emoji"`
-	LearningObjectives *[]string          `json:"learning_objectives,omitempty"`
-	LevelId            openapi_types.UUID `json:"level_id"`
-	OrderIndex         *int               `json:"order_index,omitempty"`
-	Status             *string            `json:"status,omitempty"`
-	ThumbnailUrl       *string            `json:"thumbnail_url"`
-	Title              string             `json:"title"`
+	ColorHex           *string   `json:"color_hex"`
+	Description        *string   `json:"description"`
+	IconEmoji          *string   `json:"icon_emoji"`
+	LearningObjectives *[]string `json:"learning_objectives,omitempty"`
+	LevelId            uuid.UUID `json:"level_id"`
+	OrderIndex         *int      `json:"order_index,omitempty"`
+	Status             *string   `json:"status,omitempty"`
+	ThumbnailUrl       *string   `json:"thumbnail_url"`
+	Title              string    `json:"title"`
 }
 
 // CurriculumLevelResponse defines model for CurriculumLevelResponse.
 type CurriculumLevelResponse struct {
-	CefrLevel    *string            `json:"cefr_level"`
-	ChapterCount *int               `json:"chapter_count,omitempty"`
-	ColorHex     *string            `json:"color_hex"`
-	CreatedAt    time.Time          `json:"created_at"`
-	Description  *string            `json:"description"`
-	IconEmoji    *string            `json:"icon_emoji"`
-	Id           openapi_types.UUID `json:"id"`
-	OrderIndex   int                `json:"order_index"`
-	Status       string             `json:"status"`
-	ThumbnailUrl *string            `json:"thumbnail_url"`
-	Title        string             `json:"title"`
-	TrackId      openapi_types.UUID `json:"track_id"`
-	UpdatedAt    time.Time          `json:"updated_at"`
+	CefrLevel    *string   `json:"cefr_level"`
+	ChapterCount *int      `json:"chapter_count,omitempty"`
+	ColorHex     *string   `json:"color_hex"`
+	CreatedAt    time.Time `json:"created_at"`
+	Description  *string   `json:"description"`
+	IconEmoji    *string   `json:"icon_emoji"`
+	Id           uuid.UUID `json:"id"`
+	OrderIndex   int       `json:"order_index"`
+	Status       string    `json:"status"`
+	ThumbnailUrl *string   `json:"thumbnail_url"`
+	Title        string    `json:"title"`
+	TrackId      uuid.UUID `json:"track_id"`
+	UpdatedAt    time.Time `json:"updated_at"`
 }
 
 // CurriculumLevelUpsertRequest defines model for CurriculumLevelUpsertRequest.
 type CurriculumLevelUpsertRequest struct {
-	CefrLevel    *string            `json:"cefr_level"`
-	ColorHex     *string            `json:"color_hex"`
-	Description  *string            `json:"description"`
-	IconEmoji    *string            `json:"icon_emoji"`
-	OrderIndex   *int               `json:"order_index,omitempty"`
-	Status       *string            `json:"status,omitempty"`
-	ThumbnailUrl *string            `json:"thumbnail_url"`
-	Title        string             `json:"title"`
-	TrackId      openapi_types.UUID `json:"track_id"`
+	CefrLevel    *string   `json:"cefr_level"`
+	ColorHex     *string   `json:"color_hex"`
+	Description  *string   `json:"description"`
+	IconEmoji    *string   `json:"icon_emoji"`
+	OrderIndex   *int      `json:"order_index,omitempty"`
+	Status       *string   `json:"status,omitempty"`
+	ThumbnailUrl *string   `json:"thumbnail_url"`
+	Title        string    `json:"title"`
+	TrackId      uuid.UUID `json:"track_id"`
 }
 
 // CurriculumReorderItem defines model for CurriculumReorderItem.
 type CurriculumReorderItem struct {
-	Id         openapi_types.UUID `json:"id"`
-	OrderIndex int                `json:"order_index"`
+	Id         uuid.UUID `json:"id"`
+	OrderIndex int       `json:"order_index"`
 }
 
 // CurriculumReorderRequest defines model for CurriculumReorderRequest.
@@ -2841,21 +2840,21 @@ type CurriculumReorderRequestEntityType string
 
 // CurriculumTrackResponse defines model for CurriculumTrackResponse.
 type CurriculumTrackResponse struct {
-	Audience     *string            `json:"audience"`
-	ColorHex     *string            `json:"color_hex"`
-	CreatedAt    time.Time          `json:"created_at"`
-	Description  *string            `json:"description"`
-	IconEmoji    *string            `json:"icon_emoji"`
-	Id           openapi_types.UUID `json:"id"`
-	Label        *string            `json:"label"`
-	LevelCount   *int               `json:"level_count,omitempty"`
-	OrderIndex   int                `json:"order_index"`
-	Slug         string             `json:"slug"`
-	Status       string             `json:"status"`
-	ThumbnailUrl *string            `json:"thumbnail_url"`
-	Title        string             `json:"title"`
-	TrackType    string             `json:"track_type"`
-	UpdatedAt    time.Time          `json:"updated_at"`
+	Audience     *string   `json:"audience"`
+	ColorHex     *string   `json:"color_hex"`
+	CreatedAt    time.Time `json:"created_at"`
+	Description  *string   `json:"description"`
+	IconEmoji    *string   `json:"icon_emoji"`
+	Id           uuid.UUID `json:"id"`
+	Label        *string   `json:"label"`
+	LevelCount   *int      `json:"level_count,omitempty"`
+	OrderIndex   int       `json:"order_index"`
+	Slug         string    `json:"slug"`
+	Status       string    `json:"status"`
+	ThumbnailUrl *string   `json:"thumbnail_url"`
+	Title        string    `json:"title"`
+	TrackType    string    `json:"track_type"`
+	UpdatedAt    time.Time `json:"updated_at"`
 }
 
 // CurriculumTrackUpsertRequest defines model for CurriculumTrackUpsertRequest.
@@ -2896,7 +2895,7 @@ type CurriculumTracksV3 struct {
 type CurriculumTreeChapter struct {
 	Description  *string                 `json:"description"`
 	IconEmoji    *string                 `json:"icon_emoji"`
-	Id           openapi_types.UUID      `json:"id"`
+	Id           uuid.UUID               `json:"id"`
 	LessonCount  *int                    `json:"lesson_count,omitempty"`
 	Lessons      *[]CurriculumTreeLesson `json:"lessons,omitempty"`
 	OrderIndex   int                     `json:"order_index"`
@@ -2907,11 +2906,11 @@ type CurriculumTreeChapter struct {
 
 // CurriculumTreeLesson defines model for CurriculumTreeLesson.
 type CurriculumTreeLesson struct {
-	Id         openapi_types.UUID `json:"id"`
-	Kind       *string            `json:"kind"`
-	OrderIndex int                `json:"order_index"`
-	Status     string             `json:"status"`
-	Title      string             `json:"title"`
+	Id         uuid.UUID `json:"id"`
+	Kind       *string   `json:"kind"`
+	OrderIndex int       `json:"order_index"`
+	Status     string    `json:"status"`
+	Title      string    `json:"title"`
 }
 
 // CurriculumTreeLevel defines model for CurriculumTreeLevel.
@@ -2921,7 +2920,7 @@ type CurriculumTreeLevel struct {
 	Chapters     *[]CurriculumTreeChapter `json:"chapters,omitempty"`
 	Description  *string                  `json:"description"`
 	IconEmoji    *string                  `json:"icon_emoji"`
-	Id           openapi_types.UUID       `json:"id"`
+	Id           uuid.UUID                `json:"id"`
 	OrderIndex   int                      `json:"order_index"`
 	Status       string                   `json:"status"`
 	ThumbnailUrl *string                  `json:"thumbnail_url"`
@@ -2937,7 +2936,7 @@ type CurriculumTreeResponse struct {
 type CurriculumTreeTrack struct {
 	Description  *string                `json:"description"`
 	IconEmoji    *string                `json:"icon_emoji"`
-	Id           openapi_types.UUID     `json:"id"`
+	Id           uuid.UUID              `json:"id"`
 	Label        *string                `json:"label"`
 	LevelCount   *int                   `json:"level_count,omitempty"`
 	Levels       *[]CurriculumTreeLevel `json:"levels,omitempty"`
@@ -3053,27 +3052,27 @@ type DLQAuditResolveRequest struct {
 
 // DailyChallengeGenerationAccepted defines model for DailyChallengeGenerationAccepted.
 type DailyChallengeGenerationAccepted struct {
-	ChallengeDate   openapi_types.Date `json:"challenge_date"`
-	EventStreamPath string             `json:"event_stream_path"`
-	JobId           openapi_types.UUID `json:"job_id"`
-	Stage           *string            `json:"stage"`
-	Status          string             `json:"status"`
+	ChallengeDate   Date      `json:"challenge_date"`
+	EventStreamPath string    `json:"event_stream_path"`
+	JobId           uuid.UUID `json:"job_id"`
+	Stage           *string   `json:"stage"`
+	Status          string    `json:"status"`
 }
 
 // DailyChallengeGenerationCreateRequest defines model for DailyChallengeGenerationCreateRequest.
 type DailyChallengeGenerationCreateRequest struct {
-	ChallengeDate   *openapi_types.Date `json:"challenge_date"`
-	ForceRegenerate *bool               `json:"force_regenerate,omitempty"`
-	UserId          openapi_types.UUID  `json:"user_id"`
+	ChallengeDate   *Date     `json:"challenge_date"`
+	ForceRegenerate *bool     `json:"force_regenerate,omitempty"`
+	UserId          uuid.UUID `json:"user_id"`
 }
 
 // DailyChallengeGenerationJobResponse defines model for DailyChallengeGenerationJobResponse.
 type DailyChallengeGenerationJobResponse struct {
-	ChallengeDate *openapi_types.Date     `json:"challenge_date"`
-	ChallengeId   *openapi_types.UUID     `json:"challenge_id"`
+	ChallengeDate *Date                   `json:"challenge_date"`
+	ChallengeId   *uuid.UUID              `json:"challenge_id"`
 	Checkpoint    *map[string]interface{} `json:"checkpoint"`
 	ErrorMessage  *string                 `json:"error_message"`
-	JobId         openapi_types.UUID      `json:"job_id"`
+	JobId         uuid.UUID               `json:"job_id"`
 	Preview       *map[string]interface{} `json:"preview"`
 	Stage         *string                 `json:"stage"`
 	Status        string                  `json:"status"`
@@ -3081,11 +3080,11 @@ type DailyChallengeGenerationJobResponse struct {
 
 // DailyChallengePendingAccepted defines model for DailyChallengePendingAccepted.
 type DailyChallengePendingAccepted struct {
-	ChallengeDate   openapi_types.Date  `json:"challenge_date"`
-	EventStreamPath *string             `json:"event_stream_path"`
-	JobId           *openapi_types.UUID `json:"job_id"`
-	Stage           *string             `json:"stage"`
-	Status          string              `json:"status"`
+	ChallengeDate   Date       `json:"challenge_date"`
+	EventStreamPath *string    `json:"event_stream_path"`
+	JobId           *uuid.UUID `json:"job_id"`
+	Stage           *string    `json:"stage"`
+	Status          string     `json:"status"`
 }
 
 // DailyChallengeV3 defines model for DailyChallengeV3.
@@ -3131,9 +3130,9 @@ type DecisionLog struct {
 
 // DecisionReason defines model for DecisionReason.
 type DecisionReason struct {
-	ObjectiveId openapi_types.UUID `json:"objective_id"`
-	Reason      string             `json:"reason"`
-	Source      string             `json:"source"`
+	ObjectiveId uuid.UUID `json:"objective_id"`
+	Reason      string    `json:"reason"`
+	Source      string    `json:"source"`
 }
 
 // Definition defines model for Definition.
@@ -3323,19 +3322,19 @@ type DrillItem struct {
 
 // DynamicTranslation defines model for DynamicTranslation.
 type DynamicTranslation struct {
-	CreatedAt        time.Time           `json:"created_at"`
-	Id               openapi_types.UUID  `json:"id"`
-	LanguageCode     string              `json:"language_code"`
-	ResourceId       string              `json:"resource_id"`
-	ResourceType     string              `json:"resource_type"`
-	ReviewedAt       *time.Time          `json:"reviewed_at,omitempty"`
-	ReviewedBy       *openapi_types.UUID `json:"reviewed_by,omitempty"`
-	SourceLocale     *string             `json:"source_locale,omitempty"`
-	SourceVersion    string              `json:"source_version"`
-	Status           string              `json:"status"`
-	TranslatedText   string              `json:"translated_text"`
-	TranslatorSource *string             `json:"translator_source,omitempty"`
-	UpdatedAt        time.Time           `json:"updated_at"`
+	CreatedAt        time.Time  `json:"created_at"`
+	Id               uuid.UUID  `json:"id"`
+	LanguageCode     string     `json:"language_code"`
+	ResourceId       string     `json:"resource_id"`
+	ResourceType     string     `json:"resource_type"`
+	ReviewedAt       *time.Time `json:"reviewed_at,omitempty"`
+	ReviewedBy       *uuid.UUID `json:"reviewed_by,omitempty"`
+	SourceLocale     *string    `json:"source_locale,omitempty"`
+	SourceVersion    string     `json:"source_version"`
+	Status           string     `json:"status"`
+	TranslatedText   string     `json:"translated_text"`
+	TranslatorSource *string    `json:"translator_source,omitempty"`
+	UpdatedAt        time.Time  `json:"updated_at"`
 }
 
 // DynamicTranslationCoverage defines model for DynamicTranslationCoverage.
@@ -3405,11 +3404,11 @@ type ExerciseDeck struct {
 
 // ExerciseDeckHeader defines model for ExerciseDeckHeader.
 type ExerciseDeckHeader struct {
-	DeckId         openapi_types.UUID `json:"deck_id"`
-	Difficulty     int                `json:"difficulty"`
-	ExerciseCount  int                `json:"exercise_count"`
-	ThemeThumbnail *string            `json:"theme_thumbnail,omitempty"`
-	Title          string             `json:"title"`
+	DeckId         uuid.UUID `json:"deck_id"`
+	Difficulty     int       `json:"difficulty"`
+	ExerciseCount  int       `json:"exercise_count"`
+	ThemeThumbnail *string   `json:"theme_thumbnail,omitempty"`
+	Title          string    `json:"title"`
 }
 
 // ExerciseDeckSummary defines model for ExerciseDeckSummary.
@@ -3443,39 +3442,39 @@ type ExerciseStateStatus string
 
 // ExerciseSubmission defines model for ExerciseSubmission.
 type ExerciseSubmission struct {
-	ExerciseId        openapi_types.UUID `json:"exercise_id"`
-	ResponseTimeMs    *int               `json:"response_time_ms"`
-	SubmissionId      *string            `json:"submission_id"`
-	SubmittedAtClient *time.Time         `json:"submitted_at_client"`
-	UserAnswer        interface{}        `json:"user_answer"`
+	ExerciseId        uuid.UUID   `json:"exercise_id"`
+	ResponseTimeMs    *int        `json:"response_time_ms"`
+	SubmissionId      *string     `json:"submission_id"`
+	SubmittedAtClient *time.Time  `json:"submitted_at_client"`
+	UserAnswer        interface{} `json:"user_answer"`
 }
 
 // ExerciseVariantBackfillRequest defines model for ExerciseVariantBackfillRequest.
 type ExerciseVariantBackfillRequest struct {
-	BatchSize         *int                `json:"batch_size,omitempty"`
-	Cursor            *string             `json:"cursor"`
-	DryRun            *bool               `json:"dry_run,omitempty"`
-	ExerciseTypes     *[]string           `json:"exercise_types,omitempty"`
-	IncludeRecordIds  *bool               `json:"include_record_ids,omitempty"`
-	ItemId            *openapi_types.UUID `json:"item_id"`
-	MaxBatches        *int                `json:"max_batches,omitempty"`
-	StopWhenExhausted *bool               `json:"stop_when_exhausted,omitempty"`
+	BatchSize         *int       `json:"batch_size,omitempty"`
+	Cursor            *string    `json:"cursor"`
+	DryRun            *bool      `json:"dry_run,omitempty"`
+	ExerciseTypes     *[]string  `json:"exercise_types,omitempty"`
+	IncludeRecordIds  *bool      `json:"include_record_ids,omitempty"`
+	ItemId            *uuid.UUID `json:"item_id"`
+	MaxBatches        *int       `json:"max_batches,omitempty"`
+	StopWhenExhausted *bool      `json:"stop_when_exhausted,omitempty"`
 }
 
 // ExerciseVariantBackfillResponse defines model for ExerciseVariantBackfillResponse.
 type ExerciseVariantBackfillResponse struct {
-	BatchesProcessed         *int                  `json:"batches_processed,omitempty"`
-	CreatedCount             *int                  `json:"created_count,omitempty"`
-	CreatedVariantIds        *[]openapi_types.UUID `json:"created_variant_ids,omitempty"`
-	CursorUsed               *string               `json:"cursor_used"`
-	DryRun                   bool                  `json:"dry_run"`
-	ErrorCount               *int                  `json:"error_count,omitempty"`
-	Errors                   *[]string             `json:"errors,omitempty"`
-	Exhausted                *bool                 `json:"exhausted,omitempty"`
-	NextCursor               *string               `json:"next_cursor"`
-	ScannedCount             *int                  `json:"scanned_count,omitempty"`
-	SkippedCount             *int                  `json:"skipped_count,omitempty"`
-	SkippedSourceExerciseIds *[]openapi_types.UUID `json:"skipped_source_exercise_ids,omitempty"`
+	BatchesProcessed         *int         `json:"batches_processed,omitempty"`
+	CreatedCount             *int         `json:"created_count,omitempty"`
+	CreatedVariantIds        *[]uuid.UUID `json:"created_variant_ids,omitempty"`
+	CursorUsed               *string      `json:"cursor_used"`
+	DryRun                   bool         `json:"dry_run"`
+	ErrorCount               *int         `json:"error_count,omitempty"`
+	Errors                   *[]string    `json:"errors,omitempty"`
+	Exhausted                *bool        `json:"exhausted,omitempty"`
+	NextCursor               *string      `json:"next_cursor"`
+	ScannedCount             *int         `json:"scanned_count,omitempty"`
+	SkippedCount             *int         `json:"skipped_count,omitempty"`
+	SkippedSourceExerciseIds *[]uuid.UUID `json:"skipped_source_exercise_ids,omitempty"`
 }
 
 // FeatureCheckAndIncrementResponse defines model for FeatureCheckAndIncrementResponse.
@@ -3608,7 +3607,7 @@ type Feedback struct {
 	Category                 string                  `json:"category"`
 	Context                  *map[string]interface{} `json:"context,omitempty"`
 	CreatedAt                time.Time               `json:"created_at"`
-	FeedbackId               openapi_types.UUID      `json:"feedback_id"`
+	FeedbackId               uuid.UUID               `json:"feedback_id"`
 	Locale                   *string                 `json:"locale,omitempty"`
 	Message                  string                  `json:"message"`
 	Platform                 *string                 `json:"platform,omitempty"`
@@ -3616,7 +3615,7 @@ type Feedback struct {
 	Status                   string                  `json:"status"`
 	UpdatedAt                time.Time               `json:"updated_at"`
 	UserEmail                *string                 `json:"user_email,omitempty"`
-	UserId                   *openapi_types.UUID     `json:"user_id,omitempty"`
+	UserId                   *uuid.UUID              `json:"user_id,omitempty"`
 	UserLearningLanguageCode *string                 `json:"user_learning_language_code,omitempty"`
 	UserName                 *string                 `json:"user_name,omitempty"`
 }
@@ -3630,7 +3629,7 @@ type FeedbackCreateRequest struct {
 	Message    string                  `json:"message"`
 	Platform   *string                 `json:"platform,omitempty"`
 	Rating     *int                    `json:"rating,omitempty"`
-	UserId     openapi_types.UUID      `json:"user_id"`
+	UserId     uuid.UUID               `json:"user_id"`
 }
 
 // FeedbackListMeta defines model for FeedbackListMeta.
@@ -3674,13 +3673,13 @@ type FillInTheBlankExercise struct {
 	ErrorPatternTag *string `json:"error_pattern_tag"`
 
 	// ExerciseId Unique ID for this specific exercise instance.
-	ExerciseId          *openapi_types.UUID               `json:"exercise_id,omitempty"`
+	ExerciseId          *uuid.UUID                        `json:"exercise_id,omitempty"`
 	ExerciseType        string                            `json:"exercise_type"`
-	GenerationJobId     *openapi_types.UUID               `json:"generation_job_id"`
+	GenerationJobId     *uuid.UUID                        `json:"generation_job_id"`
 	GenerationModel     *string                           `json:"generation_model"`
-	ItemIdFk            openapi_types.UUID                `json:"item_id_fk"`
+	ItemIdFk            uuid.UUID                         `json:"item_id_fk"`
 	ItemTypeFk          FillInTheBlankExerciseItemTypeFk  `json:"item_type_fk"`
-	ObjectiveId         *openapi_types.UUID               `json:"objective_id"`
+	ObjectiveId         *uuid.UUID                        `json:"objective_id"`
 	Options             *[]string                         `json:"options"`
 	Prompt              string                            `json:"prompt"`
 	PromptVersion       *string                           `json:"prompt_version"`
@@ -3716,16 +3715,16 @@ type FlashcardExercise struct {
 	ErrorPatternTag *string `json:"error_pattern_tag"`
 
 	// ExerciseId Unique ID for this specific exercise instance.
-	ExerciseId   *openapi_types.UUID `json:"exercise_id,omitempty"`
-	ExerciseType string              `json:"exercise_type"`
+	ExerciseId   *uuid.UUID `json:"exercise_id,omitempty"`
+	ExerciseType string     `json:"exercise_type"`
 
 	// ExplanationHtml Optional secondary teaching content rendered below the answer block when present.
 	ExplanationHtml     *string                      `json:"explanation_html"`
-	GenerationJobId     *openapi_types.UUID          `json:"generation_job_id"`
+	GenerationJobId     *uuid.UUID                   `json:"generation_job_id"`
 	GenerationModel     *string                      `json:"generation_model"`
-	ItemIdFk            openapi_types.UUID           `json:"item_id_fk"`
+	ItemIdFk            uuid.UUID                    `json:"item_id_fk"`
 	ItemTypeFk          FlashcardExerciseItemTypeFk  `json:"item_type_fk"`
-	ObjectiveId         *openapi_types.UUID          `json:"objective_id"`
+	ObjectiveId         *uuid.UUID                   `json:"objective_id"`
 	Prompt              string                       `json:"prompt"`
 	PromptVersion       *string                      `json:"prompt_version"`
 	QualityScore        *float32                     `json:"quality_score"`
@@ -3765,7 +3764,7 @@ type GeneralBatchScheduleUpdateRequest struct {
 
 // GeneralScheduleUpdateItem defines model for GeneralScheduleUpdateItem.
 type GeneralScheduleUpdateItem struct {
-	ItemId       openapi_types.UUID                `json:"item_id"`
+	ItemId       uuid.UUID                         `json:"item_id"`
 	ItemType     GeneralScheduleUpdateItemItemType `json:"item_type"`
 	NextReviewAt time.Time                         `json:"next_review_at"`
 }
@@ -3864,7 +3863,7 @@ type GrammarConcept struct {
 	Description       *string                `json:"description,omitempty"`
 	ExampleStructures *interface{}           `json:"example_structures,omitempty"`
 	Examples          *[]ExampleSentencePair `json:"examples,omitempty"`
-	GrammarConceptId  openapi_types.UUID     `json:"grammar_concept_id"`
+	GrammarConceptId  uuid.UUID              `json:"grammar_concept_id"`
 	Meaning           *string                `json:"meaning,omitempty"`
 	Notes             *string                `json:"notes,omitempty"`
 	RelatedConcepts   *interface{}           `json:"related_concepts,omitempty"`
@@ -3880,7 +3879,7 @@ type GrammarConceptResponse struct {
 	CreatedAt            time.Time                      `json:"created_at"`
 	Description          *string                        `json:"description"`
 	Examples             *[]ExampleSentencePairResponse `json:"examples"`
-	GrammarConceptId     openapi_types.UUID             `json:"grammar_concept_id"`
+	GrammarConceptId     uuid.UUID                      `json:"grammar_concept_id"`
 	LearningLanguageCode *string                        `json:"learning_language_code,omitempty"`
 	Meaning              *string                        `json:"meaning"`
 	SupportLanguageCode  *string                        `json:"support_language_code,omitempty"`
@@ -3895,9 +3894,9 @@ type GrantSubscriptionRequest struct {
 
 // GrantSubscriptionResponse defines model for GrantSubscriptionResponse.
 type GrantSubscriptionResponse struct {
-	Message        string             `json:"message"`
-	SubscriptionId openapi_types.UUID `json:"subscription_id"`
-	Success        bool               `json:"success"`
+	Message        string    `json:"message"`
+	SubscriptionId uuid.UUID `json:"subscription_id"`
+	Success        bool      `json:"success"`
 }
 
 // HTTPValidationError defines model for HTTPValidationError.
@@ -3928,12 +3927,12 @@ type HintResponse struct {
 
 // HubStatusResponse defines model for HubStatusResponse.
 type HubStatusResponse struct {
-	ConceptId           openapi_types.UUID                    `json:"concept_id"`
-	EnrichmentJobId     *openapi_types.UUID                   `json:"enrichment_job_id"`
+	ConceptId           uuid.UUID                             `json:"concept_id"`
+	EnrichmentJobId     *uuid.UUID                            `json:"enrichment_job_id"`
 	EnrichmentJobStatus *HubStatusResponseEnrichmentJobStatus `json:"enrichment_job_status"`
 	EnrichmentStage     *string                               `json:"enrichment_stage"`
 	EnrichmentStatus    *HubStatusResponseEnrichmentStatus    `json:"enrichment_status"`
-	JobId               *openapi_types.UUID                   `json:"job_id"`
+	JobId               *uuid.UUID                            `json:"job_id"`
 	JobStatus           *HubStatusResponseJobStatus           `json:"job_status"`
 	Message             string                                `json:"message"`
 	Preview             *ConceptHubPreview                    `json:"preview"`
@@ -3961,17 +3960,17 @@ type IdentifyConceptExercise struct {
 	ContextHint *string `json:"context_hint"`
 
 	// CorrectAnswer UUID of the correct option from the options list
-	CorrectAnswer   openapi_types.UUID `json:"correct_answer"`
-	ErrorPatternTag *string            `json:"error_pattern_tag"`
+	CorrectAnswer   uuid.UUID `json:"correct_answer"`
+	ErrorPatternTag *string   `json:"error_pattern_tag"`
 
 	// ExerciseId Unique ID for this specific exercise instance.
-	ExerciseId      *openapi_types.UUID               `json:"exercise_id,omitempty"`
+	ExerciseId      *uuid.UUID                        `json:"exercise_id,omitempty"`
 	ExerciseType    string                            `json:"exercise_type"`
-	GenerationJobId *openapi_types.UUID               `json:"generation_job_id"`
+	GenerationJobId *uuid.UUID                        `json:"generation_job_id"`
 	GenerationModel *string                           `json:"generation_model"`
-	ItemIdFk        openapi_types.UUID                `json:"item_id_fk"`
+	ItemIdFk        uuid.UUID                         `json:"item_id_fk"`
 	ItemTypeFk      IdentifyConceptExerciseItemTypeFk `json:"item_type_fk"`
-	ObjectiveId     *openapi_types.UUID               `json:"objective_id"`
+	ObjectiveId     *uuid.UUID                        `json:"objective_id"`
 
 	// Options List of option objects with 'id' (UUID) and 'name' (text) keys
 	Options       []map[string]string `json:"options"`
@@ -4039,7 +4038,7 @@ type InAppNudge struct {
 	ExpiresAt *time.Time `json:"expires_at"`
 
 	// NudgeId Stable per-(user, nudge_type, context) composite ID. Server generates deterministically from the composite PK so mobile can dedupe optimistically when the same nudge re-fires across polls. Used as the dismiss_id in POST state transitions.
-	NudgeId openapi_types.UUID `json:"nudge_id"`
+	NudgeId uuid.UUID `json:"nudge_id"`
 
 	// NudgeType Canonical nudge category from Arc G1 SoT. Mobile uses this as the i18n key prefix (e.g. nudge_type='review_backlog_idle' → i18n key 'in_app_nudge_review_backlog_title'). Pinned by V117 CHECK constraint + cross-language SoT parity.
 	NudgeType string `json:"nudge_type"`
@@ -4129,11 +4128,11 @@ type IssueRow struct {
 
 // ItemSummary defines model for ItemSummary.
 type ItemSummary struct {
-	BaseWordId           *openapi_types.UUID `json:"base_word_id"`
+	BaseWordId           *uuid.UUID          `json:"base_word_id"`
 	CefrLevel            string              `json:"cefr_level"`
 	DisplayText          string              `json:"display_text"`
-	GrammarConceptId     *openapi_types.UUID `json:"grammar_concept_id"`
-	ItemId               openapi_types.UUID  `json:"item_id"`
+	GrammarConceptId     *uuid.UUID          `json:"grammar_concept_id"`
+	ItemId               uuid.UUID           `json:"item_id"`
 	ItemType             ItemSummaryItemType `json:"item_type"`
 	LearningLanguageCode *string             `json:"learning_language_code,omitempty"`
 	SupportLanguageCode  *string             `json:"support_language_code,omitempty"`
@@ -4187,16 +4186,16 @@ type KLearnArticleInjection struct {
 
 // KLearnContextualLearningOpportunity defines model for KLearnContextualLearningOpportunity.
 type KLearnContextualLearningOpportunity struct {
-	ArticleId                openapi_types.UUID `json:"article_id"`
-	ContextSnippet           *string            `json:"context_snippet,omitempty"`
-	InternalCalculationLogId *string            `json:"internal_calculation_log_id,omitempty"`
-	OpportunityId            openapi_types.UUID `json:"opportunity_id"`
-	Reason                   *string            `json:"reason,omitempty"`
-	SuggestedExerciseTypes   *[]string          `json:"suggested_exercise_types,omitempty"`
-	TargetItemDisplayText    string             `json:"target_item_display_text"`
-	TargetItemId             openapi_types.UUID `json:"target_item_id"`
-	TargetItemType           string             `json:"target_item_type"`
-	UserId                   openapi_types.UUID `json:"user_id"`
+	ArticleId                uuid.UUID `json:"article_id"`
+	ContextSnippet           *string   `json:"context_snippet,omitempty"`
+	InternalCalculationLogId *string   `json:"internal_calculation_log_id,omitempty"`
+	OpportunityId            uuid.UUID `json:"opportunity_id"`
+	Reason                   *string   `json:"reason,omitempty"`
+	SuggestedExerciseTypes   *[]string `json:"suggested_exercise_types,omitempty"`
+	TargetItemDisplayText    string    `json:"target_item_display_text"`
+	TargetItemId             uuid.UUID `json:"target_item_id"`
+	TargetItemType           string    `json:"target_item_type"`
+	UserId                   uuid.UUID `json:"user_id"`
 }
 
 // KLearnExercise defines model for KLearnExercise.
@@ -4235,7 +4234,7 @@ type KLearnExercise struct {
 
 // KLearnPersonalizedArticleResponse defines model for KLearnPersonalizedArticleResponse.
 type KLearnPersonalizedArticleResponse struct {
-	ArticleVersionId        openapi_types.UUID        `json:"article_version_id"`
+	ArticleVersionId        uuid.UUID                 `json:"article_version_id"`
 	Injections              *[]KLearnArticleInjection `json:"injections,omitempty"`
 	ModifiedMarkdownContent *string                   `json:"modified_markdown_content,omitempty"`
 }
@@ -4256,11 +4255,11 @@ type KTVAttachDownloadVariantRequest struct {
 
 // KTVAvailableBaseWord defines model for KTVAvailableBaseWord.
 type KTVAvailableBaseWord struct {
-	BaseWordId     openapi_types.UUID `json:"base_word_id"`
-	CefrLevel      *string            `json:"cefr_level,omitempty"`
-	CreatedAt      time.Time          `json:"created_at"`
-	FrequencyScore *float32           `json:"frequency_score,omitempty"`
-	Term           string             `json:"term"`
+	BaseWordId     uuid.UUID `json:"base_word_id"`
+	CefrLevel      *string   `json:"cefr_level,omitempty"`
+	CreatedAt      time.Time `json:"created_at"`
+	FrequencyScore *float32  `json:"frequency_score,omitempty"`
+	Term           string    `json:"term"`
 }
 
 // KTVAvailableBaseWordsListResponse defines model for KTVAvailableBaseWordsListResponse.
@@ -4301,8 +4300,8 @@ type KTVCaptionGenerateResponse struct {
 // KTVGeneratedVariant defines model for KTVGeneratedVariant.
 type KTVGeneratedVariant struct {
 	CreatedAt   time.Time               `json:"created_at"`
-	JobId       *openapi_types.UUID     `json:"job_id,omitempty"`
-	MediaId     *openapi_types.UUID     `json:"media_id,omitempty"`
+	JobId       *uuid.UUID              `json:"job_id,omitempty"`
+	MediaId     *uuid.UUID              `json:"media_id,omitempty"`
 	Metadata    *map[string]interface{} `json:"metadata,omitempty"`
 	PreviewUrl  *string                 `json:"preview_url,omitempty"`
 	ReviewNotes *string                 `json:"review_notes,omitempty"`
@@ -4310,13 +4309,13 @@ type KTVGeneratedVariant struct {
 	SourceUrl   *string                 `json:"source_url,omitempty"`
 	Status      string                  `json:"status"`
 	UpdatedAt   time.Time               `json:"updated_at"`
-	VariantId   openapi_types.UUID      `json:"variant_id"`
-	WorkflowId  openapi_types.UUID      `json:"workflow_id"`
+	VariantId   uuid.UUID               `json:"variant_id"`
+	WorkflowId  uuid.UUID               `json:"workflow_id"`
 }
 
 // KTVGeneratedVariantInput defines model for KTVGeneratedVariantInput.
 type KTVGeneratedVariantInput struct {
-	MediaId    *openapi_types.UUID     `json:"media_id,omitempty"`
+	MediaId    *uuid.UUID              `json:"media_id,omitempty"`
 	Metadata   *map[string]interface{} `json:"metadata,omitempty"`
 	PreviewUrl *string                 `json:"preview_url,omitempty"`
 	SourceUrl  *string                 `json:"source_url,omitempty"`
@@ -4329,7 +4328,7 @@ type KTVGenerationJob struct {
 	CreatedAt      time.Time               `json:"created_at"`
 	ErrorMessage   *string                 `json:"error_message,omitempty"`
 	ExternalJobId  *string                 `json:"external_job_id,omitempty"`
-	JobId          openapi_types.UUID      `json:"job_id"`
+	JobId          uuid.UUID               `json:"job_id"`
 	Model          string                  `json:"model"`
 	Provider       string                  `json:"provider"`
 	RequestPayload *map[string]interface{} `json:"request_payload,omitempty"`
@@ -4338,7 +4337,7 @@ type KTVGenerationJob struct {
 	Status         string                  `json:"status"`
 	TargetVariants int                     `json:"target_variants"`
 	UpdatedAt      time.Time               `json:"updated_at"`
-	WorkflowId     openapi_types.UUID      `json:"workflow_id"`
+	WorkflowId     uuid.UUID               `json:"workflow_id"`
 }
 
 // KTVGenerationJobClaimItem defines model for KTVGenerationJobClaimItem.
@@ -4431,19 +4430,19 @@ type KTVSocialSheetConfigResponse struct {
 
 // KTVSocialSheetExportRequest defines model for KTVSocialSheetExportRequest.
 type KTVSocialSheetExportRequest struct {
-	VariantId *openapi_types.UUID `json:"variant_id,omitempty"`
+	VariantId *uuid.UUID `json:"variant_id,omitempty"`
 }
 
 // KTVSocialSheetExportResponse defines model for KTVSocialSheetExportResponse.
 type KTVSocialSheetExportResponse struct {
-	RowIndex      *int               `json:"row_index,omitempty"`
-	SpreadsheetId string             `json:"spreadsheet_id"`
-	UpdatedCells  *int               `json:"updated_cells,omitempty"`
-	UpdatedRange  *string            `json:"updated_range,omitempty"`
-	UpdatedRows   *int               `json:"updated_rows,omitempty"`
-	VariantId     openapi_types.UUID `json:"variant_id"`
-	Workflow      *KTVWorkflow       `json:"workflow,omitempty"`
-	Worksheet     string             `json:"worksheet"`
+	RowIndex      *int         `json:"row_index,omitempty"`
+	SpreadsheetId string       `json:"spreadsheet_id"`
+	UpdatedCells  *int         `json:"updated_cells,omitempty"`
+	UpdatedRange  *string      `json:"updated_range,omitempty"`
+	UpdatedRows   *int         `json:"updated_rows,omitempty"`
+	VariantId     uuid.UUID    `json:"variant_id"`
+	Workflow      *KTVWorkflow `json:"workflow,omitempty"`
+	Worksheet     string       `json:"worksheet"`
 }
 
 // KTVSocialSheetWorksheetOption defines model for KTVSocialSheetWorksheetOption.
@@ -4494,8 +4493,8 @@ type KTVTempDownloadListResponse struct {
 
 // KTVVariantCreateRequest defines model for KTVVariantCreateRequest.
 type KTVVariantCreateRequest struct {
-	JobId      *openapi_types.UUID     `json:"job_id,omitempty"`
-	MediaId    *openapi_types.UUID     `json:"media_id,omitempty"`
+	JobId      *uuid.UUID              `json:"job_id,omitempty"`
+	MediaId    *uuid.UUID              `json:"media_id,omitempty"`
 	Metadata   *map[string]interface{} `json:"metadata,omitempty"`
 	PreviewUrl *string                 `json:"preview_url,omitempty"`
 	SourceUrl  *string                 `json:"source_url,omitempty"`
@@ -4527,7 +4526,7 @@ type KTVVariantProcessResponse struct {
 	Progress       *int                 `json:"progress,omitempty"`
 	Target         *string              `json:"target,omitempty"`
 	Variant        *KTVGeneratedVariant `json:"variant,omitempty"`
-	WorkflowId     openapi_types.UUID   `json:"workflow_id"`
+	WorkflowId     uuid.UUID            `json:"workflow_id"`
 }
 
 // KTVVariantReviewRequest defines model for KTVVariantReviewRequest.
@@ -4540,28 +4539,28 @@ type KTVVariantReviewRequest struct {
 
 // KTVWorkflow defines model for KTVWorkflow.
 type KTVWorkflow struct {
-	BaseWordId                  *openapi_types.UUID     `json:"base_word_id,omitempty"`
+	BaseWordId                  *uuid.UUID              `json:"base_word_id,omitempty"`
 	CreatedAt                   time.Time               `json:"created_at"`
-	CreatedBy                   *openapi_types.UUID     `json:"created_by,omitempty"`
+	CreatedBy                   *uuid.UUID              `json:"created_by,omitempty"`
 	Jobs                        *[]KTVGenerationJob     `json:"jobs,omitempty"`
-	KielotvEntryId              *openapi_types.UUID     `json:"kielotv_entry_id,omitempty"`
+	KielotvEntryId              *uuid.UUID              `json:"kielotv_entry_id,omitempty"`
 	Locale                      string                  `json:"locale"`
 	Metadata                    *map[string]interface{} `json:"metadata,omitempty"`
 	Prompt                      *string                 `json:"prompt,omitempty"`
-	SelectedProductionVariantId *openapi_types.UUID     `json:"selected_production_variant_id,omitempty"`
-	SelectedSocialVariantId     *openapi_types.UUID     `json:"selected_social_variant_id,omitempty"`
+	SelectedProductionVariantId *uuid.UUID              `json:"selected_production_variant_id,omitempty"`
+	SelectedSocialVariantId     *uuid.UUID              `json:"selected_social_variant_id,omitempty"`
 	SourceUrl                   string                  `json:"source_url"`
 	Status                      string                  `json:"status"`
 	Term                        string                  `json:"term"`
 	UpdatedAt                   time.Time               `json:"updated_at"`
-	UpdatedBy                   *openapi_types.UUID     `json:"updated_by,omitempty"`
+	UpdatedBy                   *uuid.UUID              `json:"updated_by,omitempty"`
 	Variants                    *[]KTVGeneratedVariant  `json:"variants,omitempty"`
-	WorkflowId                  openapi_types.UUID      `json:"workflow_id"`
+	WorkflowId                  uuid.UUID               `json:"workflow_id"`
 }
 
 // KTVWorkflowCreateRequest defines model for KTVWorkflowCreateRequest.
 type KTVWorkflowCreateRequest struct {
-	BaseWordId *openapi_types.UUID     `json:"base_word_id,omitempty"`
+	BaseWordId *uuid.UUID              `json:"base_word_id,omitempty"`
 	Locale     *string                 `json:"locale,omitempty"`
 	Metadata   *map[string]interface{} `json:"metadata,omitempty"`
 	Prompt     *string                 `json:"prompt,omitempty"`
@@ -4609,15 +4608,15 @@ type KTVWorkflowSeedResponse struct {
 
 // KTVWorkflowSourceImportItem defines model for KTVWorkflowSourceImportItem.
 type KTVWorkflowSourceImportItem struct {
-	BaseWordCreated bool                `json:"base_word_created"`
-	BaseWordId      *openapi_types.UUID `json:"base_word_id,omitempty"`
-	InputWord       string              `json:"input_word"`
-	Message         *string             `json:"message,omitempty"`
-	ResolvedWord    *string             `json:"resolved_word,omitempty"`
-	SourceEntryUrl  *string             `json:"source_entry_url,omitempty"`
-	Status          string              `json:"status"`
-	WorkflowCreated bool                `json:"workflow_created"`
-	WorkflowId      *openapi_types.UUID `json:"workflow_id,omitempty"`
+	BaseWordCreated bool       `json:"base_word_created"`
+	BaseWordId      *uuid.UUID `json:"base_word_id,omitempty"`
+	InputWord       string     `json:"input_word"`
+	Message         *string    `json:"message,omitempty"`
+	ResolvedWord    *string    `json:"resolved_word,omitempty"`
+	SourceEntryUrl  *string    `json:"source_entry_url,omitempty"`
+	Status          string     `json:"status"`
+	WorkflowCreated bool       `json:"workflow_created"`
+	WorkflowId      *uuid.UUID `json:"workflow_id,omitempty"`
 }
 
 // KTVWorkflowSourceImportRequest defines model for KTVWorkflowSourceImportRequest.
@@ -4653,42 +4652,42 @@ type KTVWorkflowStatusUpdateRequest struct {
 
 // KTVWorkflowSubmitRequest defines model for KTVWorkflowSubmitRequest.
 type KTVWorkflowSubmitRequest struct {
-	BrandId                *openapi_types.UUID `json:"brand_id,omitempty"`
-	Description            *string             `json:"description,omitempty"`
-	LearningLanguageCode   *string             `json:"learning_language_code,omitempty"`
-	Status                 *string             `json:"status,omitempty"`
-	Target                 *string             `json:"target,omitempty"`
-	Title                  *string             `json:"title,omitempty"`
-	TriggerIngest          *bool               `json:"trigger_ingest,omitempty"`
-	TriggerMediaProcessing *bool               `json:"trigger_media_processing,omitempty"`
-	VariantId              *openapi_types.UUID `json:"variant_id,omitempty"`
+	BrandId                *uuid.UUID `json:"brand_id,omitempty"`
+	Description            *string    `json:"description,omitempty"`
+	LearningLanguageCode   *string    `json:"learning_language_code,omitempty"`
+	Status                 *string    `json:"status,omitempty"`
+	Target                 *string    `json:"target,omitempty"`
+	Title                  *string    `json:"title,omitempty"`
+	TriggerIngest          *bool      `json:"trigger_ingest,omitempty"`
+	TriggerMediaProcessing *bool      `json:"trigger_media_processing,omitempty"`
+	VariantId              *uuid.UUID `json:"variant_id,omitempty"`
 }
 
 // KTVWorkflowSubmitResponse defines model for KTVWorkflowSubmitResponse.
 type KTVWorkflowSubmitResponse struct {
-	ContentEntryId        openapi_types.UUID  `json:"content_entry_id"`
-	ContentVersionId      openapi_types.UUID  `json:"content_version_id"`
-	MediaId               *openapi_types.UUID `json:"media_id,omitempty"`
-	QueuedIngest          bool                `json:"queued_ingest"`
-	QueuedMediaProcessing bool                `json:"queued_media_processing"`
-	VariantId             openapi_types.UUID  `json:"variant_id"`
-	Warnings              *[]string           `json:"warnings,omitempty"`
-	Workflow              *KTVWorkflow        `json:"workflow,omitempty"`
+	ContentEntryId        uuid.UUID    `json:"content_entry_id"`
+	ContentVersionId      uuid.UUID    `json:"content_version_id"`
+	MediaId               *uuid.UUID   `json:"media_id,omitempty"`
+	QueuedIngest          bool         `json:"queued_ingest"`
+	QueuedMediaProcessing bool         `json:"queued_media_processing"`
+	VariantId             uuid.UUID    `json:"variant_id"`
+	Warnings              *[]string    `json:"warnings,omitempty"`
+	Workflow              *KTVWorkflow `json:"workflow,omitempty"`
 }
 
 // KieloTVCaptions defines model for KieloTVCaptions.
 type KieloTVCaptions struct {
-	ContentVersionId     *openapi_types.UUID `json:"content_version_id,omitempty"`
-	CreatedAt            time.Time           `json:"created_at"`
-	Cues                 interface{}         `json:"cues"`
-	Id                   openapi_types.UUID  `json:"id"`
-	IsFallback           bool                `json:"is_fallback"`
-	LearningLanguageCode *string             `json:"learning_language_code,omitempty"`
-	Locale               string              `json:"locale"`
-	SourceLocale         string              `json:"source_locale"`
-	TranslationStatus    interface{}         `json:"translation_status"`
-	UpdatedAt            time.Time           `json:"updated_at"`
-	VideoId              openapi_types.UUID  `json:"video_id"`
+	ContentVersionId     *uuid.UUID  `json:"content_version_id,omitempty"`
+	CreatedAt            time.Time   `json:"created_at"`
+	Cues                 interface{} `json:"cues"`
+	Id                   uuid.UUID   `json:"id"`
+	IsFallback           bool        `json:"is_fallback"`
+	LearningLanguageCode *string     `json:"learning_language_code,omitempty"`
+	Locale               string      `json:"locale"`
+	SourceLocale         string      `json:"source_locale"`
+	TranslationStatus    interface{} `json:"translation_status"`
+	UpdatedAt            time.Time   `json:"updated_at"`
+	VideoId              uuid.UUID   `json:"video_id"`
 }
 
 // KieloTVLocaleSupport defines model for KieloTVLocaleSupport.
@@ -4699,17 +4698,17 @@ type KieloTVLocaleSupport struct {
 
 // KieloTVMindmap defines model for KieloTVMindmap.
 type KieloTVMindmap struct {
-	ContentVersionId     *openapi_types.UUID `json:"content_version_id,omitempty"`
-	CreatedAt            time.Time           `json:"created_at"`
-	Graph                interface{}         `json:"graph"`
-	Id                   openapi_types.UUID  `json:"id"`
-	IsFallback           bool                `json:"is_fallback"`
-	LearningLanguageCode *string             `json:"learning_language_code,omitempty"`
-	Locale               string              `json:"locale"`
-	SourceLocale         string              `json:"source_locale"`
-	TranslationStatus    interface{}         `json:"translation_status"`
-	UpdatedAt            time.Time           `json:"updated_at"`
-	VideoId              openapi_types.UUID  `json:"video_id"`
+	ContentVersionId     *uuid.UUID  `json:"content_version_id,omitempty"`
+	CreatedAt            time.Time   `json:"created_at"`
+	Graph                interface{} `json:"graph"`
+	Id                   uuid.UUID   `json:"id"`
+	IsFallback           bool        `json:"is_fallback"`
+	LearningLanguageCode *string     `json:"learning_language_code,omitempty"`
+	Locale               string      `json:"locale"`
+	SourceLocale         string      `json:"source_locale"`
+	TranslationStatus    interface{} `json:"translation_status"`
+	UpdatedAt            time.Time   `json:"updated_at"`
+	VideoId              uuid.UUID   `json:"video_id"`
 }
 
 // KieloTVMindmapUpsertRequest defines model for KieloTVMindmapUpsertRequest.
@@ -4723,24 +4722,24 @@ type KieloTVMindmapUpsertRequest struct {
 
 // KieloTVVideo defines model for KieloTVVideo.
 type KieloTVVideo struct {
-	AudioUrl             *string             `json:"audio_url,omitempty"`
-	BrandId              openapi_types.UUID  `json:"brand_id"`
-	CarouselImages       *[]string           `json:"carousel_images,omitempty"`
-	CreatedAt            time.Time           `json:"created_at"`
-	Description          string              `json:"description"`
-	DurationSeconds      int                 `json:"duration_seconds"`
-	FormatType           string              `json:"format_type"`
-	Id                   openapi_types.UUID  `json:"id"`
-	LearningLanguageCode *string             `json:"learning_language_code,omitempty"`
-	Locale               *string             `json:"locale,omitempty"`
-	MediaAssetId         *openapi_types.UUID `json:"media_asset_id,omitempty"`
-	PublishedAt          time.Time           `json:"published_at"`
-	Status               *string             `json:"status,omitempty"`
-	ThumbnailUrl         string              `json:"thumbnail_url"`
-	Title                string              `json:"title"`
-	TranscriptionStatus  string              `json:"transcription_status"`
-	UpdatedAt            time.Time           `json:"updated_at"`
-	VideoUrl             string              `json:"video_url"`
+	AudioUrl             *string    `json:"audio_url,omitempty"`
+	BrandId              uuid.UUID  `json:"brand_id"`
+	CarouselImages       *[]string  `json:"carousel_images,omitempty"`
+	CreatedAt            time.Time  `json:"created_at"`
+	Description          string     `json:"description"`
+	DurationSeconds      int        `json:"duration_seconds"`
+	FormatType           string     `json:"format_type"`
+	Id                   uuid.UUID  `json:"id"`
+	LearningLanguageCode *string    `json:"learning_language_code,omitempty"`
+	Locale               *string    `json:"locale,omitempty"`
+	MediaAssetId         *uuid.UUID `json:"media_asset_id,omitempty"`
+	PublishedAt          time.Time  `json:"published_at"`
+	Status               *string    `json:"status,omitempty"`
+	ThumbnailUrl         string     `json:"thumbnail_url"`
+	Title                string     `json:"title"`
+	TranscriptionStatus  string     `json:"transcription_status"`
+	UpdatedAt            time.Time  `json:"updated_at"`
+	VideoUrl             string     `json:"video_url"`
 }
 
 // KieloTVVideoUpsertRequest defines model for KieloTVVideoUpsertRequest.
@@ -4828,8 +4827,8 @@ type LanguageUpdateRequest struct {
 
 // LearningArcStage defines model for LearningArcStage.
 type LearningArcStage struct {
-	ExerciseIds  *[]openapi_types.UUID   `json:"exercise_ids,omitempty"`
-	ObjectiveIds *[]openapi_types.UUID   `json:"objective_ids,omitempty"`
+	ExerciseIds  *[]uuid.UUID            `json:"exercise_ids,omitempty"`
+	ObjectiveIds *[]uuid.UUID            `json:"objective_ids,omitempty"`
 	StageKey     string                  `json:"stage_key"`
 	Status       *LearningArcStageStatus `json:"status,omitempty"`
 	Subtitle     *string                 `json:"subtitle"`
@@ -4876,7 +4875,7 @@ type LearningObjective struct {
 	ErrorPatternTag      *string                         `json:"error_pattern_tag"`
 	ExerciseSequence     *[]string                       `json:"exercise_sequence,omitempty"`
 	LearningLanguageCode *string                         `json:"learning_language_code,omitempty"`
-	ObjectiveId          *openapi_types.UUID             `json:"objective_id,omitempty"`
+	ObjectiveId          *uuid.UUID                      `json:"objective_id,omitempty"`
 	ObjectiveType        LearningObjectiveObjectiveType  `json:"objective_type"`
 	Proficiency          *float32                        `json:"proficiency"`
 	Reason               string                          `json:"reason"`
@@ -4884,7 +4883,7 @@ type LearningObjective struct {
 	Source               string                          `json:"source"`
 	SupportLanguageCode  *string                         `json:"support_language_code,omitempty"`
 	SupportText          *string                         `json:"support_text,omitempty"`
-	TargetItemId         openapi_types.UUID              `json:"target_item_id"`
+	TargetItemId         uuid.UUID                       `json:"target_item_id"`
 	TargetItemType       LearningObjectiveTargetItemType `json:"target_item_type"`
 }
 
@@ -4901,10 +4900,10 @@ type LearningSession struct {
 	CreatedAt               *time.Time                       `json:"created_at,omitempty"`
 	DecisionLog             *DecisionLog                     `json:"decision_log"`
 	Description             *string                          `json:"description"`
-	ExerciseRunId           *openapi_types.UUID              `json:"exercise_run_id"`
-	ExerciseStepMap         *map[string]openapi_types.UUID   `json:"exercise_step_map,omitempty"`
+	ExerciseRunId           *uuid.UUID                       `json:"exercise_run_id"`
+	ExerciseStepMap         *map[string]uuid.UUID            `json:"exercise_step_map,omitempty"`
 	Exercises               []LearningSession_Exercises_Item `json:"exercises"`
-	GenerationJobId         *openapi_types.UUID              `json:"generation_job_id"`
+	GenerationJobId         *uuid.UUID                       `json:"generation_job_id"`
 	LearningLanguageCode    *string                          `json:"learning_language_code,omitempty"`
 	LearningObjectives      *[]LearningObjective             `json:"learning_objectives,omitempty"`
 	NextStepRecommendations *[]NextStepRecommendation        `json:"next_step_recommendations,omitempty"`
@@ -4917,7 +4916,7 @@ type LearningSession struct {
 	Sections                *[]ChallengeSection              `json:"sections"`
 	SessionBackend          *LearningSessionSessionBackend   `json:"session_backend,omitempty"`
 	SessionGoal             *string                          `json:"session_goal"`
-	SessionId               *openapi_types.UUID              `json:"session_id,omitempty"`
+	SessionId               *uuid.UUID                       `json:"session_id,omitempty"`
 	SessionMode             *string                          `json:"session_mode,omitempty"`
 	SessionOrigin           *SessionOrigin                   `json:"session_origin"`
 	SessionType             LearningSessionSessionType       `json:"session_type"`
@@ -4925,7 +4924,7 @@ type LearningSession struct {
 	StreakDays              *int                             `json:"streak_days"`
 	Theme                   *ChallengeTheme                  `json:"theme"`
 	Title                   string                           `json:"title"`
-	UserId                  openapi_types.UUID               `json:"user_id"`
+	UserId                  uuid.UUID                        `json:"user_id"`
 	Version                 *int                             `json:"version,omitempty"`
 	XpEarned                *int                             `json:"xp_earned"`
 	XpTarget                *int                             `json:"xp_target"`
@@ -5015,26 +5014,26 @@ type ListScenariosResponse struct {
 
 // ListVideoItem defines model for ListVideoItem.
 type ListVideoItem struct {
-	AudioUrl                     *string            `json:"audio_url,omitempty"`
-	BrandId                      openapi_types.UUID `json:"brand_id"`
-	CarouselImages               *[]string          `json:"carousel_images,omitempty"`
-	CreatedAt                    time.Time          `json:"created_at"`
-	DurationSeconds              int                `json:"duration_seconds"`
-	FormatType                   *string            `json:"format_type,omitempty"`
-	Id                           openapi_types.UUID `json:"id"`
-	LearningLanguageCode         *string            `json:"learning_language_code,omitempty"`
-	Locale                       *string            `json:"locale,omitempty"`
-	OriginalTitle                *string            `json:"original_title,omitempty"`
-	PublishedAt                  time.Time          `json:"published_at"`
-	SourceLocale                 *string            `json:"source_locale,omitempty"`
-	ThumbnailUrl                 string             `json:"thumbnail_url"`
-	Title                        string             `json:"title"`
-	TitleTranslationFallback     *bool              `json:"title_translation_fallback,omitempty"`
-	TitleTranslationLocale       *string            `json:"title_translation_locale,omitempty"`
-	TitleTranslationSourceLocale *string            `json:"title_translation_source_locale,omitempty"`
-	TranscriptionStatus          *string            `json:"transcription_status,omitempty"`
-	UpdatedAt                    time.Time          `json:"updated_at"`
-	VideoUrl                     string             `json:"video_url"`
+	AudioUrl                     *string   `json:"audio_url,omitempty"`
+	BrandId                      uuid.UUID `json:"brand_id"`
+	CarouselImages               *[]string `json:"carousel_images,omitempty"`
+	CreatedAt                    time.Time `json:"created_at"`
+	DurationSeconds              int       `json:"duration_seconds"`
+	FormatType                   *string   `json:"format_type,omitempty"`
+	Id                           uuid.UUID `json:"id"`
+	LearningLanguageCode         *string   `json:"learning_language_code,omitempty"`
+	Locale                       *string   `json:"locale,omitempty"`
+	OriginalTitle                *string   `json:"original_title,omitempty"`
+	PublishedAt                  time.Time `json:"published_at"`
+	SourceLocale                 *string   `json:"source_locale,omitempty"`
+	ThumbnailUrl                 string    `json:"thumbnail_url"`
+	Title                        string    `json:"title"`
+	TitleTranslationFallback     *bool     `json:"title_translation_fallback,omitempty"`
+	TitleTranslationLocale       *string   `json:"title_translation_locale,omitempty"`
+	TitleTranslationSourceLocale *string   `json:"title_translation_source_locale,omitempty"`
+	TranscriptionStatus          *string   `json:"transcription_status,omitempty"`
+	UpdatedAt                    time.Time `json:"updated_at"`
+	VideoUrl                     string    `json:"video_url"`
 }
 
 // ListeningComprehensionExercise defines model for ListeningComprehensionExercise.
@@ -5047,17 +5046,17 @@ type ListeningComprehensionExercise struct {
 	ContextHint *string `json:"context_hint"`
 
 	// CorrectAnswer UUID of the correct option from the options list
-	CorrectAnswer   openapi_types.UUID `json:"correct_answer"`
-	ErrorPatternTag *string            `json:"error_pattern_tag"`
+	CorrectAnswer   uuid.UUID `json:"correct_answer"`
+	ErrorPatternTag *string   `json:"error_pattern_tag"`
 
 	// ExerciseId Unique ID for this specific exercise instance.
-	ExerciseId      *openapi_types.UUID                      `json:"exercise_id,omitempty"`
+	ExerciseId      *uuid.UUID                               `json:"exercise_id,omitempty"`
 	ExerciseType    string                                   `json:"exercise_type"`
-	GenerationJobId *openapi_types.UUID                      `json:"generation_job_id"`
+	GenerationJobId *uuid.UUID                               `json:"generation_job_id"`
 	GenerationModel *string                                  `json:"generation_model"`
-	ItemIdFk        openapi_types.UUID                       `json:"item_id_fk"`
+	ItemIdFk        uuid.UUID                                `json:"item_id_fk"`
 	ItemTypeFk      ListeningComprehensionExerciseItemTypeFk `json:"item_type_fk"`
-	ObjectiveId     *openapi_types.UUID                      `json:"objective_id"`
+	ObjectiveId     *uuid.UUID                               `json:"objective_id"`
 
 	// Options List of options with 'id' (UUID) and 'text' keys
 	Options             []map[string]string                       `json:"options"`
@@ -5154,7 +5153,7 @@ type MediaAsset struct {
 	CreatedAt           time.Time               `json:"created_at"`
 	FileHashSha256      string                  `json:"file_hash_sha256"`
 	Filename            string                  `json:"filename"`
-	MediaId             openapi_types.UUID      `json:"media_id"`
+	MediaId             uuid.UUID               `json:"media_id"`
 	Metadata            *map[string]interface{} `json:"metadata,omitempty"`
 	MimeType            string                  `json:"mime_type"`
 	OriginalStoragePath string                  `json:"original_storage_path"`
@@ -5165,21 +5164,21 @@ type MediaAsset struct {
 	StorageBucket       string                  `json:"storage_bucket"`
 	StoragePathPrefix   *string                 `json:"storage_path_prefix,omitempty"`
 	UpdatedAt           time.Time               `json:"updated_at"`
-	UploaderUserId      openapi_types.UUID      `json:"uploader_user_id"`
+	UploaderUserId      uuid.UUID               `json:"uploader_user_id"`
 	Variants            *map[string]interface{} `json:"variants,omitempty"`
 }
 
 // MediaAssetResponse defines model for MediaAssetResponse.
 type MediaAssetResponse struct {
-	CreatedAt        time.Time          `json:"created_at"`
-	MediaId          openapi_types.UUID `json:"media_id"`
-	MediaType        string             `json:"media_type"`
-	Metadata         *interface{}       `json:"metadata,omitempty"`
-	ProcessingStatus string             `json:"processing_status"`
-	ServeBaseUrl     *string            `json:"serve_base_url,omitempty"`
-	TemporaryUrl     *string            `json:"temporary_url,omitempty"`
-	UpdatedAt        time.Time          `json:"updated_at"`
-	Variants         *interface{}       `json:"variants,omitempty"`
+	CreatedAt        time.Time    `json:"created_at"`
+	MediaId          uuid.UUID    `json:"media_id"`
+	MediaType        string       `json:"media_type"`
+	Metadata         *interface{} `json:"metadata,omitempty"`
+	ProcessingStatus string       `json:"processing_status"`
+	ServeBaseUrl     *string      `json:"serve_base_url,omitempty"`
+	TemporaryUrl     *string      `json:"temporary_url,omitempty"`
+	UpdatedAt        time.Time    `json:"updated_at"`
+	Variants         *interface{} `json:"variants,omitempty"`
 }
 
 // MediaMetadata defines model for MediaMetadata.
@@ -5256,18 +5255,18 @@ type MicroDrill struct {
 
 // Mindmap defines model for Mindmap.
 type Mindmap struct {
-	ContentVersionId     *openapi_types.UUID `json:"content_version_id,omitempty"`
-	CreatedAt            time.Time           `json:"created_at"`
-	Graph                interface{}         `json:"graph"`
-	Id                   openapi_types.UUID  `json:"id"`
-	IsFallback           bool                `json:"is_fallback"`
-	LearningLanguageCode *string             `json:"learning_language_code,omitempty"`
-	Locale               string              `json:"locale"`
-	SourceLocale         string              `json:"source_locale"`
-	TranslationSource    *string             `json:"translation_source,omitempty"`
-	TranslationStatus    interface{}         `json:"translation_status"`
-	UpdatedAt            time.Time           `json:"updated_at"`
-	VideoId              openapi_types.UUID  `json:"video_id"`
+	ContentVersionId     *uuid.UUID  `json:"content_version_id,omitempty"`
+	CreatedAt            time.Time   `json:"created_at"`
+	Graph                interface{} `json:"graph"`
+	Id                   uuid.UUID   `json:"id"`
+	IsFallback           bool        `json:"is_fallback"`
+	LearningLanguageCode *string     `json:"learning_language_code,omitempty"`
+	Locale               string      `json:"locale"`
+	SourceLocale         string      `json:"source_locale"`
+	TranslationSource    *string     `json:"translation_source,omitempty"`
+	TranslationStatus    interface{} `json:"translation_status"`
+	UpdatedAt            time.Time   `json:"updated_at"`
+	VideoId              uuid.UUID   `json:"video_id"`
 }
 
 // ModelChecksum defines model for ModelChecksum.
@@ -5316,17 +5315,17 @@ type MultipleChoiceTranslationExercise struct {
 	ContextHint *string `json:"context_hint"`
 
 	// CorrectAnswer UUID of the correct option from the options list
-	CorrectAnswer   openapi_types.UUID `json:"correct_answer"`
-	ErrorPatternTag *string            `json:"error_pattern_tag"`
+	CorrectAnswer   uuid.UUID `json:"correct_answer"`
+	ErrorPatternTag *string   `json:"error_pattern_tag"`
 
 	// ExerciseId Unique ID for this specific exercise instance.
-	ExerciseId      *openapi_types.UUID                         `json:"exercise_id,omitempty"`
+	ExerciseId      *uuid.UUID                                  `json:"exercise_id,omitempty"`
 	ExerciseType    string                                      `json:"exercise_type"`
-	GenerationJobId *openapi_types.UUID                         `json:"generation_job_id"`
+	GenerationJobId *uuid.UUID                                  `json:"generation_job_id"`
 	GenerationModel *string                                     `json:"generation_model"`
-	ItemIdFk        openapi_types.UUID                          `json:"item_id_fk"`
+	ItemIdFk        uuid.UUID                                   `json:"item_id_fk"`
 	ItemTypeFk      MultipleChoiceTranslationExerciseItemTypeFk `json:"item_type_fk"`
-	ObjectiveId     *openapi_types.UUID                         `json:"objective_id"`
+	ObjectiveId     *uuid.UUID                                  `json:"objective_id"`
 
 	// Options List of translation options with 'id' (UUID) and 'text' keys
 	Options       []map[string]string `json:"options"`
@@ -5355,13 +5354,13 @@ type MultipleChoiceTranslationExerciseSourceType string
 
 // Namespace defines model for Namespace.
 type Namespace struct {
-	CreatedAt   time.Time          `json:"created_at"`
-	Description *string            `json:"description,omitempty"`
-	Id          openapi_types.UUID `json:"id"`
-	IsActive    bool               `json:"is_active"`
-	Name        string             `json:"name"`
-	Platform    *string            `json:"platform,omitempty"`
-	UpdatedAt   time.Time          `json:"updated_at"`
+	CreatedAt   time.Time `json:"created_at"`
+	Description *string   `json:"description,omitempty"`
+	Id          uuid.UUID `json:"id"`
+	IsActive    bool      `json:"is_active"`
+	Name        string    `json:"name"`
+	Platform    *string   `json:"platform,omitempty"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 // NamespaceCreateRequest defines model for NamespaceCreateRequest.
@@ -5382,14 +5381,14 @@ type NamespaceUpdateRequest struct {
 
 // NextStepRecommendation defines model for NextStepRecommendation.
 type NextStepRecommendation struct {
-	ArticleId       *openapi_types.UUID             `json:"article_id"`
+	ArticleId       *uuid.UUID                      `json:"article_id"`
 	CtaId           *NextStepRecommendationCtaId    `json:"cta_id"`
 	CtaLabel        *string                         `json:"cta_label"`
 	DestinationMode *string                         `json:"destination_mode"`
 	ExerciseTypes   *[]string                       `json:"exercise_types,omitempty"`
 	Intent          *NextStepRecommendationIntent   `json:"intent"`
-	ItemId          *openapi_types.UUID             `json:"item_id"`
-	ItemIds         *[]openapi_types.UUID           `json:"item_ids,omitempty"`
+	ItemId          *uuid.UUID                      `json:"item_id"`
+	ItemIds         *[]uuid.UUID                    `json:"item_ids,omitempty"`
 	ItemType        *NextStepRecommendationItemType `json:"item_type"`
 	LaunchParams    *RecommendationLaunchParams     `json:"launch_params"`
 	Rationale       *string                         `json:"rationale"`
@@ -5418,7 +5417,7 @@ type Notification struct {
 	DeviceToken *string                 `json:"device_token,omitempty"`
 	Title       string                  `json:"title"`
 	Type        string                  `json:"type"`
-	UserId      *openapi_types.UUID     `json:"user_id,omitempty"`
+	UserId      *uuid.UUID              `json:"user_id,omitempty"`
 }
 
 // NotificationEngagementRequest defines model for NotificationEngagementRequest.
@@ -5441,12 +5440,12 @@ type NotificationJob struct {
 	Body                 string                 `json:"body"`
 	CompletedAt          *time.Time             `json:"completed_at,omitempty"`
 	CreatedAt            time.Time              `json:"created_at"`
-	CreatedBy            *openapi_types.UUID    `json:"created_by,omitempty"`
+	CreatedBy            *uuid.UUID             `json:"created_by,omitempty"`
 	Data                 map[string]interface{} `json:"data"`
 	DedupKey             *string                `json:"dedup_key,omitempty"`
-	DeferredRenderRuleId *openapi_types.UUID    `json:"deferred_render_rule_id,omitempty"`
+	DeferredRenderRuleId *uuid.UUID             `json:"deferred_render_rule_id,omitempty"`
 	FailedCount          int                    `json:"failed_count"`
-	JobId                openapi_types.UUID     `json:"job_id"`
+	JobId                uuid.UUID              `json:"job_id"`
 	NotificationType     string                 `json:"notification_type"`
 	ProcessedCount       int                    `json:"processed_count"`
 	RenderLanguageCode   *string                `json:"render_language_code,omitempty"`
@@ -5487,17 +5486,17 @@ type NotificationPushPreferences struct {
 
 // NotificationRule defines model for NotificationRule.
 type NotificationRule struct {
-	BodyKeyId        *openapi_types.UUID    `json:"body_key_id,omitempty"`
+	BodyKeyId        *uuid.UUID             `json:"body_key_id,omitempty"`
 	BodyTemplate     string                 `json:"body_template"`
 	CreatedAt        time.Time              `json:"created_at"`
 	DataTemplate     map[string]interface{} `json:"data_template"`
 	Enabled          bool                   `json:"enabled"`
 	EventType        string                 `json:"event_type"`
-	Id               openapi_types.UUID     `json:"id"`
+	Id               uuid.UUID              `json:"id"`
 	NotificationType string                 `json:"notification_type"`
 	TargetIds        []string               `json:"target_ids"`
 	TargetType       string                 `json:"target_type"`
-	TitleKeyId       *openapi_types.UUID    `json:"title_key_id,omitempty"`
+	TitleKeyId       *uuid.UUID             `json:"title_key_id,omitempty"`
 	TitleTemplate    string                 `json:"title_template"`
 	UpdatedAt        time.Time              `json:"updated_at"`
 }
@@ -5533,8 +5532,8 @@ type NullString struct {
 
 // NullUUID defines model for NullUUID.
 type NullUUID struct {
-	UUID  openapi_types.UUID `json:"UUID"`
-	Valid bool               `json:"Valid"`
+	UUID  uuid.UUID `json:"UUID"`
+	Valid bool      `json:"Valid"`
 }
 
 // OffsetMeta defines model for OffsetMeta.
@@ -5627,7 +5626,7 @@ type Paragraph struct {
 	ContentLocale       *string                     `json:"content_locale,omitempty"`
 	GrammarOccurrences  *[]ArticleVersionOccurrence `json:"grammar_occurrences,omitempty"`
 	Localization        *LocalizationStatus         `json:"localization,omitempty"`
-	ParagraphId         openapi_types.UUID          `json:"paragraph_id"`
+	ParagraphId         uuid.UUID                   `json:"paragraph_id"`
 	ParagraphIndex      int                         `json:"paragraph_index"`
 	SupportLanguageCode *string                     `json:"support_language_code,omitempty"`
 	Text                *string                     `json:"text,omitempty"`
@@ -5639,25 +5638,25 @@ type Paragraph struct {
 
 // ParagraphTTSRequest defines model for ParagraphTTSRequest.
 type ParagraphTTSRequest struct {
-	Force       bool               `json:"force"`
-	ParagraphId openapi_types.UUID `json:"paragraph_id"`
-	Text        string             `json:"text"`
+	Force       bool      `json:"force"`
+	ParagraphId uuid.UUID `json:"paragraph_id"`
+	Text        string    `json:"text"`
 }
 
 // ParagraphTranslationItem defines model for ParagraphTranslationItem.
 type ParagraphTranslationItem struct {
-	ContentLocale       string             `json:"content_locale"`
-	Fallback            bool               `json:"fallback"`
-	ParagraphId         openapi_types.UUID `json:"paragraph_id"`
-	SourceLanguageCode  string             `json:"source_language_code"`
-	SupportLanguageCode string             `json:"support_language_code"`
-	Translation         string             `json:"translation"`
+	ContentLocale       string    `json:"content_locale"`
+	Fallback            bool      `json:"fallback"`
+	ParagraphId         uuid.UUID `json:"paragraph_id"`
+	SourceLanguageCode  string    `json:"source_language_code"`
+	SupportLanguageCode string    `json:"support_language_code"`
+	Translation         string    `json:"translation"`
 }
 
 // ParagraphTranslationRequest defines model for ParagraphTranslationRequest.
 type ParagraphTranslationRequest struct {
-	ParagraphIds        []openapi_types.UUID `json:"paragraph_ids"`
-	SupportLanguageCode *string              `json:"support_language_code,omitempty"`
+	ParagraphIds        []uuid.UUID `json:"paragraph_ids"`
+	SupportLanguageCode *string     `json:"support_language_code,omitempty"`
 }
 
 // ParagraphTranslationResponse defines model for ParagraphTranslationResponse.
@@ -5705,11 +5704,11 @@ type PlacementItemsV3 struct {
 
 // PlacementTestItem defines model for PlacementTestItem.
 type PlacementTestItem struct {
-	BaseWordId   openapi_types.UUID `json:"base_word_id"`
-	CefrLevel    *string            `json:"cefr_level,omitempty"`
-	Meaning      *string            `json:"meaning,omitempty"`
-	PartOfSpeech *string            `json:"part_of_speech,omitempty"`
-	Term         *string            `json:"term,omitempty"`
+	BaseWordId   uuid.UUID `json:"base_word_id"`
+	CefrLevel    *string   `json:"cefr_level,omitempty"`
+	Meaning      *string   `json:"meaning,omitempty"`
+	PartOfSpeech *string   `json:"part_of_speech,omitempty"`
+	Term         *string   `json:"term,omitempty"`
 }
 
 // PlacementTestItemsResponse defines model for PlacementTestItemsResponse.
@@ -5803,7 +5802,7 @@ type QueueStatusResponse struct {
 
 // QuickAddToDefaultListRequest defines model for QuickAddToDefaultListRequest.
 type QuickAddToDefaultListRequest struct {
-	BaseWordId openapi_types.UUID `json:"base_word_id"`
+	BaseWordId uuid.UUID `json:"base_word_id"`
 }
 
 // QuickAddToStudyListRequest defines model for QuickAddToStudyListRequest.
@@ -5824,18 +5823,18 @@ type RecentArticleReadIDsResponse struct {
 
 // RecommendationCampaign defines model for RecommendationCampaign.
 type RecommendationCampaign struct {
-	BodyKeyId        *openapi_types.UUID    `json:"body_key_id,omitempty"`
+	BodyKeyId        *uuid.UUID             `json:"body_key_id,omitempty"`
 	BodyTemplate     string                 `json:"body_template"`
 	CadenceConfig    map[string]interface{} `json:"cadence_config"`
 	CadenceType      string                 `json:"cadence_type"`
 	ContentTypes     []string               `json:"content_types"`
 	CooldownHours    int                    `json:"cooldown_hours"`
 	CreatedAt        time.Time              `json:"created_at"`
-	CreatedBy        *openapi_types.UUID    `json:"created_by,omitempty"`
+	CreatedBy        *uuid.UUID             `json:"created_by,omitempty"`
 	DataTemplate     map[string]interface{} `json:"data_template"`
 	DeliveryConfig   map[string]interface{} `json:"delivery_config"`
 	Enabled          bool                   `json:"enabled"`
-	Id               openapi_types.UUID     `json:"id"`
+	Id               uuid.UUID              `json:"id"`
 	MaxPerSend       int                    `json:"max_per_send"`
 	Name             string                 `json:"name"`
 	NotificationType string                 `json:"notification_type"`
@@ -5845,7 +5844,7 @@ type RecommendationCampaign struct {
 	TargetIds        []string               `json:"target_ids"`
 	TargetType       string                 `json:"target_type"`
 	Timezone         string                 `json:"timezone"`
-	TitleKeyId       *openapi_types.UUID    `json:"title_key_id,omitempty"`
+	TitleKeyId       *uuid.UUID             `json:"title_key_id,omitempty"`
 	TitleTemplate    string                 `json:"title_template"`
 	UpdatedAt        time.Time              `json:"updated_at"`
 }
@@ -5857,10 +5856,10 @@ type RecommendationCampaignList struct {
 
 // RecommendationCampaignRun defines model for RecommendationCampaignRun.
 type RecommendationCampaignRun struct {
-	CampaignId        openapi_types.UUID     `json:"campaign_id"`
+	CampaignId        uuid.UUID              `json:"campaign_id"`
 	CreatedAt         time.Time              `json:"created_at"`
-	Id                openapi_types.UUID     `json:"id"`
-	NotificationJobId *openapi_types.UUID    `json:"notification_job_id,omitempty"`
+	Id                uuid.UUID              `json:"id"`
+	NotificationJobId *uuid.UUID             `json:"notification_job_id,omitempty"`
 	RunDate           time.Time              `json:"run_date"`
 	ScheduledFor      time.Time              `json:"scheduled_for"`
 	Status            string                 `json:"status"`
@@ -5882,17 +5881,17 @@ type RecommendationCampaignRunNowResult struct {
 
 // RecommendationLaunchParams defines model for RecommendationLaunchParams.
 type RecommendationLaunchParams struct {
-	ArticleId         *openapi_types.UUID                 `json:"article_id"`
+	ArticleId         *uuid.UUID                          `json:"article_id"`
 	ContextSentence   *string                             `json:"context_sentence"`
 	DeckId            *string                             `json:"deck_id"`
 	ExerciseTypes     *[]string                           `json:"exercise_types,omitempty"`
-	ItemId            *openapi_types.UUID                 `json:"item_id"`
-	ItemIds           *[]openapi_types.UUID               `json:"item_ids,omitempty"`
+	ItemId            *uuid.UUID                          `json:"item_id"`
+	ItemIds           *[]uuid.UUID                        `json:"item_ids,omitempty"`
 	ItemType          *RecommendationLaunchParamsItemType `json:"item_type"`
-	LessonId          *openapi_types.UUID                 `json:"lesson_id"`
-	SourceSessionId   *openapi_types.UUID                 `json:"source_session_id"`
+	LessonId          *uuid.UUID                          `json:"lesson_id"`
+	SourceSessionId   *uuid.UUID                          `json:"source_session_id"`
 	SourceSessionMode *string                             `json:"source_session_mode"`
-	TopicListId       *openapi_types.UUID                 `json:"topic_list_id"`
+	TopicListId       *uuid.UUID                          `json:"topic_list_id"`
 }
 
 // RecommendationLaunchParamsItemType defines model for RecommendationLaunchParams.ItemType.
@@ -5973,20 +5972,20 @@ type RelatedLemmas struct {
 
 // RelatedVersionsResponse defines model for RelatedVersionsResponse.
 type RelatedVersionsResponse struct {
-	CurrentType        string             `json:"current_type"`
-	CurrentVersionId   openapi_types.UUID `json:"current_version_id"`
-	OriginalVersion    *VersionSummary    `json:"original_version,omitempty"`
-	SimplifiedVersions *[]VersionSummary  `json:"simplified_versions,omitempty"`
+	CurrentType        string            `json:"current_type"`
+	CurrentVersionId   uuid.UUID         `json:"current_version_id"`
+	OriginalVersion    *VersionSummary   `json:"original_version,omitempty"`
+	SimplifiedVersions *[]VersionSummary `json:"simplified_versions,omitempty"`
 }
 
 // RelatedWord defines model for RelatedWord.
 type RelatedWord struct {
-	BaseWordId      openapi_types.UUID `json:"base_word_id"`
-	CefrLevel       *string            `json:"cefr_level,omitempty"`
-	PartOfSpeech    *string            `json:"part_of_speech,omitempty"`
-	SimilarityScore float32            `json:"similarity_score"`
-	Term            *string            `json:"term,omitempty"`
-	Translation     *string            `json:"translation,omitempty"`
+	BaseWordId      uuid.UUID `json:"base_word_id"`
+	CefrLevel       *string   `json:"cefr_level,omitempty"`
+	PartOfSpeech    *string   `json:"part_of_speech,omitempty"`
+	SimilarityScore float32   `json:"similarity_score"`
+	Term            *string   `json:"term,omitempty"`
+	Translation     *string   `json:"translation,omitempty"`
 }
 
 // RelatedWordsResponse defines model for RelatedWordsResponse.
@@ -5998,10 +5997,10 @@ type RelatedWordsResponse struct {
 
 // RelatedWordsSource defines model for RelatedWordsSource.
 type RelatedWordsSource struct {
-	Id          openapi_types.UUID `json:"id"`
-	Meaning     string             `json:"meaning"`
-	Term        string             `json:"term"`
-	Translation string             `json:"translation"`
+	Id          uuid.UUID `json:"id"`
+	Meaning     string    `json:"meaning"`
+	Term        string    `json:"term"`
+	Translation string    `json:"translation"`
 }
 
 // RelatedWordsSummaryResponse defines model for RelatedWordsSummaryResponse.
@@ -6013,7 +6012,7 @@ type RelatedWordsSummaryResponse struct {
 
 // RemoveFromStudyListRequest defines model for RemoveFromStudyListRequest.
 type RemoveFromStudyListRequest struct {
-	BaseWordIds []openapi_types.UUID `json:"base_word_ids"`
+	BaseWordIds []uuid.UUID `json:"base_word_ids"`
 }
 
 // RemoveFromStudyListRequestV3 defines model for RemoveFromStudyListRequestV3.
@@ -6066,9 +6065,9 @@ type RestoreSubscriptionRequest struct {
 
 // RestoreSubscriptionResponse defines model for RestoreSubscriptionResponse.
 type RestoreSubscriptionResponse struct {
-	Message        string              `json:"message"`
-	SubscriptionId *openapi_types.UUID `json:"subscription_id,omitempty"`
-	Success        bool                `json:"success"`
+	Message        string     `json:"message"`
+	SubscriptionId *uuid.UUID `json:"subscription_id,omitempty"`
+	Success        bool       `json:"success"`
 }
 
 // ResultMetadata defines model for ResultMetadata.
@@ -6101,9 +6100,9 @@ type RevenueCatUserResponse struct {
 
 // ReviewItem defines model for ReviewItem.
 type ReviewItem struct {
-	DisplayText *string            `json:"display_text"`
-	ItemId      openapi_types.UUID `json:"item_id"`
-	ItemType    string             `json:"item_type"`
+	DisplayText *string   `json:"display_text"`
+	ItemId      uuid.UUID `json:"item_id"`
+	ItemType    string    `json:"item_type"`
 }
 
 // ReviewItemV3 defines model for ReviewItemV3.
@@ -6115,9 +6114,9 @@ type ReviewItemV3 struct {
 
 // ReviewScheduleResponse defines model for ReviewScheduleResponse.
 type ReviewScheduleResponse struct {
-	ItemsToReview        []ReviewItem       `json:"items_to_review"`
-	NextBatchAvailableAt *time.Time         `json:"next_batch_available_at"`
-	UserId               openapi_types.UUID `json:"user_id"`
+	ItemsToReview        []ReviewItem `json:"items_to_review"`
+	NextBatchAvailableAt *time.Time   `json:"next_batch_available_at"`
+	UserId               uuid.UUID    `json:"user_id"`
 }
 
 // ReviewScheduleV3 defines model for ReviewScheduleV3.
@@ -6140,10 +6139,10 @@ type RevokeSubscriptionResponse struct {
 
 // RoadmapAdminGenerateLessonRequest defines model for RoadmapAdminGenerateLessonRequest.
 type RoadmapAdminGenerateLessonRequest struct {
-	ChapterId   *openapi_types.UUID `json:"chapter_id"`
-	Description *string             `json:"description"`
-	IsPublished *bool               `json:"is_published,omitempty"`
-	OrderIndex  *int                `json:"order_index"`
+	ChapterId   *uuid.UUID `json:"chapter_id"`
+	Description *string    `json:"description"`
+	IsPublished *bool      `json:"is_published,omitempty"`
+	OrderIndex  *int       `json:"order_index"`
 
 	// Settings Generation knobs that legitimately belong in the request body.
 	//
@@ -6167,14 +6166,14 @@ type RoadmapAdminGenerateLessonRequest struct {
 type RoadmapAdminLessonResponse struct {
 	Category                 string                 `json:"category"`
 	CefrLevel                *string                `json:"cefr_level"`
-	ChapterId                *openapi_types.UUID    `json:"chapter_id"`
+	ChapterId                *uuid.UUID             `json:"chapter_id"`
 	CreatedAt                time.Time              `json:"created_at"`
 	Description              *string                `json:"description"`
 	DifficultyLevel          string                 `json:"difficulty_level"`
 	EstimatedDurationMinutes int                    `json:"estimated_duration_minutes"`
 	IsPublished              bool                   `json:"is_published"`
 	LessonContent            map[string]interface{} `json:"lesson_content"`
-	LessonId                 openapi_types.UUID     `json:"lesson_id"`
+	LessonId                 uuid.UUID              `json:"lesson_id"`
 	OrderIndex               int                    `json:"order_index"`
 	ThumbnailUrl             *string                `json:"thumbnail_url"`
 	Title                    string                 `json:"title"`
@@ -6183,7 +6182,7 @@ type RoadmapAdminLessonResponse struct {
 
 // RoadmapCompleteLessonResponse defines model for RoadmapCompleteLessonResponse.
 type RoadmapCompleteLessonResponse struct {
-	LessonId               openapi_types.UUID                                 `json:"lesson_id"`
+	LessonId               uuid.UUID                                          `json:"lesson_id"`
 	PracticeRecommendation *NextStepRecommendation                            `json:"practice_recommendation"`
 	PracticeStatus         *RoadmapCompleteLessonResponsePracticeStatus       `json:"practice_status,omitempty"`
 	PracticeTargetSource   *RoadmapCompleteLessonResponsePracticeTargetSource `json:"practice_target_source,omitempty"`
@@ -6206,8 +6205,8 @@ type RoadmapLessonDetailResponse struct {
 	EstimatedDurationMinutes int                                              `json:"estimated_duration_minutes"`
 	IsLastInChapter          *bool                                            `json:"is_last_in_chapter,omitempty"`
 	LessonContent            map[string]interface{}                           `json:"lesson_content"`
-	LessonId                 openapi_types.UUID                               `json:"lesson_id"`
-	NextLessonInChapterId    *openapi_types.UUID                              `json:"next_lesson_in_chapter_id"`
+	LessonId                 uuid.UUID                                        `json:"lesson_id"`
+	NextLessonInChapterId    *uuid.UUID                                       `json:"next_lesson_in_chapter_id"`
 	NextLessonInChapterTitle *string                                          `json:"next_lesson_in_chapter_title"`
 	OrderIndex               int                                              `json:"order_index"`
 	PracticeRecommendation   *NextStepRecommendation                          `json:"practice_recommendation"`
@@ -6263,7 +6262,7 @@ type RoadmapLessonListItem struct {
 	DifficultyLevel          string                        `json:"difficulty_level"`
 	EstimatedDurationMinutes int                           `json:"estimated_duration_minutes"`
 	Kind                     *string                       `json:"kind"`
-	LessonId                 openapi_types.UUID            `json:"lesson_id"`
+	LessonId                 uuid.UUID                     `json:"lesson_id"`
 	OrderIndex               int                           `json:"order_index"`
 	Progress                 RoadmapLessonProgressSnapshot `json:"progress"`
 	State                    RoadmapLessonListItemState    `json:"state"`
@@ -6314,7 +6313,7 @@ type RoadmapLessonSummaryV3 struct {
 type RoadmapLessonUpsertRequest struct {
 	Category                 *string                                    `json:"category,omitempty"`
 	CefrLevel                *string                                    `json:"cefr_level"`
-	ChapterId                *openapi_types.UUID                        `json:"chapter_id"`
+	ChapterId                *uuid.UUID                                 `json:"chapter_id"`
 	Description              *string                                    `json:"description"`
 	DifficultyLevel          *RoadmapLessonUpsertRequestDifficultyLevel `json:"difficulty_level,omitempty"`
 	EstimatedDurationMinutes *int                                       `json:"estimated_duration_minutes,omitempty"`
@@ -6331,7 +6330,7 @@ type RoadmapLessonUpsertRequestDifficultyLevel string
 // RoadmapLessonsResponse defines model for RoadmapLessonsResponse.
 type RoadmapLessonsResponse struct {
 	Lessons []RoadmapLessonListItem `json:"lessons"`
-	UserId  openapi_types.UUID      `json:"user_id"`
+	UserId  uuid.UUID               `json:"user_id"`
 }
 
 // RoadmapLessonsV3 defines model for RoadmapLessonsV3.
@@ -6342,24 +6341,24 @@ type RoadmapLessonsV3 struct {
 
 // RoadmapPracticeTargetBackfillRequest defines model for RoadmapPracticeTargetBackfillRequest.
 type RoadmapPracticeTargetBackfillRequest struct {
-	DryRun           *bool               `json:"dry_run,omitempty"`
-	IncludeLessonIds *bool               `json:"include_lesson_ids,omitempty"`
-	LessonId         *openapi_types.UUID `json:"lesson_id"`
-	PublishedOnly    *bool               `json:"published_only,omitempty"`
+	DryRun           *bool      `json:"dry_run,omitempty"`
+	IncludeLessonIds *bool      `json:"include_lesson_ids,omitempty"`
+	LessonId         *uuid.UUID `json:"lesson_id"`
+	PublishedOnly    *bool      `json:"published_only,omitempty"`
 }
 
 // RoadmapPracticeTargetBackfillResponse defines model for RoadmapPracticeTargetBackfillResponse.
 type RoadmapPracticeTargetBackfillResponse struct {
-	DryRun               bool                  `json:"dry_run"`
-	ExplicitCount        *int                  `json:"explicit_count,omitempty"`
-	FallbackCount        *int                  `json:"fallback_count,omitempty"`
-	PublishedOnly        bool                  `json:"published_only"`
-	ScannedCount         *int                  `json:"scanned_count,omitempty"`
-	UnavailableCount     *int                  `json:"unavailable_count,omitempty"`
-	UnavailableLessonIds *[]openapi_types.UUID `json:"unavailable_lesson_ids,omitempty"`
-	UnchangedCount       *int                  `json:"unchanged_count,omitempty"`
-	UpdatedCount         *int                  `json:"updated_count,omitempty"`
-	UpdatedLessonIds     *[]openapi_types.UUID `json:"updated_lesson_ids,omitempty"`
+	DryRun               bool         `json:"dry_run"`
+	ExplicitCount        *int         `json:"explicit_count,omitempty"`
+	FallbackCount        *int         `json:"fallback_count,omitempty"`
+	PublishedOnly        bool         `json:"published_only"`
+	ScannedCount         *int         `json:"scanned_count,omitempty"`
+	UnavailableCount     *int         `json:"unavailable_count,omitempty"`
+	UnavailableLessonIds *[]uuid.UUID `json:"unavailable_lesson_ids,omitempty"`
+	UnchangedCount       *int         `json:"unchanged_count,omitempty"`
+	UpdatedCount         *int         `json:"updated_count,omitempty"`
+	UpdatedLessonIds     *[]uuid.UUID `json:"updated_lesson_ids,omitempty"`
 }
 
 // RoadmapProgressV3 defines model for RoadmapProgressV3.
@@ -6375,7 +6374,7 @@ type RoadmapProgressV3 struct {
 type RoadmapSpeechEvaluationResponse struct {
 	ExpectedText        string                  `json:"expected_text"`
 	LanguageProbability *float32                `json:"language_probability,omitempty"`
-	LessonId            openapi_types.UUID      `json:"lesson_id"`
+	LessonId            uuid.UUID               `json:"lesson_id"`
 	Passed              bool                    `json:"passed"`
 	RecognizedText      string                  `json:"recognized_text"`
 	Segments            *[]RoadmapSpeechSegment `json:"segments,omitempty"`
@@ -6394,7 +6393,7 @@ type RoadmapSpeechSegment struct {
 
 // RoadmapStartLessonResponse defines model for RoadmapStartLessonResponse.
 type RoadmapStartLessonResponse struct {
-	LessonId openapi_types.UUID            `json:"lesson_id"`
+	LessonId uuid.UUID                     `json:"lesson_id"`
 	Progress RoadmapLessonProgressSnapshot `json:"progress"`
 }
 
@@ -6405,28 +6404,28 @@ type RoadmapStepCompleteRequest struct {
 
 // RoadmapStepCompleteResponse defines model for RoadmapStepCompleteResponse.
 type RoadmapStepCompleteResponse struct {
-	LessonId  openapi_types.UUID            `json:"lesson_id"`
+	LessonId  uuid.UUID                     `json:"lesson_id"`
 	Progress  RoadmapLessonProgressSnapshot `json:"progress"`
 	StepIndex int                           `json:"step_index"`
 }
 
 // RoadmapStepTTSStreamSessionResponse defines model for RoadmapStepTTSStreamSessionResponse.
 type RoadmapStepTTSStreamSessionResponse struct {
-	CacheHit  *bool               `json:"cache_hit,omitempty"`
-	ExpiresAt time.Time           `json:"expires_at"`
-	JobId     *openapi_types.UUID `json:"job_id"`
-	SessionId openapi_types.UUID  `json:"session_id"`
-	Text      string              `json:"text"`
-	Token     string              `json:"token"`
+	CacheHit  *bool      `json:"cache_hit,omitempty"`
+	ExpiresAt time.Time  `json:"expires_at"`
+	JobId     *uuid.UUID `json:"job_id"`
+	SessionId uuid.UUID  `json:"session_id"`
+	Text      string     `json:"text"`
+	Token     string     `json:"token"`
 }
 
 // RoadmapUserProgressResponse defines model for RoadmapUserProgressResponse.
 type RoadmapUserProgressResponse struct {
-	ActiveLessonId   *openapi_types.UUID `json:"active_lesson_id"`
-	CompletedLessons int                 `json:"completed_lessons"`
-	ProgressPercent  *float32            `json:"progress_percent,omitempty"`
-	TotalLessons     int                 `json:"total_lessons"`
-	UserId           openapi_types.UUID  `json:"user_id"`
+	ActiveLessonId   *uuid.UUID `json:"active_lesson_id"`
+	CompletedLessons int        `json:"completed_lessons"`
+	ProgressPercent  *float32   `json:"progress_percent,omitempty"`
+	TotalLessons     int        `json:"total_lessons"`
+	UserId           uuid.UUID  `json:"user_id"`
 }
 
 // RunRow defines model for RunRow.
@@ -6466,13 +6465,13 @@ type SavedCollectionPracticeRequest struct {
 	Intent *SavedCollectionPracticeRequestIntent `json:"intent,omitempty"`
 
 	// ItemIds Subset of saved item IDs to practice. None means all saved items.
-	ItemIds *[]openapi_types.UUID `json:"item_ids"`
+	ItemIds *[]uuid.UUID `json:"item_ids"`
 
 	// MaxItems Maximum number of items to include in the practice session.
 	MaxItems *int `json:"max_items,omitempty"`
 
 	// SourceSessionId ID of the session that led here (for context carryover).
-	SourceSessionId *openapi_types.UUID `json:"source_session_id"`
+	SourceSessionId *uuid.UUID `json:"source_session_id"`
 
 	// SourceSessionMode Mode of the source session (for origin tracking).
 	SourceSessionMode *string `json:"source_session_mode"`
@@ -6521,11 +6520,11 @@ type Scenario struct {
 	Category                 *string                 `json:"category,omitempty"`
 	CefrLevel                *string                 `json:"cefr_level,omitempty"`
 	CreatedAt                time.Time               `json:"created_at"`
-	CreatedBy                *openapi_types.UUID     `json:"created_by,omitempty"`
+	CreatedBy                *uuid.UUID              `json:"created_by,omitempty"`
 	Description              *string                 `json:"description,omitempty"`
 	Difficulty               *string                 `json:"difficulty,omitempty"`
 	EstimatedDurationMinutes *int                    `json:"estimated_duration_minutes,omitempty"`
-	Id                       openapi_types.UUID      `json:"id"`
+	Id                       uuid.UUID               `json:"id"`
 	IsFeatured               bool                    `json:"is_featured"`
 	LearningLanguageCode     *string                 `json:"learning_language_code,omitempty"`
 	LocalizedDescriptions    *map[string]string      `json:"localized_descriptions,omitempty"`
@@ -6533,19 +6532,19 @@ type Scenario struct {
 	ScenarioContent          *map[string]interface{} `json:"scenario_content,omitempty"`
 	Slug                     string                  `json:"slug"`
 	SortOrder                int                     `json:"sort_order"`
-	SourceId                 *openapi_types.UUID     `json:"source_id,omitempty"`
+	SourceId                 *uuid.UUID              `json:"source_id,omitempty"`
 	SourceService            string                  `json:"source_service"`
 	SourceType               string                  `json:"source_type"`
 	Status                   string                  `json:"status"`
 	SupportLanguageCode      *string                 `json:"support_language_code,omitempty"`
 	Tags                     *[]string               `json:"tags,omitempty"`
 	TextMode                 *string                 `json:"text_mode,omitempty"`
-	ThumbnailMediaId         *openapi_types.UUID     `json:"thumbnail_media_id,omitempty"`
+	ThumbnailMediaId         *uuid.UUID              `json:"thumbnail_media_id,omitempty"`
 	ThumbnailUrl             *string                 `json:"thumbnail_url,omitempty"`
 	Title                    string                  `json:"title"`
 	UpdatedAt                time.Time               `json:"updated_at"`
-	UpdatedBy                *openapi_types.UUID     `json:"updated_by,omitempty"`
-	VoiceAgentId             *openapi_types.UUID     `json:"voice_agent_id,omitempty"`
+	UpdatedBy                *uuid.UUID              `json:"updated_by,omitempty"`
+	VoiceAgentId             *uuid.UUID              `json:"voice_agent_id,omitempty"`
 	VoiceId                  *string                 `json:"voice_id,omitempty"`
 }
 
@@ -6559,13 +6558,13 @@ type ScenarioChoiceExercise struct {
 	ErrorPatternTag *string `json:"error_pattern_tag"`
 
 	// ExerciseId Unique ID for this specific exercise instance.
-	ExerciseId          *openapi_types.UUID               `json:"exercise_id,omitempty"`
+	ExerciseId          *uuid.UUID                        `json:"exercise_id,omitempty"`
 	ExerciseType        string                            `json:"exercise_type"`
-	GenerationJobId     *openapi_types.UUID               `json:"generation_job_id"`
+	GenerationJobId     *uuid.UUID                        `json:"generation_job_id"`
 	GenerationModel     *string                           `json:"generation_model"`
-	ItemIdFk            openapi_types.UUID                `json:"item_id_fk"`
+	ItemIdFk            uuid.UUID                         `json:"item_id_fk"`
 	ItemTypeFk          ScenarioChoiceExerciseItemTypeFk  `json:"item_type_fk"`
-	ObjectiveId         *openapi_types.UUID               `json:"objective_id"`
+	ObjectiveId         *uuid.UUID                        `json:"objective_id"`
 	PhraseOptions       []string                          `json:"phrase_options"`
 	Prompt              string                            `json:"prompt"`
 	PromptVersion       *string                           `json:"prompt_version"`
@@ -6590,14 +6589,14 @@ type ScenarioListItem struct {
 	Description              *string                 `json:"description,omitempty"`
 	Difficulty               *string                 `json:"difficulty,omitempty"`
 	EstimatedDurationMinutes *int                    `json:"estimated_duration_minutes,omitempty"`
-	Id                       openapi_types.UUID      `json:"id"`
+	Id                       uuid.UUID               `json:"id"`
 	IsFeatured               bool                    `json:"is_featured"`
 	LearningLanguageCode     *string                 `json:"learning_language_code,omitempty"`
 	LocalizedDescriptions    *map[string]string      `json:"localized_descriptions,omitempty"`
 	ScenarioContent          *map[string]interface{} `json:"scenario_content,omitempty"`
 	SceneImageUrl            *string                 `json:"scene_image_url,omitempty"`
 	Slug                     string                  `json:"slug"`
-	SourceId                 *openapi_types.UUID     `json:"source_id,omitempty"`
+	SourceId                 *uuid.UUID              `json:"source_id,omitempty"`
 	SourceService            *string                 `json:"source_service,omitempty"`
 	SourceType               *string                 `json:"source_type,omitempty"`
 	SupportLanguageCode      *string                 `json:"support_language_code,omitempty"`
@@ -6608,8 +6607,8 @@ type ScenarioListItem struct {
 
 // ScheduleUpdateItem defines model for ScheduleUpdateItem.
 type ScheduleUpdateItem struct {
-	Id           openapi_types.UUID `json:"id"`
-	NextReviewAt time.Time          `json:"next_review_at"`
+	Id           uuid.UUID `json:"id"`
+	NextReviewAt time.Time `json:"next_review_at"`
 }
 
 // ScheduleUpdateRequest defines model for ScheduleUpdateRequest.
@@ -6622,7 +6621,7 @@ type ScheduledCommunication struct {
 	Body          *string                 `json:"body,omitempty"`
 	CompletedAt   *time.Time              `json:"completed_at,omitempty"`
 	CreatedAt     time.Time               `json:"created_at"`
-	Id            openapi_types.UUID      `json:"id"`
+	Id            uuid.UUID               `json:"id"`
 	Metadata      *map[string]interface{} `json:"metadata,omitempty"`
 	RecipientType string                  `json:"recipient_type"`
 	Recipients    []string                `json:"recipients"`
@@ -6727,13 +6726,13 @@ type SentenceConstructionExercise struct {
 	ErrorPatternTag *string `json:"error_pattern_tag"`
 
 	// ExerciseId Unique ID for this specific exercise instance.
-	ExerciseId          *openapi_types.UUID                     `json:"exercise_id,omitempty"`
+	ExerciseId          *uuid.UUID                              `json:"exercise_id,omitempty"`
 	ExerciseType        string                                  `json:"exercise_type"`
-	GenerationJobId     *openapi_types.UUID                     `json:"generation_job_id"`
+	GenerationJobId     *uuid.UUID                              `json:"generation_job_id"`
 	GenerationModel     *string                                 `json:"generation_model"`
-	ItemIdFk            openapi_types.UUID                      `json:"item_id_fk"`
+	ItemIdFk            uuid.UUID                               `json:"item_id_fk"`
 	ItemTypeFk          SentenceConstructionExerciseItemTypeFk  `json:"item_type_fk"`
-	ObjectiveId         *openapi_types.UUID                     `json:"objective_id"`
+	ObjectiveId         *uuid.UUID                              `json:"objective_id"`
 	Prompt              string                                  `json:"prompt"`
 	PromptVersion       *string                                 `json:"prompt_version"`
 	QualityScore        *float32                                `json:"quality_score"`
@@ -6770,9 +6769,9 @@ type SessionCompletionSummary struct {
 
 // SessionOrigin defines model for SessionOrigin.
 type SessionOrigin struct {
-	EntryPoint        *string             `json:"entry_point"`
-	SourceSessionId   *openapi_types.UUID `json:"source_session_id"`
-	SourceSessionMode *string             `json:"source_session_mode"`
+	EntryPoint        *string    `json:"entry_point"`
+	SourceSessionId   *uuid.UUID `json:"source_session_id"`
+	SourceSessionMode *string    `json:"source_session_mode"`
 }
 
 // SessionProgressSummary defines model for SessionProgressSummary.
@@ -6787,7 +6786,7 @@ type SessionProgressSummary struct {
 
 // SessionReconcileItemResult defines model for SessionReconcileItemResult.
 type SessionReconcileItemResult struct {
-	ExerciseId   openapi_types.UUID                `json:"exercise_id"`
+	ExerciseId   uuid.UUID                         `json:"exercise_id"`
 	Result       *SubmissionResult                 `json:"result"`
 	Status       *SessionReconcileItemResultStatus `json:"status,omitempty"`
 	SubmissionId *string                           `json:"submission_id"`
@@ -6834,20 +6833,20 @@ type SessionSummary struct {
 
 // SetActiveTrackRequest defines model for SetActiveTrackRequest.
 type SetActiveTrackRequest struct {
-	TrackId openapi_types.UUID `json:"track_id"`
+	TrackId uuid.UUID `json:"track_id"`
 }
 
 // SetDynamicTranslationStatusRequest defines model for SetDynamicTranslationStatusRequest.
 type SetDynamicTranslationStatusRequest struct {
-	OverrideText *string             `json:"override_text,omitempty"`
-	ReviewedBy   *openapi_types.UUID `json:"reviewed_by,omitempty"`
-	Status       string              `json:"status"`
+	OverrideText *string    `json:"override_text,omitempty"`
+	ReviewedBy   *uuid.UUID `json:"reviewed_by,omitempty"`
+	Status       string     `json:"status"`
 }
 
 // SetTranslationStatusRequest defines model for SetTranslationStatusRequest.
 type SetTranslationStatusRequest struct {
-	ReviewedBy *openapi_types.UUID `json:"reviewed_by,omitempty"`
-	Status     string              `json:"status"`
+	ReviewedBy *uuid.UUID `json:"reviewed_by,omitempty"`
+	Status     string     `json:"status"`
 }
 
 // SetUserFeatureLimitRequest defines model for SetUserFeatureLimitRequest.
@@ -6885,13 +6884,13 @@ type SimpleAiConversationFlow struct {
 
 // SimplifiedArticleTeaser defines model for SimplifiedArticleTeaser.
 type SimplifiedArticleTeaser struct {
-	ArticleId                   openapi_types.UUID `json:"article_id"`
-	ContentVersionId            openapi_types.UUID `json:"content_version_id"`
-	DifficultyScore             float32            `json:"difficulty_score"`
-	EstimatedReadingTimeMinutes int                `json:"estimated_reading_time_minutes"`
-	SimplificationLevel         string             `json:"simplification_level"`
-	ThumbnailMediaId            *string            `json:"thumbnail_media_id"`
-	Title                       string             `json:"title"`
+	ArticleId                   uuid.UUID `json:"article_id"`
+	ContentVersionId            uuid.UUID `json:"content_version_id"`
+	DifficultyScore             float32   `json:"difficulty_score"`
+	EstimatedReadingTimeMinutes int       `json:"estimated_reading_time_minutes"`
+	SimplificationLevel         string    `json:"simplification_level"`
+	ThumbnailMediaId            *string   `json:"thumbnail_media_id"`
+	Title                       string    `json:"title"`
 }
 
 // SingletonAPIKeyCreateResult defines model for SingletonAPIKeyCreateResult.
@@ -8276,14 +8275,14 @@ type SpellingChallengeExercise struct {
 	ErrorPatternTag *string `json:"error_pattern_tag"`
 
 	// ExerciseId Unique ID for this specific exercise instance.
-	ExerciseId          *openapi_types.UUID                  `json:"exercise_id,omitempty"`
+	ExerciseId          *uuid.UUID                           `json:"exercise_id,omitempty"`
 	ExerciseType        string                               `json:"exercise_type"`
-	GenerationJobId     *openapi_types.UUID                  `json:"generation_job_id"`
+	GenerationJobId     *uuid.UUID                           `json:"generation_job_id"`
 	GenerationModel     *string                              `json:"generation_model"`
 	Hint                *string                              `json:"hint,omitempty"`
-	ItemIdFk            openapi_types.UUID                   `json:"item_id_fk"`
+	ItemIdFk            uuid.UUID                            `json:"item_id_fk"`
 	ItemTypeFk          SpellingChallengeExerciseItemTypeFk  `json:"item_type_fk"`
-	ObjectiveId         *openapi_types.UUID                  `json:"objective_id"`
+	ObjectiveId         *uuid.UUID                           `json:"objective_id"`
 	Prompt              string                               `json:"prompt"`
 	PromptVersion       *string                              `json:"prompt_version"`
 	QualityScore        *float32                             `json:"quality_score"`
@@ -8349,18 +8348,18 @@ type StreakInfoV3 struct {
 
 // StudyList defines model for StudyList.
 type StudyList struct {
-	ContainsWord *bool               `json:"contains_word,omitempty"`
-	CreatedAt    time.Time           `json:"created_at"`
-	Description  *string             `json:"description,omitempty"`
-	Icon         *string             `json:"icon,omitempty"`
-	IsArchived   bool                `json:"is_archived"`
-	ItemCount    int                 `json:"item_count"`
-	ListId       openapi_types.UUID  `json:"list_id"`
-	Name         string              `json:"name"`
-	Source       string              `json:"source"`
-	SourceId     *openapi_types.UUID `json:"source_id,omitempty"`
-	UpdatedAt    time.Time           `json:"updated_at"`
-	UserId       openapi_types.UUID  `json:"user_id"`
+	ContainsWord *bool      `json:"contains_word,omitempty"`
+	CreatedAt    time.Time  `json:"created_at"`
+	Description  *string    `json:"description,omitempty"`
+	Icon         *string    `json:"icon,omitempty"`
+	IsArchived   bool       `json:"is_archived"`
+	ItemCount    int        `json:"item_count"`
+	ListId       uuid.UUID  `json:"list_id"`
+	Name         string     `json:"name"`
+	Source       string     `json:"source"`
+	SourceId     *uuid.UUID `json:"source_id,omitempty"`
+	UpdatedAt    time.Time  `json:"updated_at"`
+	UserId       uuid.UUID  `json:"user_id"`
 }
 
 // StudyListV3 defines model for StudyListV3.
@@ -8457,23 +8456,23 @@ type SuggestedConceptHub struct {
 
 // SurfaceReference defines model for SurfaceReference.
 type SurfaceReference struct {
-	CaptionIndex            *int                `json:"caption_index,omitempty"`
-	InflectedFormDetailsRaw *string             `json:"inflected_form_details_raw,omitempty"`
-	LanguageCode            string              `json:"language_code"`
-	Morphology              *Morphology         `json:"morphology,omitempty"`
-	OriginalTokenPhrase     *string             `json:"original_token_phrase,omitempty"`
-	ParagraphId             *openapi_types.UUID `json:"paragraph_id,omitempty"`
-	PromptSegmentIndex      *int                `json:"prompt_segment_index,omitempty"`
-	PublishedAt             time.Time           `json:"published_at"`
-	SnippetText             *string             `json:"snippet_text,omitempty"`
-	StartWordIndex          *int                `json:"start_word_index,omitempty"`
-	SurfaceEntryId          openapi_types.UUID  `json:"surface_entry_id"`
-	SurfaceId               openapi_types.UUID  `json:"surface_id"`
-	SurfaceTitle            *string             `json:"surface_title,omitempty"`
-	SurfaceType             string              `json:"surface_type"`
-	TimestampStartSeconds   *float32            `json:"timestamp_start_seconds,omitempty"`
-	TokenCount              int                 `json:"token_count"`
-	TurnIndex               *int                `json:"turn_index,omitempty"`
+	CaptionIndex            *int        `json:"caption_index,omitempty"`
+	InflectedFormDetailsRaw *string     `json:"inflected_form_details_raw,omitempty"`
+	LanguageCode            string      `json:"language_code"`
+	Morphology              *Morphology `json:"morphology,omitempty"`
+	OriginalTokenPhrase     *string     `json:"original_token_phrase,omitempty"`
+	ParagraphId             *uuid.UUID  `json:"paragraph_id,omitempty"`
+	PromptSegmentIndex      *int        `json:"prompt_segment_index,omitempty"`
+	PublishedAt             time.Time   `json:"published_at"`
+	SnippetText             *string     `json:"snippet_text,omitempty"`
+	StartWordIndex          *int        `json:"start_word_index,omitempty"`
+	SurfaceEntryId          uuid.UUID   `json:"surface_entry_id"`
+	SurfaceId               uuid.UUID   `json:"surface_id"`
+	SurfaceTitle            *string     `json:"surface_title,omitempty"`
+	SurfaceType             string      `json:"surface_type"`
+	TimestampStartSeconds   *float32    `json:"timestamp_start_seconds,omitempty"`
+	TokenCount              int         `json:"token_count"`
+	TurnIndex               *int        `json:"turn_index,omitempty"`
 }
 
 // SurfacesResponse defines model for SurfacesResponse.
@@ -8484,28 +8483,28 @@ type SurfacesResponse struct {
 
 // TTSBaseWordStreamSessionResponse defines model for TTSBaseWordStreamSessionResponse.
 type TTSBaseWordStreamSessionResponse struct {
-	CacheHit  *bool               `json:"cache_hit,omitempty"`
-	ExpiresAt time.Time           `json:"expires_at"`
-	JobId     *openapi_types.UUID `json:"job_id"`
-	SessionId openapi_types.UUID  `json:"session_id"`
-	Token     string              `json:"token"`
+	CacheHit  *bool      `json:"cache_hit,omitempty"`
+	ExpiresAt time.Time  `json:"expires_at"`
+	JobId     *uuid.UUID `json:"job_id"`
+	SessionId uuid.UUID  `json:"session_id"`
+	Token     string     `json:"token"`
 }
 
 // TTSGenerateRequest defines model for TTSGenerateRequest.
 type TTSGenerateRequest struct {
-	BaseWordId   openapi_types.UUID `json:"base_word_id"`
-	Force        *bool              `json:"force,omitempty"`
-	LanguageCode *string            `json:"language_code,omitempty"`
+	BaseWordId   uuid.UUID `json:"base_word_id"`
+	Force        *bool     `json:"force,omitempty"`
+	LanguageCode *string   `json:"language_code,omitempty"`
 }
 
 // TTSGenerateResponse defines model for TTSGenerateResponse.
 type TTSGenerateResponse struct {
 	AudioUrl     *string                       `json:"audio_url"`
-	BaseWordId   openapi_types.UUID            `json:"base_word_id"`
+	BaseWordId   uuid.UUID                     `json:"base_word_id"`
 	ErrorMessage *string                       `json:"error_message"`
-	JobId        *openapi_types.UUID           `json:"job_id"`
+	JobId        *uuid.UUID                    `json:"job_id"`
 	JobStatus    *TTSGenerateResponseJobStatus `json:"job_status"`
-	MediaId      *openapi_types.UUID           `json:"media_id"`
+	MediaId      *uuid.UUID                    `json:"media_id"`
 	Stage        *string                       `json:"stage"`
 	Status       TTSGenerateResponseStatus     `json:"status"`
 }
@@ -8519,10 +8518,10 @@ type TTSGenerateResponseStatus string
 // TTSJobStatusResponse defines model for TTSJobStatusResponse.
 type TTSJobStatusResponse struct {
 	AudioUrl     *string                     `json:"audio_url"`
-	BaseWordId   openapi_types.UUID          `json:"base_word_id"`
+	BaseWordId   uuid.UUID                   `json:"base_word_id"`
 	ErrorMessage *string                     `json:"error_message"`
-	JobId        openapi_types.UUID          `json:"job_id"`
-	MediaId      *openapi_types.UUID         `json:"media_id"`
+	JobId        uuid.UUID                   `json:"job_id"`
+	MediaId      *uuid.UUID                  `json:"media_id"`
 	Stage        *string                     `json:"stage"`
 	Status       *TTSJobStatusResponseStatus `json:"status"`
 }
@@ -8532,20 +8531,20 @@ type TTSJobStatusResponseStatus string
 
 // TTSParagraphGenerateRequest defines model for TTSParagraphGenerateRequest.
 type TTSParagraphGenerateRequest struct {
-	Force        *bool              `json:"force,omitempty"`
-	LanguageCode *string            `json:"language_code,omitempty"`
-	ParagraphId  openapi_types.UUID `json:"paragraph_id"`
-	Text         string             `json:"text"`
+	Force        *bool     `json:"force,omitempty"`
+	LanguageCode *string   `json:"language_code,omitempty"`
+	ParagraphId  uuid.UUID `json:"paragraph_id"`
+	Text         string    `json:"text"`
 }
 
 // TTSParagraphGenerateResponse defines model for TTSParagraphGenerateResponse.
 type TTSParagraphGenerateResponse struct {
 	AudioUrl     *string                                `json:"audio_url"`
 	ErrorMessage *string                                `json:"error_message"`
-	JobId        *openapi_types.UUID                    `json:"job_id"`
+	JobId        *uuid.UUID                             `json:"job_id"`
 	JobStatus    *TTSParagraphGenerateResponseJobStatus `json:"job_status"`
-	MediaId      *openapi_types.UUID                    `json:"media_id"`
-	ParagraphId  openapi_types.UUID                     `json:"paragraph_id"`
+	MediaId      *uuid.UUID                             `json:"media_id"`
+	ParagraphId  uuid.UUID                              `json:"paragraph_id"`
 	Stage        *string                                `json:"stage"`
 	Status       TTSParagraphGenerateResponseStatus     `json:"status"`
 }
@@ -8560,9 +8559,9 @@ type TTSParagraphGenerateResponseStatus string
 type TTSParagraphJobStatusResponse struct {
 	AudioUrl     *string                              `json:"audio_url"`
 	ErrorMessage *string                              `json:"error_message"`
-	JobId        openapi_types.UUID                   `json:"job_id"`
-	MediaId      *openapi_types.UUID                  `json:"media_id"`
-	ParagraphId  openapi_types.UUID                   `json:"paragraph_id"`
+	JobId        uuid.UUID                            `json:"job_id"`
+	MediaId      *uuid.UUID                           `json:"media_id"`
+	ParagraphId  uuid.UUID                            `json:"paragraph_id"`
 	Stage        *string                              `json:"stage"`
 	Status       *TTSParagraphJobStatusResponseStatus `json:"status"`
 }
@@ -8572,23 +8571,23 @@ type TTSParagraphJobStatusResponseStatus string
 
 // TTSParagraphStreamSessionResponse defines model for TTSParagraphStreamSessionResponse.
 type TTSParagraphStreamSessionResponse struct {
-	CacheHit  *bool               `json:"cache_hit,omitempty"`
-	ExpiresAt time.Time           `json:"expires_at"`
-	JobId     *openapi_types.UUID `json:"job_id"`
-	SessionId openapi_types.UUID  `json:"session_id"`
-	Token     string              `json:"token"`
+	CacheHit  *bool      `json:"cache_hit,omitempty"`
+	ExpiresAt time.Time  `json:"expires_at"`
+	JobId     *uuid.UUID `json:"job_id"`
+	SessionId uuid.UUID  `json:"session_id"`
+	Token     string     `json:"token"`
 }
 
 // Tag defines model for Tag.
 type Tag struct {
-	TagId   openapi_types.UUID `json:"tag_id"`
-	TagName string             `json:"tag_name"`
-	TagType *NullString        `json:"tag_type,omitempty"`
+	TagId   uuid.UUID   `json:"tag_id"`
+	TagName string      `json:"tag_name"`
+	TagType *NullString `json:"tag_type,omitempty"`
 }
 
 // TargetedLearningSuggestion defines model for TargetedLearningSuggestion.
 type TargetedLearningSuggestion struct {
-	GrammarConceptId openapi_types.UUID `json:"grammar_concept_id"`
+	GrammarConceptId uuid.UUID `json:"grammar_concept_id"`
 
 	// Localization readiness of the lazily-localized title; pending = title is source fallback, refetch when warm
 	Localization *LocalizationStatus `json:"localization"`
@@ -8599,7 +8598,7 @@ type TargetedLearningSuggestion struct {
 // TargetedLessonResponse defines model for TargetedLessonResponse.
 type TargetedLessonResponse struct {
 	SuggestedConceptHubs []TargetedLearningSuggestion `json:"suggested_concept_hubs"`
-	UserId               openapi_types.UUID           `json:"user_id"`
+	UserId               uuid.UUID                    `json:"user_id"`
 }
 
 // TargetedSuggestionsResponse defines model for TargetedSuggestionsResponse.
@@ -8617,38 +8616,38 @@ type TimeSeriesPoint struct {
 
 // TokenResponse defines model for TokenResponse.
 type TokenResponse struct {
-	AccessToken  string             `json:"access_token"`
-	ExpiresIn    int                `json:"expires_in"`
-	RefreshToken *string            `json:"refresh_token,omitempty"`
-	TokenType    string             `json:"token_type"`
-	UserId       openapi_types.UUID `json:"user_id"`
+	AccessToken  string    `json:"access_token"`
+	ExpiresIn    int       `json:"expires_in"`
+	RefreshToken *string   `json:"refresh_token,omitempty"`
+	TokenType    string    `json:"token_type"`
+	UserId       uuid.UUID `json:"user_id"`
 }
 
 // TopicListClusteringRequest defines model for TopicListClusteringRequest.
 type TopicListClusteringRequest struct {
-	CandidateLimit *int                `json:"candidate_limit,omitempty"`
-	ClusterSize    *int                `json:"cluster_size,omitempty"`
-	MaxTopics      *int                `json:"max_topics,omitempty"`
-	SeedWordId     *openapi_types.UUID `json:"seed_word_id"`
+	CandidateLimit *int       `json:"candidate_limit,omitempty"`
+	ClusterSize    *int       `json:"cluster_size,omitempty"`
+	MaxTopics      *int       `json:"max_topics,omitempty"`
+	SeedWordId     *uuid.UUID `json:"seed_word_id"`
 }
 
 // TopicListGenerateRequest defines model for TopicListGenerateRequest.
 type TopicListGenerateRequest struct {
-	Lang        *string            `json:"lang,omitempty"`
-	MustInclude *[]string          `json:"must_include,omitempty"`
-	Prompt      string             `json:"prompt"`
-	UserId      openapi_types.UUID `json:"user_id"`
+	Lang        *string   `json:"lang,omitempty"`
+	MustInclude *[]string `json:"must_include,omitempty"`
+	Prompt      string    `json:"prompt"`
+	UserId      uuid.UUID `json:"user_id"`
 }
 
 // TopicListGenerationJobResponse defines model for TopicListGenerationJobResponse.
 type TopicListGenerationJobResponse struct {
 	ErrorMessage *string                              `json:"error_message"`
-	JobId        openapi_types.UUID                   `json:"job_id"`
+	JobId        uuid.UUID                            `json:"job_id"`
 	Preview      *TopicListPreview                    `json:"preview"`
-	SeedWordId   openapi_types.UUID                   `json:"seed_word_id"`
+	SeedWordId   uuid.UUID                            `json:"seed_word_id"`
 	Stage        *string                              `json:"stage"`
 	Status       TopicListGenerationJobResponseStatus `json:"status"`
-	TopicListId  *openapi_types.UUID                  `json:"topic_list_id"`
+	TopicListId  *uuid.UUID                           `json:"topic_list_id"`
 }
 
 // TopicListGenerationJobResponseStatus defines model for TopicListGenerationJobResponse.Status.
@@ -8656,16 +8655,16 @@ type TopicListGenerationJobResponseStatus string
 
 // TopicListItemCreate defines model for TopicListItemCreate.
 type TopicListItemCreate struct {
-	BaseWordId openapi_types.UUID `json:"base_word_id"`
+	BaseWordId uuid.UUID `json:"base_word_id"`
 }
 
 // TopicListItemResponse defines model for TopicListItemResponse.
 type TopicListItemResponse struct {
-	BaseWordId           openapi_types.UUID `json:"base_word_id"`
-	Meaning              *string            `json:"meaning"`
-	Position             int                `json:"position"`
-	SimilarityToCentroid *float32           `json:"similarity_to_centroid"`
-	Term                 *string            `json:"term"`
+	BaseWordId           uuid.UUID `json:"base_word_id"`
+	Meaning              *string   `json:"meaning"`
+	Position             int       `json:"position"`
+	SimilarityToCentroid *float32  `json:"similarity_to_centroid"`
+	Term                 *string   `json:"term"`
 }
 
 // TopicListPreview defines model for TopicListPreview.
@@ -8676,23 +8675,23 @@ type TopicListPreview struct {
 	DisplayName *string                  `json:"display_name"`
 	Icon        *string                  `json:"icon"`
 	Name        *string                  `json:"name"`
-	SeedWordId  openapi_types.UUID       `json:"seed_word_id"`
+	SeedWordId  uuid.UUID                `json:"seed_word_id"`
 	Words       *[]TopicListItemResponse `json:"words,omitempty"`
 }
 
 // TopicListResponse defines model for TopicListResponse.
 type TopicListResponse struct {
-	Category    string             `json:"category"`
-	CefrLevel   *string            `json:"cefr_level"`
-	CreatedAt   time.Time          `json:"created_at"`
-	Description *string            `json:"description"`
-	DisplayName *string            `json:"display_name"`
-	Icon        *string            `json:"icon"`
-	Id          openapi_types.UUID `json:"id"`
-	Name        string             `json:"name"`
+	Category    string    `json:"category"`
+	CefrLevel   *string   `json:"cefr_level"`
+	CreatedAt   time.Time `json:"created_at"`
+	Description *string   `json:"description"`
+	DisplayName *string   `json:"display_name"`
+	Icon        *string   `json:"icon"`
+	Id          uuid.UUID `json:"id"`
+	Name        string    `json:"name"`
 
 	// OwnerUserId User who owns this topic list; null/absent for system-curated lists.
-	OwnerUserId *openapi_types.UUID `json:"owner_user_id,omitempty"`
+	OwnerUserId *uuid.UUID `json:"owner_user_id,omitempty"`
 
 	// SourceType ai_generated | admin_curated | user_created
 	SourceType *string `json:"source_type,omitempty"`
@@ -8702,11 +8701,11 @@ type TopicListResponse struct {
 
 // TopicListStatusResponse defines model for TopicListStatusResponse.
 type TopicListStatusResponse struct {
-	JobId      *openapi_types.UUID               `json:"job_id"`
+	JobId      *uuid.UUID                        `json:"job_id"`
 	JobStatus  *TopicListStatusResponseJobStatus `json:"job_status"`
 	Message    string                            `json:"message"`
 	Preview    *TopicListPreview                 `json:"preview"`
-	SeedWordId openapi_types.UUID                `json:"seed_word_id"`
+	SeedWordId uuid.UUID                         `json:"seed_word_id"`
 	Stage      *string                           `json:"stage"`
 	Status     TopicListStatusResponseStatus     `json:"status"`
 	TopicLists *[]TopicListTeaser                `json:"topic_lists"`
@@ -8720,13 +8719,13 @@ type TopicListStatusResponseStatus string
 
 // TopicListTeaser defines model for TopicListTeaser.
 type TopicListTeaser struct {
-	Category    string              `json:"category"`
-	CefrLevel   *string             `json:"cefr_level"`
-	DisplayName *string             `json:"display_name"`
-	Icon        *string             `json:"icon"`
-	Id          openapi_types.UUID  `json:"id"`
-	Name        string              `json:"name"`
-	OwnerUserId *openapi_types.UUID `json:"owner_user_id"`
+	Category    string     `json:"category"`
+	CefrLevel   *string    `json:"cefr_level"`
+	DisplayName *string    `json:"display_name"`
+	Icon        *string    `json:"icon"`
+	Id          uuid.UUID  `json:"id"`
+	Name        string     `json:"name"`
+	OwnerUserId *uuid.UUID `json:"owner_user_id"`
 
 	// SampleWords Sample learning-language words from this topic (no translations)
 	SampleWords *[]string `json:"sample_words,omitempty"`
@@ -8742,25 +8741,25 @@ type TopicListWithWordsResponse struct {
 
 // TopicListsForWordResponse defines model for TopicListsForWordResponse.
 type TopicListsForWordResponse struct {
-	TopicLists []TopicListTeaser  `json:"topic_lists"`
-	WordId     openapi_types.UUID `json:"word_id"`
+	TopicLists []TopicListTeaser `json:"topic_lists"`
+	WordId     uuid.UUID         `json:"word_id"`
 }
 
 // TrackListItem defines model for TrackListItem.
 type TrackListItem struct {
-	Audience      *string            `json:"audience"`
-	ChapterCount  *int               `json:"chapter_count,omitempty"`
-	ColorHex      *string            `json:"color_hex"`
-	Description   *string            `json:"description"`
-	IconEmoji     *string            `json:"icon_emoji"`
-	Id            openapi_types.UUID `json:"id"`
-	IsRecommended *bool              `json:"is_recommended,omitempty"`
-	Label         *string            `json:"label"`
-	LevelCount    *int               `json:"level_count,omitempty"`
-	Slug          string             `json:"slug"`
-	ThumbnailUrl  *string            `json:"thumbnail_url"`
-	Title         string             `json:"title"`
-	TotalLessons  *int               `json:"total_lessons,omitempty"`
+	Audience      *string   `json:"audience"`
+	ChapterCount  *int      `json:"chapter_count,omitempty"`
+	ColorHex      *string   `json:"color_hex"`
+	Description   *string   `json:"description"`
+	IconEmoji     *string   `json:"icon_emoji"`
+	Id            uuid.UUID `json:"id"`
+	IsRecommended *bool     `json:"is_recommended,omitempty"`
+	Label         *string   `json:"label"`
+	LevelCount    *int      `json:"level_count,omitempty"`
+	Slug          string    `json:"slug"`
+	ThumbnailUrl  *string   `json:"thumbnail_url"`
+	Title         string    `json:"title"`
+	TotalLessons  *int      `json:"total_lessons,omitempty"`
 }
 
 // TrackListResponse defines model for TrackListResponse.
@@ -8773,7 +8772,7 @@ type TrackRoadmapChapter struct {
 	CompletedLessonCount *int                      `json:"completed_lesson_count,omitempty"`
 	Description          *string                   `json:"description"`
 	IconEmoji            *string                   `json:"icon_emoji"`
-	Id                   openapi_types.UUID        `json:"id"`
+	Id                   uuid.UUID                 `json:"id"`
 	LessonCount          *int                      `json:"lesson_count,omitempty"`
 	Lessons              *[]TrackRoadmapLesson     `json:"lessons,omitempty"`
 	Status               TrackRoadmapChapterStatus `json:"status"`
@@ -8787,7 +8786,7 @@ type TrackRoadmapChapterStatus string
 // TrackRoadmapLesson defines model for TrackRoadmapLesson.
 type TrackRoadmapLesson struct {
 	Kind         *string                 `json:"kind"`
-	LessonId     openapi_types.UUID      `json:"lesson_id"`
+	LessonId     uuid.UUID               `json:"lesson_id"`
 	OrderIndex   int                     `json:"order_index"`
 	State        TrackRoadmapLessonState `json:"state"`
 	ThumbnailUrl *string                 `json:"thumbnail_url"`
@@ -8804,7 +8803,7 @@ type TrackRoadmapLevel struct {
 	Chapters              *[]TrackRoadmapChapter  `json:"chapters,omitempty"`
 	CompletedChapterCount *int                    `json:"completed_chapter_count,omitempty"`
 	IconEmoji             *string                 `json:"icon_emoji"`
-	Id                    openapi_types.UUID      `json:"id"`
+	Id                    uuid.UUID               `json:"id"`
 	ProgressPercent       *float32                `json:"progress_percent,omitempty"`
 	Status                TrackRoadmapLevelStatus `json:"status"`
 	ThumbnailUrl          *string                 `json:"thumbnail_url"`
@@ -8819,14 +8818,14 @@ type TrackRoadmapResponse struct {
 	CompletedLessons  *int                 `json:"completed_lessons,omitempty"`
 	Levels            *[]TrackRoadmapLevel `json:"levels,omitempty"`
 	NextChapterTitle  *string              `json:"next_chapter_title"`
-	NextLessonId      *openapi_types.UUID  `json:"next_lesson_id"`
+	NextLessonId      *uuid.UUID           `json:"next_lesson_id"`
 	NextLessonTitle   *string              `json:"next_lesson_title"`
 	ProgressPercent   *float32             `json:"progress_percent,omitempty"`
 	TotalLessons      *int                 `json:"total_lessons,omitempty"`
 	TrackColorHex     *string              `json:"track_color_hex"`
 	TrackDescription  *string              `json:"track_description"`
 	TrackIconEmoji    *string              `json:"track_icon_emoji"`
-	TrackId           openapi_types.UUID   `json:"track_id"`
+	TrackId           uuid.UUID            `json:"track_id"`
 	TrackThumbnailUrl *string              `json:"track_thumbnail_url"`
 	TrackTitle        string               `json:"track_title"`
 }
@@ -8886,41 +8885,41 @@ type TransferSubscriptionResponse struct {
 
 // Translation defines model for Translation.
 type Translation struct {
-	CreatedAt        time.Time           `json:"created_at"`
-	CreatedBy        *openapi_types.UUID `json:"created_by,omitempty"`
-	Id               openapi_types.UUID  `json:"id"`
-	KeyId            openapi_types.UUID  `json:"key_id"`
-	LanguageCode     string              `json:"language_code"`
-	QualityScore     *float32            `json:"quality_score,omitempty"`
-	ReviewedAt       *time.Time          `json:"reviewed_at,omitempty"`
-	ReviewedBy       *openapi_types.UUID `json:"reviewed_by,omitempty"`
-	Status           string              `json:"status"`
-	TranslatorSource *string             `json:"translator_source,omitempty"`
-	UpdatedAt        time.Time           `json:"updated_at"`
-	Value            string              `json:"value"`
+	CreatedAt        time.Time  `json:"created_at"`
+	CreatedBy        *uuid.UUID `json:"created_by,omitempty"`
+	Id               uuid.UUID  `json:"id"`
+	KeyId            uuid.UUID  `json:"key_id"`
+	LanguageCode     string     `json:"language_code"`
+	QualityScore     *float32   `json:"quality_score,omitempty"`
+	ReviewedAt       *time.Time `json:"reviewed_at,omitempty"`
+	ReviewedBy       *uuid.UUID `json:"reviewed_by,omitempty"`
+	Status           string     `json:"status"`
+	TranslatorSource *string    `json:"translator_source,omitempty"`
+	UpdatedAt        time.Time  `json:"updated_at"`
+	Value            string     `json:"value"`
 }
 
 // TranslationBundle defines model for TranslationBundle.
 type TranslationBundle struct {
-	Bundle       map[string]string   `json:"bundle"`
-	Checksum     string              `json:"checksum"`
-	GeneratedAt  time.Time           `json:"generated_at"`
-	Id           openapi_types.UUID  `json:"id"`
-	LanguageCode string              `json:"language_code"`
-	NamespaceId  *openapi_types.UUID `json:"namespace_id,omitempty"`
-	Version      int                 `json:"version"`
+	Bundle       map[string]string `json:"bundle"`
+	Checksum     string            `json:"checksum"`
+	GeneratedAt  time.Time         `json:"generated_at"`
+	Id           uuid.UUID         `json:"id"`
+	LanguageCode string            `json:"language_code"`
+	NamespaceId  *uuid.UUID        `json:"namespace_id,omitempty"`
+	Version      int               `json:"version"`
 }
 
 // TranslationKey defines model for TranslationKey.
 type TranslationKey struct {
 	ContextScreenshotUrl *string                      `json:"context_screenshot_url,omitempty"`
 	CreatedAt            time.Time                    `json:"created_at"`
-	CreatedBy            *openapi_types.UUID          `json:"created_by,omitempty"`
+	CreatedBy            *uuid.UUID                   `json:"created_by,omitempty"`
 	Description          *string                      `json:"description,omitempty"`
-	Id                   openapi_types.UUID           `json:"id"`
+	Id                   uuid.UUID                    `json:"id"`
 	Key                  string                       `json:"key"`
 	MaxLength            *int                         `json:"max_length,omitempty"`
-	NamespaceId          openapi_types.UUID           `json:"namespace_id"`
+	NamespaceId          uuid.UUID                    `json:"namespace_id"`
 	Placeholders         *[]TranslationKeyPlaceholder `json:"placeholders,omitempty"`
 	SourceText           string                       `json:"source_text"`
 	Tags                 *[]string                    `json:"tags,omitempty"`
@@ -9126,15 +9125,15 @@ type UpdateTranslationKeyRequest struct {
 
 // UpsertDynamicTranslationRequest defines model for UpsertDynamicTranslationRequest.
 type UpsertDynamicTranslationRequest struct {
-	LanguageCode     string              `json:"language_code"`
-	ResourceId       string              `json:"resource_id"`
-	ResourceType     string              `json:"resource_type"`
-	ReviewerId       *openapi_types.UUID `json:"reviewer_id,omitempty"`
-	SourceLocale     *string             `json:"source_locale,omitempty"`
-	SourceVersion    string              `json:"source_version"`
-	Status           *string             `json:"status,omitempty"`
-	TranslatedText   string              `json:"translated_text"`
-	TranslatorSource *string             `json:"translator_source,omitempty"`
+	LanguageCode     string     `json:"language_code"`
+	ResourceId       string     `json:"resource_id"`
+	ResourceType     string     `json:"resource_type"`
+	ReviewerId       *uuid.UUID `json:"reviewer_id,omitempty"`
+	SourceLocale     *string    `json:"source_locale,omitempty"`
+	SourceVersion    string     `json:"source_version"`
+	Status           *string    `json:"status,omitempty"`
+	TranslatedText   string     `json:"translated_text"`
+	TranslatorSource *string    `json:"translator_source,omitempty"`
 }
 
 // UpsertDynamicTranslationResponse defines model for UpsertDynamicTranslationResponse.
@@ -9160,12 +9159,12 @@ type UpsertTierLimitResponse struct {
 
 // UserAchievementProgress defines model for UserAchievementProgress.
 type UserAchievementProgress struct {
-	AchievementCode string             `json:"achievement_code"`
-	CurrentValue    int                `json:"current_value"`
-	Id              openapi_types.UUID `json:"id"`
-	TargetValue     *int               `json:"target_value,omitempty"`
-	UpdatedAt       time.Time          `json:"updated_at"`
-	UserId          openapi_types.UUID `json:"user_id"`
+	AchievementCode string    `json:"achievement_code"`
+	CurrentValue    int       `json:"current_value"`
+	Id              uuid.UUID `json:"id"`
+	TargetValue     *int      `json:"target_value,omitempty"`
+	UpdatedAt       time.Time `json:"updated_at"`
+	UserId          uuid.UUID `json:"user_id"`
 }
 
 // UserAchievementProgressResponse defines model for UserAchievementProgressResponse.
@@ -9213,19 +9212,19 @@ type UserActionEnvelope struct {
 
 // UserActiveTrackResponse defines model for UserActiveTrackResponse.
 type UserActiveTrackResponse struct {
-	ProgressPercent *float32            `json:"progress_percent,omitempty"`
-	TrackColorHex   *string             `json:"track_color_hex"`
-	TrackIconEmoji  *string             `json:"track_icon_emoji"`
-	TrackId         *openapi_types.UUID `json:"track_id"`
-	TrackTitle      *string             `json:"track_title"`
+	ProgressPercent *float32   `json:"progress_percent,omitempty"`
+	TrackColorHex   *string    `json:"track_color_hex"`
+	TrackIconEmoji  *string    `json:"track_icon_emoji"`
+	TrackId         *uuid.UUID `json:"track_id"`
+	TrackTitle      *string    `json:"track_title"`
 }
 
 // UserBasicInfo defines model for UserBasicInfo.
 type UserBasicInfo struct {
-	Email string             `json:"email"`
-	Id    openapi_types.UUID `json:"id"`
-	Name  *string            `json:"name,omitempty"`
-	Tier  string             `json:"tier"`
+	Email string    `json:"email"`
+	Id    uuid.UUID `json:"id"`
+	Name  *string   `json:"name,omitempty"`
+	Tier  string    `json:"tier"`
 }
 
 // UserCountResult defines model for UserCountResult.
@@ -9235,10 +9234,10 @@ type UserCountResult struct {
 
 // UserDerivedProfileResponse defines model for UserDerivedProfileResponse.
 type UserDerivedProfileResponse struct {
-	CreatedAt        time.Time          `json:"created_at"`
-	LastCalculatedAt *time.Time         `json:"last_calculated_at"`
-	UpdatedAt        time.Time          `json:"updated_at"`
-	UserId           openapi_types.UUID `json:"user_id"`
+	CreatedAt        time.Time  `json:"created_at"`
+	LastCalculatedAt *time.Time `json:"last_calculated_at"`
+	UpdatedAt        time.Time  `json:"updated_at"`
+	UserId           uuid.UUID  `json:"user_id"`
 }
 
 // UserExistsResponse defines model for UserExistsResponse.
@@ -9263,7 +9262,7 @@ type UserNotification struct {
 	Body      string                  `json:"body"`
 	CreatedAt time.Time               `json:"created_at"`
 	Data      *map[string]interface{} `json:"data,omitempty"`
-	Id        openapi_types.UUID      `json:"id"`
+	Id        uuid.UUID               `json:"id"`
 	Read      bool                    `json:"read"`
 	Title     string                  `json:"title"`
 	Type      string                  `json:"type"`
@@ -9341,10 +9340,10 @@ type UserResponse struct {
 
 // UserRevenueCatLink defines model for UserRevenueCatLink.
 type UserRevenueCatLink struct {
-	LinkedAt         time.Time          `json:"linked_at"`
-	RevenueCatUserId string             `json:"revenue_cat_user_id"`
-	UpdatedAt        time.Time          `json:"updated_at"`
-	UserId           openapi_types.UUID `json:"user_id"`
+	LinkedAt         time.Time `json:"linked_at"`
+	RevenueCatUserId string    `json:"revenue_cat_user_id"`
+	UpdatedAt        time.Time `json:"updated_at"`
+	UserId           uuid.UUID `json:"user_id"`
 }
 
 // UserSearchHit defines model for UserSearchHit.
@@ -9415,38 +9414,38 @@ type VerifyResetTokenResponse struct {
 
 // VersionSummary defines model for VersionSummary.
 type VersionSummary struct {
-	ArticleType string             `json:"article_type"`
-	Title       string             `json:"title"`
-	VersionId   openapi_types.UUID `json:"version_id"`
+	ArticleType string    `json:"article_type"`
+	Title       string    `json:"title"`
+	VersionId   uuid.UUID `json:"version_id"`
 }
 
 // Video defines model for Video.
 type Video struct {
-	AudioUrl                           *string            `json:"audio_url,omitempty"`
-	BrandId                            openapi_types.UUID `json:"brand_id"`
-	CarouselImages                     *[]string          `json:"carousel_images,omitempty"`
-	CreatedAt                          time.Time          `json:"created_at"`
-	Description                        string             `json:"description"`
-	DescriptionTranslationFallback     *bool              `json:"description_translation_fallback,omitempty"`
-	DescriptionTranslationLocale       *string            `json:"description_translation_locale,omitempty"`
-	DescriptionTranslationSourceLocale *string            `json:"description_translation_source_locale,omitempty"`
-	DurationSeconds                    int                `json:"duration_seconds"`
-	FormatType                         *string            `json:"format_type,omitempty"`
-	Id                                 openapi_types.UUID `json:"id"`
-	LearningLanguageCode               *string            `json:"learning_language_code,omitempty"`
-	Locale                             *string            `json:"locale,omitempty"`
-	OriginalDescription                *string            `json:"original_description,omitempty"`
-	OriginalTitle                      *string            `json:"original_title,omitempty"`
-	PublishedAt                        time.Time          `json:"published_at"`
-	SourceLocale                       *string            `json:"source_locale,omitempty"`
-	ThumbnailUrl                       string             `json:"thumbnail_url"`
-	Title                              string             `json:"title"`
-	TitleTranslationFallback           *bool              `json:"title_translation_fallback,omitempty"`
-	TitleTranslationLocale             *string            `json:"title_translation_locale,omitempty"`
-	TitleTranslationSourceLocale       *string            `json:"title_translation_source_locale,omitempty"`
-	TranscriptionStatus                *string            `json:"transcription_status,omitempty"`
-	UpdatedAt                          time.Time          `json:"updated_at"`
-	VideoUrl                           string             `json:"video_url"`
+	AudioUrl                           *string   `json:"audio_url,omitempty"`
+	BrandId                            uuid.UUID `json:"brand_id"`
+	CarouselImages                     *[]string `json:"carousel_images,omitempty"`
+	CreatedAt                          time.Time `json:"created_at"`
+	Description                        string    `json:"description"`
+	DescriptionTranslationFallback     *bool     `json:"description_translation_fallback,omitempty"`
+	DescriptionTranslationLocale       *string   `json:"description_translation_locale,omitempty"`
+	DescriptionTranslationSourceLocale *string   `json:"description_translation_source_locale,omitempty"`
+	DurationSeconds                    int       `json:"duration_seconds"`
+	FormatType                         *string   `json:"format_type,omitempty"`
+	Id                                 uuid.UUID `json:"id"`
+	LearningLanguageCode               *string   `json:"learning_language_code,omitempty"`
+	Locale                             *string   `json:"locale,omitempty"`
+	OriginalDescription                *string   `json:"original_description,omitempty"`
+	OriginalTitle                      *string   `json:"original_title,omitempty"`
+	PublishedAt                        time.Time `json:"published_at"`
+	SourceLocale                       *string   `json:"source_locale,omitempty"`
+	ThumbnailUrl                       string    `json:"thumbnail_url"`
+	Title                              string    `json:"title"`
+	TitleTranslationFallback           *bool     `json:"title_translation_fallback,omitempty"`
+	TitleTranslationLocale             *string   `json:"title_translation_locale,omitempty"`
+	TitleTranslationSourceLocale       *string   `json:"title_translation_source_locale,omitempty"`
+	TranscriptionStatus                *string   `json:"transcription_status,omitempty"`
+	UpdatedAt                          time.Time `json:"updated_at"`
+	VideoUrl                           string    `json:"video_url"`
 }
 
 // VideoFeatureQuota defines model for VideoFeatureQuota.
@@ -9470,17 +9469,17 @@ type VideoListPage struct {
 
 // VoiceAgent defines model for VoiceAgent.
 type VoiceAgent struct {
-	AvatarUrl    *string            `json:"avatar_url,omitempty"`
-	CreatedAt    time.Time          `json:"created_at"`
-	Description  *string            `json:"description,omitempty"`
-	Gender       *string            `json:"gender,omitempty"`
-	Id           openapi_types.UUID `json:"id"`
-	IsActive     bool               `json:"is_active"`
-	Language     string             `json:"language"`
-	LanguageCode *string            `json:"language_code,omitempty"`
-	Name         string             `json:"name"`
-	UpdatedAt    time.Time          `json:"updated_at"`
-	VoiceId      string             `json:"voice_id"`
+	AvatarUrl    *string   `json:"avatar_url,omitempty"`
+	CreatedAt    time.Time `json:"created_at"`
+	Description  *string   `json:"description,omitempty"`
+	Gender       *string   `json:"gender,omitempty"`
+	Id           uuid.UUID `json:"id"`
+	IsActive     bool      `json:"is_active"`
+	Language     string    `json:"language"`
+	LanguageCode *string   `json:"language_code,omitempty"`
+	Name         string    `json:"name"`
+	UpdatedAt    time.Time `json:"updated_at"`
+	VoiceId      string    `json:"voice_id"`
 }
 
 // WatchedVideo defines model for WatchedVideo.
@@ -9501,26 +9500,26 @@ type WatchedVideosResponse struct {
 // WebIngestPlan defines model for WebIngestPlan.
 type WebIngestPlan struct {
 	CreatedAt            time.Time           `json:"created_at"`
-	CreatedBy            *openapi_types.UUID `json:"created_by,omitempty"`
+	CreatedBy            *uuid.UUID          `json:"created_by,omitempty"`
 	LearningLanguageCode string              `json:"learning_language_code"`
 	PlanDate             string              `json:"plan_date"`
-	PlanId               openapi_types.UUID  `json:"plan_id"`
+	PlanId               uuid.UUID           `json:"plan_id"`
 	Targets              []WebIngestPlanItem `json:"targets"`
 	Timezone             string              `json:"timezone"`
 	UpdatedAt            time.Time           `json:"updated_at"`
-	UpdatedBy            *openapi_types.UUID `json:"updated_by,omitempty"`
+	UpdatedBy            *uuid.UUID          `json:"updated_by,omitempty"`
 }
 
 // WebIngestPlanItem defines model for WebIngestPlanItem.
 type WebIngestPlanItem struct {
-	BrandId              *openapi_types.UUID `json:"brand_id,omitempty"`
-	BrandName            *string             `json:"brand_name,omitempty"`
-	DisplayName          string              `json:"display_name"`
-	IsActive             bool                `json:"is_active"`
-	LearningLanguageCode string              `json:"learning_language_code"`
-	Position             int                 `json:"position"`
-	SourceUrl            string              `json:"source_url"`
-	TargetId             string              `json:"target_id"`
+	BrandId              *uuid.UUID `json:"brand_id,omitempty"`
+	BrandName            *string    `json:"brand_name,omitempty"`
+	DisplayName          string     `json:"display_name"`
+	IsActive             bool       `json:"is_active"`
+	LearningLanguageCode string     `json:"learning_language_code"`
+	Position             int        `json:"position"`
+	SourceUrl            string     `json:"source_url"`
+	TargetId             string     `json:"target_id"`
 }
 
 // WebIngestRun defines model for WebIngestRun.
@@ -9535,7 +9534,7 @@ type WebIngestRun struct {
 	LearningLanguageCode string              `json:"learning_language_code"`
 	PendingTargets       int                 `json:"pending_targets"`
 	PlanDate             string              `json:"plan_date"`
-	RunId                openapi_types.UUID  `json:"run_id"`
+	RunId                uuid.UUID           `json:"run_id"`
 	RunnerName           *string             `json:"runner_name,omitempty"`
 	StartedAt            time.Time           `json:"started_at"`
 	Status               string              `json:"status"`
@@ -9563,18 +9562,18 @@ type WebIngestRunItem struct {
 
 // WebIngestTarget defines model for WebIngestTarget.
 type WebIngestTarget struct {
-	BrandId              *openapi_types.UUID `json:"brand_id,omitempty"`
-	BrandName            *string             `json:"brand_name,omitempty"`
-	CreatedAt            time.Time           `json:"created_at"`
-	CreatedBy            *openapi_types.UUID `json:"created_by,omitempty"`
-	DisplayName          string              `json:"display_name"`
-	IsActive             bool                `json:"is_active"`
-	LearningLanguageCode string              `json:"learning_language_code"`
-	Notes                *string             `json:"notes,omitempty"`
-	SourceUrl            string              `json:"source_url"`
-	TargetId             string              `json:"target_id"`
-	UpdatedAt            time.Time           `json:"updated_at"`
-	UpdatedBy            *openapi_types.UUID `json:"updated_by,omitempty"`
+	BrandId              *uuid.UUID `json:"brand_id,omitempty"`
+	BrandName            *string    `json:"brand_name,omitempty"`
+	CreatedAt            time.Time  `json:"created_at"`
+	CreatedBy            *uuid.UUID `json:"created_by,omitempty"`
+	DisplayName          string     `json:"display_name"`
+	IsActive             bool       `json:"is_active"`
+	LearningLanguageCode string     `json:"learning_language_code"`
+	Notes                *string    `json:"notes,omitempty"`
+	SourceUrl            string     `json:"source_url"`
+	TargetId             string     `json:"target_id"`
+	UpdatedAt            time.Time  `json:"updated_at"`
+	UpdatedBy            *uuid.UUID `json:"updated_by,omitempty"`
 }
 
 // WebIngestTargetRequest defines model for WebIngestTargetRequest.
@@ -9681,12 +9680,12 @@ type WordCluster struct {
 
 // WordClusterSessionStatusResponse defines model for WordClusterSessionStatusResponse.
 type WordClusterSessionStatusResponse struct {
-	ItemId            openapi_types.UUID `json:"item_id"`
-	Message           string             `json:"message"`
-	MissingComponents *[]string          `json:"missing_components,omitempty"`
-	RetryAfterMs      *int               `json:"retry_after_ms,omitempty"`
-	SessionMode       *string            `json:"session_mode,omitempty"`
-	Status            string             `json:"status"`
+	ItemId            uuid.UUID `json:"item_id"`
+	Message           string    `json:"message"`
+	MissingComponents *[]string `json:"missing_components,omitempty"`
+	RetryAfterMs      *int      `json:"retry_after_ms,omitempty"`
+	SessionMode       *string   `json:"session_mode,omitempty"`
+	Status            string    `json:"status"`
 }
 
 // WordDeckCreate defines model for WordDeckCreate.
@@ -9698,7 +9697,7 @@ type WordDeckCreate struct {
 
 // WordDeckItemCreate defines model for WordDeckItemCreate.
 type WordDeckItemCreate struct {
-	ItemId   openapi_types.UUID         `json:"item_id"`
+	ItemId   uuid.UUID                  `json:"item_id"`
 	ItemType WordDeckItemCreateItemType `json:"item_type"`
 }
 
@@ -9707,31 +9706,31 @@ type WordDeckItemCreateItemType string
 
 // WordDeckItemResponse defines model for WordDeckItemResponse.
 type WordDeckItemResponse struct {
-	AddedAt  time.Time          `json:"added_at"`
-	DeckIdFk openapi_types.UUID `json:"deck_id_fk"`
-	Id       openapi_types.UUID `json:"id"`
-	ItemId   openapi_types.UUID `json:"item_id"`
-	ItemType string             `json:"item_type"`
-	Order    *int               `json:"order"`
+	AddedAt  time.Time `json:"added_at"`
+	DeckIdFk uuid.UUID `json:"deck_id_fk"`
+	Id       uuid.UUID `json:"id"`
+	ItemId   uuid.UUID `json:"item_id"`
+	ItemType string    `json:"item_type"`
+	Order    *int      `json:"order"`
 }
 
 // WordDeckResponse defines model for WordDeckResponse.
 type WordDeckResponse struct {
-	CreatedAt   time.Time          `json:"created_at"`
-	Description *string            `json:"description"`
-	Id          openapi_types.UUID `json:"id"`
-	IsPublic    bool               `json:"is_public"`
-	Name        string             `json:"name"`
-	UpdatedAt   time.Time          `json:"updated_at"`
-	UserIdFk    openapi_types.UUID `json:"user_id_fk"`
+	CreatedAt   time.Time `json:"created_at"`
+	Description *string   `json:"description"`
+	Id          uuid.UUID `json:"id"`
+	IsPublic    bool      `json:"is_public"`
+	Name        string    `json:"name"`
+	UpdatedAt   time.Time `json:"updated_at"`
+	UserIdFk    uuid.UUID `json:"user_id_fk"`
 }
 
 // WordDeckReviewRequest defines model for WordDeckReviewRequest.
 type WordDeckReviewRequest struct {
-	DeckId         openapi_types.UUID `json:"deck_id"`
-	ItemId         openapi_types.UUID `json:"item_id"`
-	OutcomeCorrect bool               `json:"outcome_correct"`
-	ResponseTimeMs *int               `json:"response_time_ms"`
+	DeckId         uuid.UUID `json:"deck_id"`
+	ItemId         uuid.UUID `json:"item_id"`
+	OutcomeCorrect bool      `json:"outcome_correct"`
+	ResponseTimeMs *int      `json:"response_time_ms"`
 }
 
 // WordDeckUpdate defines model for WordDeckUpdate.
@@ -11327,8 +11326,8 @@ type GetInternalApiV3UsersUserIdWatchedVideosParams struct {
 // GetArticleOpportunitiesInternalArticlesArticleIdOpportunitiesGetParams defines parameters for GetArticleOpportunitiesInternalArticlesArticleIdOpportunitiesGet.
 type GetArticleOpportunitiesInternalArticlesArticleIdOpportunitiesGetParams struct {
 	// UserId The ID of the user
-	UserId           openapi_types.UUID `form:"user_id" json:"user_id"`
-	MaxOpportunities *int               `form:"max_opportunities,omitempty" json:"max_opportunities,omitempty"`
+	UserId           uuid.UUID `form:"user_id" json:"user_id"`
+	MaxOpportunities *int      `form:"max_opportunities,omitempty" json:"max_opportunities,omitempty"`
 }
 
 // GetChallengeDecisionLogsInternalChallengesUserIdDecisionLogsGetParams defines parameters for GetChallengeDecisionLogsInternalChallengesUserIdDecisionLogsGet.
@@ -11453,7 +11452,7 @@ type EnrichDictionaryInternalDictionaryEnrichPostParams struct {
 }
 
 // EnrichDictionaryByIdsInternalDictionaryEnrichByIdsPostJSONBody defines parameters for EnrichDictionaryByIdsInternalDictionaryEnrichByIdsPost.
-type EnrichDictionaryByIdsInternalDictionaryEnrichByIdsPostJSONBody = []openapi_types.UUID
+type EnrichDictionaryByIdsInternalDictionaryEnrichByIdsPostJSONBody = []uuid.UUID
 
 // EnrichDictionaryByIdsInternalDictionaryEnrichByIdsPostParams defines parameters for EnrichDictionaryByIdsInternalDictionaryEnrichByIdsPost.
 type EnrichDictionaryByIdsInternalDictionaryEnrichByIdsPostParams struct {
@@ -11496,7 +11495,7 @@ type EnrichWordsInternalEnrichWordsPostParams struct {
 }
 
 // EnrichWordsByIdsInternalEnrichWordsByIdsPostJSONBody defines parameters for EnrichWordsByIdsInternalEnrichWordsByIdsPost.
-type EnrichWordsByIdsInternalEnrichWordsByIdsPostJSONBody = []openapi_types.UUID
+type EnrichWordsByIdsInternalEnrichWordsByIdsPostJSONBody = []uuid.UUID
 
 // EnrichWordsByIdsInternalEnrichWordsByIdsPostParams defines parameters for EnrichWordsByIdsInternalEnrichWordsByIdsPost.
 type EnrichWordsByIdsInternalEnrichWordsByIdsPostParams struct {
@@ -11533,13 +11532,13 @@ type RevalidateExercisesInternalExercisesRevalidatePostParams struct {
 // CreateConversationDrillsInternalKlearnConversationDrillsPostParams defines parameters for CreateConversationDrillsInternalKlearnConversationDrillsPost.
 type CreateConversationDrillsInternalKlearnConversationDrillsPostParams struct {
 	// UserId The ID of the user
-	UserId openapi_types.UUID `form:"user_id" json:"user_id"`
+	UserId uuid.UUID `form:"user_id" json:"user_id"`
 }
 
 // GetDiscoveryItemsInternalKlearnDiscoveryItemsGetParams defines parameters for GetDiscoveryItemsInternalKlearnDiscoveryItemsGet.
 type GetDiscoveryItemsInternalKlearnDiscoveryItemsGetParams struct {
 	// UserId The ID of the user
-	UserId openapi_types.UUID `form:"user_id" json:"user_id"`
+	UserId uuid.UUID `form:"user_id" json:"user_id"`
 
 	// Limit Maximum number of discovery items to return
 	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
@@ -11548,7 +11547,7 @@ type GetDiscoveryItemsInternalKlearnDiscoveryItemsGetParams struct {
 // CreateCustomExerciseDeckInternalKlearnExerciseDecksPostParams defines parameters for CreateCustomExerciseDeckInternalKlearnExerciseDecksPost.
 type CreateCustomExerciseDeckInternalKlearnExerciseDecksPostParams struct {
 	// UserId The ID of the user
-	UserId openapi_types.UUID `form:"user_id" json:"user_id"`
+	UserId uuid.UUID `form:"user_id" json:"user_id"`
 }
 
 // GetInternalKlearnGrammarConceptsGrammarConceptIdExampleSentencesParams defines parameters for GetInternalKlearnGrammarConceptsGrammarConceptIdExampleSentences.
@@ -11597,8 +11596,8 @@ type GetWordStatusesInternalKlearnUsersUserIdWordStatusesGetParams struct {
 // GetInAppNudgeInternalMeInAppNudgesGetParams defines parameters for GetInAppNudgeInternalMeInAppNudgesGet.
 type GetInAppNudgeInternalMeInAppNudgesGetParams struct {
 	// Context Canonical context from kielo-shared/vocab/inappnudgecontext.go (8 values). Mobile maps current_route → context at call time.
-	Context string             `form:"context" json:"context"`
-	XUserID openapi_types.UUID `json:"X-User-ID"`
+	Context string    `form:"context" json:"context"`
+	XUserID uuid.UUID `json:"X-User-ID"`
 
 	// XKieloLearningLanguage Canonical learning language code (fi, sv).
 	XKieloLearningLanguage string `json:"X-Kielo-Learning-Language"`
@@ -11606,7 +11605,7 @@ type GetInAppNudgeInternalMeInAppNudgesGetParams struct {
 
 // PostInAppNudgeStateInternalMeInAppNudgesNudgeIdStatePostParams defines parameters for PostInAppNudgeStateInternalMeInAppNudgesNudgeIdStatePost.
 type PostInAppNudgeStateInternalMeInAppNudgesNudgeIdStatePostParams struct {
-	XUserID openapi_types.UUID `json:"X-User-ID"`
+	XUserID uuid.UUID `json:"X-User-ID"`
 }
 
 // GetInternalMediaParams defines parameters for GetInternalMedia.
@@ -11706,13 +11705,13 @@ type StreamParagraphTtsStreamSessionInternalTtsParagraphsStreamSessionsSessionId
 // GetDailyChallengeKlearnApiV3ChallengesDailyGetParams defines parameters for GetDailyChallengeKlearnApiV3ChallengesDailyGet.
 type GetDailyChallengeKlearnApiV3ChallengesDailyGetParams struct {
 	// UserId The ID of the user
-	UserId openapi_types.UUID `form:"user_id" json:"user_id"`
+	UserId uuid.UUID `form:"user_id" json:"user_id"`
 
 	// ChallengeDateStr Date for the challenge (YYYY-MM-DD)
 	ChallengeDateStr *string `form:"challenge_date_str,omitempty" json:"challenge_date_str,omitempty"`
 
 	// SessionId An existing session ID to resume a challenge
-	SessionId *openapi_types.UUID `form:"session_id,omitempty" json:"session_id,omitempty"`
+	SessionId *uuid.UUID `form:"session_id,omitempty" json:"session_id,omitempty"`
 
 	// LearningLanguageCode Learning language code for challenge content
 	LearningLanguageCode *string `form:"learning_language_code,omitempty" json:"learning_language_code,omitempty"`
@@ -11721,7 +11720,7 @@ type GetDailyChallengeKlearnApiV3ChallengesDailyGetParams struct {
 // StartAdaptivePracticeKlearnApiV3ChallengesPracticePostParams defines parameters for StartAdaptivePracticeKlearnApiV3ChallengesPracticePost.
 type StartAdaptivePracticeKlearnApiV3ChallengesPracticePostParams struct {
 	// UserId The ID of the user
-	UserId openapi_types.UUID `form:"user_id" json:"user_id"`
+	UserId uuid.UUID `form:"user_id" json:"user_id"`
 
 	// ItemLimit Maximum unique items to include in adaptive practice
 	ItemLimit *int `form:"item_limit,omitempty" json:"item_limit,omitempty"`
@@ -11739,7 +11738,7 @@ type StartAdaptivePracticeKlearnApiV3ChallengesPracticePostParams struct {
 // GetConceptHubByConceptIdKlearnApiV3ConceptHubsByConceptConceptIdGetParams defines parameters for GetConceptHubByConceptIdKlearnApiV3ConceptHubsByConceptConceptIdGet.
 type GetConceptHubByConceptIdKlearnApiV3ConceptHubsByConceptConceptIdGetParams struct {
 	// UserId The ID of the user requesting the hub
-	UserId openapi_types.UUID `form:"user_id" json:"user_id"`
+	UserId uuid.UUID `form:"user_id" json:"user_id"`
 
 	// Include Sweep CCCCC-A: opt into eager core_content via `?include=core_content`. Default omits the heavy block.
 	Include *string `form:"include,omitempty" json:"include,omitempty"`
@@ -11748,7 +11747,7 @@ type GetConceptHubByConceptIdKlearnApiV3ConceptHubsByConceptConceptIdGetParams s
 // GetExercisesForDeckKlearnApiV3ConceptHubsExerciseDecksDeckIdGetParams defines parameters for GetExercisesForDeckKlearnApiV3ConceptHubsExerciseDecksDeckIdGet.
 type GetExercisesForDeckKlearnApiV3ConceptHubsExerciseDecksDeckIdGetParams struct {
 	// UserId The ID of the user starting the session
-	UserId openapi_types.UUID `form:"user_id" json:"user_id"`
+	UserId uuid.UUID `form:"user_id" json:"user_id"`
 
 	// ForceRefresh Skip session reuse and force a fresh deck session.
 	ForceRefresh *bool `form:"force_refresh,omitempty" json:"force_refresh,omitempty"`
@@ -11757,7 +11756,7 @@ type GetExercisesForDeckKlearnApiV3ConceptHubsExerciseDecksDeckIdGetParams struc
 // GetConceptHubSummariesKlearnApiV3ConceptHubsSummariesGetParams defines parameters for GetConceptHubSummariesKlearnApiV3ConceptHubsSummariesGet.
 type GetConceptHubSummariesKlearnApiV3ConceptHubsSummariesGetParams struct {
 	// Ids One or more published Concept Hub IDs
-	Ids []openapi_types.UUID `form:"ids" json:"ids"`
+	Ids []uuid.UUID `form:"ids" json:"ids"`
 }
 
 // GetConceptHubKlearnApiV3ConceptHubsConceptHubIdGetParams defines parameters for GetConceptHubKlearnApiV3ConceptHubsConceptHubIdGet.
@@ -11769,23 +11768,23 @@ type GetConceptHubKlearnApiV3ConceptHubsConceptHubIdGetParams struct {
 // GetArticleLearningOpportunitiesKlearnApiV3ContextualArticleArticleIdLearningOpportunitiesGetParams defines parameters for GetArticleLearningOpportunitiesKlearnApiV3ContextualArticleArticleIdLearningOpportunitiesGet.
 type GetArticleLearningOpportunitiesKlearnApiV3ContextualArticleArticleIdLearningOpportunitiesGetParams struct {
 	// UserId The ID of the user
-	UserId           openapi_types.UUID `form:"user_id" json:"user_id"`
-	MaxOpportunities *int               `form:"max_opportunities,omitempty" json:"max_opportunities,omitempty"`
+	UserId           uuid.UUID `form:"user_id" json:"user_id"`
+	MaxOpportunities *int      `form:"max_opportunities,omitempty" json:"max_opportunities,omitempty"`
 }
 
 // GetTrackRoadmapKlearnApiV3CurriculumTracksTrackIdRoadmapGetParams defines parameters for GetTrackRoadmapKlearnApiV3CurriculumTracksTrackIdRoadmapGet.
 type GetTrackRoadmapKlearnApiV3CurriculumTracksTrackIdRoadmapGetParams struct {
-	UserId openapi_types.UUID `form:"user_id" json:"user_id"`
+	UserId uuid.UUID `form:"user_id" json:"user_id"`
 }
 
 // GetUserActiveTrackKlearnApiV3CurriculumUserTrackGetParams defines parameters for GetUserActiveTrackKlearnApiV3CurriculumUserTrackGet.
 type GetUserActiveTrackKlearnApiV3CurriculumUserTrackGetParams struct {
-	UserId openapi_types.UUID `form:"user_id" json:"user_id"`
+	UserId uuid.UUID `form:"user_id" json:"user_id"`
 }
 
 // SetUserActiveTrackKlearnApiV3CurriculumUserTrackPutParams defines parameters for SetUserActiveTrackKlearnApiV3CurriculumUserTrackPut.
 type SetUserActiveTrackKlearnApiV3CurriculumUserTrackPutParams struct {
-	UserId openapi_types.UUID `form:"user_id" json:"user_id"`
+	UserId uuid.UUID `form:"user_id" json:"user_id"`
 }
 
 // GetDeckKlearnApiV3DecksDecksDeckIdGetParams defines parameters for GetDeckKlearnApiV3DecksDecksDeckIdGet.
@@ -11815,12 +11814,12 @@ type GetDiscoveryItemsKlearnApiV3DiscoveryItemsGetParams struct {
 
 // GetStudyContentKlearnApiV3DiscoveryStudyContentGetParams defines parameters for GetStudyContentKlearnApiV3DiscoveryStudyContentGet.
 type GetStudyContentKlearnApiV3DiscoveryStudyContentGetParams struct {
-	UserId openapi_types.UUID `form:"user_id" json:"user_id"`
+	UserId uuid.UUID `form:"user_id" json:"user_id"`
 }
 
 // IngestBehavioralEventKlearnApiV3EventsBehavioralPostParams defines parameters for IngestBehavioralEventKlearnApiV3EventsBehavioralPost.
 type IngestBehavioralEventKlearnApiV3EventsBehavioralPostParams struct {
-	XUserID openapi_types.UUID `json:"X-User-ID"`
+	XUserID uuid.UUID `json:"X-User-ID"`
 }
 
 // GetPlacementItemsKlearnApiV3PlacementItemsGetParams defines parameters for GetPlacementItemsKlearnApiV3PlacementItemsGet.
@@ -11831,7 +11830,7 @@ type GetPlacementItemsKlearnApiV3PlacementItemsGetParams struct {
 // GetReviewScheduleForUserKlearnApiV3ReviewsScheduleGetParams defines parameters for GetReviewScheduleForUserKlearnApiV3ReviewsScheduleGet.
 type GetReviewScheduleForUserKlearnApiV3ReviewsScheduleGetParams struct {
 	// UserId The ID of the user
-	UserId openapi_types.UUID `form:"user_id" json:"user_id"`
+	UserId uuid.UUID `form:"user_id" json:"user_id"`
 
 	// Limit Maximum number of review items to return
 	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
@@ -11855,7 +11854,7 @@ type AdminGenerateRoadmapLessonKlearnApiV3RoadmapAdminLessonsGeneratePostParams 
 // ListRoadmapLessonsKlearnApiV3RoadmapLessonsGetParams defines parameters for ListRoadmapLessonsKlearnApiV3RoadmapLessonsGet.
 type ListRoadmapLessonsKlearnApiV3RoadmapLessonsGetParams struct {
 	// UserId The ID of the user
-	UserId openapi_types.UUID `form:"user_id" json:"user_id"`
+	UserId uuid.UUID `form:"user_id" json:"user_id"`
 
 	// LearningLanguageCode Learner's target language. When provided, returns only lessons authored for that language. Empty means no filter (admin/debug).
 	LearningLanguageCode *string `form:"learning_language_code,omitempty" json:"learning_language_code,omitempty"`
@@ -11864,71 +11863,71 @@ type ListRoadmapLessonsKlearnApiV3RoadmapLessonsGetParams struct {
 // GetRoadmapLessonKlearnApiV3RoadmapLessonsLessonIdGetParams defines parameters for GetRoadmapLessonKlearnApiV3RoadmapLessonsLessonIdGet.
 type GetRoadmapLessonKlearnApiV3RoadmapLessonsLessonIdGetParams struct {
 	// UserId The ID of the user
-	UserId openapi_types.UUID `form:"user_id" json:"user_id"`
+	UserId uuid.UUID `form:"user_id" json:"user_id"`
 }
 
 // CompleteRoadmapLessonKlearnApiV3RoadmapLessonsLessonIdCompletePostParams defines parameters for CompleteRoadmapLessonKlearnApiV3RoadmapLessonsLessonIdCompletePost.
 type CompleteRoadmapLessonKlearnApiV3RoadmapLessonsLessonIdCompletePostParams struct {
 	// UserId The ID of the user
-	UserId openapi_types.UUID `form:"user_id" json:"user_id"`
+	UserId uuid.UUID `form:"user_id" json:"user_id"`
 }
 
 // StartRoadmapPracticeKlearnApiV3RoadmapLessonsLessonIdPracticePostParams defines parameters for StartRoadmapPracticeKlearnApiV3RoadmapLessonsLessonIdPracticePost.
 type StartRoadmapPracticeKlearnApiV3RoadmapLessonsLessonIdPracticePostParams struct {
 	// UserId The ID of the user
-	UserId openapi_types.UUID `form:"user_id" json:"user_id"`
+	UserId uuid.UUID `form:"user_id" json:"user_id"`
 }
 
 // StartRoadmapLessonKlearnApiV3RoadmapLessonsLessonIdStartPostParams defines parameters for StartRoadmapLessonKlearnApiV3RoadmapLessonsLessonIdStartPost.
 type StartRoadmapLessonKlearnApiV3RoadmapLessonsLessonIdStartPostParams struct {
 	// UserId The ID of the user
-	UserId openapi_types.UUID `form:"user_id" json:"user_id"`
+	UserId uuid.UUID `form:"user_id" json:"user_id"`
 }
 
 // CompleteRoadmapStepKlearnApiV3RoadmapLessonsLessonIdStepsStepIndexCompletePostParams defines parameters for CompleteRoadmapStepKlearnApiV3RoadmapLessonsLessonIdStepsStepIndexCompletePost.
 type CompleteRoadmapStepKlearnApiV3RoadmapLessonsLessonIdStepsStepIndexCompletePostParams struct {
 	// UserId The ID of the user
-	UserId openapi_types.UUID `form:"user_id" json:"user_id"`
+	UserId uuid.UUID `form:"user_id" json:"user_id"`
 }
 
 // EvaluateRoadmapStepSpeechKlearnApiV3RoadmapLessonsLessonIdStepsStepIndexSpeechEvaluatePostParams defines parameters for EvaluateRoadmapStepSpeechKlearnApiV3RoadmapLessonsLessonIdStepsStepIndexSpeechEvaluatePost.
 type EvaluateRoadmapStepSpeechKlearnApiV3RoadmapLessonsLessonIdStepsStepIndexSpeechEvaluatePostParams struct {
 	// UserId The ID of the user
-	UserId             openapi_types.UUID `form:"user_id" json:"user_id"`
-	OptimizeForLatency *bool              `form:"optimize_for_latency,omitempty" json:"optimize_for_latency,omitempty"`
+	UserId             uuid.UUID `form:"user_id" json:"user_id"`
+	OptimizeForLatency *bool     `form:"optimize_for_latency,omitempty" json:"optimize_for_latency,omitempty"`
 }
 
 // CreateRoadmapStepTtsStreamSessionKlearnApiV3RoadmapLessonsLessonIdStepsStepIndexTtsPostParams defines parameters for CreateRoadmapStepTtsStreamSessionKlearnApiV3RoadmapLessonsLessonIdStepsStepIndexTtsPost.
 type CreateRoadmapStepTtsStreamSessionKlearnApiV3RoadmapLessonsLessonIdStepsStepIndexTtsPostParams struct {
 	// UserId The ID of the user
-	UserId openapi_types.UUID `form:"user_id" json:"user_id"`
+	UserId uuid.UUID `form:"user_id" json:"user_id"`
 }
 
 // GetRoadmapProgressKlearnApiV3RoadmapProgressGetParams defines parameters for GetRoadmapProgressKlearnApiV3RoadmapProgressGet.
 type GetRoadmapProgressKlearnApiV3RoadmapProgressGetParams struct {
 	// UserId The ID of the user
-	UserId openapi_types.UUID `form:"user_id" json:"user_id"`
+	UserId uuid.UUID `form:"user_id" json:"user_id"`
 }
 
 // CreateSavedCollectionPracticeKlearnApiV3SavedCollectionPracticePostParams defines parameters for CreateSavedCollectionPracticeKlearnApiV3SavedCollectionPracticePost.
 type CreateSavedCollectionPracticeKlearnApiV3SavedCollectionPracticePostParams struct {
 	// UserId The ID of the user
-	UserId openapi_types.UUID `form:"user_id" json:"user_id"`
+	UserId uuid.UUID `form:"user_id" json:"user_id"`
 }
 
 // StartWordClusterSessionKlearnApiV3SessionsWordClusterPostParams defines parameters for StartWordClusterSessionKlearnApiV3SessionsWordClusterPost.
 type StartWordClusterSessionKlearnApiV3SessionsWordClusterPostParams struct {
 	// UserId The ID of the user
-	UserId openapi_types.UUID `form:"user_id" json:"user_id"`
+	UserId uuid.UUID `form:"user_id" json:"user_id"`
 }
 
 // GetContextualMicroDrillKlearnApiV3SuggestionsContextualMicroDrillGetParams defines parameters for GetContextualMicroDrillKlearnApiV3SuggestionsContextualMicroDrillGet.
 type GetContextualMicroDrillKlearnApiV3SuggestionsContextualMicroDrillGetParams struct {
 	// UserId The ID of the user
-	UserId openapi_types.UUID `form:"user_id" json:"user_id"`
+	UserId uuid.UUID `form:"user_id" json:"user_id"`
 
 	// ItemId The ID of the target BaseWord or GrammarConcept item
-	ItemId openapi_types.UUID `form:"item_id" json:"item_id"`
+	ItemId uuid.UUID `form:"item_id" json:"item_id"`
 
 	// ItemType Type of the item: 'BaseWord' or 'GrammarConcept'
 	ItemType string `form:"item_type" json:"item_type"`
@@ -11941,20 +11940,20 @@ type GetContextualMicroDrillKlearnApiV3SuggestionsContextualMicroDrillGetParams 
 // GetTargetedLessonsKlearnApiV3SuggestionsTargetedGetParams defines parameters for GetTargetedLessonsKlearnApiV3SuggestionsTargetedGet.
 type GetTargetedLessonsKlearnApiV3SuggestionsTargetedGetParams struct {
 	// UserId The ID of the user
-	UserId         openapi_types.UUID `form:"user_id" json:"user_id"`
-	MaxSuggestions *int               `form:"max_suggestions,omitempty" json:"max_suggestions,omitempty"`
+	UserId         uuid.UUID `form:"user_id" json:"user_id"`
+	MaxSuggestions *int      `form:"max_suggestions,omitempty" json:"max_suggestions,omitempty"`
 }
 
 // GetTopicListsForWordKlearnApiV3TopicListsForWordWordIdGetParams defines parameters for GetTopicListsForWordKlearnApiV3TopicListsForWordWordIdGet.
 type GetTopicListsForWordKlearnApiV3TopicListsForWordWordIdGetParams struct {
 	// UserId User requesting the topic list
-	UserId openapi_types.UUID `form:"user_id" json:"user_id"`
+	UserId uuid.UUID `form:"user_id" json:"user_id"`
 }
 
 // DeleteTopicListKlearnApiV3TopicListsTopicListIdDeleteParams defines parameters for DeleteTopicListKlearnApiV3TopicListsTopicListIdDelete.
 type DeleteTopicListKlearnApiV3TopicListsTopicListIdDeleteParams struct {
 	// UserId User ID requesting deletion
-	UserId openapi_types.UUID `form:"user_id" json:"user_id"`
+	UserId uuid.UUID `form:"user_id" json:"user_id"`
 }
 
 // GetTopicListKlearnApiV3TopicListsTopicListIdGetParams defines parameters for GetTopicListKlearnApiV3TopicListsTopicListIdGet.
@@ -11966,19 +11965,19 @@ type GetTopicListKlearnApiV3TopicListsTopicListIdGetParams struct {
 // AddTopicListItemKlearnApiV3TopicListsTopicListIdItemsPostParams defines parameters for AddTopicListItemKlearnApiV3TopicListsTopicListIdItemsPost.
 type AddTopicListItemKlearnApiV3TopicListsTopicListIdItemsPostParams struct {
 	// UserId User ID requesting addition
-	UserId openapi_types.UUID `form:"user_id" json:"user_id"`
+	UserId uuid.UUID `form:"user_id" json:"user_id"`
 }
 
 // RemoveTopicListItemKlearnApiV3TopicListsTopicListIdItemsBaseWordIdDeleteParams defines parameters for RemoveTopicListItemKlearnApiV3TopicListsTopicListIdItemsBaseWordIdDelete.
 type RemoveTopicListItemKlearnApiV3TopicListsTopicListIdItemsBaseWordIdDeleteParams struct {
 	// UserId User ID requesting removal
-	UserId openapi_types.UUID `form:"user_id" json:"user_id"`
+	UserId uuid.UUID `form:"user_id" json:"user_id"`
 }
 
 // StartTopicListPracticeKlearnApiV3TopicListsTopicListIdPracticePostParams defines parameters for StartTopicListPracticeKlearnApiV3TopicListsTopicListIdPracticePost.
 type StartTopicListPracticeKlearnApiV3TopicListsTopicListIdPracticePostParams struct {
 	// UserId User starting the session
-	UserId openapi_types.UUID `form:"user_id" json:"user_id"`
+	UserId uuid.UUID `form:"user_id" json:"user_id"`
 }
 
 // PostAdminApiV3FeatureLimitsTierJSONRequestBody defines body for PostAdminApiV3FeatureLimitsTier for application/json ContentType.
@@ -12778,18 +12777,6 @@ func (t *AiConversationContent_Flows_Item) FromSimpleAiConversationFlow(v Simple
 	return err
 }
 
-// MergeSimpleAiConversationFlow performs a merge with any union data inside the AiConversationContent_Flows_Item, using the provided SimpleAiConversationFlow
-func (t *AiConversationContent_Flows_Item) MergeSimpleAiConversationFlow(v SimpleAiConversationFlow) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
 // AsAiConversationFlow returns the union data inside the AiConversationContent_Flows_Item as a AiConversationFlow
 func (t AiConversationContent_Flows_Item) AsAiConversationFlow() (AiConversationFlow, error) {
 	var body AiConversationFlow
@@ -12801,18 +12788,6 @@ func (t AiConversationContent_Flows_Item) AsAiConversationFlow() (AiConversation
 func (t *AiConversationContent_Flows_Item) FromAiConversationFlow(v AiConversationFlow) error {
 	b, err := json.Marshal(v)
 	t.union = b
-	return err
-}
-
-// MergeAiConversationFlow performs a merge with any union data inside the AiConversationContent_Flows_Item, using the provided AiConversationFlow
-func (t *AiConversationContent_Flows_Item) MergeAiConversationFlow(v AiConversationFlow) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
 	return err
 }
 
@@ -12840,18 +12815,6 @@ func (t *AiConversationFlow_Steps_Item) FromAiConversationFlowSteps0(v AiConvers
 	return err
 }
 
-// MergeAiConversationFlowSteps0 performs a merge with any union data inside the AiConversationFlow_Steps_Item, using the provided AiConversationFlowSteps0
-func (t *AiConversationFlow_Steps_Item) MergeAiConversationFlowSteps0(v AiConversationFlowSteps0) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
 // AsAiConversationStep returns the union data inside the AiConversationFlow_Steps_Item as a AiConversationStep
 func (t AiConversationFlow_Steps_Item) AsAiConversationStep() (AiConversationStep, error) {
 	var body AiConversationStep
@@ -12863,18 +12826,6 @@ func (t AiConversationFlow_Steps_Item) AsAiConversationStep() (AiConversationSte
 func (t *AiConversationFlow_Steps_Item) FromAiConversationStep(v AiConversationStep) error {
 	b, err := json.Marshal(v)
 	t.union = b
-	return err
-}
-
-// MergeAiConversationStep performs a merge with any union data inside the AiConversationFlow_Steps_Item, using the provided AiConversationStep
-func (t *AiConversationFlow_Steps_Item) MergeAiConversationStep(v AiConversationStep) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
 	return err
 }
 
@@ -12903,19 +12854,6 @@ func (t *ChallengeSection_Exercises_Item) FromFlashcardExercise(v FlashcardExerc
 	return err
 }
 
-// MergeFlashcardExercise performs a merge with any union data inside the ChallengeSection_Exercises_Item, using the provided FlashcardExercise
-func (t *ChallengeSection_Exercises_Item) MergeFlashcardExercise(v FlashcardExercise) error {
-	v.ExerciseType = "flashcard"
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
 // AsFillInTheBlankExercise returns the union data inside the ChallengeSection_Exercises_Item as a FillInTheBlankExercise
 func (t ChallengeSection_Exercises_Item) AsFillInTheBlankExercise() (FillInTheBlankExercise, error) {
 	var body FillInTheBlankExercise
@@ -12928,19 +12866,6 @@ func (t *ChallengeSection_Exercises_Item) FromFillInTheBlankExercise(v FillInThe
 	v.ExerciseType = "fill_in_the_blank"
 	b, err := json.Marshal(v)
 	t.union = b
-	return err
-}
-
-// MergeFillInTheBlankExercise performs a merge with any union data inside the ChallengeSection_Exercises_Item, using the provided FillInTheBlankExercise
-func (t *ChallengeSection_Exercises_Item) MergeFillInTheBlankExercise(v FillInTheBlankExercise) error {
-	v.ExerciseType = "fill_in_the_blank"
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
 	return err
 }
 
@@ -12959,19 +12884,6 @@ func (t *ChallengeSection_Exercises_Item) FromMultipleChoiceTranslationExercise(
 	return err
 }
 
-// MergeMultipleChoiceTranslationExercise performs a merge with any union data inside the ChallengeSection_Exercises_Item, using the provided MultipleChoiceTranslationExercise
-func (t *ChallengeSection_Exercises_Item) MergeMultipleChoiceTranslationExercise(v MultipleChoiceTranslationExercise) error {
-	v.ExerciseType = "multiple_choice_translation"
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
 // AsSentenceConstructionExercise returns the union data inside the ChallengeSection_Exercises_Item as a SentenceConstructionExercise
 func (t ChallengeSection_Exercises_Item) AsSentenceConstructionExercise() (SentenceConstructionExercise, error) {
 	var body SentenceConstructionExercise
@@ -12984,19 +12896,6 @@ func (t *ChallengeSection_Exercises_Item) FromSentenceConstructionExercise(v Sen
 	v.ExerciseType = "sentence_construction"
 	b, err := json.Marshal(v)
 	t.union = b
-	return err
-}
-
-// MergeSentenceConstructionExercise performs a merge with any union data inside the ChallengeSection_Exercises_Item, using the provided SentenceConstructionExercise
-func (t *ChallengeSection_Exercises_Item) MergeSentenceConstructionExercise(v SentenceConstructionExercise) error {
-	v.ExerciseType = "sentence_construction"
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
 	return err
 }
 
@@ -13015,19 +12914,6 @@ func (t *ChallengeSection_Exercises_Item) FromIdentifyConceptExercise(v Identify
 	return err
 }
 
-// MergeIdentifyConceptExercise performs a merge with any union data inside the ChallengeSection_Exercises_Item, using the provided IdentifyConceptExercise
-func (t *ChallengeSection_Exercises_Item) MergeIdentifyConceptExercise(v IdentifyConceptExercise) error {
-	v.ExerciseType = "identify_the_concept"
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
 // AsListeningComprehensionExercise returns the union data inside the ChallengeSection_Exercises_Item as a ListeningComprehensionExercise
 func (t ChallengeSection_Exercises_Item) AsListeningComprehensionExercise() (ListeningComprehensionExercise, error) {
 	var body ListeningComprehensionExercise
@@ -13040,19 +12926,6 @@ func (t *ChallengeSection_Exercises_Item) FromListeningComprehensionExercise(v L
 	v.ExerciseType = "listening_comprehension"
 	b, err := json.Marshal(v)
 	t.union = b
-	return err
-}
-
-// MergeListeningComprehensionExercise performs a merge with any union data inside the ChallengeSection_Exercises_Item, using the provided ListeningComprehensionExercise
-func (t *ChallengeSection_Exercises_Item) MergeListeningComprehensionExercise(v ListeningComprehensionExercise) error {
-	v.ExerciseType = "listening_comprehension"
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
 	return err
 }
 
@@ -13071,19 +12944,6 @@ func (t *ChallengeSection_Exercises_Item) FromContextMatchingExercise(v ContextM
 	return err
 }
 
-// MergeContextMatchingExercise performs a merge with any union data inside the ChallengeSection_Exercises_Item, using the provided ContextMatchingExercise
-func (t *ChallengeSection_Exercises_Item) MergeContextMatchingExercise(v ContextMatchingExercise) error {
-	v.ExerciseType = "context_matching"
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
 // AsSpellingChallengeExercise returns the union data inside the ChallengeSection_Exercises_Item as a SpellingChallengeExercise
 func (t ChallengeSection_Exercises_Item) AsSpellingChallengeExercise() (SpellingChallengeExercise, error) {
 	var body SpellingChallengeExercise
@@ -13099,19 +12959,6 @@ func (t *ChallengeSection_Exercises_Item) FromSpellingChallengeExercise(v Spelli
 	return err
 }
 
-// MergeSpellingChallengeExercise performs a merge with any union data inside the ChallengeSection_Exercises_Item, using the provided SpellingChallengeExercise
-func (t *ChallengeSection_Exercises_Item) MergeSpellingChallengeExercise(v SpellingChallengeExercise) error {
-	v.ExerciseType = "spelling_challenge"
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
 // AsScenarioChoiceExercise returns the union data inside the ChallengeSection_Exercises_Item as a ScenarioChoiceExercise
 func (t ChallengeSection_Exercises_Item) AsScenarioChoiceExercise() (ScenarioChoiceExercise, error) {
 	var body ScenarioChoiceExercise
@@ -13124,19 +12971,6 @@ func (t *ChallengeSection_Exercises_Item) FromScenarioChoiceExercise(v ScenarioC
 	v.ExerciseType = "scenario_choice"
 	b, err := json.Marshal(v)
 	t.union = b
-	return err
-}
-
-// MergeScenarioChoiceExercise performs a merge with any union data inside the ChallengeSection_Exercises_Item, using the provided ScenarioChoiceExercise
-func (t *ChallengeSection_Exercises_Item) MergeScenarioChoiceExercise(v ScenarioChoiceExercise) error {
-	v.ExerciseType = "scenario_choice"
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
 	return err
 }
 
@@ -13202,19 +13036,6 @@ func (t *LearningSession_Exercises_Item) FromFlashcardExercise(v FlashcardExerci
 	return err
 }
 
-// MergeFlashcardExercise performs a merge with any union data inside the LearningSession_Exercises_Item, using the provided FlashcardExercise
-func (t *LearningSession_Exercises_Item) MergeFlashcardExercise(v FlashcardExercise) error {
-	v.ExerciseType = "flashcard"
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
 // AsFillInTheBlankExercise returns the union data inside the LearningSession_Exercises_Item as a FillInTheBlankExercise
 func (t LearningSession_Exercises_Item) AsFillInTheBlankExercise() (FillInTheBlankExercise, error) {
 	var body FillInTheBlankExercise
@@ -13227,19 +13048,6 @@ func (t *LearningSession_Exercises_Item) FromFillInTheBlankExercise(v FillInTheB
 	v.ExerciseType = "fill_in_the_blank"
 	b, err := json.Marshal(v)
 	t.union = b
-	return err
-}
-
-// MergeFillInTheBlankExercise performs a merge with any union data inside the LearningSession_Exercises_Item, using the provided FillInTheBlankExercise
-func (t *LearningSession_Exercises_Item) MergeFillInTheBlankExercise(v FillInTheBlankExercise) error {
-	v.ExerciseType = "fill_in_the_blank"
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
 	return err
 }
 
@@ -13258,19 +13066,6 @@ func (t *LearningSession_Exercises_Item) FromMultipleChoiceTranslationExercise(v
 	return err
 }
 
-// MergeMultipleChoiceTranslationExercise performs a merge with any union data inside the LearningSession_Exercises_Item, using the provided MultipleChoiceTranslationExercise
-func (t *LearningSession_Exercises_Item) MergeMultipleChoiceTranslationExercise(v MultipleChoiceTranslationExercise) error {
-	v.ExerciseType = "multiple_choice_translation"
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
 // AsSentenceConstructionExercise returns the union data inside the LearningSession_Exercises_Item as a SentenceConstructionExercise
 func (t LearningSession_Exercises_Item) AsSentenceConstructionExercise() (SentenceConstructionExercise, error) {
 	var body SentenceConstructionExercise
@@ -13283,19 +13078,6 @@ func (t *LearningSession_Exercises_Item) FromSentenceConstructionExercise(v Sent
 	v.ExerciseType = "sentence_construction"
 	b, err := json.Marshal(v)
 	t.union = b
-	return err
-}
-
-// MergeSentenceConstructionExercise performs a merge with any union data inside the LearningSession_Exercises_Item, using the provided SentenceConstructionExercise
-func (t *LearningSession_Exercises_Item) MergeSentenceConstructionExercise(v SentenceConstructionExercise) error {
-	v.ExerciseType = "sentence_construction"
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
 	return err
 }
 
@@ -13314,19 +13096,6 @@ func (t *LearningSession_Exercises_Item) FromIdentifyConceptExercise(v IdentifyC
 	return err
 }
 
-// MergeIdentifyConceptExercise performs a merge with any union data inside the LearningSession_Exercises_Item, using the provided IdentifyConceptExercise
-func (t *LearningSession_Exercises_Item) MergeIdentifyConceptExercise(v IdentifyConceptExercise) error {
-	v.ExerciseType = "identify_the_concept"
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
 // AsListeningComprehensionExercise returns the union data inside the LearningSession_Exercises_Item as a ListeningComprehensionExercise
 func (t LearningSession_Exercises_Item) AsListeningComprehensionExercise() (ListeningComprehensionExercise, error) {
 	var body ListeningComprehensionExercise
@@ -13339,19 +13108,6 @@ func (t *LearningSession_Exercises_Item) FromListeningComprehensionExercise(v Li
 	v.ExerciseType = "listening_comprehension"
 	b, err := json.Marshal(v)
 	t.union = b
-	return err
-}
-
-// MergeListeningComprehensionExercise performs a merge with any union data inside the LearningSession_Exercises_Item, using the provided ListeningComprehensionExercise
-func (t *LearningSession_Exercises_Item) MergeListeningComprehensionExercise(v ListeningComprehensionExercise) error {
-	v.ExerciseType = "listening_comprehension"
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
 	return err
 }
 
@@ -13370,19 +13126,6 @@ func (t *LearningSession_Exercises_Item) FromContextMatchingExercise(v ContextMa
 	return err
 }
 
-// MergeContextMatchingExercise performs a merge with any union data inside the LearningSession_Exercises_Item, using the provided ContextMatchingExercise
-func (t *LearningSession_Exercises_Item) MergeContextMatchingExercise(v ContextMatchingExercise) error {
-	v.ExerciseType = "context_matching"
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
 // AsSpellingChallengeExercise returns the union data inside the LearningSession_Exercises_Item as a SpellingChallengeExercise
 func (t LearningSession_Exercises_Item) AsSpellingChallengeExercise() (SpellingChallengeExercise, error) {
 	var body SpellingChallengeExercise
@@ -13398,19 +13141,6 @@ func (t *LearningSession_Exercises_Item) FromSpellingChallengeExercise(v Spellin
 	return err
 }
 
-// MergeSpellingChallengeExercise performs a merge with any union data inside the LearningSession_Exercises_Item, using the provided SpellingChallengeExercise
-func (t *LearningSession_Exercises_Item) MergeSpellingChallengeExercise(v SpellingChallengeExercise) error {
-	v.ExerciseType = "spelling_challenge"
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
 // AsScenarioChoiceExercise returns the union data inside the LearningSession_Exercises_Item as a ScenarioChoiceExercise
 func (t LearningSession_Exercises_Item) AsScenarioChoiceExercise() (ScenarioChoiceExercise, error) {
 	var body ScenarioChoiceExercise
@@ -13423,19 +13153,6 @@ func (t *LearningSession_Exercises_Item) FromScenarioChoiceExercise(v ScenarioCh
 	v.ExerciseType = "scenario_choice"
 	b, err := json.Marshal(v)
 	t.union = b
-	return err
-}
-
-// MergeScenarioChoiceExercise performs a merge with any union data inside the LearningSession_Exercises_Item, using the provided ScenarioChoiceExercise
-func (t *LearningSession_Exercises_Item) MergeScenarioChoiceExercise(v ScenarioChoiceExercise) error {
-	v.ExerciseType = "scenario_choice"
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
 	return err
 }
 
@@ -13500,18 +13217,6 @@ func (t *ValidationError_Loc_Item) FromValidationErrorLoc0(v ValidationErrorLoc0
 	return err
 }
 
-// MergeValidationErrorLoc0 performs a merge with any union data inside the ValidationError_Loc_Item, using the provided ValidationErrorLoc0
-func (t *ValidationError_Loc_Item) MergeValidationErrorLoc0(v ValidationErrorLoc0) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
 // AsValidationErrorLoc1 returns the union data inside the ValidationError_Loc_Item as a ValidationErrorLoc1
 func (t ValidationError_Loc_Item) AsValidationErrorLoc1() (ValidationErrorLoc1, error) {
 	var body ValidationErrorLoc1
@@ -13523,18 +13228,6 @@ func (t ValidationError_Loc_Item) AsValidationErrorLoc1() (ValidationErrorLoc1, 
 func (t *ValidationError_Loc_Item) FromValidationErrorLoc1(v ValidationErrorLoc1) error {
 	b, err := json.Marshal(v)
 	t.union = b
-	return err
-}
-
-// MergeValidationErrorLoc1 performs a merge with any union data inside the ValidationError_Loc_Item, using the provided ValidationErrorLoc1
-func (t *ValidationError_Loc_Item) MergeValidationErrorLoc1(v ValidationErrorLoc1) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
 	return err
 }
 
