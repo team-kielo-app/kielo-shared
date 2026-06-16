@@ -9793,6 +9793,15 @@ type GetAdminApiV3FeedbackFeaturesParams struct {
 	Search *string `form:"search,omitempty" json:"search,omitempty"`
 }
 
+// GetAdminApiV3FeedbackFeaturesFeatureIdCommentsParams defines parameters for GetAdminApiV3FeedbackFeaturesFeatureIdComments.
+type GetAdminApiV3FeedbackFeaturesFeatureIdCommentsParams struct {
+	// Limit Legacy offset-pagination limit. Prefer page_size on new routes.
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Offset Legacy offset-pagination offset. Prefer next_page_key on new routes.
+	Offset *int `form:"offset,omitempty" json:"offset,omitempty"`
+}
+
 // GetAdminApiV3UsersUserIdFeatureLimitsEffectiveParams defines parameters for GetAdminApiV3UsersUserIdFeatureLimitsEffective.
 type GetAdminApiV3UsersUserIdFeatureLimitsEffectiveParams struct {
 	// Tier Optional subscription tier override for resolving effective limits.
@@ -9842,6 +9851,18 @@ type GetApiV3ArticlesParams struct {
 
 	// IncludeNonProcessed Include articles still in the processing pipeline
 	IncludeNonProcessed *bool `form:"include_non_processed,omitempty" json:"include_non_processed,omitempty"`
+
+	// Limit Legacy offset-pagination limit. Prefer page_size on new routes.
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Offset Legacy offset-pagination offset. Prefer next_page_key on new routes.
+	Offset *int `form:"offset,omitempty" json:"offset,omitempty"`
+
+	// SupportLanguageCode Two-letter ISO 639-1 code for translated UI strings (per ADR-006 §3.83).
+	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
+
+	// WithTranslation Admin-tooling toggle: include translation + translation_fallback fields in the response.
+	WithTranslation *bool `form:"with_translation,omitempty" json:"with_translation,omitempty"`
 }
 
 // GetApiV3ArticlesSnippetsParams defines parameters for GetApiV3ArticlesSnippets.
@@ -10466,24 +10487,45 @@ type GetApiV3KielotvVideosParams struct {
 
 	// SupportLanguageCode Localization target
 	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
+
+	// MinDuration Minimum video duration in seconds.
+	MinDuration *int `form:"min_duration,omitempty" json:"min_duration,omitempty"`
+
+	// MaxDuration Maximum video duration in seconds.
+	MaxDuration *int `form:"max_duration,omitempty" json:"max_duration,omitempty"`
 }
 
 // GetApiV3KielotvVideosVideoIdParams defines parameters for GetApiV3KielotvVideosVideoId.
 type GetApiV3KielotvVideosVideoIdParams struct {
 	// Context lesson = don't consume the KTV daily feature limit
 	Context *string `form:"context,omitempty" json:"context,omitempty"`
+
+	// SupportLanguageCode Two-letter ISO 639-1 code for translated UI strings (per ADR-006 §3.83).
+	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
 }
 
 // GetApiV3KielotvVideosVideoIdCaptionsParams defines parameters for GetApiV3KielotvVideosVideoIdCaptions.
 type GetApiV3KielotvVideosVideoIdCaptionsParams struct {
 	// Locale Legacy alias for support_language_code on KieloTV localized assets.
 	Locale *string `form:"locale,omitempty" json:"locale,omitempty"`
+
+	// SupportLanguageCode Two-letter ISO 639-1 code for translated UI strings (per ADR-006 §3.83).
+	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
+}
+
+// GetApiV3KielotvVideosVideoIdLocalesParams defines parameters for GetApiV3KielotvVideosVideoIdLocales.
+type GetApiV3KielotvVideosVideoIdLocalesParams struct {
+	// SupportLanguageCode Two-letter ISO 639-1 code for translated UI strings (per ADR-006 §3.83).
+	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
 }
 
 // GetApiV3KielotvVideosVideoIdMindmapParams defines parameters for GetApiV3KielotvVideosVideoIdMindmap.
 type GetApiV3KielotvVideosVideoIdMindmapParams struct {
 	// Locale Legacy alias for support_language_code on KieloTV localized assets.
 	Locale *string `form:"locale,omitempty" json:"locale,omitempty"`
+
+	// SupportLanguageCode Two-letter ISO 639-1 code for translated UI strings (per ADR-006 §3.83).
+	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
 }
 
 // GetApiV3KlearnConceptHubsByConceptGrammarConceptIdParams defines parameters for GetApiV3KlearnConceptHubsByConceptGrammarConceptId.
@@ -10979,6 +11021,12 @@ type GetApiV3RoadmapLessonsParams struct {
 
 	// CefrLevel Filter by CEFR proficiency level (A1, A2, B1, B2, C1, C2).
 	CefrLevel *string `form:"cefr_level,omitempty" json:"cefr_level,omitempty"`
+}
+
+// GetApiV3RoadmapLessonsLessonIdParams defines parameters for GetApiV3RoadmapLessonsLessonId.
+type GetApiV3RoadmapLessonsLessonIdParams struct {
+	// SupportLanguageCode Two-letter ISO 639-1 code for translated UI strings (per ADR-006 §3.83).
+	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
 }
 
 // PostApiV3RoadmapLessonsLessonIdStepsStepIndexSpeechEvaluateParams defines parameters for PostApiV3RoadmapLessonsLessonIdStepsStepIndexSpeechEvaluate.
