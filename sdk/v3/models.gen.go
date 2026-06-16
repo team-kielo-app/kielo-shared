@@ -2907,10 +2907,13 @@ type CurriculumTrackUpsertRequest struct {
 // CurriculumTrackV3 defines model for CurriculumTrackV3.
 type CurriculumTrackV3 struct {
 	Audience      *string `json:"audience,omitempty"`
+	ChapterCount  *int    `json:"chapter_count,omitempty"`
+	ColorHex      *string `json:"color_hex,omitempty"`
 	Description   *string `json:"description,omitempty"`
 	IconEmoji     *string `json:"icon_emoji,omitempty"`
 	Id            string  `json:"id"`
 	IsRecommended *bool   `json:"is_recommended,omitempty"`
+	Label         *string `json:"label,omitempty"`
 	LevelCount    *int    `json:"level_count,omitempty"`
 	Slug          *string `json:"slug,omitempty"`
 	ThumbnailUrl  *string `json:"thumbnail_url,omitempty"`
@@ -6326,6 +6329,7 @@ type RoadmapLessonSummaryV3 struct {
 	Description              *string                  `json:"description,omitempty"`
 	DifficultyLevel          *string                  `json:"difficulty_level,omitempty"`
 	EstimatedDurationMinutes *int                     `json:"estimated_duration_minutes,omitempty"`
+	Kind                     *string                  `json:"kind,omitempty"`
 	LessonId                 string                   `json:"lesson_id"`
 	OrderIndex               *int                     `json:"order_index,omitempty"`
 	Progress                 *RoadmapLessonProgressV3 `json:"progress,omitempty"`

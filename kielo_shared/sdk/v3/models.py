@@ -1589,10 +1589,13 @@ class CurriculumTrackUpsertRequest(BaseModel):
 
 class CurriculumTrackV3(BaseModel):
     audience: str | None = None
+    chapter_count: int | None = None
+    color_hex: str | None = None
     description: str | None = None
     icon_emoji: str | None = None
     id: str
     is_recommended: bool | None = None
+    label: str | None = None
     level_count: int | None = None
     slug: str | None = None
     thumbnail_url: str | None = None
@@ -3964,6 +3967,7 @@ class RoadmapLessonSummaryV3(BaseModel):
     description: str | None = None
     difficulty_level: str | None = None
     estimated_duration_minutes: int | None = None
+    kind: str | None = None
     lesson_id: str
     order_index: int | None = None
     progress: RoadmapLessonProgressV3 | None = None
