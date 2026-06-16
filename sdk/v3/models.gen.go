@@ -1423,14 +1423,6 @@ type Captions struct {
 	VideoId              uuid.UUID   `json:"video_id"`
 }
 
-// Card defines model for Card.
-type Card struct {
-	Back  string `json:"back"`
-	Front string `json:"front"`
-	Id    string `json:"id"`
-	Type  string `json:"type"`
-}
-
 // CategoryProgress defines model for CategoryProgress.
 type CategoryProgress struct {
 	Category         string `json:"category"`
@@ -3419,13 +3411,6 @@ type ExampleSentencePair struct {
 type ExampleSentencePairResponse struct {
 	Text        *string `json:"text"`
 	Translation *string `json:"translation"`
-}
-
-// ExerciseDeck defines model for ExerciseDeck.
-type ExerciseDeck struct {
-	Cards []Card `json:"cards"`
-	Id    string `json:"id"`
-	Title string `json:"title"`
 }
 
 // ExerciseDeckHeader defines model for ExerciseDeckHeader.
@@ -7352,11 +7337,6 @@ type SingletonEffectiveUserLimitsResponse struct {
 // SingletonEndSessionResponse defines model for SingletonEndSessionResponse.
 type SingletonEndSessionResponse struct {
 	Data EndSessionResponse `json:"data"`
-}
-
-// SingletonExerciseDeck defines model for SingletonExerciseDeck.
-type SingletonExerciseDeck struct {
-	Data ExerciseDeck `json:"data"`
 }
 
 // SingletonFeatureCheckAndIncrementResponse defines model for SingletonFeatureCheckAndIncrementResponse.

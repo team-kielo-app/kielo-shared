@@ -492,13 +492,6 @@ class Captions(BaseModel):
     video_id: UUID_aliased
 
 
-class Card(BaseModel):
-    back: str
-    front: str
-    id: str
-    type: str
-
-
 class CategoryProgress(BaseModel):
     category: str
     time_spent_minutes: int
@@ -1832,12 +1825,6 @@ class ExampleSentencePair(ConceptHubExample):
 class ExampleSentencePairResponse(BaseModel):
     text: str | None = Field(None, title="Text")
     translation: str | None = Field(None, title="Translation")
-
-
-class ExerciseDeck(BaseModel):
-    cards: list[Card]
-    id: str
-    title: str
 
 
 class ExerciseDeckHeader(BaseModel):
@@ -4687,10 +4674,6 @@ class SingletonDynamicTranslation(BaseModel):
 
 class SingletonEndSessionResponse(BaseModel):
     data: EndSessionResponse
-
-
-class SingletonExerciseDeck(BaseModel):
-    data: ExerciseDeck
 
 
 class SingletonFeatureCheckAndIncrementResponse(BaseModel):
