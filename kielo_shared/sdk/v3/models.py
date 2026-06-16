@@ -1515,6 +1515,7 @@ class CurriculumTrackResponse(BaseModel):
     description: str | None = Field(None, title="Description")
     icon_emoji: str | None = Field(None, title="Icon Emoji")
     id: UUID_aliased = Field(..., title="Id")
+    label: str | None = Field(None, title="Label")
     level_count: int | None = Field(0, title="Level Count")
     order_index: int = Field(..., title="Order Index")
     slug: str = Field(..., title="Slug")
@@ -1530,6 +1531,7 @@ class CurriculumTrackUpsertRequest(BaseModel):
     color_hex: str | None = Field(None, title="Color Hex")
     description: str | None = Field(None, title="Description")
     icon_emoji: str | None = Field(None, title="Icon Emoji")
+    label: str | None = Field(None, title="Label")
     order_index: int | None = Field(0, title="Order Index")
     slug: constr(min_length=2, max_length=100) = Field(..., title="Slug")
     status: str | None = Field("draft", title="Status")
@@ -1557,6 +1559,7 @@ class CurriculumTracksV3(BaseModel):
 
 class CurriculumTreeLesson(BaseModel):
     id: UUID_aliased = Field(..., title="Id")
+    kind: str | None = Field(None, title="Kind")
     order_index: int = Field(..., title="Order Index")
     status: str = Field(..., title="Status")
     title: str = Field(..., title="Title")
@@ -2132,7 +2135,7 @@ class GrammarConcept(BaseModel):
     category: str | None = None
     cefr_level: str | None = None
     common_mistakes: str | None = None
-    created_at: AwareDatetime | None = None
+    created_at: AwareDatetime
     description: str | None = None
     example_structures: Any | None = None
     examples: list[ExampleSentencePair] | None = None
@@ -2141,7 +2144,7 @@ class GrammarConcept(BaseModel):
     notes: str | None = None
     related_concepts: Any | None = None
     term: str | None = None
-    updated_at: AwareDatetime | None = None
+    updated_at: AwareDatetime
     user_status: str | None = None
 
 
@@ -2953,7 +2956,7 @@ class ListVideoItem(BaseModel):
     learning_language_code: str | None = None
     locale: str | None = None
     original_title: str | None = None
-    published_at: AwareDatetime | None = None
+    published_at: AwareDatetime
     source_locale: str | None = None
     thumbnail_url: str
     title: str
@@ -3711,6 +3714,12 @@ class RelatedWord(BaseModel):
     translation: str | None = None
 
 
+class RelatedWordsResponse(BaseModel):
+    count: int
+    related_words: list[RelatedWord]
+    source_word: dict[str, Any]
+
+
 class RelatedWordsSource(BaseModel):
     id: UUID_aliased
     meaning: str
@@ -3880,7 +3889,7 @@ class RoadmapLessonGenerationSettings(BaseModel):
         10, title="Estimated Duration Minutes"
     )
     shape: str | None = Field(None, title="Shape")
-    step_count: conint(ge=4, le=14) | None = Field(12, title="Step Count")
+    step_count: conint(ge=4, le=20) | None = Field(None, title="Step Count")
     tts_language: str | None = Field(None, title="Tts Language")
 
 
@@ -4402,6 +4411,10 @@ class SingletonAchievementDefinitionList(BaseModel):
     data: AchievementDefinitionList
 
 
+class SingletonAchievementDefinitionsResponse(BaseModel):
+    data: AchievementDefinitionsResponse
+
+
 class SingletonAdminContentItem(BaseModel):
     data: AdminContentItem
 
@@ -4414,8 +4427,24 @@ class SingletonAdminContentSyncResponse(BaseModel):
     data: AdminContentSyncResponse
 
 
+class SingletonAppFeedback(BaseModel):
+    data: AppFeedback
+
+
+class SingletonArticleParagraphTranslationsResponse(BaseModel):
+    data: ArticleParagraphTranslationsResponse
+
+
 class SingletonAuditLogsListResponse(BaseModel):
     data: AuditLogsListResponse
+
+
+class SingletonAvailableLocales(BaseModel):
+    data: AvailableLocales
+
+
+class SingletonAwardAchievementResponse(BaseModel):
+    data: AwardAchievementResponse
 
 
 class SingletonBatchSaveTranslationsResponse(BaseModel):
@@ -4438,12 +4467,72 @@ class SingletonCancelSubscriptionResponse(BaseModel):
     data: CancelSubscriptionResponse
 
 
+class SingletonCaptions(BaseModel):
+    data: Captions
+
+
+class SingletonCheckAndAwardResponse(BaseModel):
+    data: CheckAndAwardResponse
+
+
+class SingletonCommsCampaignValidateResult(BaseModel):
+    data: CommsCampaignValidateResult
+
+
+class SingletonCommsCommunicationLog(BaseModel):
+    data: CommsCommunicationLog
+
+
+class SingletonCommsNotificationJob(BaseModel):
+    data: CommsNotificationJob
+
+
+class SingletonCommsNotificationRule(BaseModel):
+    data: CommsNotificationRule
+
+
+class SingletonCommsRecommendationCampaign(BaseModel):
+    data: CommsRecommendationCampaign
+
+
+class SingletonCommsRecommendationCampaignRunNowResult(BaseModel):
+    data: CommsRecommendationCampaignRunNowResult
+
+
+class SingletonCommsScheduledCommunication(BaseModel):
+    data: CommsScheduledCommunication
+
+
+class SingletonCommsSendEmailResult(BaseModel):
+    data: CommsSendEmailResult
+
+
+class SingletonCommsStats(BaseModel):
+    data: CommsStats
+
+
+class SingletonCommsStatsBreakdown(BaseModel):
+    data: CommsStatsBreakdown
+
+
+class SingletonCommsUserCountResult(BaseModel):
+    data: CommsUserCountResult
+
+
 class SingletonCommsUserSearchHitList(BaseModel):
     data: list[CommsUserSearchHit]
 
 
 class SingletonCommunicationLog(BaseModel):
     data: CommunicationLog
+
+
+class SingletonConceptHubSentenceExampleList(BaseModel):
+    data: list[ConceptHubSentenceExample]
+
+
+class SingletonConceptHubSummaryList(BaseModel):
+    data: list[ConceptHubSummary]
 
 
 class SingletonContentEntrySummary(BaseModel):
@@ -4458,6 +4547,10 @@ class SingletonContentUploadURLs(BaseModel):
     data: ContentUploadURLs
 
 
+class SingletonConversationHistoryResponse(BaseModel):
+    data: ConversationHistoryResponse
+
+
 class SingletonConversationInterestResponse(BaseModel):
     data: ConversationInterestResponse
 
@@ -4468,6 +4561,10 @@ class SingletonConversationLooseResponse(BaseModel):
 
 class SingletonConversationScenarioStepsResponse(BaseModel):
     data: ConversationScenarioStepsResponse
+
+
+class SingletonConversationSessionMeta(BaseModel):
+    data: ConversationSessionMeta
 
 
 class SingletonConvoScenario(BaseModel):
@@ -4486,12 +4583,48 @@ class SingletonConvoVoiceAgentList(BaseModel):
     data: list[ConvoVoiceAgent]
 
 
+class SingletonCountResponse(BaseModel):
+    data: CountResponse
+
+
+class SingletonCreateAuthUserResponse(BaseModel):
+    data: CreateAuthUserResponse
+
+
+class SingletonCreateBaseWordResponse(BaseModel):
+    data: CreateBaseWordResponse
+
+
+class SingletonCurriculumChapterResponse(BaseModel):
+    data: CurriculumChapterResponse
+
+
+class SingletonCurriculumLevelResponse(BaseModel):
+    data: CurriculumLevelResponse
+
+
+class SingletonCurriculumTrackResponse(BaseModel):
+    data: CurriculumTrackResponse
+
+
 class SingletonCurriculumTracksV3(BaseModel):
     data: CurriculumTracksV3
 
 
 class SingletonDailyChallengeV3(BaseModel):
     data: DailyChallengeV3
+
+
+class SingletonDeleteTierLimitResponse(BaseModel):
+    data: DeleteTierLimitResponse
+
+
+class SingletonDeleteUserFeatureLimitResponse(BaseModel):
+    data: DeleteUserFeatureLimitResponse
+
+
+class SingletonDynamicTranslation(BaseModel):
+    data: DynamicTranslation
 
 
 class SingletonEndSessionResponse(BaseModel):
@@ -4502,12 +4635,28 @@ class SingletonExerciseDeck(BaseModel):
     data: ExerciseDeck
 
 
+class SingletonFeatureCheckAndIncrementResponse(BaseModel):
+    data: FeatureCheckAndIncrementResponse
+
+
+class SingletonFeatureCheckResponse(BaseModel):
+    data: FeatureCheckResponse
+
+
+class SingletonFeatureCheckUniqueResponse(BaseModel):
+    data: FeatureCheckUniqueResponse
+
+
 class SingletonFeatureComment(BaseModel):
     data: FeatureComment
 
 
 class SingletonFeatureCommentListResponse(BaseModel):
     data: FeatureCommentListResponse
+
+
+class SingletonFeatureCommentsAdminResponse(BaseModel):
+    data: FeatureCommentsAdminResponse
 
 
 class SingletonFeatureLimitList(BaseModel):
@@ -4526,6 +4675,10 @@ class SingletonFeatureRequestListResponse(BaseModel):
     data: FeatureRequestListResponse
 
 
+class SingletonFeatureRequestsAdminResponse(BaseModel):
+    data: FeatureRequestsAdminResponse
+
+
 class SingletonFeatureVoteResult(BaseModel):
     data: FeatureVoteResult
 
@@ -4538,12 +4691,28 @@ class SingletonFeedbackListResponse(BaseModel):
     data: FeedbackListResponse
 
 
+class SingletonForgotPasswordResponse(BaseModel):
+    data: ForgotPasswordResponse
+
+
+class SingletonGenerateUploadURLResponse(BaseModel):
+    data: GenerateUploadURLResponse
+
+
 class SingletonGetUploadURLResponse(BaseModel):
     data: GetUploadURLResponse
 
 
+class SingletonGrammarConcept(BaseModel):
+    data: GrammarConcept
+
+
 class SingletonGrammarConceptList(BaseModel):
     data: list[GrammarConcept]
+
+
+class SingletonGrantSubscriptionResponse(BaseModel):
+    data: GrantSubscriptionResponse
 
 
 class SingletonHintResponse(BaseModel):
@@ -4554,8 +4723,20 @@ class SingletonImportJob(BaseModel):
     data: ImportJob
 
 
+class SingletonInvalidateCacheResponse(BaseModel):
+    data: InvalidateCacheResponse
+
+
+class SingletonIssueRow(BaseModel):
+    data: IssueRow
+
+
 class SingletonJoinSessionResponse(BaseModel):
     data: JoinSessionResponse
+
+
+class SingletonKLearnContextualLearningOpportunityList(BaseModel):
+    data: list[KLearnContextualLearningOpportunity]
 
 
 class SingletonKTVAvailableBaseWordsListResponse(BaseModel):
@@ -4674,6 +4855,10 @@ class SingletonLocalizationLanguageList(BaseModel):
     data: list[LocalizationLanguage]
 
 
+class SingletonLoginResponse(BaseModel):
+    data: LoginResponse
+
+
 class SingletonLogoutResponse(BaseModel):
     data: LogoutResponse
 
@@ -4694,6 +4879,10 @@ class SingletonMediaAssetList(BaseModel):
     data: list[MediaAsset]
 
 
+class SingletonMediaAssetResponse(BaseModel):
+    data: MediaAssetResponse
+
+
 class SingletonMediaUploadCompleteResponse(BaseModel):
     data: MediaUploadCompleteResponse
 
@@ -4702,8 +4891,16 @@ class SingletonMediaUploadURLResponse(BaseModel):
     data: MediaUploadURLResponse
 
 
+class SingletonMessageResponse(BaseModel):
+    data: MessageResponse
+
+
 class SingletonMicroDrill(BaseModel):
     data: MicroDrill
+
+
+class SingletonMindmap(BaseModel):
+    data: Mindmap
 
 
 class SingletonModelManifest(BaseModel):
@@ -4730,16 +4927,36 @@ class SingletonNotifyUploadCompleteResponse(BaseModel):
     data: NotifyUploadCompleteResponse
 
 
+class SingletonParagraphTranslationResponse(BaseModel):
+    data: ParagraphTranslationResponse
+
+
 class SingletonPlacementItemsV3(BaseModel):
     data: PlacementItemsV3
+
+
+class SingletonPushTokensResponse(BaseModel):
+    data: PushTokensResponse
 
 
 class SingletonQueueStatus(BaseModel):
     data: QueueStatus
 
 
+class SingletonRecentArticleReadIDsResponse(BaseModel):
+    data: RecentArticleReadIDsResponse
+
+
 class SingletonRecommendationCampaign(BaseModel):
     data: RecommendationCampaign
+
+
+class SingletonRecommendationCampaignRunNowResult(BaseModel):
+    data: RecommendationCampaignRunNowResult
+
+
+class SingletonRefreshTokenResponse(BaseModel):
+    data: RefreshTokenResponse
 
 
 class SingletonRegenerateLanguageBundlesResponse(BaseModel):
@@ -4750,8 +4967,28 @@ class SingletonRegisterPushTokenResponse(BaseModel):
     data: RegisterPushTokenResponse
 
 
+class SingletonRegisterResponse(BaseModel):
+    data: RegisterResponse
+
+
+class SingletonRelatedWordsResponse(BaseModel):
+    data: RelatedWordsResponse
+
+
+class SingletonRelatedWordsSummaryResponse(BaseModel):
+    data: RelatedWordsSummaryResponse
+
+
+class SingletonResetPasswordResponse(BaseModel):
+    data: ResetPasswordResponse
+
+
 class SingletonRestoreAccessResponse(BaseModel):
     data: RestoreAccessResponse
+
+
+class SingletonRestoreSubscriptionResponse(BaseModel):
+    data: RestoreSubscriptionResponse
 
 
 class SingletonRevenueCatUserResponse(BaseModel):
@@ -4760,6 +4997,18 @@ class SingletonRevenueCatUserResponse(BaseModel):
 
 class SingletonReviewScheduleV3(BaseModel):
     data: ReviewScheduleV3
+
+
+class SingletonRevokeAchievementResponse(BaseModel):
+    data: RevokeAchievementResponse
+
+
+class SingletonRevokeSubscriptionResponse(BaseModel):
+    data: RevokeSubscriptionResponse
+
+
+class SingletonRoadmapAdminLessonResponse(BaseModel):
+    data: RoadmapAdminLessonResponse
 
 
 class SingletonRoadmapLessonsV3(BaseModel):
@@ -4800,6 +5049,10 @@ class SingletonSendEmailResult(BaseModel):
 
 class SingletonSessionSummary(BaseModel):
     data: SessionSummary
+
+
+class SingletonSetUserFeatureLimitResponse(BaseModel):
+    data: SetUserFeatureLimitResponse
 
 
 class SingletonSetUserOverrideResponse(BaseModel):
@@ -5215,11 +5468,13 @@ class TopicListsForWordResponse(BaseModel):
 
 class TrackListItem(BaseModel):
     audience: str | None = Field(None, title="Audience")
+    chapter_count: int | None = Field(0, title="Chapter Count")
     color_hex: str | None = Field(None, title="Color Hex")
     description: str | None = Field(None, title="Description")
     icon_emoji: str | None = Field(None, title="Icon Emoji")
     id: UUID_aliased = Field(..., title="Id")
     is_recommended: bool | None = Field(False, title="Is Recommended")
+    label: str | None = Field(None, title="Label")
     level_count: int | None = Field(0, title="Level Count")
     slug: str = Field(..., title="Slug")
     thumbnail_url: str | None = Field(None, title="Thumbnail Url")
@@ -5238,6 +5493,7 @@ class Status13(StrEnum):
 
 
 class TrackRoadmapLesson(BaseModel):
+    kind: str | None = Field(None, title="Kind")
     lesson_id: UUID_aliased = Field(..., title="Lesson Id")
     order_index: int = Field(..., title="Order Index")
     state: Status13 = Field(..., title="State")
@@ -5706,7 +5962,7 @@ class Video(BaseModel):
     locale: str | None = None
     original_description: str | None = None
     original_title: str | None = None
-    published_at: AwareDatetime | None = None
+    published_at: AwareDatetime
     source_locale: str | None = None
     thumbnail_url: str
     title: str
@@ -6330,6 +6586,7 @@ class CurriculumTreeTrack(BaseModel):
     description: str | None = Field(None, title="Description")
     icon_emoji: str | None = Field(None, title="Icon Emoji")
     id: UUID_aliased = Field(..., title="Id")
+    label: str | None = Field(None, title="Label")
     level_count: int | None = Field(0, title="Level Count")
     levels: list[CurriculumTreeLevel] | None = Field(None, title="Levels")
     order_index: int = Field(..., title="Order Index")
@@ -6357,11 +6614,6 @@ class CursorPageFeatureRequest(BaseModel):
 
 class CursorPageLearningItemV3(BaseModel):
     items: list[LearningItemV3]
-    next_page_key: str | None = None
-
-
-class CursorPageRelatedWord(BaseModel):
-    items: list[RelatedWord]
     next_page_key: str | None = None
 
 
@@ -6787,8 +7039,15 @@ class RoadmapLessonDetailResponse(BaseModel):
     description: str | None = Field(None, title="Description")
     difficulty_level: str = Field(..., title="Difficulty Level")
     estimated_duration_minutes: int = Field(..., title="Estimated Duration Minutes")
+    is_last_in_chapter: bool | None = Field(False, title="Is Last In Chapter")
     lesson_content: dict[str, Any] = Field(..., title="Lesson Content")
     lesson_id: UUID_aliased = Field(..., title="Lesson Id")
+    next_lesson_in_chapter_id: UUID_aliased | None = Field(
+        None, title="Next Lesson In Chapter Id"
+    )
+    next_lesson_in_chapter_title: str | None = Field(
+        None, title="Next Lesson In Chapter Title"
+    )
     order_index: int = Field(..., title="Order Index")
     practice_recommendation: NextStepRecommendation | None = None
     practice_status: PracticeStatus | None = Field(
@@ -6810,6 +7069,7 @@ class RoadmapLessonListItem(BaseModel):
     description: str | None = Field(None, title="Description")
     difficulty_level: str = Field(..., title="Difficulty Level")
     estimated_duration_minutes: int = Field(..., title="Estimated Duration Minutes")
+    kind: str | None = Field(None, title="Kind")
     lesson_id: UUID_aliased = Field(..., title="Lesson Id")
     order_index: int = Field(..., title="Order Index")
     progress: RoadmapLessonProgressSnapshot
@@ -6886,6 +7146,14 @@ class SessionReconcileItemResult(BaseModel):
     submission_id: str | None = Field(None, title="Submission Id")
 
 
+class SingletonAllFeatureLimitsResponse(BaseModel):
+    data: AllFeatureLimitsResponse
+
+
+class SingletonBaseWord(BaseModel):
+    data: BaseWord
+
+
 class SingletonBaseWordList(BaseModel):
     data: list[BaseWord]
 
@@ -6894,12 +7162,36 @@ class SingletonBatchEmailResult(BaseModel):
     data: BatchEmailResult
 
 
+class SingletonBatchLookupResponse(BaseModel):
+    data: BatchLookupResponse
+
+
+class SingletonCAMArticleContent(BaseModel):
+    data: CAMArticleContent
+
+
 class SingletonCampaignConfigSchema(BaseModel):
     data: CampaignConfigSchema
 
 
 class SingletonCampaignPreviewResult(BaseModel):
     data: CampaignPreviewResult
+
+
+class SingletonCommsBatchEmailResult(BaseModel):
+    data: CommsBatchEmailResult
+
+
+class SingletonCommsCampaignConfigSchema(BaseModel):
+    data: CommsCampaignConfigSchema
+
+
+class SingletonCommsCampaignPreviewResult(BaseModel):
+    data: CommsCampaignPreviewResult
+
+
+class SingletonConceptHubCore(BaseModel):
+    data: ConceptHubCore
 
 
 class SingletonConceptHubCoreContent(BaseModel):
@@ -6912,6 +7204,22 @@ class SingletonConversationScenario(BaseModel):
 
 class SingletonConversationScenariosResponse(BaseModel):
     data: ConversationScenariosResponse
+
+
+class SingletonDataQualityIssuesPage(BaseModel):
+    data: DataQualityIssuesPage
+
+
+class SingletonDataQualityRunsPage(BaseModel):
+    data: DataQualityRunsPage
+
+
+class SingletonEffectiveUserLimitsResponse(BaseModel):
+    data: EffectiveUserLimitsResponse
+
+
+class SingletonGetMediaResponse(BaseModel):
+    data: GetMediaResponse
 
 
 class SingletonInAppNudge(BaseModel):
@@ -6962,8 +7270,16 @@ class SingletonProgressSummaryV3(BaseModel):
     data: ProgressSummaryV3
 
 
+class SingletonRelatedVersionsResponse(BaseModel):
+    data: RelatedVersionsResponse
+
+
 class SingletonSearchResponse(BaseModel):
     data: SearchResponse
+
+
+class SingletonSemanticSearchResponse(BaseModel):
+    data: SemanticSearchResponse
 
 
 class SingletonStats(BaseModel):
@@ -6994,8 +7310,24 @@ class SingletonSubscriptionInfo(BaseModel):
     data: SubscriptionInfo
 
 
+class SingletonSurfacesResponse(BaseModel):
+    data: SurfacesResponse
+
+
 class SingletonTargetedSuggestionsResponse(BaseModel):
     data: TargetedSuggestionsResponse
+
+
+class SingletonTokenResponse(BaseModel):
+    data: TokenResponse
+
+
+class SingletonTopicListWithWordsResponse(BaseModel):
+    data: TopicListWithWordsResponse
+
+
+class SingletonTopicListsForWordResponse(BaseModel):
+    data: TopicListsForWordResponse
 
 
 class SingletonTransactionHistoryResponse(BaseModel):
@@ -7034,8 +7366,52 @@ class SingletonUnreadNotificationCountResponseV3(BaseModel):
     data: UnreadNotificationCountResponseV3
 
 
+class SingletonUpdateFeatureCategoryResponse(BaseModel):
+    data: UpdateFeatureCategoryResponse
+
+
+class SingletonUpdateFeaturePrivacyResponse(BaseModel):
+    data: UpdateFeaturePrivacyResponse
+
+
+class SingletonUpdateFeatureStatusResponse(BaseModel):
+    data: UpdateFeatureStatusResponse
+
+
+class SingletonUpdateLearningProgressResponse(BaseModel):
+    data: UpdateLearningProgressResponse
+
+
+class SingletonUpdateProgressResponse(BaseModel):
+    data: UpdateProgressResponse
+
+
+class SingletonUpsertTierLimitResponse(BaseModel):
+    data: UpsertTierLimitResponse
+
+
+class SingletonUserAchievementProgressResponse(BaseModel):
+    data: UserAchievementProgressResponse
+
+
+class SingletonUserAchievementsCountResponse(BaseModel):
+    data: UserAchievementsCountResponse
+
+
+class SingletonUserAchievementsResponse(BaseModel):
+    data: UserAchievementsResponse
+
+
 class SingletonUserCountResult(BaseModel):
     data: UserCountResult
+
+
+class SingletonUserExistsResponse(BaseModel):
+    data: UserExistsResponse
+
+
+class SingletonUserFeatureLimitsResponse(BaseModel):
+    data: UserFeatureLimitsResponse
 
 
 class SingletonUserFeatureOverridesResult(BaseModel):
@@ -7058,6 +7434,10 @@ class SingletonUserResponse(BaseModel):
     data: UserResponse
 
 
+class SingletonUserRevenueCatLink(BaseModel):
+    data: UserRevenueCatLink
+
+
 class SingletonUserSearchHitList(BaseModel):
     data: list[UserSearchHit]
 
@@ -7068,6 +7448,22 @@ class SingletonUserSubscriptionGrantResponse(BaseModel):
 
 class SingletonUserSubscriptionRevokeResponse(BaseModel):
     data: UserSubscriptionRevokeResponse
+
+
+class SingletonUsersWithOverridesResponse(BaseModel):
+    data: UsersWithOverridesResponse
+
+
+class SingletonVerifyResetTokenResponse(BaseModel):
+    data: VerifyResetTokenResponse
+
+
+class SingletonVideo(BaseModel):
+    data: Video
+
+
+class SingletonWatchedVideosResponse(BaseModel):
+    data: WatchedVideosResponse
 
 
 class SingletonWebIngestTarget(BaseModel):
@@ -7531,8 +7927,16 @@ class SingletonConceptHub(BaseModel):
     data: ConceptHub
 
 
+class SingletonConceptHubResponse(BaseModel):
+    data: ConceptHubResponse
+
+
 class SingletonConversationDiscoveryResponse(BaseModel):
     data: ConversationDiscoveryResponse
+
+
+class SingletonCurriculumTreeResponse(BaseModel):
+    data: CurriculumTreeResponse
 
 
 class SingletonDevicePreferences(BaseModel):
@@ -7545,6 +7949,10 @@ class SingletonDictionaryEntry(BaseModel):
 
 class SingletonDictionaryLookupResponse(BaseModel):
     data: DictionaryLookupResponse
+
+
+class SingletonLearningSession(BaseModel):
+    data: LearningSession
 
 
 class SingletonTranslationKey(BaseModel):

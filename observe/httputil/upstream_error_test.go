@@ -1,6 +1,7 @@
 package httputil
 
 import (
+	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
@@ -197,6 +198,105 @@ func (timeoutErr) Temporary() bool { return true }
 // back to wrapping). The 1.20+ stdlib path is preferred.
 func errorsJoin(outer, inner error) error {
 	return joinedError{outer: outer, inner: inner}
+}
+
+func TestUnwrapDataEnvelope(t *testing.T) {
+	cases := []struct {
+		name string
+		in   string
+		want string
+	}{
+		{"bare object passthrough", `{"id":"abc","name":"x"}`, `{"id":"abc","name":"x"}`},
+		{"single-key data object peeled", `{"data":{"id":"abc"}}`, `{"id":"abc"}`},
+		{"single-key data array peeled", `{"data":[1,2,3]}`, `[1,2,3]`},
+		{"single-key data scalar peeled", `{"data":"hi"}`, `"hi"`},
+		{"single-key data null peeled", `{"data":null}`, `null`},
+		{"bare array passthrough", `[1,2,3]`, `[1,2,3]`},
+		{"object with items key passthrough", `{"items":[1,2]}`, `{"items":[1,2]}`},
+		{"two-key object incl data passthrough", `{"data":1,"meta":2}`, `{"data":1,"meta":2}`},
+		{"single non-data key passthrough", `{"datum":1}`, `{"datum":1}`},
+		{"leading whitespace data peeled", "  {\"data\": {\"k\":1}}  ", `{"k":1}`},
+		{"malformed passthrough", `{not json`, `{not json`},
+		{"empty passthrough", ``, ``},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := string(UnwrapDataEnvelope([]byte(tc.in)))
+			// Compare semantically when both sides are valid JSON
+			// (peeled bytes may differ in whitespace), else by string.
+			if json.Valid([]byte(tc.want)) && json.Valid([]byte(got)) {
+				assert.JSONEq(t, tc.want, got)
+			} else {
+				assert.Equal(t, tc.want, got)
+			}
+		})
+	}
+}
+
+func TestDecodeUpstreamTolerant_BareBody(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.WriteString(w, `{"id":"abc","name":"thing"}`)
+	}))
+	defer srv.Close()
+
+	resp, err := http.Get(srv.URL)
+	require.NoError(t, err)
+	var out struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
+	}
+	require.NoError(t, DecodeUpstreamTolerant(resp, &out, "demo", "GET", srv.URL))
+	assert.Equal(t, "abc", out.ID)
+	assert.Equal(t, "thing", out.Name)
+}
+
+func TestDecodeUpstreamTolerant_EnvelopedBody(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.WriteString(w, `{"data":{"id":"abc","name":"thing"}}`)
+	}))
+	defer srv.Close()
+
+	resp, err := http.Get(srv.URL)
+	require.NoError(t, err)
+	var out struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
+	}
+	require.NoError(t, DecodeUpstreamTolerant(resp, &out, "demo", "GET", srv.URL))
+	assert.Equal(t, "abc", out.ID)
+	assert.Equal(t, "thing", out.Name)
+}
+
+func TestDecodeUpstreamTolerant_BareTopLevelArray(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.WriteString(w, `[{"id":"a"},{"id":"b"}]`)
+	}))
+	defer srv.Close()
+
+	resp, err := http.Get(srv.URL)
+	require.NoError(t, err)
+	var out []struct {
+		ID string `json:"id"`
+	}
+	require.NoError(t, DecodeUpstreamTolerant(resp, &out, "demo", "GET", srv.URL))
+	require.Len(t, out, 2)
+	assert.Equal(t, "a", out[0].ID)
+}
+
+func TestDecodeUpstreamTolerant_4xxReturnsTypedError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = io.WriteString(w, `{"message":"bad"}`)
+	}))
+	defer srv.Close()
+
+	resp, err := http.Get(srv.URL)
+	require.NoError(t, err)
+	err = DecodeUpstreamTolerant(resp, nil, "demo", "GET", srv.URL)
+	ue := AsUpstreamError(err)
+	require.NotNil(t, ue)
+	assert.Equal(t, 400, ue.StatusCode)
+	assert.Contains(t, ue.Body, "bad")
 }
 
 type joinedError struct {

@@ -200,6 +200,106 @@ func DecodeUpstreamEnvelope(resp *http.Response, into any, service, method, url 
 	return nil
 }
 
+// UnwrapDataEnvelope is the Phase-1 envelope-migration shim. It takes a
+// decoded-as-bytes JSON success body from a peer Kielo service and returns
+// the "real" payload bytes, transparently peeling a single `{"data": …}`
+// envelope when (and only when) one is present.
+//
+// The rule is deliberately conservative so it stays correct for today's
+// bare responses AND tomorrow's enveloped ones:
+//
+//   - Unwrap to the inner value IFF the body is a JSON object with EXACTLY
+//     one member whose key is `data`. (`{"data": <anything>}` → <anything>.)
+//   - Otherwise (a JSON array, a scalar, an object with !=1 keys, or an
+//     object whose sole key isn't `data`) return the input unchanged.
+//
+// This means a current bare body like `{"id":"abc","name":"x"}` or
+// `[ … ]` or `{"items":[…]}` passes straight through, while a future
+// `{"data":{"id":"abc"}}` is peeled to `{"id":"abc"}`. A bare body that
+// legitimately has `data` as its only field is the one ambiguous case;
+// the envelope contract (ADR-004 §4 / ADR-006 §5) makes that shape mean
+// "envelope", so peeling it is the intended behavior.
+//
+// Returns the input unchanged on any parse trouble — never errors. The
+// caller's subsequent json.Unmarshal surfaces malformed payloads.
+func UnwrapDataEnvelope(raw []byte) []byte {
+	trimmed := bytesTrimSpace(raw)
+	// Cheap gate: only object bodies can be envelopes.
+	if len(trimmed) == 0 || trimmed[0] != '{' {
+		return raw
+	}
+	var top map[string]json.RawMessage
+	if err := json.Unmarshal(trimmed, &top); err != nil {
+		return raw
+	}
+	if len(top) != 1 {
+		return raw
+	}
+	data, ok := top["data"]
+	if !ok {
+		return raw
+	}
+	return data
+}
+
+func bytesTrimSpace(b []byte) []byte {
+	return []byte(strings.TrimSpace(string(b)))
+}
+
+// DecodeUpstreamTolerant is the Phase-1 envelope-migration sibling of
+// DecodeUpstreamResponse. It behaves identically for error handling
+// (non-OK → *UpstreamError with the raw body preserved) but, on success,
+// decodes the payload through UnwrapDataEnvelope so it accepts BOTH the
+// current bare body shape AND a future `{"data": …}` envelope from the
+// same peer endpoint.
+//
+// Use this to migrate bare-reading internal client decoders without a
+// flag-day cutover: a peer can start wrapping its `/internal/…` (or any)
+// responses in the canonical envelope and every tolerant caller keeps
+// working before and after the switch. New code that targets an endpoint
+// known to ALWAYS emit the envelope today should still prefer
+// DecodeUpstreamEnvelope (which fails loudly if the envelope is missing).
+//
+// Always closes resp.Body.
+func DecodeUpstreamTolerant(resp *http.Response, into any, service, method, url string, okCodes ...int) error {
+	defer resp.Body.Close()
+
+	if len(okCodes) == 0 {
+		okCodes = []int{http.StatusOK, http.StatusCreated, http.StatusNoContent}
+	}
+	ok := false
+	for _, code := range okCodes {
+		if resp.StatusCode == code {
+			ok = true
+			break
+		}
+	}
+	if !ok {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+		return &UpstreamError{
+			StatusCode: resp.StatusCode,
+			Body:       strings.TrimSpace(string(body)),
+			Service:    service,
+			Method:     method,
+			URL:        url,
+		}
+	}
+	if into == nil || resp.StatusCode == http.StatusNoContent {
+		return nil
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("read %s response: %w", service, err)
+	}
+	if len(bytesTrimSpace(body)) == 0 {
+		return nil
+	}
+	if err := json.Unmarshal(UnwrapDataEnvelope(body), into); err != nil {
+		return fmt.Errorf("decode %s response: %w", service, err)
+	}
+	return nil
+}
+
 // EchoErrorFromUpstream maps a peer-call error to an *echo.HTTPError
 // that preserves the upstream contract:
 //
