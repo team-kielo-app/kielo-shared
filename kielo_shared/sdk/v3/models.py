@@ -2181,7 +2181,7 @@ class GrammarConcept(BaseModel):
     category: str | None = None
     cefr_level: str | None = None
     common_mistakes: str | None = None
-    created_at: AwareDatetime
+    created_at: AwareDatetime | None = None
     description: str | None = None
     example_structures: Any | None = None
     examples: list[ExampleSentencePair] | None = None
@@ -2190,7 +2190,7 @@ class GrammarConcept(BaseModel):
     notes: str | None = None
     related_concepts: Any | None = None
     term: str | None = None
-    updated_at: AwareDatetime
+    updated_at: AwareDatetime | None = None
     user_status: str | None = None
 
 
@@ -3002,7 +3002,7 @@ class ListVideoItem(BaseModel):
     learning_language_code: str | None = None
     locale: str | None = None
     original_title: str | None = None
-    published_at: AwareDatetime
+    published_at: AwareDatetime | None = None
     source_locale: str | None = None
     thumbnail_url: str
     title: str
@@ -6035,7 +6035,7 @@ class Video(BaseModel):
     locale: str | None = None
     original_description: str | None = None
     original_title: str | None = None
-    published_at: AwareDatetime
+    published_at: AwareDatetime | None = None
     source_locale: str | None = None
     thumbnail_url: str
     title: str
