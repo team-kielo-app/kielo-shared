@@ -66,6 +66,7 @@ from datetime import datetime
 from typing import Any, Mapping, Optional
 from uuid import UUID
 
+from kielo_shared.envelope import unwrap_envelope
 from kielo_shared.http import internal_client_async
 
 from kielo_shared.vocab.content_bridge_surface_type import (
@@ -348,7 +349,7 @@ class ContentBridgeClient:
 
         response = await self._client.get(path, params=params)
         response.raise_for_status()
-        payload = _unwrap_envelope(response.json())
+        payload = unwrap_envelope(response.json())
 
         return _deserialize_page(payload)
 
@@ -387,7 +388,7 @@ class ContentBridgeClient:
         }
         response = await self._client.get(path, params=params)
         response.raise_for_status()
-        payload = _unwrap_envelope(response.json())
+        payload = unwrap_envelope(response.json())
 
         counts = payload.get("counts_by_surface") or {}
         return CountsBySurface(
@@ -480,22 +481,9 @@ class ContentBridgeClient:
         params = {"caller": self._caller}
         response = await self._client.post(path, json=body, params=params)
         response.raise_for_status()
-        payload = _unwrap_envelope(response.json())
+        payload = unwrap_envelope(response.json())
 
         return _deserialize_batch_lookup(payload)
-
-
-def _unwrap_envelope(payload: Any) -> Any:
-    """Return the inner body of a ``{"data": ...}`` envelope, else the payload.
-
-    Phase 1 envelope-migration tolerance: content-service will begin
-    wrapping responses in ``{"data": <body>}``. Only a single-key dict
-    whose sole key is ``"data"`` is unwrapped; every other shape passes
-    through untouched so current bare responses keep decoding.
-    """
-    if isinstance(payload, dict) and set(payload.keys()) == {"data"}:
-        return payload["data"]
-    return payload
 
 
 def _deserialize_page(payload: dict[str, Any]) -> SurfacesPage:
