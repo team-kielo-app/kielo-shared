@@ -1267,6 +1267,11 @@ type BrowseScenariosResponse struct {
 	NextPageKey *string               `json:"next_page_key,omitempty"`
 }
 
+// BulkCreateAuditLogsRequest defines model for BulkCreateAuditLogsRequest.
+type BulkCreateAuditLogsRequest struct {
+	Entries []CreateAuditLogRequest `json:"entries"`
+}
+
 // BulkCreateTranslationKeysRequest defines model for BulkCreateTranslationKeysRequest.
 type BulkCreateTranslationKeysRequest struct {
 	CreatedBy *uuid.UUID                    `json:"created_by,omitempty"`
@@ -12510,6 +12515,9 @@ type PatchInternalApiV3FeedbackFeedbackIdStatusJSONRequestBody = AppFeedbackUpda
 
 // PostInternalApiV3LocalizationAuditJSONRequestBody defines body for PostInternalApiV3LocalizationAudit for application/json ContentType.
 type PostInternalApiV3LocalizationAuditJSONRequestBody = CreateAuditLogRequest
+
+// PostInternalApiV3LocalizationAuditBulkJSONRequestBody defines body for PostInternalApiV3LocalizationAuditBulk for application/json ContentType.
+type PostInternalApiV3LocalizationAuditBulkJSONRequestBody = BulkCreateAuditLogsRequest
 
 // PostInternalApiV3LocalizationDynamicJSONRequestBody defines body for PostInternalApiV3LocalizationDynamic for application/json ContentType.
 type PostInternalApiV3LocalizationDynamicJSONRequestBody = UpsertDynamicTranslationRequest

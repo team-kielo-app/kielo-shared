@@ -6406,6 +6406,10 @@ class BrowseScenariosResponse(BaseModel):
     next_page_key: str | None = None
 
 
+class BulkCreateAuditLogsRequest(BaseModel):
+    entries: list[CreateAuditLogRequest]
+
+
 class BulkUpsertDynamicTranslationsRequest(BaseModel):
     items: list[UpsertDynamicTranslationRequest]
 
