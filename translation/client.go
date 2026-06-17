@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"slices"
 	"strings"
@@ -162,8 +163,23 @@ func (c *Client) postBatch(ctx context.Context, url string, texts []string, sour
 	if resp.StatusCode != http.StatusOK {
 		return nil
 	}
+	raw, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil
+	}
+	// Envelope-tolerant decode. kielolearn-engine /internal/translate-batch
+	// now wraps its response in the v3 {"data": …} envelope; kielo-models
+	// opus-mt /api/v3/translations stays bare. UnwrapDataEnvelope peels a
+	// sole-"data" object and passes bare bodies through unchanged, so this
+	// decodes BOTH shapes. Pre-fix the bare json decoder read the enveloped
+	// engine body as body.Translations=nil → len(translations) < len(texts)
+	// → treated every Gemini-routed batch as a full-batch failure, so seam
+	// callProvider returned source (never cached) and callers re-translated
+	// on every request (convo scenario-detail localization burned a cold
+	// 10-30s Gemini call per open). Same class as the v3-envelope consumer
+	// regressions swept elsewhere.
 	var body batchResponse
-	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+	if err := json.Unmarshal(httputil.UnwrapDataEnvelope(raw), &body); err != nil {
 		return nil
 	}
 	if len(body.Translations) < len(texts) {
