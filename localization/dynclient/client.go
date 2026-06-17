@@ -657,6 +657,18 @@ func (c *Client) CreateAuditLog(ctx context.Context, req CreateAuditLogRequest) 
 	return c.doJSON(ctx, http.MethodPost, "/internal/api/v3/localization/audit", req, nil, http.StatusNoContent)
 }
 
+// BulkCreateAuditLogsRequest is the body of POST /audit/bulk.
+type BulkCreateAuditLogsRequest struct {
+	Entries []CreateAuditLogRequest `json:"entries"`
+}
+
+// BulkCreateAuditLogs POSTs to /audit/bulk — one round-trip for N audit
+// entries. Bulk import paths use this instead of N CreateAuditLog calls so
+// the per-item audit fan-out collapses to a single write.
+func (c *Client) BulkCreateAuditLogs(ctx context.Context, req BulkCreateAuditLogsRequest) error {
+	return c.doJSON(ctx, http.MethodPost, "/internal/api/v3/localization/audit/bulk", req, nil, http.StatusNoContent)
+}
+
 // SetDynamicTranslationStatus PATCHes /dynamic/:id/status.
 // Returns the updated row so callers can scope cache
 // invalidation by resource_type.
