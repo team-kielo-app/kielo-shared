@@ -3001,18 +3001,6 @@ type CursorPageArticleVersionSnippet struct {
 	NextPageKey *string                 `json:"next_page_key,omitempty"`
 }
 
-// CursorPageFeatureComment defines model for CursorPageFeatureComment.
-type CursorPageFeatureComment struct {
-	Items       []FeatureComment `json:"items"`
-	NextPageKey *string          `json:"next_page_key,omitempty"`
-}
-
-// CursorPageFeatureRequest defines model for CursorPageFeatureRequest.
-type CursorPageFeatureRequest struct {
-	Items       []FeatureRequest `json:"items"`
-	NextPageKey *string          `json:"next_page_key,omitempty"`
-}
-
 // CursorPageLearningItemV3 defines model for CursorPageLearningItemV3.
 type CursorPageLearningItemV3 struct {
 	Items       []LearningItemV3 `json:"items"`
@@ -11491,15 +11479,12 @@ type EnrichDictionaryInternalDictionaryEnrichPostParams struct {
 	// Limit Max words to enrich
 	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
 
-	// LearningLanguageCode Learning-language code (canonical; takes precedence over the deprecated `language_code` param)
+	// LearningLanguageCode Learning-language code (canonical)
 	LearningLanguageCode *string `form:"learning_language_code,omitempty" json:"learning_language_code,omitempty"`
-
-	// LanguageCode DEPRECATED: use `learning_language_code` instead. Accepted for one release cycle of dual-accept, then removed.
-	LanguageCode     *string `form:"language_code,omitempty" json:"language_code,omitempty"`
-	AllowLlm         *bool   `form:"allow_llm,omitempty" json:"allow_llm,omitempty"`
-	ForceRefresh     *bool   `form:"force_refresh,omitempty" json:"force_refresh,omitempty"`
-	ConfusablesLimit *int    `form:"confusables_limit,omitempty" json:"confusables_limit,omitempty"`
-	LlmBudget        *int    `form:"llm_budget,omitempty" json:"llm_budget,omitempty"`
+	AllowLlm             *bool   `form:"allow_llm,omitempty" json:"allow_llm,omitempty"`
+	ForceRefresh         *bool   `form:"force_refresh,omitempty" json:"force_refresh,omitempty"`
+	ConfusablesLimit     *int    `form:"confusables_limit,omitempty" json:"confusables_limit,omitempty"`
+	LlmBudget            *int    `form:"llm_budget,omitempty" json:"llm_budget,omitempty"`
 }
 
 // EnrichDictionaryByIdsInternalDictionaryEnrichByIdsPostJSONBody defines parameters for EnrichDictionaryByIdsInternalDictionaryEnrichByIdsPost.
@@ -11507,15 +11492,12 @@ type EnrichDictionaryByIdsInternalDictionaryEnrichByIdsPostJSONBody = []uuid.UUI
 
 // EnrichDictionaryByIdsInternalDictionaryEnrichByIdsPostParams defines parameters for EnrichDictionaryByIdsInternalDictionaryEnrichByIdsPost.
 type EnrichDictionaryByIdsInternalDictionaryEnrichByIdsPostParams struct {
-	// LearningLanguageCode Learning-language code (canonical; takes precedence over the deprecated `language_code` param)
+	// LearningLanguageCode Learning-language code (canonical)
 	LearningLanguageCode *string `form:"learning_language_code,omitempty" json:"learning_language_code,omitempty"`
-
-	// LanguageCode DEPRECATED: use `learning_language_code` instead. Accepted for one release cycle of dual-accept, then removed.
-	LanguageCode     *string `form:"language_code,omitempty" json:"language_code,omitempty"`
-	AllowLlm         *bool   `form:"allow_llm,omitempty" json:"allow_llm,omitempty"`
-	ForceRefresh     *bool   `form:"force_refresh,omitempty" json:"force_refresh,omitempty"`
-	ConfusablesLimit *int    `form:"confusables_limit,omitempty" json:"confusables_limit,omitempty"`
-	LlmBudget        *int    `form:"llm_budget,omitempty" json:"llm_budget,omitempty"`
+	AllowLlm             *bool   `form:"allow_llm,omitempty" json:"allow_llm,omitempty"`
+	ForceRefresh         *bool   `form:"force_refresh,omitempty" json:"force_refresh,omitempty"`
+	ConfusablesLimit     *int    `form:"confusables_limit,omitempty" json:"confusables_limit,omitempty"`
+	LlmBudget            *int    `form:"llm_budget,omitempty" json:"llm_budget,omitempty"`
 }
 
 // GetInternalDictionaryLookupParams defines parameters for GetInternalDictionaryLookup.
@@ -11673,11 +11655,8 @@ type AnalyzeWordInternalMorphologyAnalyzeGetParams struct {
 	// Word Learning-language word to analyze
 	Word string `form:"word" json:"word"`
 
-	// LearningLanguageCode Learning-language code (canonical; takes precedence over the deprecated `language_code` param)
+	// LearningLanguageCode Learning-language code (canonical)
 	LearningLanguageCode *string `form:"learning_language_code,omitempty" json:"learning_language_code,omitempty"`
-
-	// LanguageCode DEPRECATED: use `learning_language_code` instead. Accepted for one release cycle of dual-accept, then removed.
-	LanguageCode *string `form:"language_code,omitempty" json:"language_code,omitempty"`
 }
 
 // GetBaseFormInternalMorphologyBaseFormGetParams defines parameters for GetBaseFormInternalMorphologyBaseFormGet.
@@ -11685,11 +11664,8 @@ type GetBaseFormInternalMorphologyBaseFormGetParams struct {
 	// Word Learning-language word to get base form for
 	Word string `form:"word" json:"word"`
 
-	// LearningLanguageCode Learning-language code (canonical; takes precedence over the deprecated `language_code` param)
+	// LearningLanguageCode Learning-language code (canonical)
 	LearningLanguageCode *string `form:"learning_language_code,omitempty" json:"learning_language_code,omitempty"`
-
-	// LanguageCode DEPRECATED: use `learning_language_code` instead. Accepted for one release cycle of dual-accept, then removed.
-	LanguageCode *string `form:"language_code,omitempty" json:"language_code,omitempty"`
 }
 
 // GetMorphologyParadigmInternalMorphologyParadigmGetParams defines parameters for GetMorphologyParadigmInternalMorphologyParadigmGet.
@@ -11700,11 +11676,8 @@ type GetMorphologyParadigmInternalMorphologyParadigmGetParams struct {
 	// PartOfSpeech Optional part of speech
 	PartOfSpeech *string `form:"part_of_speech,omitempty" json:"part_of_speech,omitempty"`
 
-	// LearningLanguageCode Learning-language code (canonical; takes precedence over the deprecated `language_code` param)
+	// LearningLanguageCode Learning-language code (canonical)
 	LearningLanguageCode *string `form:"learning_language_code,omitempty" json:"learning_language_code,omitempty"`
-
-	// LanguageCode DEPRECATED: use `learning_language_code` instead. Accepted for one release cycle of dual-accept, then removed.
-	LanguageCode *string `form:"language_code,omitempty" json:"language_code,omitempty"`
 }
 
 // SpellCheckInternalMorphologySpellCheckGetParams defines parameters for SpellCheckInternalMorphologySpellCheckGet.
@@ -11712,11 +11685,8 @@ type SpellCheckInternalMorphologySpellCheckGetParams struct {
 	// Word Word to check
 	Word string `form:"word" json:"word"`
 
-	// LearningLanguageCode Learning-language code (canonical; takes precedence over the deprecated `language_code` param)
+	// LearningLanguageCode Learning-language code (canonical)
 	LearningLanguageCode *string `form:"learning_language_code,omitempty" json:"learning_language_code,omitempty"`
-
-	// LanguageCode DEPRECATED: use `learning_language_code` instead. Accepted for one release cycle of dual-accept, then removed.
-	LanguageCode *string `form:"language_code,omitempty" json:"language_code,omitempty"`
 }
 
 // SuggestSpellingInternalMorphologySuggestGetParams defines parameters for SuggestSpellingInternalMorphologySuggestGet.
@@ -11724,11 +11694,8 @@ type SuggestSpellingInternalMorphologySuggestGetParams struct {
 	// Word Possibly misspelled learning-language word
 	Word string `form:"word" json:"word"`
 
-	// LearningLanguageCode Learning-language code (canonical; takes precedence over the deprecated `language_code` param)
+	// LearningLanguageCode Learning-language code (canonical)
 	LearningLanguageCode *string `form:"learning_language_code,omitempty" json:"learning_language_code,omitempty"`
-
-	// LanguageCode DEPRECATED: use `learning_language_code` instead. Accepted for one release cycle of dual-accept, then removed.
-	LanguageCode *string `form:"language_code,omitempty" json:"language_code,omitempty"`
 }
 
 // GetInternalSearchSemanticParams defines parameters for GetInternalSearchSemantic.

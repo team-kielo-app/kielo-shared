@@ -6675,16 +6675,6 @@ class CursorPageArticleVersionSnippet(BaseModel):
     next_page_key: str | None = None
 
 
-class CursorPageFeatureComment(BaseModel):
-    items: list[FeatureComment]
-    next_page_key: str | None = None
-
-
-class CursorPageFeatureRequest(BaseModel):
-    items: list[FeatureRequest]
-    next_page_key: str | None = None
-
-
 class CursorPageLearningItemV3(BaseModel):
     items: list[LearningItemV3]
     next_page_key: str | None = None
