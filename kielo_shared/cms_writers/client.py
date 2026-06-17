@@ -31,6 +31,7 @@ from typing import Any, Optional
 from uuid import UUID
 
 
+from kielo_shared.envelope import unwrap_envelope
 from kielo_shared.http import internal_client_async
 
 from . import (
@@ -185,7 +186,7 @@ class CMSWritersClient:
                 resource_id=str(base_word_id),
             )
         response.raise_for_status()
-        body = response.json()
+        body = unwrap_envelope(response.json())
         return CMSWriterUpdateResult(body["action"])
 
     async def null_base_word_meaning_if(
@@ -217,7 +218,7 @@ class CMSWritersClient:
                 resource_id=str(base_word_id),
             )
         response.raise_for_status()
-        body = response.json()
+        body = unwrap_envelope(response.json())
         return CMSWriterUpdateResult(body["action"])
 
     async def upsert_base_word_translation(
@@ -272,7 +273,7 @@ class CMSWritersClient:
                 resource_id=str(base_word_id),
             )
         response.raise_for_status()
-        body = response.json()
+        body = unwrap_envelope(response.json())
         return BaseWordTranslationResult(
             meaning_action=CMSWriterUpdateResult(body["meaning_action"]),
             senses_upserted=int(body.get("senses_upserted", 0)),
@@ -325,7 +326,7 @@ class CMSWritersClient:
         url = f"{self.cms_service_url}/internal/klearn/base-words/embeddings/batch"
         response = await self._client.post(url, json={"items": items})
         response.raise_for_status()
-        body = response.json()
+        body = unwrap_envelope(response.json())
         return BaseWordEmbeddingBatchResult(
             updated=int(body.get("updated", 0)),
             missing=list(body.get("missing") or []),
@@ -374,7 +375,7 @@ class CMSWritersClient:
         url = f"{self.cms_service_url}/internal/klearn/base-words/{base_word_id}/word-forms"
         response = await self._client.put(url, json={"forms": forms})
         response.raise_for_status()
-        body = response.json()
+        body = unwrap_envelope(response.json())
         return int(body.get("updated", 0))
 
     async def upsert_dictionary_senses(
@@ -403,7 +404,7 @@ class CMSWritersClient:
         url = f"{self.cms_service_url}/internal/klearn/base-words/{base_word_id}/senses"
         response = await self._client.put(url, json={"senses": senses})
         response.raise_for_status()
-        body = response.json()
+        body = unwrap_envelope(response.json())
         return int(body.get("updated", 0))
 
     async def null_dictionary_sense_translation_if(
@@ -443,7 +444,7 @@ class CMSWritersClient:
                 resource_id=f"{base_word_id}/senses/{sense_order}",
             )
         response.raise_for_status()
-        body = response.json()
+        body = unwrap_envelope(response.json())
         return CMSWriterUpdateResult(body["action"])
 
 
