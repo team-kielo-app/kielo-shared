@@ -156,8 +156,15 @@ func (c *Client) Upsert(ctx context.Context, req UpsertRequest) (*UpsertResponse
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		return nil, c.statusErr(resp, "upsert")
 	}
+	raw, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read upsert response: %w", err)
+	}
 	var out UpsertResponse
-	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+	// Tolerant decode: peel a canonical {"data":…} envelope if the
+	// kielo-localization producer is on the v3 envelope (it is once
+	// MountV3Defaults is wired), pass the bare body through otherwise.
+	if err := json.Unmarshal(httputil.UnwrapDataEnvelope(raw), &out); err != nil {
 		return nil, fmt.Errorf("decode upsert response: %w", err)
 	}
 	return &out, nil
@@ -231,8 +238,14 @@ func (c *Client) FetchByResources(ctx context.Context, req FetchRequest) (*Fetch
 	if resp.StatusCode != http.StatusOK {
 		return nil, c.statusErr(resp, "fetch")
 	}
+	raw, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read fetch response: %w", err)
+	}
 	var out FetchResponse
-	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+	// Tolerant decode (see Upsert). The {"items":…} list shape is
+	// canonical and passes through UnwrapDataEnvelope unchanged.
+	if err := json.Unmarshal(httputil.UnwrapDataEnvelope(raw), &out); err != nil {
 		return nil, fmt.Errorf("decode fetch response: %w", err)
 	}
 	return &out, nil
@@ -428,7 +441,13 @@ func (c *Client) doJSON(
 		}
 	}
 	if out != nil {
-		if err := json.NewDecoder(resp.Body).Decode(out); err != nil {
+		raw, readErr := io.ReadAll(resp.Body)
+		if readErr != nil {
+			return fmt.Errorf("read response: %w", readErr)
+		}
+		// Tolerant decode (see Upsert/FetchByResources): peel a canonical
+		// {"data":…} envelope when present, pass the bare body through.
+		if err := json.Unmarshal(httputil.UnwrapDataEnvelope(raw), out); err != nil {
 			return fmt.Errorf("decode response: %w", err)
 		}
 	}
@@ -655,6 +674,18 @@ func (c *Client) GenerateBundle(
 // CreateAuditLog POSTs to /audit.
 func (c *Client) CreateAuditLog(ctx context.Context, req CreateAuditLogRequest) error {
 	return c.doJSON(ctx, http.MethodPost, "/internal/api/v3/localization/audit", req, nil, http.StatusNoContent)
+}
+
+// BulkCreateAuditLogsRequest is the body of POST /audit/bulk.
+type BulkCreateAuditLogsRequest struct {
+	Entries []CreateAuditLogRequest `json:"entries"`
+}
+
+// BulkCreateAuditLogs POSTs to /audit/bulk — one round-trip for N audit
+// entries. Bulk import paths use this instead of N CreateAuditLog calls so
+// the per-item audit fan-out collapses to a single write.
+func (c *Client) BulkCreateAuditLogs(ctx context.Context, req BulkCreateAuditLogsRequest) error {
+	return c.doJSON(ctx, http.MethodPost, "/internal/api/v3/localization/audit/bulk", req, nil, http.StatusNoContent)
 }
 
 // SetDynamicTranslationStatus PATCHes /dynamic/:id/status.
