@@ -726,18 +726,23 @@ type AdminBroadcastRequest struct {
 
 // AdminContentItem defines model for AdminContentItem.
 type AdminContentItem struct {
-	CreatedAt            string                 `json:"created_at"`
-	Description          *string                `json:"description,omitempty"`
-	ExternalId           string                 `json:"external_id"`
-	Id                   *string                `json:"id,omitempty"`
-	LearningLanguageCode *string                `json:"learning_language_code,omitempty"`
-	Metadata             map[string]interface{} `json:"metadata"`
-	PublishedAt          *string                `json:"published_at,omitempty"`
-	Source               string                 `json:"source"`
-	Status               string                 `json:"status"`
-	Title                string                 `json:"title"`
-	Type                 string                 `json:"type"`
-	UpdatedAt            string                 `json:"updated_at"`
+	ContentSource        string                  `json:"content_source"`
+	ContentType          string                  `json:"content_type"`
+	CreatedAt            *string                 `json:"created_at,omitempty"`
+	CreatedBy            *string                 `json:"created_by,omitempty"`
+	Description          *string                 `json:"description,omitempty"`
+	ExternalId           string                  `json:"external_id"`
+	Id                   *string                 `json:"id,omitempty"`
+	LearningLanguageCode *string                 `json:"learning_language_code,omitempty"`
+	Metadata             *map[string]interface{} `json:"metadata,omitempty"`
+	PublishedAt          *string                 `json:"published_at,omitempty"`
+	Slug                 *string                 `json:"slug,omitempty"`
+	Status               string                  `json:"status"`
+	Title                string                  `json:"title"`
+	UpdatedAt            *string                 `json:"updated_at,omitempty"`
+	UpdatedBy            *string                 `json:"updated_by,omitempty"`
+	VersionCount         int                     `json:"version_count"`
+	ViewCount            int                     `json:"view_count"`
 }
 
 // AdminContentListResponse defines model for AdminContentListResponse.
@@ -1262,6 +1267,11 @@ type BrowseScenariosResponse struct {
 	NextPageKey *string               `json:"next_page_key,omitempty"`
 }
 
+// BulkCreateAuditLogsRequest defines model for BulkCreateAuditLogsRequest.
+type BulkCreateAuditLogsRequest struct {
+	Entries []CreateAuditLogRequest `json:"entries"`
+}
+
 // BulkCreateTranslationKeysRequest defines model for BulkCreateTranslationKeysRequest.
 type BulkCreateTranslationKeysRequest struct {
 	CreatedBy *uuid.UUID                    `json:"created_by,omitempty"`
@@ -1421,14 +1431,6 @@ type Captions struct {
 	TranslationStatus    interface{} `json:"translation_status"`
 	UpdatedAt            time.Time   `json:"updated_at"`
 	VideoId              uuid.UUID   `json:"video_id"`
-}
-
-// Card defines model for Card.
-type Card struct {
-	Back  string `json:"back"`
-	Front string `json:"front"`
-	Id    string `json:"id"`
-	Type  string `json:"type"`
 }
 
 // CategoryProgress defines model for CategoryProgress.
@@ -2112,6 +2114,15 @@ type Confusable struct {
 	Source          *string  `json:"source,omitempty"`
 	Term            *string  `json:"term,omitempty"`
 	Translation     *string  `json:"translation,omitempty"`
+}
+
+// ContentBrand defines model for ContentBrand.
+type ContentBrand struct {
+	BrandId          uuid.UUID `json:"brand_id"`
+	CreatedAt        time.Time `json:"created_at"`
+	DisplayName      string    `json:"display_name"`
+	SourceIdentifier string    `json:"source_identifier"`
+	UpdatedAt        time.Time `json:"updated_at"`
 }
 
 // ContentDiscoveryResponse defines model for ContentDiscoveryResponse.
@@ -2901,10 +2912,13 @@ type CurriculumTrackUpsertRequest struct {
 // CurriculumTrackV3 defines model for CurriculumTrackV3.
 type CurriculumTrackV3 struct {
 	Audience      *string `json:"audience,omitempty"`
+	ChapterCount  *int    `json:"chapter_count,omitempty"`
+	ColorHex      *string `json:"color_hex,omitempty"`
 	Description   *string `json:"description,omitempty"`
 	IconEmoji     *string `json:"icon_emoji,omitempty"`
 	Id            string  `json:"id"`
 	IsRecommended *bool   `json:"is_recommended,omitempty"`
+	Label         *string `json:"label,omitempty"`
 	LevelCount    *int    `json:"level_count,omitempty"`
 	Slug          *string `json:"slug,omitempty"`
 	ThumbnailUrl  *string `json:"thumbnail_url,omitempty"`
@@ -2990,18 +3004,6 @@ type CursorPageArticleVersion struct {
 type CursorPageArticleVersionSnippet struct {
 	Items       []ArticleVersionSnippet `json:"items"`
 	NextPageKey *string                 `json:"next_page_key,omitempty"`
-}
-
-// CursorPageFeatureComment defines model for CursorPageFeatureComment.
-type CursorPageFeatureComment struct {
-	Items       []FeatureComment `json:"items"`
-	NextPageKey *string          `json:"next_page_key,omitempty"`
-}
-
-// CursorPageFeatureRequest defines model for CursorPageFeatureRequest.
-type CursorPageFeatureRequest struct {
-	Items       []FeatureRequest `json:"items"`
-	NextPageKey *string          `json:"next_page_key,omitempty"`
 }
 
 // CursorPageLearningItemV3 defines model for CursorPageLearningItemV3.
@@ -3419,13 +3421,6 @@ type ExampleSentencePair struct {
 type ExampleSentencePairResponse struct {
 	Text        *string `json:"text"`
 	Translation *string `json:"translation"`
-}
-
-// ExerciseDeck defines model for ExerciseDeck.
-type ExerciseDeck struct {
-	Cards []Card `json:"cards"`
-	Id    string `json:"id"`
-	Title string `json:"title"`
 }
 
 // ExerciseDeckHeader defines model for ExerciseDeckHeader.
@@ -3885,7 +3880,7 @@ type GrammarConcept struct {
 	Category          *string                `json:"category,omitempty"`
 	CefrLevel         *string                `json:"cefr_level,omitempty"`
 	CommonMistakes    *string                `json:"common_mistakes,omitempty"`
-	CreatedAt         time.Time              `json:"created_at"`
+	CreatedAt         *time.Time             `json:"created_at,omitempty"`
 	Description       *string                `json:"description,omitempty"`
 	ExampleStructures *interface{}           `json:"example_structures,omitempty"`
 	Examples          *[]ExampleSentencePair `json:"examples,omitempty"`
@@ -3894,7 +3889,7 @@ type GrammarConcept struct {
 	Notes             *string                `json:"notes,omitempty"`
 	RelatedConcepts   *interface{}           `json:"related_concepts,omitempty"`
 	Term              *string                `json:"term,omitempty"`
-	UpdatedAt         time.Time              `json:"updated_at"`
+	UpdatedAt         *time.Time             `json:"updated_at,omitempty"`
 	UserStatus        *string                `json:"user_status,omitempty"`
 }
 
@@ -5040,26 +5035,26 @@ type ListScenariosResponse struct {
 
 // ListVideoItem defines model for ListVideoItem.
 type ListVideoItem struct {
-	AudioUrl                     *string   `json:"audio_url,omitempty"`
-	BrandId                      uuid.UUID `json:"brand_id"`
-	CarouselImages               *[]string `json:"carousel_images,omitempty"`
-	CreatedAt                    time.Time `json:"created_at"`
-	DurationSeconds              int       `json:"duration_seconds"`
-	FormatType                   *string   `json:"format_type,omitempty"`
-	Id                           uuid.UUID `json:"id"`
-	LearningLanguageCode         *string   `json:"learning_language_code,omitempty"`
-	Locale                       *string   `json:"locale,omitempty"`
-	OriginalTitle                *string   `json:"original_title,omitempty"`
-	PublishedAt                  time.Time `json:"published_at"`
-	SourceLocale                 *string   `json:"source_locale,omitempty"`
-	ThumbnailUrl                 string    `json:"thumbnail_url"`
-	Title                        string    `json:"title"`
-	TitleTranslationFallback     *bool     `json:"title_translation_fallback,omitempty"`
-	TitleTranslationLocale       *string   `json:"title_translation_locale,omitempty"`
-	TitleTranslationSourceLocale *string   `json:"title_translation_source_locale,omitempty"`
-	TranscriptionStatus          *string   `json:"transcription_status,omitempty"`
-	UpdatedAt                    time.Time `json:"updated_at"`
-	VideoUrl                     string    `json:"video_url"`
+	AudioUrl                     *string    `json:"audio_url,omitempty"`
+	BrandId                      uuid.UUID  `json:"brand_id"`
+	CarouselImages               *[]string  `json:"carousel_images,omitempty"`
+	CreatedAt                    time.Time  `json:"created_at"`
+	DurationSeconds              int        `json:"duration_seconds"`
+	FormatType                   *string    `json:"format_type,omitempty"`
+	Id                           uuid.UUID  `json:"id"`
+	LearningLanguageCode         *string    `json:"learning_language_code,omitempty"`
+	Locale                       *string    `json:"locale,omitempty"`
+	OriginalTitle                *string    `json:"original_title,omitempty"`
+	PublishedAt                  *time.Time `json:"published_at,omitempty"`
+	SourceLocale                 *string    `json:"source_locale,omitempty"`
+	ThumbnailUrl                 string     `json:"thumbnail_url"`
+	Title                        string     `json:"title"`
+	TitleTranslationFallback     *bool      `json:"title_translation_fallback,omitempty"`
+	TitleTranslationLocale       *string    `json:"title_translation_locale,omitempty"`
+	TitleTranslationSourceLocale *string    `json:"title_translation_source_locale,omitempty"`
+	TranscriptionStatus          *string    `json:"transcription_status,omitempty"`
+	UpdatedAt                    time.Time  `json:"updated_at"`
+	VideoUrl                     string     `json:"video_url"`
 }
 
 // ListeningComprehensionExercise defines model for ListeningComprehensionExercise.
@@ -5957,9 +5952,10 @@ type RegenerateLanguageBundlesResponse struct {
 
 // RegisterPushTokenRequest defines model for RegisterPushTokenRequest.
 type RegisterPushTokenRequest struct {
-	DeviceLanguageCode *string `json:"device_language_code,omitempty"`
-	Platform           string  `json:"platform"`
-	Token              string  `json:"token"`
+	DeviceLanguageCode  *string `json:"device_language_code,omitempty"`
+	Platform            string  `json:"platform"`
+	SupportLanguageCode *string `json:"support_language_code,omitempty"`
+	Token               string  `json:"token"`
 }
 
 // RegisterPushTokenResponse defines model for RegisterPushTokenResponse.
@@ -6327,6 +6323,7 @@ type RoadmapLessonSummaryV3 struct {
 	Description              *string                  `json:"description,omitempty"`
 	DifficultyLevel          *string                  `json:"difficulty_level,omitempty"`
 	EstimatedDurationMinutes *int                     `json:"estimated_duration_minutes,omitempty"`
+	Kind                     *string                  `json:"kind,omitempty"`
 	LessonId                 string                   `json:"lesson_id"`
 	OrderIndex               *int                     `json:"order_index,omitempty"`
 	Progress                 *RoadmapLessonProgressV3 `json:"progress,omitempty"`
@@ -7019,11 +7016,6 @@ type SingletonBatchSaveTranslationsResponse struct {
 	Data BatchSaveTranslationsResponse `json:"data"`
 }
 
-// SingletonBrandList defines model for SingletonBrandList.
-type SingletonBrandList struct {
-	Data []Brand `json:"data"`
-}
-
 // SingletonCAMArticleContent defines model for SingletonCAMArticleContent.
 type SingletonCAMArticleContent struct {
 	Data CAMArticleContent `json:"data"`
@@ -7177,6 +7169,11 @@ type SingletonConceptHubSentenceExampleList struct {
 // SingletonConceptHubSummaryList defines model for SingletonConceptHubSummaryList.
 type SingletonConceptHubSummaryList struct {
 	Data []ConceptHubSummary `json:"data"`
+}
+
+// SingletonContentBrandList defines model for SingletonContentBrandList.
+type SingletonContentBrandList struct {
+	Data []ContentBrand `json:"data"`
 }
 
 // SingletonContentEntrySummary defines model for SingletonContentEntrySummary.
@@ -7352,11 +7349,6 @@ type SingletonEffectiveUserLimitsResponse struct {
 // SingletonEndSessionResponse defines model for SingletonEndSessionResponse.
 type SingletonEndSessionResponse struct {
 	Data EndSessionResponse `json:"data"`
-}
-
-// SingletonExerciseDeck defines model for SingletonExerciseDeck.
-type SingletonExerciseDeck struct {
-	Data ExerciseDeck `json:"data"`
 }
 
 // SingletonFeatureCheckAndIncrementResponse defines model for SingletonFeatureCheckAndIncrementResponse.
@@ -9474,31 +9466,31 @@ type VersionSummary struct {
 
 // Video defines model for Video.
 type Video struct {
-	AudioUrl                           *string   `json:"audio_url,omitempty"`
-	BrandId                            uuid.UUID `json:"brand_id"`
-	CarouselImages                     *[]string `json:"carousel_images,omitempty"`
-	CreatedAt                          time.Time `json:"created_at"`
-	Description                        string    `json:"description"`
-	DescriptionTranslationFallback     *bool     `json:"description_translation_fallback,omitempty"`
-	DescriptionTranslationLocale       *string   `json:"description_translation_locale,omitempty"`
-	DescriptionTranslationSourceLocale *string   `json:"description_translation_source_locale,omitempty"`
-	DurationSeconds                    int       `json:"duration_seconds"`
-	FormatType                         *string   `json:"format_type,omitempty"`
-	Id                                 uuid.UUID `json:"id"`
-	LearningLanguageCode               *string   `json:"learning_language_code,omitempty"`
-	Locale                             *string   `json:"locale,omitempty"`
-	OriginalDescription                *string   `json:"original_description,omitempty"`
-	OriginalTitle                      *string   `json:"original_title,omitempty"`
-	PublishedAt                        time.Time `json:"published_at"`
-	SourceLocale                       *string   `json:"source_locale,omitempty"`
-	ThumbnailUrl                       string    `json:"thumbnail_url"`
-	Title                              string    `json:"title"`
-	TitleTranslationFallback           *bool     `json:"title_translation_fallback,omitempty"`
-	TitleTranslationLocale             *string   `json:"title_translation_locale,omitempty"`
-	TitleTranslationSourceLocale       *string   `json:"title_translation_source_locale,omitempty"`
-	TranscriptionStatus                *string   `json:"transcription_status,omitempty"`
-	UpdatedAt                          time.Time `json:"updated_at"`
-	VideoUrl                           string    `json:"video_url"`
+	AudioUrl                           *string    `json:"audio_url,omitempty"`
+	BrandId                            uuid.UUID  `json:"brand_id"`
+	CarouselImages                     *[]string  `json:"carousel_images,omitempty"`
+	CreatedAt                          time.Time  `json:"created_at"`
+	Description                        string     `json:"description"`
+	DescriptionTranslationFallback     *bool      `json:"description_translation_fallback,omitempty"`
+	DescriptionTranslationLocale       *string    `json:"description_translation_locale,omitempty"`
+	DescriptionTranslationSourceLocale *string    `json:"description_translation_source_locale,omitempty"`
+	DurationSeconds                    int        `json:"duration_seconds"`
+	FormatType                         *string    `json:"format_type,omitempty"`
+	Id                                 uuid.UUID  `json:"id"`
+	LearningLanguageCode               *string    `json:"learning_language_code,omitempty"`
+	Locale                             *string    `json:"locale,omitempty"`
+	OriginalDescription                *string    `json:"original_description,omitempty"`
+	OriginalTitle                      *string    `json:"original_title,omitempty"`
+	PublishedAt                        *time.Time `json:"published_at,omitempty"`
+	SourceLocale                       *string    `json:"source_locale,omitempty"`
+	ThumbnailUrl                       string     `json:"thumbnail_url"`
+	Title                              string     `json:"title"`
+	TitleTranslationFallback           *bool      `json:"title_translation_fallback,omitempty"`
+	TitleTranslationLocale             *string    `json:"title_translation_locale,omitempty"`
+	TitleTranslationSourceLocale       *string    `json:"title_translation_source_locale,omitempty"`
+	TranscriptionStatus                *string    `json:"transcription_status,omitempty"`
+	UpdatedAt                          time.Time  `json:"updated_at"`
+	VideoUrl                           string     `json:"video_url"`
 }
 
 // VideoFeatureQuota defines model for VideoFeatureQuota.
@@ -11493,15 +11485,12 @@ type EnrichDictionaryInternalDictionaryEnrichPostParams struct {
 	// Limit Max words to enrich
 	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
 
-	// LearningLanguageCode Learning-language code (canonical; takes precedence over the deprecated `language_code` param)
+	// LearningLanguageCode Learning-language code (canonical)
 	LearningLanguageCode *string `form:"learning_language_code,omitempty" json:"learning_language_code,omitempty"`
-
-	// LanguageCode DEPRECATED: use `learning_language_code` instead. Accepted for one release cycle of dual-accept, then removed.
-	LanguageCode     *string `form:"language_code,omitempty" json:"language_code,omitempty"`
-	AllowLlm         *bool   `form:"allow_llm,omitempty" json:"allow_llm,omitempty"`
-	ForceRefresh     *bool   `form:"force_refresh,omitempty" json:"force_refresh,omitempty"`
-	ConfusablesLimit *int    `form:"confusables_limit,omitempty" json:"confusables_limit,omitempty"`
-	LlmBudget        *int    `form:"llm_budget,omitempty" json:"llm_budget,omitempty"`
+	AllowLlm             *bool   `form:"allow_llm,omitempty" json:"allow_llm,omitempty"`
+	ForceRefresh         *bool   `form:"force_refresh,omitempty" json:"force_refresh,omitempty"`
+	ConfusablesLimit     *int    `form:"confusables_limit,omitempty" json:"confusables_limit,omitempty"`
+	LlmBudget            *int    `form:"llm_budget,omitempty" json:"llm_budget,omitempty"`
 }
 
 // EnrichDictionaryByIdsInternalDictionaryEnrichByIdsPostJSONBody defines parameters for EnrichDictionaryByIdsInternalDictionaryEnrichByIdsPost.
@@ -11509,15 +11498,12 @@ type EnrichDictionaryByIdsInternalDictionaryEnrichByIdsPostJSONBody = []uuid.UUI
 
 // EnrichDictionaryByIdsInternalDictionaryEnrichByIdsPostParams defines parameters for EnrichDictionaryByIdsInternalDictionaryEnrichByIdsPost.
 type EnrichDictionaryByIdsInternalDictionaryEnrichByIdsPostParams struct {
-	// LearningLanguageCode Learning-language code (canonical; takes precedence over the deprecated `language_code` param)
+	// LearningLanguageCode Learning-language code (canonical)
 	LearningLanguageCode *string `form:"learning_language_code,omitempty" json:"learning_language_code,omitempty"`
-
-	// LanguageCode DEPRECATED: use `learning_language_code` instead. Accepted for one release cycle of dual-accept, then removed.
-	LanguageCode     *string `form:"language_code,omitempty" json:"language_code,omitempty"`
-	AllowLlm         *bool   `form:"allow_llm,omitempty" json:"allow_llm,omitempty"`
-	ForceRefresh     *bool   `form:"force_refresh,omitempty" json:"force_refresh,omitempty"`
-	ConfusablesLimit *int    `form:"confusables_limit,omitempty" json:"confusables_limit,omitempty"`
-	LlmBudget        *int    `form:"llm_budget,omitempty" json:"llm_budget,omitempty"`
+	AllowLlm             *bool   `form:"allow_llm,omitempty" json:"allow_llm,omitempty"`
+	ForceRefresh         *bool   `form:"force_refresh,omitempty" json:"force_refresh,omitempty"`
+	ConfusablesLimit     *int    `form:"confusables_limit,omitempty" json:"confusables_limit,omitempty"`
+	LlmBudget            *int    `form:"llm_budget,omitempty" json:"llm_budget,omitempty"`
 }
 
 // GetInternalDictionaryLookupParams defines parameters for GetInternalDictionaryLookup.
@@ -11675,11 +11661,8 @@ type AnalyzeWordInternalMorphologyAnalyzeGetParams struct {
 	// Word Learning-language word to analyze
 	Word string `form:"word" json:"word"`
 
-	// LearningLanguageCode Learning-language code (canonical; takes precedence over the deprecated `language_code` param)
+	// LearningLanguageCode Learning-language code (canonical)
 	LearningLanguageCode *string `form:"learning_language_code,omitempty" json:"learning_language_code,omitempty"`
-
-	// LanguageCode DEPRECATED: use `learning_language_code` instead. Accepted for one release cycle of dual-accept, then removed.
-	LanguageCode *string `form:"language_code,omitempty" json:"language_code,omitempty"`
 }
 
 // GetBaseFormInternalMorphologyBaseFormGetParams defines parameters for GetBaseFormInternalMorphologyBaseFormGet.
@@ -11687,11 +11670,8 @@ type GetBaseFormInternalMorphologyBaseFormGetParams struct {
 	// Word Learning-language word to get base form for
 	Word string `form:"word" json:"word"`
 
-	// LearningLanguageCode Learning-language code (canonical; takes precedence over the deprecated `language_code` param)
+	// LearningLanguageCode Learning-language code (canonical)
 	LearningLanguageCode *string `form:"learning_language_code,omitempty" json:"learning_language_code,omitempty"`
-
-	// LanguageCode DEPRECATED: use `learning_language_code` instead. Accepted for one release cycle of dual-accept, then removed.
-	LanguageCode *string `form:"language_code,omitempty" json:"language_code,omitempty"`
 }
 
 // GetMorphologyParadigmInternalMorphologyParadigmGetParams defines parameters for GetMorphologyParadigmInternalMorphologyParadigmGet.
@@ -11702,11 +11682,8 @@ type GetMorphologyParadigmInternalMorphologyParadigmGetParams struct {
 	// PartOfSpeech Optional part of speech
 	PartOfSpeech *string `form:"part_of_speech,omitempty" json:"part_of_speech,omitempty"`
 
-	// LearningLanguageCode Learning-language code (canonical; takes precedence over the deprecated `language_code` param)
+	// LearningLanguageCode Learning-language code (canonical)
 	LearningLanguageCode *string `form:"learning_language_code,omitempty" json:"learning_language_code,omitempty"`
-
-	// LanguageCode DEPRECATED: use `learning_language_code` instead. Accepted for one release cycle of dual-accept, then removed.
-	LanguageCode *string `form:"language_code,omitempty" json:"language_code,omitempty"`
 }
 
 // SpellCheckInternalMorphologySpellCheckGetParams defines parameters for SpellCheckInternalMorphologySpellCheckGet.
@@ -11714,11 +11691,8 @@ type SpellCheckInternalMorphologySpellCheckGetParams struct {
 	// Word Word to check
 	Word string `form:"word" json:"word"`
 
-	// LearningLanguageCode Learning-language code (canonical; takes precedence over the deprecated `language_code` param)
+	// LearningLanguageCode Learning-language code (canonical)
 	LearningLanguageCode *string `form:"learning_language_code,omitempty" json:"learning_language_code,omitempty"`
-
-	// LanguageCode DEPRECATED: use `learning_language_code` instead. Accepted for one release cycle of dual-accept, then removed.
-	LanguageCode *string `form:"language_code,omitempty" json:"language_code,omitempty"`
 }
 
 // SuggestSpellingInternalMorphologySuggestGetParams defines parameters for SuggestSpellingInternalMorphologySuggestGet.
@@ -11726,11 +11700,8 @@ type SuggestSpellingInternalMorphologySuggestGetParams struct {
 	// Word Possibly misspelled learning-language word
 	Word string `form:"word" json:"word"`
 
-	// LearningLanguageCode Learning-language code (canonical; takes precedence over the deprecated `language_code` param)
+	// LearningLanguageCode Learning-language code (canonical)
 	LearningLanguageCode *string `form:"learning_language_code,omitempty" json:"learning_language_code,omitempty"`
-
-	// LanguageCode DEPRECATED: use `learning_language_code` instead. Accepted for one release cycle of dual-accept, then removed.
-	LanguageCode *string `form:"language_code,omitempty" json:"language_code,omitempty"`
 }
 
 // GetInternalSearchSemanticParams defines parameters for GetInternalSearchSemantic.
@@ -12545,6 +12516,9 @@ type PatchInternalApiV3FeedbackFeedbackIdStatusJSONRequestBody = AppFeedbackUpda
 
 // PostInternalApiV3LocalizationAuditJSONRequestBody defines body for PostInternalApiV3LocalizationAudit for application/json ContentType.
 type PostInternalApiV3LocalizationAuditJSONRequestBody = CreateAuditLogRequest
+
+// PostInternalApiV3LocalizationAuditBulkJSONRequestBody defines body for PostInternalApiV3LocalizationAuditBulk for application/json ContentType.
+type PostInternalApiV3LocalizationAuditBulkJSONRequestBody = BulkCreateAuditLogsRequest
 
 // PostInternalApiV3LocalizationDynamicJSONRequestBody defines body for PostInternalApiV3LocalizationDynamic for application/json ContentType.
 type PostInternalApiV3LocalizationDynamicJSONRequestBody = UpsertDynamicTranslationRequest

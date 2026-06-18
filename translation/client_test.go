@@ -147,6 +147,46 @@ func TestTranslateBatch_RoutesNonOpusMTPairToGemini(t *testing.T) {
 	assert.Equal(t, "/internal/translate-batch", receivedPath)
 }
 
+// Regression: kielolearn-engine /internal/translate-batch now wraps its
+// response in the v3 {"data": …} envelope. Pre-fix postBatch decoded the
+// bare {"translations":[…]} shape, so the enveloped body produced
+// body.Translations=nil → every Gemini-routed batch read as a full-batch
+// failure → seam callProvider returned source (never cached) and convo
+// re-translated the scenario description on EVERY detail open (10-30s).
+// The fix routes the body through httputil.UnwrapDataEnvelope before
+// decoding. This locks the enveloped shape in.
+func TestTranslateBatch_DecodesEngineDataEnvelope(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		// Enveloped, exactly as the engine emits post {data}-migration.
+		_, _ = w.Write([]byte(`{"data":{"translations":["Xin chào"],"source_lang":"en","target_lang":"vi","provider":"llm"}}`))
+	}))
+	defer server.Close()
+
+	c := NewClient("", server.URL, "k", nil)
+	got := c.TranslateBatch(context.Background(), []string{"Hello"}, "en", "vi")
+
+	assert.Equal(t, []string{"Xin chào"}, got,
+		"enveloped engine response must decode to the inner translations")
+}
+
+// Sibling guard: the bare (un-enveloped) shape must keep decoding too, so
+// the tolerant unwrap doesn't break kielo-models opus-mt (which stays
+// bare) or any peer that hasn't migrated yet.
+func TestTranslateBatch_StillDecodesBareResponse(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"translations":["Xin chào"]}`))
+	}))
+	defer server.Close()
+
+	c := NewClient("", server.URL, "k", nil)
+	got := c.TranslateBatch(context.Background(), []string{"Hello"}, "en", "vi")
+
+	assert.Equal(t, []string{"Xin chào"}, got,
+		"bare response must still decode (opus-mt + unmigrated peers)")
+}
+
 // Sweep EEE — src == tgt routes to passthrough; no HTTP call.
 func TestTranslateBatch_PassthroughOnSameLocale(t *testing.T) {
 	var called bool

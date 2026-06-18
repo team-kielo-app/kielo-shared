@@ -114,18 +114,23 @@ class AdminBroadcastRequest(BaseModel):
 
 
 class AdminContentItem(BaseModel):
-    created_at: str
+    content_source: str
+    content_type: str
+    created_at: str | None = None
+    created_by: str | None = None
     description: str | None = None
     external_id: str
     id: str | None = None
     learning_language_code: str | None = None
-    metadata: dict[str, Any]
+    metadata: dict[str, Any] | None = None
     published_at: str | None = None
-    source: str
+    slug: str | None = None
     status: str
     title: str
-    type: str
-    updated_at: str
+    updated_at: str | None = None
+    updated_by: str | None = None
+    version_count: int
+    view_count: int
 
 
 class AdminContentListResponse(BaseModel):
@@ -490,13 +495,6 @@ class Captions(BaseModel):
     translation_status: Any
     updated_at: AwareDatetime
     video_id: UUID_aliased
-
-
-class Card(BaseModel):
-    back: str
-    front: str
-    id: str
-    type: str
 
 
 class CategoryProgress(BaseModel):
@@ -959,6 +957,14 @@ class Confusable(BaseModel):
     source: str | None = None
     term: str | None = None
     translation: str | None = None
+
+
+class ContentBrand(BaseModel):
+    brand_id: UUID_aliased
+    created_at: AwareDatetime
+    display_name: str
+    source_identifier: str
+    updated_at: AwareDatetime
 
 
 class ContentEntrySummary(BaseModel):
@@ -1583,10 +1589,13 @@ class CurriculumTrackUpsertRequest(BaseModel):
 
 class CurriculumTrackV3(BaseModel):
     audience: str | None = None
+    chapter_count: int | None = None
+    color_hex: str | None = None
     description: str | None = None
     icon_emoji: str | None = None
     id: str
     is_recommended: bool | None = None
+    label: str | None = None
     level_count: int | None = None
     slug: str | None = None
     thumbnail_url: str | None = None
@@ -1832,12 +1841,6 @@ class ExampleSentencePair(ConceptHubExample):
 class ExampleSentencePairResponse(BaseModel):
     text: str | None = Field(None, title="Text")
     translation: str | None = Field(None, title="Translation")
-
-
-class ExerciseDeck(BaseModel):
-    cards: list[Card]
-    id: str
-    title: str
 
 
 class ExerciseDeckHeader(BaseModel):
@@ -2181,7 +2184,7 @@ class GrammarConcept(BaseModel):
     category: str | None = None
     cefr_level: str | None = None
     common_mistakes: str | None = None
-    created_at: AwareDatetime
+    created_at: AwareDatetime | None = None
     description: str | None = None
     example_structures: Any | None = None
     examples: list[ExampleSentencePair] | None = None
@@ -2190,7 +2193,7 @@ class GrammarConcept(BaseModel):
     notes: str | None = None
     related_concepts: Any | None = None
     term: str | None = None
-    updated_at: AwareDatetime
+    updated_at: AwareDatetime | None = None
     user_status: str | None = None
 
 
@@ -3002,7 +3005,7 @@ class ListVideoItem(BaseModel):
     learning_language_code: str | None = None
     locale: str | None = None
     original_title: str | None = None
-    published_at: AwareDatetime
+    published_at: AwareDatetime | None = None
     source_locale: str | None = None
     thumbnail_url: str
     title: str
@@ -3726,6 +3729,7 @@ class RegenerateLanguageBundlesResponse(BaseModel):
 class RegisterPushTokenRequest(BaseModel):
     device_language_code: str | None = None
     platform: str
+    support_language_code: str | None = None
     token: str
 
 
@@ -3964,6 +3968,7 @@ class RoadmapLessonSummaryV3(BaseModel):
     description: str | None = None
     difficulty_level: str | None = None
     estimated_duration_minutes: int | None = None
+    kind: str | None = None
     lesson_id: str
     order_index: int | None = None
     progress: RoadmapLessonProgressV3 | None = None
@@ -4501,10 +4506,6 @@ class SingletonBatchSaveTranslationsResponse(BaseModel):
     data: BatchSaveTranslationsResponse
 
 
-class SingletonBrandList(BaseModel):
-    data: list[Brand]
-
-
 class SingletonCacheInvalidateResponse(BaseModel):
     data: CacheInvalidateResponse
 
@@ -4587,6 +4588,10 @@ class SingletonConceptHubSentenceExampleList(BaseModel):
 
 class SingletonConceptHubSummaryList(BaseModel):
     data: list[ConceptHubSummary]
+
+
+class SingletonContentBrandList(BaseModel):
+    data: list[ContentBrand]
 
 
 class SingletonContentEntrySummary(BaseModel):
@@ -4687,10 +4692,6 @@ class SingletonDynamicTranslation(BaseModel):
 
 class SingletonEndSessionResponse(BaseModel):
     data: EndSessionResponse
-
-
-class SingletonExerciseDeck(BaseModel):
-    data: ExerciseDeck
 
 
 class SingletonFeatureCheckAndIncrementResponse(BaseModel):
@@ -6035,7 +6036,7 @@ class Video(BaseModel):
     locale: str | None = None
     original_description: str | None = None
     original_title: str | None = None
-    published_at: AwareDatetime
+    published_at: AwareDatetime | None = None
     source_locale: str | None = None
     thumbnail_url: str
     title: str
@@ -6406,6 +6407,10 @@ class BrowseScenariosResponse(BaseModel):
     next_page_key: str | None = None
 
 
+class BulkCreateAuditLogsRequest(BaseModel):
+    entries: list[CreateAuditLogRequest]
+
+
 class BulkUpsertDynamicTranslationsRequest(BaseModel):
     items: list[UpsertDynamicTranslationRequest]
 
@@ -6672,16 +6677,6 @@ class CurriculumTreeTrack(BaseModel):
 
 class CursorPageArticleVersionSnippet(BaseModel):
     items: list[ArticleVersionSnippet]
-    next_page_key: str | None = None
-
-
-class CursorPageFeatureComment(BaseModel):
-    items: list[FeatureComment]
-    next_page_key: str | None = None
-
-
-class CursorPageFeatureRequest(BaseModel):
-    items: list[FeatureRequest]
     next_page_key: str | None = None
 
 
