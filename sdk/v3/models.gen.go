@@ -5952,9 +5952,10 @@ type RegenerateLanguageBundlesResponse struct {
 
 // RegisterPushTokenRequest defines model for RegisterPushTokenRequest.
 type RegisterPushTokenRequest struct {
-	DeviceLanguageCode *string `json:"device_language_code,omitempty"`
-	Platform           string  `json:"platform"`
-	Token              string  `json:"token"`
+	DeviceLanguageCode  *string `json:"device_language_code,omitempty"`
+	Platform            string  `json:"platform"`
+	SupportLanguageCode *string `json:"support_language_code,omitempty"`
+	Token               string  `json:"token"`
 }
 
 // RegisterPushTokenResponse defines model for RegisterPushTokenResponse.
