@@ -3729,6 +3729,7 @@ class RegenerateLanguageBundlesResponse(BaseModel):
 class RegisterPushTokenRequest(BaseModel):
     device_language_code: str | None = None
     platform: str
+    support_language_code: str | None = None
     token: str
 
 
