@@ -1,0 +1,476 @@
+// Package db provides shared database helpers for kielo services.
+//
+// The search_path machinery here mirrors kielo_shared.db_utils on the
+// Python side: per-request search_path resolution for schema-per-language
+// routing, robust under PgBouncer transaction pooling.
+//
+// Wiring (Echo handlers):
+//
+//  1. Auth/JWT middleware extracts the active learning language from the
+//     request (claim, header, or path param) and calls db.WithLanguage(ctx, lang)
+//     to attach it to the request context.
+//  2. Repository BeginTx wrappers call db.IssueSearchPathForContext at the
+//     top of every transaction, before any other statement, to issue
+//     SET LOCAL search_path with the per-language schemas.
+//
+// Static-path callers (services that own a fixed schema set, e.g. ingest
+// workers operating only on _shared) call db.IssueStaticSearchPath instead.
+//
+// SQL-injection guard: only validated language identifiers and
+// pre-validated schema templates reach the SET statement. Untrusted input
+// is rejected by ValidateLanguageIdent before formatting.
+package db
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"regexp"
+	"strings"
+
+	"github.com/team-kielo-app/kielo-shared/observe/metrics"
+)
+
+var _ = errors.Is // ensure errors is used for ApplySearchPathToTx
+
+// DefaultPerLanguageSearchPathTemplate is the canonical schema layout
+// for per-language queries post-M6 cutover.
+//
+// Sweep post-ZT-followup-docker Round E (2026-06-04) DROPPED the legacy
+// `klearn, cms` fallback per Sweep LLL Phase 7 NNN.4 + ZE.5 empirical
+// gate proof. Pre-Round-E this template included `klearn, cms` after
+// the per-language schemas as a transition-window safety net for reads
+// of not-yet-partitioned tables. Post-Round-E:
+//
+//   - Sweep ZE.5 `_lint-implicit-cross-language-read` static gate runs
+//     at baseline 0 hard-fail — proves NO production code relies on
+//     the implicit cross-language read via the fallback path.
+//   - Every production cross-language table read explicitly qualifies
+//     the schema (`klearn.outbox_events`, `cms.api_keys`, etc.) OR uses
+//     ORM `__table_args__ = {"schema": "klearn"}` declarations.
+//   - The 22 cross-language tables cataloged in
+//     `scripts/diag-implicit-cross-language-read.py` ALL appear
+//     explicitly-qualified in production source.
+//
+// Per-language schemas (klearn_<lang>, cms_<lang>) come first so reads
+// of per-language tables resolve via search_path. users / localization /
+// communications / convo / media stay where they are — already
+// cross-language by construction. public is last for pgvector and other
+// extensions.
+//
+// IF a new cross-language table is added to klearn or cms WITHOUT
+// explicit schema qualification at every production read site, the
+// `_lint-implicit-cross-language-read` gate will catch it at PR time
+// and surface the qualification gap before merge. Operators relying
+// on the pre-Round-E implicit fallback behavior must explicitly add
+// `klearn.` / `cms.` prefixes to their SQL OR add the table to the
+// gate's ALLOWED_IMPLICIT_TABLES list with a one-line rationale.
+const DefaultPerLanguageSearchPathTemplate = "klearn_{lang}, cms_{lang}, " +
+	"users, localization, communications, convo, media, public"
+
+// ErrNoActiveLanguage is returned by IssueSearchPathForContext when the
+// caller didn't attach a language to ctx via WithLanguage. The repository
+// layer should treat this as a programmer error: per-request handlers
+// must run after a language-extracting middleware.
+var ErrNoActiveLanguage = errors.New("kielo-shared/db: no active language on context")
+
+// languageIdentRe matches Kielo's internal canonical base language codes.
+// Region/script suffixes are not valid schema suffixes: use "sv", not
+// "sv_SE". Stricter than the search_path identifier regex on purpose,
+// since the result is interpolated into schema names such as cms_sv.
+var languageIdentRe = regexp.MustCompile(`^[a-z]{2,3}$`)
+
+// searchPathIdentRe matches a single schema identifier. Used to validate
+// the result of formatting a template before issuing SET search_path,
+// because that statement can't be parameterized.
+var searchPathIdentRe = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
+
+type ctxKey struct{}
+
+// fallbackTagCtxKey carries the per-call-site fallback tag (label +
+// expected-or-not bit) used by the per-language search_path fallback
+// metric. Separate key type so a language ctx value can't be misread as
+// a callsite (and vice versa).
+type fallbackTagCtxKey struct{}
+
+// FallbackTag describes a context's expectation about hitting the
+// per-language search_path silent-fallback path.
+//
+//   - Callsite: stable per-call-site identifier (e.g.
+//     "kielotv.list_brands", "pgxsearchpath.list_active_languages").
+//     Bounded vocabulary.
+//   - Expected: when true, hitting the fallback is the documented
+//     contract for this call site — typically a global / cross-language
+//     query (localization.languages, audit log writes). The metric still
+//     records the rate so dashboards can spot anomalies, but the WARN
+//     log is suppressed (it would be noise on a sustained-by-design
+//     fallback). When false (the default), the first occurrence per
+//     (service, callsite) WARNs so cold-start regressions catch a
+//     human's eye.
+type FallbackTag struct {
+	Callsite string
+	Expected bool
+}
+
+var supportedLearningLanguageIdents = map[string]struct{}{
+	"fi": {},
+	"sv": {},
+}
+
+// WithFallbackCallsite attaches a per-call-site tag to ctx for a path
+// where hitting the silent fallback is UNEXPECTED — request-path
+// repository calls that should always run under a language scope set by
+// middleware. First occurrence per (service, callsite) WARNs; subsequent
+// hits fall to DEBUG. The metric counter increments every time so the
+// rate is alertable.
+//
+// Typical use: a repository wrapper method that knows it's the
+// canonical entry point for a domain feature:
+//
+//	func (r *KielotvRepo) ListBrands(ctx context.Context) ([]Brand, error) {
+//	    ctx = db.WithFallbackCallsite(ctx, "kielotv.list_brands")
+//	    // ... pgxsearchpath.WithReadTx(ctx, ...) ...
+//	}
+//
+// Empty `callsite` is a no-op (returns ctx unchanged) so callers can
+// pass-through without conditionals.
+func WithFallbackCallsite(ctx context.Context, callsite string) context.Context {
+	if callsite == "" {
+		return ctx
+	}
+	return context.WithValue(ctx, fallbackTagCtxKey{}, FallbackTag{
+		Callsite: callsite,
+		Expected: false,
+	})
+}
+
+// WithExpectedFallback attaches a per-call-site tag for a path where
+// hitting the silent fallback IS the documented contract — global /
+// cross-language queries (e.g. listing all active languages from
+// localization.languages, writing audit logs, cleanup workers
+// operating on _shared data). The metric still increments so anomalies
+// are visible, but no WARN log fires (would be noise on a
+// sustained-by-design fallback).
+//
+// Use this from packages that intentionally read global tables, NOT
+// from request-path repos that should have language scope. If you're
+// not sure, use WithFallbackCallsite — the WARN-once is the better
+// default until you've confirmed the call site really is global.
+//
+//	func ListActiveLanguageCodes(ctx context.Context, db TxBeginner) {
+//	    ctx = db.WithExpectedFallback(ctx, "pgxsearchpath.list_active_languages")
+//	    // ... WithReadTx(ctx, ...) ...
+//	}
+func WithExpectedFallback(ctx context.Context, callsite string) context.Context {
+	if callsite == "" {
+		return ctx
+	}
+	return context.WithValue(ctx, fallbackTagCtxKey{}, FallbackTag{
+		Callsite: callsite,
+		Expected: true,
+	})
+}
+
+// FallbackTagFromContext returns the FallbackTag attached by
+// WithFallbackCallsite / WithExpectedFallback, or a zero FallbackTag if
+// none. The emit helper substitutes "unknown" for empty Callsite so
+// the metric still exports.
+func FallbackTagFromContext(ctx context.Context) FallbackTag {
+	if ctx == nil {
+		return FallbackTag{}
+	}
+	if v, ok := ctx.Value(fallbackTagCtxKey{}).(FallbackTag); ok {
+		return v
+	}
+	return FallbackTag{}
+}
+
+// FallbackCallsiteFromContext is the back-compat shim. Returns just the
+// Callsite string from the attached FallbackTag (empty if none).
+// Prefer FallbackTagFromContext for new code that wants the Expected
+// bit too.
+//
+// Deprecated: use FallbackTagFromContext.
+func FallbackCallsiteFromContext(ctx context.Context) string {
+	return FallbackTagFromContext(ctx).Callsite
+}
+
+// WithLanguage attaches a validated language code to ctx. Returns the
+// original ctx unchanged if lang fails ValidateLanguageIdent, so callers
+// that pass through user input fall back safely to "no language" rather
+// than poisoning the context. Use ValidateLanguageIdent directly if you
+// want bad input to fail loud.
+func WithLanguage(ctx context.Context, lang string) context.Context {
+	if err := ValidateLearningLanguageIdent(lang); err != nil {
+		return ctx
+	}
+	return context.WithValue(ctx, ctxKey{}, lang)
+}
+
+// LanguageFromContext returns the language attached by WithLanguage, or
+// "" and false if none.
+func LanguageFromContext(ctx context.Context) (string, bool) {
+	if ctx == nil {
+		return "", false
+	}
+	lang, ok := ctx.Value(ctxKey{}).(string)
+	if !ok || lang == "" {
+		return "", false
+	}
+	return lang, true
+}
+
+// RequireLanguageFromContext returns the language attached by WithLanguage,
+// or ErrNoActiveLanguage if no language is present on ctx.
+func RequireLanguageFromContext(ctx context.Context) (string, error) {
+	lang, ok := LanguageFromContext(ctx)
+	if !ok {
+		return "", ErrNoActiveLanguage
+	}
+	return lang, nil
+}
+
+// ValidateLanguageIdent rejects anything that isn't a recognizable
+// language code. The result is interpolated into a schema name; looser
+// identifier rules would let arbitrary identifiers through.
+func ValidateLanguageIdent(lang string) error {
+	if !languageIdentRe.MatchString(lang) {
+		return fmt.Errorf(
+			"kielo-shared/db: invalid language identifier %q (expected lowercase base language code, e.g. \"fi\" or \"sv\")",
+			lang,
+		)
+	}
+	return nil
+}
+
+// ValidateLearningLanguageIdent rejects values that are syntactically valid
+// locales but are not currently supported authored learning languages.
+func ValidateLearningLanguageIdent(lang string) error {
+	if err := ValidateLanguageIdent(lang); err != nil {
+		return err
+	}
+	if _, ok := supportedLearningLanguageIdents[lang]; !ok {
+		return fmt.Errorf(
+			"kielo-shared/db: unsupported learning language %q (supported: \"fi\", \"sv\")",
+			lang,
+		)
+	}
+	return nil
+}
+
+// SanitizeSearchPath validates and canonicalizes a comma-separated
+// search_path identifier list. Returns the cleaned (whitespace-trimmed,
+// re-joined) string suitable for `SET search_path TO ...` or an error
+// if any element fails the identifier regex. Used by callers that
+// build connection-level AfterConnect handlers (kielo-shared/db/
+// pgxsearchpath.SetSearchPathOnConnect) and by the per-language
+// SET LOCAL machinery in this package.
+func SanitizeSearchPath(searchPath string) (string, error) {
+	return validateSearchPathIdents(searchPath)
+}
+
+// validateSearchPathIdents rejects any element that isn't a plain
+// identifier. Mirrors _validate_search_path_idents in db_utils.py.
+func validateSearchPathIdents(searchPath string) (string, error) {
+	var cleaned []string
+	for part := range strings.SplitSeq(searchPath, ",") {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		if !searchPathIdentRe.MatchString(part) {
+			return "", fmt.Errorf(
+				"kielo-shared/db: invalid search_path identifier %q (only [A-Za-z_][A-Za-z0-9_]* allowed)",
+				part,
+			)
+		}
+		cleaned = append(cleaned, part)
+	}
+	return strings.Join(cleaned, ","), nil
+}
+
+// BuildSearchPath formats a per-language template by substituting {lang}.
+// Validates lang first, then validates the formatted result. Returns the
+// canonicalised (whitespace-trimmed, comma-joined) string suitable for
+// SET search_path TO ....
+func BuildSearchPath(lang, template string) (string, error) {
+	if err := ValidateLearningLanguageIdent(lang); err != nil {
+		return "", err
+	}
+	formatted := strings.ReplaceAll(template, "{lang}", lang)
+	return validateSearchPathIdents(formatted)
+}
+
+// IssueRaw issues SET LOCAL search_path TO <path> on exec. The exec
+// closure is the caller's transaction handle; this avoids tying us to
+// any particular driver's *Tx type. Call once at the top of every
+// transaction, before any other statement.
+//
+// SET LOCAL applies for the duration of the current transaction only,
+// so it survives PgBouncer reusing backends across transactions.
+func IssueRaw(ctx context.Context, path string, exec func(ctx context.Context, query string) error) error {
+	cleaned, err := validateSearchPathIdents(path)
+	if err != nil {
+		return err
+	}
+	return exec(ctx, "SET LOCAL search_path TO "+cleaned)
+}
+
+// IssueStaticSearchPath issues SET LOCAL search_path with a fixed path.
+// Use for services that own a single schema set (e.g. ingest workers
+// operating only on _shared content).
+func IssueStaticSearchPath(ctx context.Context, path string, exec func(ctx context.Context, query string) error) error {
+	return IssueRaw(ctx, path, exec)
+}
+
+// IssueSearchPathForContext reads the active language from ctx (set by
+// WithLanguage) and issues SET LOCAL search_path with the per-language
+// schemas. Returns ErrNoActiveLanguage if no language is on ctx.
+//
+// template should typically be DefaultPerLanguageSearchPathTemplate. Pass
+// a custom template if a service needs a non-standard layout (e.g. read
+// replicas with a different schema order).
+func IssueSearchPathForContext(
+	ctx context.Context,
+	template string,
+	exec func(ctx context.Context, query string) error,
+) error {
+	lang, ok := LanguageFromContext(ctx)
+	if !ok {
+		return ErrNoActiveLanguage
+	}
+	path, err := BuildSearchPath(lang, template)
+	if err != nil {
+		return err
+	}
+	return exec(ctx, "SET LOCAL search_path TO "+path)
+}
+
+// ApplySearchPathToTx is the optional repository-side helper for
+// per-request search_path routing. Call it once at the top of
+// transactions that may be language-scoped but still support legacy or
+// background fallback behavior. The exec closure adapts whichever
+// pgx-or-database/sql tx type the service uses.
+//
+// Behavior:
+//   - If ctx has no active language attached (legacy callers, background
+//     workers without per-request context), returns nil — the connection-
+//     level search_path applies.
+//   - If ctx has an active language, issues SET LOCAL search_path with
+//     the standard per-language template.
+//   - Returns nil for ErrNoActiveLanguage; surfaces other errors
+//     (validation failure, exec failure) wrapped with context.
+//
+// This consolidates the helper that was previously duplicated in
+// kielo-cms/internal/repository/content_repository.go so every service
+// uses the same recipe.
+func ApplySearchPathToTx(
+	ctx context.Context,
+	exec func(ctx context.Context, query string) error,
+) error {
+	if _, ok := LanguageFromContext(ctx); !ok {
+		tag := FallbackTagFromContext(ctx)
+		metrics.PerLanguageSearchPathFallbackEmit(tag.Callsite, tag.Expected)
+		return nil
+	}
+	if err := IssueSearchPathForContext(
+		ctx, DefaultPerLanguageSearchPathTemplate, exec,
+	); err != nil {
+		if errors.Is(err, ErrNoActiveLanguage) {
+			tag := FallbackTagFromContext(ctx)
+			metrics.PerLanguageSearchPathFallbackEmit(tag.Callsite, tag.Expected)
+			return nil
+		}
+		return fmt.Errorf("kielo-shared/db: ApplySearchPathToTx: %w", err)
+	}
+	return nil
+}
+
+// ApplySearchPathToTxRequired is the strict repository-side helper for
+// request handlers that touch per-language tables and must never fall
+// back to the connection-level search_path. Missing ctx language returns
+// ErrNoActiveLanguage, wrapped for call-site context.
+func ApplySearchPathToTxRequired(
+	ctx context.Context,
+	exec func(ctx context.Context, query string) error,
+) error {
+	if err := IssueSearchPathForContext(
+		ctx, DefaultPerLanguageSearchPathTemplate, exec,
+	); err != nil {
+		return fmt.Errorf("kielo-shared/db: ApplySearchPathToTxRequired: %w", err)
+	}
+	return nil
+}
+
+// TxBeginner is the minimal pgx-or-database/sql contract: anything that
+// can start a transaction with a context. Both pgxpool.Pool and
+// *pgx.Conn satisfy this; database/sql users wrap in a small adapter.
+//
+// We deliberately use `any` for the result so the helper works with
+// pgx.Tx (which is an interface, not *sql.Tx). Callers cast the result
+// to their driver's tx type.
+type TxBeginner interface {
+	BeginTx(ctx context.Context, opts any) (any, error)
+}
+
+// PgxTx is the interface every pgx transaction satisfies — declared
+// here to avoid importing pgx into kielo-shared/db (kielo-shared/db
+// stays driver-agnostic).
+type PgxTx interface {
+	Exec(ctx context.Context, sql string, args ...any) (any, error)
+	Rollback(ctx context.Context) error
+	Commit(ctx context.Context) error
+}
+
+// BeginTxWithSearchPath opens a transaction via `begin` and issues
+// SET LOCAL search_path inside it before any other statement. If ctx
+// carries an active language, the per-language template is used;
+// otherwise the connection-level search_path applies (no SET issued).
+//
+// Usage in a kielo-cms repository:
+//
+//	tx, err := db.BeginTxWithSearchPath(ctx, func(c context.Context) (db.PgxTx, error) {
+//	    return r.db.BeginTx(c, pgx.TxOptions{})
+//	}, db.DefaultPerLanguageSearchPathTemplate)
+//	if err != nil { return err }
+//	defer tx.Rollback(ctx)
+//	// ... run queries on tx ...
+//	return tx.Commit(ctx)
+//
+// The closure indirection keeps kielo-shared/db driver-agnostic: pgx
+// callers write a one-line pgx.BeginTx; database/sql callers write
+// theirs. The helper itself only knows how to issue SET LOCAL on
+// whatever PgxTx-shaped value the closure returns.
+func BeginTxWithSearchPath(
+	ctx context.Context,
+	begin func(ctx context.Context) (PgxTx, error),
+	template string,
+) (PgxTx, error) {
+	tx, err := begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// If no active language on ctx, fall back to the connection-level
+	// search_path (no SET issued). Repository methods that NEED per-
+	// language scoping should treat ErrNoActiveLanguage as a programmer
+	// error in their caller — the middleware should always have set it.
+	// Emit observability so the rate of fallbacks is queryable; the
+	// first occurrence per (service, callsite) WARNs to catch a human's
+	// eye, subsequent ones fall to DEBUG.
+	if _, ok := LanguageFromContext(ctx); !ok {
+		tag := FallbackTagFromContext(ctx)
+		metrics.PerLanguageSearchPathFallbackEmit(tag.Callsite, tag.Expected)
+		return tx, nil
+	}
+
+	exec := func(c context.Context, query string) error {
+		_, err := tx.Exec(c, query)
+		return err
+	}
+	if err := IssueSearchPathForContext(ctx, template, exec); err != nil {
+		_ = tx.Rollback(ctx)
+		return nil, fmt.Errorf("kielo-shared/db: BeginTxWithSearchPath: %w", err)
+	}
+	return tx, nil
+}

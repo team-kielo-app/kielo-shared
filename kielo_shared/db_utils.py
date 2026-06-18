@@ -2,18 +2,111 @@
 
 from __future__ import annotations
 
+import contextvars
 import os
 import re
 import ssl
-from typing import Any
+from typing import Any, Callable, Iterable, Union
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
-from sqlalchemy import event
+# sqlalchemy is imported lazily inside register_search_path_listener and
+# register_asyncpg_disconnect_handler. The bulk of this module (the URL
+# helpers + the per-request active-language contextvar accessors) has no
+# DB dependency, so services that only want `get_active_language()`
+# (e.g. kielotv-studio-toolbox, which imports it transitively through
+# kielo_shared.httpx_hooks) no longer need to install sqlalchemy.
+
+from kielo_shared.locale_constants import SUPPORTED_LEARNING_LANGUAGES
 
 VECTOR_DB_SEARCH_PATH = "cms, klearn, public"
-KLEARN_DB_SEARCH_PATH = "public, users, klearn, cms"
+
+# Connection-level search_path for non-request-scoped sessions
+# (background workers, alembic migrations, startup probes).
+#
+# Sweep LLL Phase 7 NNN.4 retry (2026-06-08; Python sibling of
+# post-ZT-followup-docker Round E 2026-06-04 Go-side drop, plus
+# the NNN.5 admin-endpoint precondition shipped same day):
+# pre-NNN.4 this string was "public, users, klearn, cms" — included
+# the legacy single-schema entries as fallback for not-yet-
+# partitioned tables. Post-NNN.4 the legacy entries are DROPPED.
+#
+# Empirical proof the drop is safe:
+#   - scripts/diag-implicit-cross-language-read.py at baseline 0
+#     hard-fail (ZE.5 gate, 2026-06-03). Every cross-language table
+#     read in production explicitly schema-qualifies (klearn.foo,
+#     cms.foo) OR uses ORM __table_args__ schema=... declarations.
+#   - Sweep LLL Phase 7 NNN.5 (2026-06-08) made admin curriculum +
+#     roadmap endpoints REJECT empty-language requests, so the
+#     request-scoped resolver always has language when these
+#     endpoints hit per-language ORMs.
+#   - Empirical 2026-06-08 audit of 17 engine background services:
+#     all 7 actively-spawned scanners (review_due_notification_service,
+#     streak_at_risk, saved_item_backlog, return_after_silence,
+#     observation_grounded, exercise_cache_warmup,
+#     session_localization_prewarm) either use active_language_scope
+#     directly OR delegate to learner_observation_service.observe()
+#     which wraps active_language_scope internally.
+#   - All raw SQL in scanner code uses explicit schema-qualification
+#     (FROM users.users, FROM users.notifications, FROM users.feature_usage).
+#   - Alembic migrations explicitly write 'ALTER TABLE klearn.X' /
+#     'UPDATE klearn.X' — no reliance on search_path resolution.
+#   - 17 services that delegate to request-scoped flows inherit the
+#     active_language contextvar from the parent request's
+#     ActiveLanguageMiddleware.
+#
+# Inverted invariant post-NNN.4: any non-request-scoped session that
+# needs a cross-language table read MUST qualify it explicitly. The
+# ZE.5 gate enforces this at PR time.
+KLEARN_DB_SEARCH_PATH = "public, users"
+
+# Default per-language template for request-scoped queries.
+#
+# The per-language schemas (klearn_<lang>, cms_<lang>) come first so
+# reads of partitioned tables resolve there. users / localization /
+# communications / convo / media stay on the path — they're already
+# cross-language by construction. public is last for pgvector and
+# other extensions.
+#
+# Sweep LLL Phase 7 NNN.4 retry (2026-06-08): pre-NNN.4 this template
+# included `klearn, cms` after the per-language schemas as fallback.
+# Post-NNN.4 the legacy entries are DROPPED — same empirical proof as
+# KLEARN_DB_SEARCH_PATH above, plus NNN.5's strict admin-endpoint gate
+# ensures admin requests never hit per-language ORMs without language.
+DEFAULT_PER_LANGUAGE_SEARCH_PATH_TEMPLATE = (
+    "klearn_{lang}, cms_{lang}, "
+    "users, localization, communications, convo, media, public"
+)
 
 _SEARCH_PATH_IDENT_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+# Stricter than the search_path identifier regex: internal language codes are
+# lowercase ISO 639-1/639-3 base codes (e.g. "fi", "sv", "zh"). Used by the
+# per-language resolver before formatting it into a schema name.
+_LANGUAGE_IDENT_RE = re.compile(r"^[a-z]{2,3}$")
+
+SearchPathResolver = Callable[[], str]
+SearchPathSpec = Union[str, SearchPathResolver]
+
+# Per-request active language. Apps set this via middleware (FastAPI
+# dependency, Starlette middleware, or a manual `set_active_language()`
+# in background workers) before any DB transaction begins. Resolvers
+# returned by `make_per_language_search_path` read it on every
+# transaction `begin` event.
+_active_language: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "kielo_active_language", default=None
+)
+
+# Sweep SSSS-C: Python sibling of Go's `db.WithSupportLanguage` /
+# `SupportLanguageFromContext`. Carries the request's support
+# (UI/translation) language so httpx_hooks can stamp
+# `support_language_code` + `X-Kielo-Support-Language` on outbound
+# requests from engine ↔ Go services. Pre-SSSS-C only the inbound
+# resolver (`kielo_shared.locale.fastapi.get_support_language`) set
+# this value; outbound httpx clients dropped it, so engine-driven
+# flows that re-fetched localized content from Go services lost the
+# support-language signal mid-chain. Mirror of the QQQQ Go-side lift.
+_active_support_language: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "kielo_active_support_language", default=None
+)
 
 
 def normalize_search_path(search_path: str) -> str:
@@ -89,7 +182,7 @@ def normalize_postgres_url(db_url: str) -> str:
 
 def build_sync_sqlalchemy_url_and_connect_args(
     db_url: str,
-    search_path: str | None = None,  # noqa: ARG001 - kept for backward compat
+    search_path: str | None = None,
 ) -> tuple[str, dict[str, Any]]:
     """Build a sync SQLAlchemy URL and connect_args from a Postgres URL.
 
@@ -106,7 +199,7 @@ def build_sync_sqlalchemy_url_and_connect_args(
 
 def build_asyncpg_url_and_connect_args(
     db_url: str,
-    search_path: str,  # noqa: ARG001 - kept for backward compat
+    search_path: str,
 ) -> tuple[str, dict[str, Any]]:
     """Build an asyncpg URL and connect_args from a Postgres URL.
 
@@ -198,46 +291,319 @@ def _validate_search_path_idents(search_path: str) -> str:
     return normalized
 
 
-def register_search_path_listener(engine: Any, search_path: str) -> None:
-    """Register search_path setup on an async engine, robust to transaction pooling.
+def is_valid_language_ident(lang: str) -> bool:
+    """Non-raising check for whether ``lang`` matches the language regex.
 
-    Replaces the previous approach of passing ``server_settings`` to asyncpg,
-    which PgBouncer / PlanetScale (Neon) rejects as an unsupported startup
-    parameter.
+    Use from places (e.g. request middleware) that need to test a value
+    without raising — those callers typically fall through to the next
+    fallback source when the value fails. Fails-loud callers should use
+    :func:`_validate_language_ident` directly.
+    """
+    return bool(lang) and bool(_LANGUAGE_IDENT_RE.match(lang))
+
+
+def _validate_language_ident(lang: str) -> str:
+    """Reject anything that isn't a recognisable language code.
+
+    The result is interpolated into a schema name (e.g. ``klearn_fi``);
+    looser identifier rules would let arbitrary identifiers through.
+    """
+    if not is_valid_language_ident(lang):
+        raise ValueError(
+            f"Invalid language identifier: {lang!r}. "
+            f"Expected ISO 639 lowercase base code (e.g. 'fi', 'sv')."
+        )
+    return lang
+
+
+def _validate_learning_language_ident(lang: str) -> str:
+    _validate_language_ident(lang)
+    if lang not in SUPPORTED_LEARNING_LANGUAGES:
+        raise ValueError(
+            f"Unsupported learning language: {lang!r}. Supported values are 'fi' and 'sv'."
+        )
+    return lang
+
+
+def set_active_language(lang: str) -> contextvars.Token[str | None]:
+    """Set the active language for the current async/sync context.
+
+    Returns a token that callers can pass to :func:`reset_active_language`
+    if they want to restore the previous value (Starlette/FastAPI request
+    middleware should not need to — the contextvar is implicitly per-task).
+    Raises ``ValueError`` if ``lang`` is not one of the supported authored
+    learning languages, so localization locales do not become schema suffixes.
+    """
+    return _active_language.set(_validate_learning_language_ident(lang))
+
+
+def reset_active_language(token: contextvars.Token[str | None]) -> None:
+    _active_language.reset(token)
+
+
+def get_active_language() -> str | None:
+    """Return the active language for the current context, or ``None`` if unset."""
+    return _active_language.get()
+
+
+def require_active_language() -> str:
+    """Return the active language or fail instead of silently defaulting."""
+    language = get_active_language()
+    if not language:
+        raise RuntimeError("active learning language is required")
+    return language
+
+
+# Sweep SSSS-C: support-language accessors (sibling to active-language above).
+# Storage is unvalidated string because the resolver
+# (`kielo_shared.locale.fastapi.get_support_language`) already passes through
+# `IsSupportedSupportLanguage`; this layer is just a contextvar passthrough.
+def set_active_support_language(code: str) -> contextvars.Token[str | None]:
+    """Set the active support (UI/translation) language for the current
+    async/sync context. Returns a contextvars Token that callers can
+    pass to :func:`reset_active_support_language` if they want to
+    restore the previous value (FastAPI request middleware should not
+    need to — the contextvar is implicitly per-task).
+    """
+    if not isinstance(code, str):
+        raise TypeError(f"support language code must be str, got {type(code).__name__}")
+    code = code.strip()
+    if not code:
+        raise ValueError("support language code must be non-empty")
+    return _active_support_language.set(code)
+
+
+def reset_active_support_language(token: contextvars.Token[str | None]) -> None:
+    _active_support_language.reset(token)
+
+
+def get_active_support_language() -> str | None:
+    """Return the active support language for the current context, or
+    ``None`` if unset. Used by ``kielo_shared.httpx_hooks.
+    inject_active_support_language_query`` to forward the signal on
+    outbound httpx requests from the engine.
+    """
+    return _active_support_language.get()
+
+
+async def check_per_language_schemas_present(
+    engine: Any,
+    *,
+    languages: Iterable[str] | None = None,
+    required_prefixes: Iterable[str] = ("klearn", "cms"),
+) -> tuple[bool, list[str]]:
+    """Verify per-language schemas exist for each configured language.
+
+    Returns ``(ok, missing)`` where ``missing`` is a list of schema names
+    that should exist but don't (e.g. ``["klearn_sv", "cms_sv"]``). The
+    boolean ``ok`` is ``True`` iff ``missing`` is empty.
+
+    Why this matters: the search_path resolver built by
+    :func:`make_per_language_search_path` silently falls back to the
+    legacy ``klearn``/``cms`` schemas when per-language schemas don't
+    exist. That fallback was designed for the M3-era dual-write window
+    when each table independently graduated, but post-M5 the model code
+    assumes per-language tables exist (column ``learning_language_code``
+    has been dropped from them). When per-language schemas are missing,
+    writes silently land in the legacy tables where the column is still
+    ``NOT NULL`` — producing confusing ``NotNullViolationError``s that
+    look like application bugs but are actually configuration errors.
+
+    Call this from service startup (typically in the FastAPI ``lifespan``
+    handler) so the configuration error surfaces immediately at boot
+    with a clear message, instead of waiting for the first write to
+    a per-language partitioned table.
+
+    ``languages`` defaults to :data:`SUPPORTED_LEARNING_LANGUAGES`
+    (``{'fi', 'sv'}``). ``required_prefixes`` defaults to
+    ``("klearn", "cms")`` — the two schema families partitioned per
+    language. The check assembles ``f"{prefix}_{lang}"`` for the Cartesian
+    product and confirms each exists in ``pg_namespace``.
+
+    Returns the (ok, missing) tuple rather than raising so callers can
+    decide whether the missing schemas are fatal (e.g. fail engine
+    startup) or just a warning (e.g. a worker that operates only on
+    legacy ``_shared`` data and doesn't need per-language).
+    """
+    from sqlalchemy import (
+        text,
+    )  # local import: kielo_shared has no top-level sqlalchemy dep
+
+    if languages is None:
+        # Late import to avoid a module-init cycle (locale_constants
+        # imports nothing from db_utils, but inserting the import at
+        # module top puts a runtime dep on locale_constants for every
+        # importer of db_utils).
+        from kielo_shared.locale_constants import SUPPORTED_LEARNING_LANGUAGES
+
+        languages = SUPPORTED_LEARNING_LANGUAGES
+
+    expected: list[str] = []
+    for prefix in required_prefixes:
+        for lang in languages:
+            expected.append(f"{prefix}_{lang}")
+
+    async with engine.connect() as conn:
+        result = await conn.execute(
+            text("SELECT nspname FROM pg_namespace WHERE nspname = ANY(:names)"),
+            {"names": expected},
+        )
+        present = {row[0] for row in result.fetchall()}
+
+    missing = sorted(name for name in expected if name not in present)
+    return (not missing, missing)
+
+
+def make_per_language_search_path(
+    template: str = DEFAULT_PER_LANGUAGE_SEARCH_PATH_TEMPLATE,
+    fallback: str | None = None,
+    *,
+    service: str | None = None,
+    resolver_name: str | None = None,
+    expected_fallback: bool = False,
+) -> SearchPathResolver:
+    """Build a resolver suitable for :func:`register_search_path_listener`.
+
+    The resolver reads :func:`get_active_language` on every call. If a
+    language is set, it formats ``template`` with ``{lang}`` substituted
+    and returns the result. If unset:
+
+    * with ``fallback`` provided — return that string (useful for
+      background workers that operate only on ``_shared`` data).
+    * without ``fallback`` — raise ``RuntimeError``. This is the safe
+      default: a transaction that hits the DB without a language scope
+      would otherwise silently inherit the previous transaction's path
+      under PgBouncer reuse, which is exactly the contamination
+      footgun schema-per-language is designed to prevent.
+
+    The resolver's output is validated by ``_validate_search_path_idents``
+    inside the begin listener, so a malformed template fails the
+    transaction rather than the DB.
+
+    Observability (when both ``service`` and ``resolver_name`` are set):
+    each time the fallback branch fires, the resolver emits to
+    :data:`kielo_shared.observability.metrics.PER_LANGUAGE_SEARCH_PATH_FALLBACK_TOTAL`
+    so dashboards can alert on unexpected fallback rates. ``expected_fallback``
+    governs log level: ``True`` (background workers — fallback is the
+    documented contract) → DEBUG; ``False`` (request-path resolvers — any
+    fallback signals an upstream regression) → WARN on the first occurrence
+    per ``(service, resolver_name)``, DEBUG thereafter. Pre-existing
+    callers that omit ``service``/``resolver_name`` get no observability
+    fanout (preserves backward compat for tests that exercise the
+    resolver in isolation).
+    """
+    observable = service is not None and resolver_name is not None
+
+    def resolver() -> str:
+        lang = _active_language.get()
+        if lang is None:
+            if fallback is not None:
+                if observable:
+                    # Local import: kielo_shared.observability has no
+                    # top-level dep on db_utils, and db_utils stays
+                    # importable without prometheus_client installed.
+                    from kielo_shared.observability.metrics import (
+                        per_language_search_path_fallback_emit,
+                    )
+
+                    per_language_search_path_fallback_emit(
+                        service=service,  # type: ignore[arg-type]
+                        resolver=resolver_name,  # type: ignore[arg-type]
+                        expected_fallback=expected_fallback,
+                    )
+                return fallback
+            raise RuntimeError(
+                "Active language is not set on this context. Either set it via "
+                "kielo_shared.db_utils.set_active_language() before opening a "
+                "DB transaction, or build the resolver with a fallback string "
+                "(e.g. '_shared, public') for background workers that operate "
+                "only on shared data."
+            )
+        # Defensive — we already validated on `set_active_language`, but a
+        # caller could write directly to the contextvar.
+        _validate_learning_language_ident(lang)
+        return template.format(lang=lang)
+
+    return resolver
+
+
+def register_search_path_listener(
+    engine: Any,
+    search_path: SearchPathSpec,
+) -> None:
+    """Register search_path setup on a SQLAlchemy engine, PgBouncer-safe.
+
+    Replaces the previous approach of passing ``server_settings`` to
+    asyncpg, which PgBouncer / PlanetScale (Neon) rejects as an unsupported
+    startup parameter.
+
+    ``search_path`` may be either:
+
+    * **A string** — static path resolved once and applied at every
+      transaction begin. Used by services that own a fixed schema set
+      (e.g. ingest workers operating only on ``_shared`` content).
+    * **A callable** — resolver invoked at every transaction begin.
+      Used for per-request schema routing (schema-per-language). The
+      resolver typically comes from :func:`make_per_language_search_path`
+      and reads the active language from a contextvar set by per-request
+      middleware. The resolved string is validated each call, so a
+      malformed result fails the transaction rather than the DB.
 
     Two listeners are registered to cover both deployment modes:
 
-    * ``connect`` — for sync engines only, sets ``search_path`` at the
-      session level via a DBAPI cursor.
-    * ``begin`` — for all engines, fires at the start of every SQLAlchemy
-      transaction and issues
-      ``SET LOCAL search_path`` so the value applies for the lifetime of
-      that transaction. This is required for PlanetScale / Neon / any
-      PgBouncer-fronted Postgres that resets session state between
-      transactions.
+    * ``connect`` — fires once at session establishment. For sync engines
+      with a static path, sets ``SET search_path`` via a DBAPI cursor so
+      pre-transaction operations also see the correct path. For async
+      engines or callable paths, this is a no-op (callable paths can't
+      be resolved at connect time because the language context isn't
+      attached yet, and async engines apply the path at begin anyway).
+    * ``begin`` — fires at the start of every SQLAlchemy transaction
+      and issues ``SET LOCAL search_path`` so the value applies for the
+      lifetime of that transaction. This is required for PlanetScale /
+      Neon / any PgBouncer-fronted Postgres that resets session state
+      between transactions.
 
     Call once per engine, after
-    :func:`sqlalchemy.ext.asyncio.create_async_engine`.
+    :func:`sqlalchemy.ext.asyncio.create_async_engine` or
+    :func:`sqlalchemy.create_engine`.
     """
-    normalized = _validate_search_path_idents(search_path)
+    from sqlalchemy import event  # lazy: keep db_utils import sqlalchemy-free
+
+    is_callable = callable(search_path)
+    static_normalized: str | None = None
+    if not is_callable:
+        # str → validate once eagerly so a typo fails at engine setup,
+        # not at the first transaction.
+        static_normalized = _validate_search_path_idents(search_path)  # type: ignore[arg-type]
+
     is_async_engine = hasattr(engine, "sync_engine")
     sync_engine = engine.sync_engine if is_async_engine else engine
 
     @event.listens_for(sync_engine, "connect")
-    def _on_connect(dbapi_connection, _connection_record):  # noqa: ARG001
+    def _on_connect(dbapi_connection, _connection_record):
+        # Async engines apply search_path at begin; the connect hook would
+        # require an awaitable cursor anyway.
         if is_async_engine:
+            return
+        # Callable paths depend on per-request context that isn't bound at
+        # connect time. Skip; the begin hook handles it.
+        if is_callable:
             return
         cursor = dbapi_connection.cursor()
         try:
-            cursor.execute(f"SET search_path TO {normalized}")
+            cursor.execute(f"SET search_path TO {static_normalized}")
         finally:
             cursor.close()
 
     @event.listens_for(sync_engine, "begin")
     def _on_begin(conn):
+        if is_callable:
+            resolved = _validate_search_path_idents(search_path())  # type: ignore[operator]
+        else:
+            resolved = static_normalized  # type: ignore[assignment]
         # SET LOCAL applies for the duration of the current transaction only,
         # so it survives PgBouncer reusing backends across transactions.
-        conn.exec_driver_sql(f"SET LOCAL search_path TO {normalized}")
+        conn.exec_driver_sql(f"SET LOCAL search_path TO {resolved}")
 
 
 _ASYNCPG_STATE_DISCONNECT_MARKERS = (
@@ -280,6 +646,8 @@ def register_asyncpg_disconnect_handler(engine: Any) -> None:
 
     Call once per async engine, after :func:`create_async_engine`.
     """
+    from sqlalchemy import event  # lazy: keep db_utils import sqlalchemy-free
+
     try:
         import asyncpg
     except ImportError:
@@ -310,7 +678,7 @@ def register_asyncpg_disconnect_handler(engine: Any) -> None:
 
     # --- (2) handle_error event for mid-statement InterfaceErrors. ---
     @event.listens_for(sync_engine, "handle_error")
-    def _mark_asyncpg_disconnect(context):  # noqa: ANN001 - SQLAlchemy event type
+    def _mark_asyncpg_disconnect(context):
         original = context.original_exception
         if original is None:
             return

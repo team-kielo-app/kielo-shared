@@ -16,7 +16,7 @@ func TestNew_IncludesServiceField(t *testing.T) {
 
 	logger.Info("hello")
 
-	var entry map[string]interface{}
+	var entry map[string]any
 	if err := json.Unmarshal(buf.Bytes(), &entry); err != nil {
 		t.Fatalf("invalid JSON output: %v\nraw: %s", err, buf.String())
 	}
@@ -65,7 +65,7 @@ func TestHandler_InjectsTraceFields(t *testing.T) {
 
 	logger.InfoContext(ctx, "traced log")
 
-	var entry map[string]interface{}
+	var entry map[string]any
 	if err := json.Unmarshal(buf.Bytes(), &entry); err != nil {
 		t.Fatalf("invalid JSON: %v\nraw: %s", err, buf.String())
 	}
@@ -87,7 +87,7 @@ func TestHandler_NoTraceContext(t *testing.T) {
 
 	logger.InfoContext(context.Background(), "no trace")
 
-	var entry map[string]interface{}
+	var entry map[string]any
 	if err := json.Unmarshal(buf.Bytes(), &entry); err != nil {
 		t.Fatalf("invalid JSON: %v", err)
 	}
@@ -125,7 +125,7 @@ func TestHandler_WithAttrs(t *testing.T) {
 	ctx := observe.WithContext(context.Background(), tc)
 	logger.InfoContext(ctx, "test")
 
-	var entry map[string]interface{}
+	var entry map[string]any
 	if err := json.Unmarshal(buf.Bytes(), &entry); err != nil {
 		t.Fatalf("invalid JSON: %v", err)
 	}

@@ -22,12 +22,34 @@ type UserExistenceChecker interface {
 	UserExists(ctx context.Context, userID uuid.UUID) (bool, error)
 }
 
-// Claims represents the JWT claims structure
+// Claims represents the JWT claims structure.
+//
+// JSON-tag policy for each field — DO NOT bulk-remove omitempty:
+//
+//   - UserID: required on every token; no omitempty (would marshal as
+//     the zero UUID if accidentally unset, which we want to surface).
+//   - Email: legitimately empty for SSO/broker logins that haven't
+//     received an email scope. omitempty only affects marshaling
+//     (smaller JWT body); consumers that gate on email must check
+//     for empty string explicitly.
+//   - Role: legitimately empty for anonymous tokens and pre-RBAC
+//     legacy tokens. Admin-gating consumers compare against "admin"
+//     so empty correctly fails the check. omitempty is safe.
+//   - DeviceToken: legitimately empty for web sessions (admin-ui) —
+//     only mobile clients populate it. omitempty is correct.
+//   - LearningLanguage: NOT omitempty by design (ADR-001 strict
+//     learning-language contract). Empty here is always a bug —
+//     either a user signed up before the contract or onboarding
+//     never completed. Empty issuance is metered via
+//     LanguageDefaultFallbackTotal so we can refuse it once the
+//     metric reads zero across a release cycle. Restoring omitempty
+//     here would silently hide that incident class.
 type Claims struct {
-	UserID      uuid.UUID `json:"user_id"`
-	Email       string    `json:"email,omitempty"`
-	Role        string    `json:"role,omitempty"`
-	DeviceToken string    `json:"device_token,omitempty"`
+	UserID           uuid.UUID `json:"user_id"`
+	Email            string    `json:"email,omitempty"`
+	Role             string    `json:"role,omitempty"`
+	DeviceToken      string    `json:"device_token,omitempty"`
+	LearningLanguage string    `json:"learning_language_code"`
 	jwt.RegisteredClaims
 }
 
@@ -73,10 +95,15 @@ func JWTAuthWithOptions(jwtSecret string, userChecker UserExistenceChecker, opti
 					if userChecker != nil {
 						exists, err := userChecker.UserExists(c.Request().Context(), claims.UserID)
 						if err != nil {
-							return echo.NewHTTPError(http.StatusInternalServerError, "Failed to verify user existence")
+							// Sweep ZZZZ: typed code so client can branch
+							// (transient infra issue → retry vs hard auth fail).
+							c.Logger().Errorf("JWT middleware userChecker failed: %v", err)
+							return authErr(http.StatusInternalServerError, AuthCodeUserCheckFailed,
+								"Unable to verify your account right now. Please try again in a moment.")
 						}
 						if !exists {
-							return echo.NewHTTPError(http.StatusUnauthorized, "User no longer exists")
+							return authErr(http.StatusUnauthorized, AuthCodeUserDeleted,
+								"Your account is no longer available. Please contact support if this is unexpected.")
 						}
 					}
 					// Set claims in context
@@ -88,15 +115,24 @@ func JWTAuthWithOptions(jwtSecret string, userChecker UserExistenceChecker, opti
 			// Fallback to traditional Bearer token parsing
 			authHeader := c.Request().Header.Get("Authorization")
 			if authHeader == "" {
-				return echo.NewHTTPError(http.StatusUnauthorized, "Missing authorization header")
+				// Sweep ZZZZ: dedicated AUTH_TOKEN_MISSING (was default
+				// UNAUTHORIZED + "Missing authorization header"). Mobile
+				// branches on this to silently retry-after-refresh.
+				return authErr(http.StatusUnauthorized, AuthCodeTokenMissing,
+					"You need to be signed in to continue.")
 			}
 
-			tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-			if tokenString == authHeader {
-				return echo.NewHTTPError(http.StatusBadRequest, "Invalid authorization header format")
+			tokenString, ok := strings.CutPrefix(authHeader, "Bearer ")
+			if !ok {
+				// Sweep ZZZZ: pre-ZZZZ returned 400 + BAD_REQUEST on bad
+				// bearer prefix (per RFC 6750 this should be 401). Now:
+				// 401 + AUTH_TOKEN_MALFORMED so the client treats it as
+				// "force re-login" not "fix your request".
+				return authErr(http.StatusUnauthorized, AuthCodeTokenMalformed,
+					"Your session token format is invalid. Please log in again.")
 			}
 
-			keyFunc := func(token *jwt.Token) (interface{}, error) {
+			keyFunc := func(token *jwt.Token) (any, error) {
 				// If RSA public key is provided, use it
 				if options != nil && (options.PublicKeyPEM != "" || options.PublicKey != nil) {
 					// Ensure the token is signed with an RSA algorithm
@@ -125,7 +161,14 @@ func JWTAuthWithOptions(jwtSecret string, userChecker UserExistenceChecker, opti
 				jwt.WithLeeway(1*time.Minute))
 
 			if err != nil {
-				return echo.NewHTTPError(http.StatusUnauthorized, "Invalid token")
+				// Sweep ZZZZ: classify the failure mode so the client can
+				// differentiate "token expired → silent refresh" from
+				// "signature invalid → force re-login" from "malformed →
+				// corrupt storage → force re-login". Pre-ZZZZ all four
+				// collapsed to "Invalid token" with default UNAUTHORIZED.
+				code, message := classifyJWTError(err)
+				c.Logger().Debugf("JWT middleware parse failed: code=%s err=%v", code, err)
+				return authErr(http.StatusUnauthorized, code, message)
 			}
 
 			if claims, ok := token.Claims.(*Claims); ok && token.Valid {
@@ -133,10 +176,13 @@ func JWTAuthWithOptions(jwtSecret string, userChecker UserExistenceChecker, opti
 				if userChecker != nil {
 					exists, err := userChecker.UserExists(c.Request().Context(), claims.UserID)
 					if err != nil {
-						return echo.NewHTTPError(http.StatusInternalServerError, "Failed to verify user existence")
+						c.Logger().Errorf("JWT middleware userChecker failed: %v", err)
+						return authErr(http.StatusInternalServerError, AuthCodeUserCheckFailed,
+							"Unable to verify your account right now. Please try again in a moment.")
 					}
 					if !exists {
-						return echo.NewHTTPError(http.StatusUnauthorized, "User no longer exists")
+						return authErr(http.StatusUnauthorized, AuthCodeUserDeleted,
+							"Your account is no longer available. Please contact support if this is unexpected.")
 					}
 				}
 
@@ -145,7 +191,8 @@ func JWTAuthWithOptions(jwtSecret string, userChecker UserExistenceChecker, opti
 				return next(c)
 			}
 
-			return echo.NewHTTPError(http.StatusUnauthorized, "Invalid token claims")
+			return authErr(http.StatusUnauthorized, AuthCodeTokenClaimsInvalid,
+				"Your session token is missing required information. Please log in again.")
 		}
 	}
 }
@@ -160,10 +207,37 @@ func setClaimsInContext(c echo.Context, claims Claims, options *JWTOptions) {
 		c.Set("userID", claims.UserID)
 		c.Set("userEmail", claims.Email)
 		c.Set("deviceToken", claims.DeviceToken)
+		// Also expose role under a stable key. Handlers that need to
+		// authorize cross-user reads (e.g. an admin reading another
+		// user's profile) read this without having to switch the
+		// service-wide storage shape.
+		c.Set("userRole", claims.Role)
+	}
+	// Always expose the learning language claim under the canonical key so
+	// active_language.DefaultExtractor (and any other consumer) can read it
+	// regardless of which storage shape the service chose above.
+	if claims.LearningLanguage != "" {
+		c.Set(JWTClaimKey, claims.LearningLanguage)
 	}
 }
 
-// GatewayAuth trusts headers forwarded by the API gateway instead of re-validating JWT
+// GatewayAuth trusts headers forwarded by the API gateway instead
+// of re-validating JWT.
+//
+// DEAD CODE NOTE (2026-05-29): this function has zero callers in
+// the monorepo. It encodes a planned future gateway-fronted topology
+// (Cloudflare / GCP LB stamps the X-User-* headers based on the JWT
+// it verified) that hasn't shipped. The X-User-Email / X-Device-Token
+// reads at lines below assume those headers are populated by the
+// gateway; today nothing in the monorepo sets X-User-Email
+// (diag-header-drift.py flags this as GET-only), so a real call
+// would extract empty strings.
+//
+// Kept as-is rather than deleted because (a) the upstream contract
+// is documented in the function shape, and (b) ripping it out forces
+// a contract re-design if the gateway topology ever ships. Mark for
+// deletion at Phase 8 if the gateway topology is decisively
+// abandoned.
 func GatewayAuth() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
@@ -180,7 +254,10 @@ func GatewayAuth() echo.MiddlewareFunc {
 				return echo.NewHTTPError(http.StatusUnauthorized, "Invalid user ID format")
 			}
 
-			// Set user context from gateway headers
+			// Set user context from gateway headers. X-User-Email
+			// / X-Device-Token are stamped by the gateway in the
+			// planned topology; in the current direct-JWT topology
+			// they're empty (see DEAD CODE NOTE above).
 			c.Set("userID", userID)
 			c.Set("userEmail", c.Request().Header.Get("X-User-Email"))
 			c.Set("deviceToken", c.Request().Header.Get("X-Device-Token"))
@@ -270,16 +347,23 @@ func FlexibleAuthWithOptions(jwtSecret string, userChecker UserExistenceChecker,
 			if userIDStr := c.Request().Header.Get("X-User-ID"); userIDStr != "" && hasValidInternalAPIKey(c.Request()) {
 				userID, err := uuid.Parse(userIDStr)
 				if err != nil {
-					return echo.NewHTTPError(http.StatusUnauthorized, "Invalid user ID format")
+					// Sweep ZZZZ: typed code; the gateway sent a non-UUID
+					// X-User-ID — internal infra bug or bad upstream call.
+					c.Logger().Warnf("FlexibleAuth: invalid X-User-ID format: %v", err)
+					return authErr(http.StatusUnauthorized, AuthCodeTokenClaimsInvalid,
+						"Your session token is missing required information. Please log in again.")
 				}
 				// Check user existence if checker provided
 				if userChecker != nil {
 					exists, err := userChecker.UserExists(c.Request().Context(), userID)
 					if err != nil {
-						return echo.NewHTTPError(http.StatusInternalServerError, "Failed to verify user existence")
+						c.Logger().Errorf("FlexibleAuth userChecker failed: %v", err)
+						return authErr(http.StatusInternalServerError, AuthCodeUserCheckFailed,
+							"Unable to verify your account right now. Please try again in a moment.")
 					}
 					if !exists {
-						return echo.NewHTTPError(http.StatusUnauthorized, "User no longer exists")
+						return authErr(http.StatusUnauthorized, AuthCodeUserDeleted,
+							"Your account is no longer available. Please contact support if this is unexpected.")
 					}
 				}
 				// Set context based on options
@@ -327,7 +411,11 @@ func RequireAdminRole() echo.MiddlewareFunc {
 					if claims.Role == "admin" {
 						return next(c)
 					}
-					return echo.NewHTTPError(http.StatusForbidden, "admin access required")
+					// Sweep ZZZZ: dedicated AUTH_ADMIN_REQUIRED code so
+					// admin-ui can render "your account does not have
+					// admin access" instead of generic "forbidden".
+					return authErr(http.StatusForbidden, AuthCodeAdminRequired,
+						"This area requires administrator access.")
 				}
 			}
 
@@ -336,11 +424,14 @@ func RequireAdminRole() echo.MiddlewareFunc {
 				if role == "admin" {
 					return next(c)
 				}
-				return echo.NewHTTPError(http.StatusForbidden, "admin access required")
+				return authErr(http.StatusForbidden, AuthCodeAdminRequired,
+					"This area requires administrator access.")
 			}
 
-			// No valid authentication found
-			return echo.NewHTTPError(http.StatusUnauthorized, "authentication required")
+			// Sweep ZZZZ: dedicated AUTH_AUTH_REQUIRED so client can
+			// distinguish "no auth at all" from "auth but wrong role".
+			return authErr(http.StatusUnauthorized, AuthCodeAuthRequired,
+				"You need to be signed in to continue.")
 		}
 	}
 }

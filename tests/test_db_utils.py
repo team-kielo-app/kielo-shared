@@ -1,3 +1,5 @@
+import pytest
+
 from kielo_shared import db_utils
 
 
@@ -175,15 +177,19 @@ def test_register_search_path_listener_sync_engine_uses_cursor():
 
     dbapi_conn = MagicMock(spec=["cursor"])
     by_event["connect"][1](dbapi_conn, MagicMock())
+    # Sweep LLL Phase 7 NNN.4 retry (2026-06-08): legacy klearn,cms
+    # dropped from KLEARN_DB_SEARCH_PATH per the same empirical proof
+    # Round E used for the Go template (ZE.5 gate at baseline 0) plus
+    # NNN.5's strict admin-endpoint gate (kielolearn-engine a98f0c7).
     dbapi_conn.cursor.return_value.execute.assert_called_once_with(
-        "SET search_path TO public,users,klearn,cms"
+        "SET search_path TO public,users"
     )
     dbapi_conn.cursor.return_value.close.assert_called_once()
 
     sa_conn = MagicMock()
     by_event["begin"][1](sa_conn)
     sa_conn.exec_driver_sql.assert_called_once_with(
-        "SET LOCAL search_path TO public,users,klearn,cms"
+        "SET LOCAL search_path TO public,users"
     )
 
 
@@ -208,3 +214,430 @@ def test_register_search_path_listener_async_engine_skips_connect_cursor_path():
 
     # Should no-op (and specifically must not call cursor()).
     by_event["connect"][1](FakeAdapter(), object())
+
+
+# --- Per-language dynamic resolver -----------------------------------------
+
+
+def test_validate_language_ident_accepts_iso_codes():
+    assert db_utils._validate_language_ident("fi") == "fi"
+    assert db_utils._validate_language_ident("sv") == "sv"
+    assert db_utils._validate_language_ident("vi") == "vi"
+    assert db_utils._validate_language_ident("zh") == "zh"
+
+
+def test_validate_learning_language_ident_rejects_localization_only_locale():
+    assert db_utils._validate_learning_language_ident("fi") == "fi"
+    assert db_utils._validate_learning_language_ident("sv") == "sv"
+    with pytest.raises(ValueError, match="Unsupported learning language"):
+        db_utils._validate_learning_language_ident("vi")
+
+
+def test_validate_language_ident_rejects_garbage():
+    import pytest
+
+    for bad in ("FI", "f", "english", "fi-en", "fi; DROP", "", "fi_cn", "zh_CN"):
+        with pytest.raises(ValueError, match="Invalid language identifier"):
+            db_utils._validate_language_ident(bad)
+
+
+def test_set_active_language_validates():
+    import pytest
+
+    with pytest.raises(ValueError, match="Invalid language identifier"):
+        db_utils.set_active_language("public; DROP TABLE users")
+
+
+def test_active_language_contextvar_roundtrip():
+    assert db_utils.get_active_language() is None
+    token = db_utils.set_active_language("sv")
+    try:
+        assert db_utils.get_active_language() == "sv"
+    finally:
+        db_utils.reset_active_language(token)
+    assert db_utils.get_active_language() is None
+
+
+def test_make_per_language_search_path_default_template():
+    resolver = db_utils.make_per_language_search_path()
+    token = db_utils.set_active_language("sv")
+    try:
+        # Sweep LLL Phase 7 NNN.4 retry (2026-06-08): legacy klearn,cms
+        # dropped from the template (see KLEARN_DB_SEARCH_PATH docstring
+        # in db_utils.py for the empirical proof + NNN.5 precondition).
+        assert resolver() == "klearn_sv, cms_sv, users, localization, communications, convo, media, public"
+    finally:
+        db_utils.reset_active_language(token)
+
+
+def test_make_per_language_search_path_custom_template():
+    resolver = db_utils.make_per_language_search_path(
+        template="cms_{lang}, _shared"
+    )
+    token = db_utils.set_active_language("fi")
+    try:
+        assert resolver() == "cms_fi, _shared"
+    finally:
+        db_utils.reset_active_language(token)
+
+
+def test_make_per_language_search_path_fallback_when_unset():
+    resolver = db_utils.make_per_language_search_path(fallback="_shared, public")
+    # No active language set on this context.
+    assert resolver() == "_shared, public"
+
+
+def test_make_per_language_search_path_raises_without_fallback():
+    import pytest
+
+    resolver = db_utils.make_per_language_search_path()
+    with pytest.raises(RuntimeError, match="Active language is not set"):
+        resolver()
+
+
+def test_register_search_path_listener_callable_resolves_per_transaction():
+    """With a callable path, the begin listener resolves on every transaction.
+
+    Two consecutive begins under different active languages must issue
+    different SET LOCAL search_path statements — proving per-request routing
+    works under a connection pool that reuses backends.
+    """
+    from unittest.mock import MagicMock
+
+    class FakeSyncEngine:
+        pass
+
+    engine = FakeSyncEngine()
+    resolver = db_utils.make_per_language_search_path()
+    listeners = _capture_listeners(engine, resolver)
+    by_event = {identifier: (target, fn) for target, identifier, fn in listeners}
+
+    sa_conn = MagicMock()
+
+    token_fi = db_utils.set_active_language("fi")
+    try:
+        by_event["begin"][1](sa_conn)
+    finally:
+        db_utils.reset_active_language(token_fi)
+
+    token_sv = db_utils.set_active_language("sv")
+    try:
+        by_event["begin"][1](sa_conn)
+    finally:
+        db_utils.reset_active_language(token_sv)
+
+    calls = [c.args[0] for c in sa_conn.exec_driver_sql.call_args_list]
+    # Sweep LLL Phase 7 NNN.4 retry (2026-06-08): legacy klearn,cms
+    # dropped from DEFAULT_PER_LANGUAGE_SEARCH_PATH_TEMPLATE per the
+    # same empirical proof Round E used for the Go template (ZE.5
+    # gate at baseline 0) plus NNN.5's strict admin-endpoint gate
+    # (kielolearn-engine a98f0c7).
+    assert calls == [
+        "SET LOCAL search_path TO klearn_fi,cms_fi,users,localization,communications,convo,media,public",
+        "SET LOCAL search_path TO klearn_sv,cms_sv,users,localization,communications,convo,media,public",
+    ]
+
+
+def test_register_search_path_listener_callable_skips_sync_connect():
+    """With a callable path the connect hook can't resolve (no language ctx
+    bound yet); it must no-op rather than crash on a missing language.
+    """
+
+    class FakeSyncEngine:
+        pass
+
+    engine = FakeSyncEngine()
+    resolver = db_utils.make_per_language_search_path()
+    listeners = _capture_listeners(engine, resolver)
+    by_event = {identifier: (target, fn) for target, identifier, fn in listeners}
+
+    class FakeAdapter:
+        def cursor(self):
+            raise AssertionError(
+                "callable search_path connect hook must not call cursor()"
+            )
+
+    # Must not raise even though no language is set on this context.
+    by_event["connect"][1](FakeAdapter(), object())
+
+
+def test_register_search_path_listener_callable_validates_resolver_output():
+    """A resolver that returns a malformed path must fail at transaction begin
+    (the SQL injection guard runs every time, not just at engine setup).
+    """
+    import pytest
+    from unittest.mock import MagicMock
+
+    class FakeSyncEngine:
+        pass
+
+    engine = FakeSyncEngine()
+
+    def bad_resolver():
+        return "public; DROP TABLE users"
+
+    listeners = _capture_listeners(engine, bad_resolver)
+    by_event = {identifier: (target, fn) for target, identifier, fn in listeners}
+
+    sa_conn = MagicMock()
+    with pytest.raises(ValueError, match="Invalid search_path identifier"):
+        by_event["begin"][1](sa_conn)
+
+
+# ---------------------------------------------------------------------------
+# check_per_language_schemas_present (added 2026-05-23 for cleanup #2).
+# Verifies the diagnostic check that engine startup runs to surface
+# "per-language migrations didn't run" as an actionable error instead
+# of a downstream NotNullViolationError.
+# ---------------------------------------------------------------------------
+@pytest.mark.asyncio
+async def test_check_per_language_schemas_present_all_present():
+    """When every expected schema exists, returns (True, [])."""
+    from unittest.mock import AsyncMock, MagicMock
+
+    # Mock the async engine.connect() -> async-context-manager returning a conn.
+    fake_result = MagicMock()
+    fake_result.fetchall.return_value = [
+        ("klearn_fi",), ("klearn_sv",), ("cms_fi",), ("cms_sv",),
+    ]
+
+    fake_conn = MagicMock()
+    fake_conn.execute = AsyncMock(return_value=fake_result)
+
+    fake_conn_ctx = MagicMock()
+    fake_conn_ctx.__aenter__ = AsyncMock(return_value=fake_conn)
+    fake_conn_ctx.__aexit__ = AsyncMock(return_value=None)
+
+    fake_engine = MagicMock()
+    fake_engine.connect = MagicMock(return_value=fake_conn_ctx)
+
+    ok, missing = await db_utils.check_per_language_schemas_present(fake_engine)
+    assert ok is True
+    assert missing == []
+
+
+@pytest.mark.asyncio
+async def test_check_per_language_schemas_present_some_missing():
+    """When schemas are missing, returns (False, sorted-list-of-missing)."""
+    from unittest.mock import AsyncMock, MagicMock
+
+    fake_result = MagicMock()
+    # Only fi schemas present; sv schemas missing.
+    fake_result.fetchall.return_value = [("klearn_fi",), ("cms_fi",)]
+
+    fake_conn = MagicMock()
+    fake_conn.execute = AsyncMock(return_value=fake_result)
+
+    fake_conn_ctx = MagicMock()
+    fake_conn_ctx.__aenter__ = AsyncMock(return_value=fake_conn)
+    fake_conn_ctx.__aexit__ = AsyncMock(return_value=None)
+
+    fake_engine = MagicMock()
+    fake_engine.connect = MagicMock(return_value=fake_conn_ctx)
+
+    ok, missing = await db_utils.check_per_language_schemas_present(fake_engine)
+    assert ok is False
+    assert missing == ["cms_sv", "klearn_sv"]
+
+
+@pytest.mark.asyncio
+async def test_check_per_language_schemas_present_custom_languages():
+    """Custom `languages` arg controls which prefix×lang combos are required."""
+    from unittest.mock import AsyncMock, MagicMock
+
+    fake_result = MagicMock()
+    fake_result.fetchall.return_value = [("klearn_de",), ("cms_de",)]
+
+    fake_conn = MagicMock()
+    fake_conn.execute = AsyncMock(return_value=fake_result)
+
+    fake_conn_ctx = MagicMock()
+    fake_conn_ctx.__aenter__ = AsyncMock(return_value=fake_conn)
+    fake_conn_ctx.__aexit__ = AsyncMock(return_value=None)
+
+    fake_engine = MagicMock()
+    fake_engine.connect = MagicMock(return_value=fake_conn_ctx)
+
+    ok, missing = await db_utils.check_per_language_schemas_present(
+        fake_engine, languages=["de"]
+    )
+    assert ok is True
+    assert missing == []
+
+
+# ─────────────── per-language fallback observability ────────────────────
+
+
+@pytest.fixture
+def _reset_per_language_fallback_warn_state():
+    """Clear the module-level WARN-once memo + counter samples so each test
+    sees a clean state. The memo is process-local; without resetting,
+    test ordering would determine whether a WARN fires."""
+    from kielo_shared.observability import metrics as metrics_mod
+
+    metrics_mod._PER_LANGUAGE_FALLBACK_WARN_SEEN.clear()
+    if metrics_mod.PROMETHEUS_AVAILABLE:
+        metrics_mod.PER_LANGUAGE_SEARCH_PATH_FALLBACK_TOTAL.clear()
+    yield
+    metrics_mod._PER_LANGUAGE_FALLBACK_WARN_SEEN.clear()
+    if metrics_mod.PROMETHEUS_AVAILABLE:
+        metrics_mod.PER_LANGUAGE_SEARCH_PATH_FALLBACK_TOTAL.clear()
+
+
+def test_make_per_language_search_path_emits_metric_on_fallback(
+    _reset_per_language_fallback_warn_state,
+):
+    """When ``service`` + ``resolver_name`` are set, every fallback hit
+    increments the prometheus counter for that (service, resolver) key."""
+    pytest.importorskip("prometheus_client")
+    from kielo_shared.observability.metrics import (
+        PER_LANGUAGE_SEARCH_PATH_FALLBACK_TOTAL,
+    )
+
+    resolver = db_utils.make_per_language_search_path(
+        fallback="_shared, public",
+        service="test-svc",
+        resolver_name="test_site",
+    )
+    # Sample is created lazily on first .labels() call; assert post-call.
+    resolver()
+    resolver()
+    resolver()
+    sample = PER_LANGUAGE_SEARCH_PATH_FALLBACK_TOTAL.labels(
+        service="test-svc", resolver="test_site"
+    )
+    assert sample._value.get() == 3
+
+
+def test_make_per_language_search_path_skips_metric_when_language_set(
+    _reset_per_language_fallback_warn_state,
+):
+    """The metric is only incremented on the fallback path; when an active
+    language IS set, the resolver returns the per-language path with no
+    fanout."""
+    pytest.importorskip("prometheus_client")
+    from kielo_shared.observability.metrics import (
+        PER_LANGUAGE_SEARCH_PATH_FALLBACK_TOTAL,
+    )
+
+    resolver = db_utils.make_per_language_search_path(
+        fallback="_shared, public",
+        service="test-svc",
+        resolver_name="test_site",
+    )
+    token = db_utils.set_active_language("fi")
+    try:
+        assert "klearn_fi" in resolver()
+    finally:
+        db_utils.reset_active_language(token)
+    # No sample created — labels() would create a zero sample, so we
+    # check the family has no children for our key.
+    samples = list(
+        PER_LANGUAGE_SEARCH_PATH_FALLBACK_TOTAL.collect()[0].samples
+    )
+    assert not any(
+        s.labels.get("service") == "test-svc"
+        and s.labels.get("resolver") == "test_site"
+        and s.value > 0
+        for s in samples
+    )
+
+
+def test_make_per_language_search_path_warn_once_when_unexpected(
+    caplog,
+    _reset_per_language_fallback_warn_state,
+):
+    """``expected_fallback=False`` emits WARN on the FIRST fallback per
+    (service, resolver) pair, then DEBUG. The counter still increments
+    every time so the ongoing rate is queryable."""
+    import logging
+
+    resolver = db_utils.make_per_language_search_path(
+        fallback="_shared, public",
+        service="test-svc",
+        resolver_name="unexpected_site",
+        expected_fallback=False,
+    )
+
+    caplog.set_level(
+        logging.DEBUG, logger="kielo_shared.observability.metrics"
+    )
+    resolver()
+    resolver()
+    resolver()
+
+    warn_records = [
+        r for r in caplog.records
+        if r.levelno == logging.WARNING
+        and "per_language_search_path_fallback" in r.message
+        and "unexpected_site" in r.message
+    ]
+    debug_records = [
+        r for r in caplog.records
+        if r.levelno == logging.DEBUG
+        and "per_language_search_path_fallback" in r.message
+        and "unexpected_site" in r.message
+    ]
+    assert len(warn_records) == 1
+    assert len(debug_records) == 2
+
+
+def test_make_per_language_search_path_debug_only_when_expected(
+    caplog,
+    _reset_per_language_fallback_warn_state,
+):
+    """``expected_fallback=True`` (background workers) keeps the log at
+    DEBUG every time — fallback IS the documented contract; WARN would
+    be noise. Counter increments unchanged."""
+    import logging
+
+    resolver = db_utils.make_per_language_search_path(
+        fallback="_shared, public",
+        service="test-svc",
+        resolver_name="expected_site",
+        expected_fallback=True,
+    )
+
+    caplog.set_level(
+        logging.DEBUG, logger="kielo_shared.observability.metrics"
+    )
+    resolver()
+    resolver()
+
+    warn_records = [
+        r for r in caplog.records
+        if r.levelno == logging.WARNING
+        and "per_language_search_path_fallback" in r.message
+    ]
+    debug_records = [
+        r for r in caplog.records
+        if r.levelno == logging.DEBUG
+        and "per_language_search_path_fallback" in r.message
+        and "expected_site" in r.message
+    ]
+    assert warn_records == []
+    assert len(debug_records) == 2
+
+
+def test_make_per_language_search_path_no_observability_without_labels(
+    caplog,
+    _reset_per_language_fallback_warn_state,
+):
+    """Backward compat: callers that don't pass ``service``/``resolver_name``
+    get the original silent-fallback behavior (no counter, no log).
+    Verifies the observability path is gated on opt-in so existing tests
+    that exercise the resolver in isolation aren't disturbed."""
+    import logging
+
+    resolver = db_utils.make_per_language_search_path(fallback="_shared, public")
+    caplog.set_level(
+        logging.DEBUG, logger="kielo_shared.observability.metrics"
+    )
+    resolver()
+    resolver()
+
+    relevant = [
+        r for r in caplog.records
+        if "per_language_search_path_fallback" in r.message
+    ]
+    assert relevant == []

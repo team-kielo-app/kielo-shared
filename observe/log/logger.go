@@ -15,6 +15,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/team-kielo-app/kielo-shared/db"
 	"github.com/team-kielo-app/kielo-shared/observe"
 )
 
@@ -96,6 +97,9 @@ func (h *traceHandler) Handle(ctx context.Context, record slog.Record) error {
 			slog.String("span_id", tc.SpanID),
 			slog.String("request_id", tc.RequestID),
 		)
+	}
+	if lang, ok := db.LanguageFromContext(ctx); ok && lang != "" {
+		record.AddAttrs(slog.String("learning_language_code", lang))
 	}
 	return h.base.Handle(ctx, record)
 }

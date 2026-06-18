@@ -84,7 +84,9 @@ def normalize_internal_storage_url(url: str) -> str:
     internal_parsed = urlparse(internal)
     if parsed.hostname == internal_parsed.hostname:
         return url
-    return urlunparse(parsed._replace(
-        scheme=internal_parsed.scheme,
-        netloc=f"{internal_parsed.hostname}:{internal_parsed.port or DEFAULT_EMULATOR_PORT}",
-    ))
+    return urlunparse(
+        parsed._replace(
+            scheme=internal_parsed.scheme,
+            netloc=f"{internal_parsed.hostname}:{internal_parsed.port or DEFAULT_EMULATOR_PORT}",
+        )
+    )

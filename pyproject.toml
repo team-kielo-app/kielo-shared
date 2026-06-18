@@ -16,7 +16,85 @@ dependencies = [
 [tool.deptry]
 
 [tool.deptry.per_rule_ignores]
-DEP001 = ["asyncpg"]
+# Consumer-provided runtime deps: kielo-shared exposes opt-in hooks /
+# middleware / seam providers that only activate when the consumer's
+# own pyproject installs the underlying library. Declaring them as
+# required deps here would force every consumer to install the full
+# union (aiohttp + starlette + google-genai + livekit-plugins-deepgram +
+# pydantic).
+#
+# `pydantic` is opt-in via `kielo_shared.sdk.v3` — the generated
+# pydantic-v2 models for the typed Python SDK. Engine + ingest-
+# processor already ship pydantic >=2.0 in their own dependency
+# manifests; consumers that don't import `kielo_shared.sdk.*` (e.g.
+# CLI tools, lightweight workers) skip the cost entirely.
+DEP001 = [
+    "aiohttp",
+    "asyncpg",
+    "fastapi",
+    "google",
+    "livekit",
+    "prometheus_client",
+    "pydantic",
+    "starlette",
+]
+
+[tool.mypy]
+python_version = "3.11"
+warn_unused_configs = true
+namespace_packages = true
+explicit_package_bases = true
+
+# Consumer-provided runtime deps (mirrors [tool.deptry.per_rule_ignores] DEP001).
+# These libraries are intentionally not in kielo-shared's `dependencies` because
+# they come from the consuming service. Without per-module ignores mypy would
+# emit import-not-found for every Protocol/middleware/hook file that exposes
+# integration with them.
+[[tool.mypy.overrides]]
+module = [
+    "aiohttp",
+    "aiohttp.*",
+    "asyncpg",
+    "certifi",
+    "fastapi.*",
+    "google.*",
+    "httpx",
+    "httpx.*",
+    "livekit.*",
+    "prometheus_client",
+    "prometheus_client.*",
+    "sqlalchemy",
+    "sqlalchemy.*",
+    "starlette.*",
+]
+ignore_missing_imports = true
+
+# Generated SDK module. datamodel-code-generator emits pydantic
+# constrained-type constructor syntax (conint(...), constr(...)) that
+# mypy cannot parse as type annotations even though it's runtime-valid
+# pydantic — see https://github.com/koxudaxi/datamodel-code-generator/issues/2167.
+# The file is byte-deterministic regen output (no human edits), so
+# checking it would only surface tool-version drift, not real type
+# issues; the source of truth is the OpenAPI spec.
+[[tool.mypy.overrides]]
+module = ["kielo_shared.sdk.v3.models"]
+ignore_errors = true
+
+[tool.vulture]
+# `ex` is the redis-py kwarg for TTL — Protocol abstract methods declare it
+# so callers can pass it positionally or by name. Vulture sees the abstract
+# method body (`...`) and flags it unused.
+# `executemany` is the SQLAlchemy event hook signature — fixed by the framework.
+# `session`, `trace_config_ctx` are aiohttp.TraceConfig hook signature params
+# (see aiohttp_hooks.py); aiohttp invokes hooks positionally so the names are
+# fixed by the framework even though our hook body only uses `params`.
+# `Message` is the google.cloud.pubsub_v1 Message class — imported under
+# `if TYPE_CHECKING:` for string annotations in pubsub_consumer.py;
+# vulture's static walk doesn't follow forward refs so flags it unused.
+# `transaction` is the redis-py pipeline() kwarg — Protocol method
+# stub at cache_redis.py:77 declares it for typing parity with redis-py;
+# vulture flags the abstract param even though callers pass it.
+ignore_names = ["ex", "executemany", "session", "trace_config_ctx", "Message", "transaction"]
 
 [tool.setuptools.dynamic]
 version = {attr = "kielo_shared.__version__"}
@@ -26,3 +104,8 @@ include = ["kielo_shared*"]
 
 [tool.setuptools.package-data]
 kielo_shared = ["*.json"]
+
+[tool.ruff.lint]
+# RUF100 flags `# noqa` directives whose targeted rule is no longer triggered
+# at that line — surfaces stale suppressions for deletion.
+extend-select = ["RUF100"]

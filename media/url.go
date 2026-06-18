@@ -3,7 +3,6 @@ package media
 import (
 	"encoding/json"
 	"fmt"
-	"net/url"
 	"strings"
 
 	"github.com/team-kielo-app/kielo-shared/gcs"
@@ -109,54 +108,9 @@ func PreferredVariantURL(serveBaseURL string, variants map[string]Variant, keyPr
 		if !ok || strings.TrimSpace(v.Path) == "" {
 			continue
 		}
-		if joined := joinServeBaseAndVariantPath(base, v.Path); joined != "" {
+		if joined := gcs.JoinServeBaseAndObjectPath(base, v.Path); joined != "" {
 			return joined
 		}
 	}
 	return ""
-}
-
-// joinServeBaseAndVariantPath combines a serve-base URL with a variant
-// filename. It correctly handles two cases:
-//
-//   - Direct/CDN URL: just appends the path with a "/" separator.
-//   - GCS storage API URL (".../storage/v1/b/<bucket>/o/<prefix>/"):
-//     re-encodes the full object path with the proper "/o/" segment
-//     and appends "?alt=media" so the returned URL is fetchable.
-func joinServeBaseAndVariantPath(serveBaseURL, variantPath string) string {
-	base := strings.TrimSpace(serveBaseURL)
-	if base == "" {
-		return ""
-	}
-	vPath := strings.TrimSpace(variantPath)
-	if vPath == "" {
-		return base
-	}
-
-	if parsedBase, err := url.Parse(base); err == nil && parsedBase != nil {
-		if strings.TrimSpace(parsedBase.RawQuery) != "" || !strings.HasSuffix(parsedBase.Path, "/") {
-			return base
-		}
-		if gcs.IsStorageAPIPath(parsedBase.Path) {
-			bucketAndPrefix := strings.TrimPrefix(parsedBase.Path, gcs.StorageAPIPath)
-			parts := strings.SplitN(bucketAndPrefix, "/o/", 2)
-			if len(parts) == 2 {
-				bucket := strings.TrimSpace(parts[0])
-				objectPrefix := strings.Trim(parts[1], "/")
-				objectPath := strings.TrimLeft(vPath, "/")
-				if objectPrefix != "" {
-					objectPath = objectPrefix + "/" + objectPath
-				}
-				if bucket != "" && objectPath != "" {
-					hostBase := fmt.Sprintf("%s://%s", parsedBase.Scheme, parsedBase.Host)
-					return gcs.BuildObjectFetchURL(hostBase, bucket, objectPath)
-				}
-			}
-		}
-	}
-
-	if strings.HasSuffix(base, "/") {
-		return base + strings.TrimLeft(vPath, "/")
-	}
-	return base + "/" + strings.TrimLeft(vPath, "/")
 }

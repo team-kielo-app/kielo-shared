@@ -13,6 +13,9 @@ MODULE_WHISPER = "whisper"
 MODULE_EMBEDDINGS = "embeddings"
 MODULE_TRANSLATION_FI_EN = "translation_fi_en"
 MODULE_TRANSLATION_EN_FI = "translation_en_fi"
+MODULE_TRANSLATION_SV_EN = "translation_sv_en"
+MODULE_TRANSLATION_EN_SV = "translation_en_sv"
+MODULE_TRANSLATION_EN_VI = "translation_en_vi"
 MODULE_OMORFI = "omorfi"
 MODULE_VOIKKO = "voikko"
 
@@ -140,9 +143,19 @@ async def fetch_models_health_async(
     headers: Mapping[str, str] | None = None,
     timeout_seconds: float = DEFAULT_HEALTH_TIMEOUT_SECONDS,
 ) -> dict[str, Any]:
-    async with httpx.AsyncClient(
+    # The models service is an internal Kielo peer — propagate the
+    # active language and trace context per ADR-006 §3/§9 so every
+    # health probe is correlated end-to-end. Callers pass the
+    # X-Internal-API-Key via the headers mapping; internal_client_async
+    # handles its own pass-through cleanly.
+    from kielo_shared.http import INTERNAL_API_KEY_HEADER, internal_client_async
+
+    normalized_headers = _normalize_headers(headers)
+    api_key = normalized_headers.pop(INTERNAL_API_KEY_HEADER, None)
+    async with internal_client_async(
+        api_key=api_key,
         timeout=timeout_seconds,
-        headers=_normalize_headers(headers),
+        headers=normalized_headers or None,
     ) as client:
         response = await client.get(build_health_url(base_url))
         payload = response.json()
@@ -163,9 +176,15 @@ def fetch_models_health(
     headers: Mapping[str, str] | None = None,
     timeout_seconds: float = DEFAULT_HEALTH_TIMEOUT_SECONDS,
 ) -> dict[str, Any]:
-    with httpx.Client(
+    # Sync sibling — see fetch_models_health_async for rationale.
+    from kielo_shared.http import INTERNAL_API_KEY_HEADER, internal_client_sync
+
+    normalized_headers = _normalize_headers(headers)
+    api_key = normalized_headers.pop(INTERNAL_API_KEY_HEADER, None)
+    with internal_client_sync(
+        api_key=api_key,
         timeout=timeout_seconds,
-        headers=_normalize_headers(headers),
+        headers=normalized_headers or None,
     ) as client:
         response = client.get(build_health_url(base_url))
         payload = response.json()
@@ -195,7 +214,9 @@ async def _fetch_module_health_async(
             timeout=timeout_seconds,
             headers=_normalize_headers(headers),
         ) as client:
-            response = await client.get(urljoin(base_url.strip().rstrip("/") + "/", path))
+            response = await client.get(
+                urljoin(base_url.strip().rstrip("/") + "/", path)
+            )
             payload = response.json()
         if response.status_code not in (200, 503) or not isinstance(payload, dict):
             return None
@@ -398,14 +419,21 @@ def normalize_transcription_payload(
         for item in raw_segments:
             if not isinstance(item, Mapping):
                 continue
+            # Neutral keys only: ``text`` / ``text_primary`` / ``words_array``.
+            # Emit BOTH ``text`` (read by kielolearn-engine) and
+            # ``text_primary`` (consumed by ingest-processor's
+            # ``TranscriptionSegment`` Pydantic model).
+            text_primary = str(item.get("text") or item.get("text_primary") or "")
+            words_array = item.get("words_array") or []
             normalized_segments.append(
                 {
                     "segment_index": int(item.get("segment_index", 0)),
                     "start_time": float(item.get("start_time", 0.0)),
                     "end_time": float(item.get("end_time", 0.0)),
-                    "text_fi": str(item.get("text_fi") or ""),
+                    "text": text_primary,
+                    "text_primary": text_primary,
                     "words": item.get("words") or [],
-                    "words_array_fi": item.get("words_array_fi") or [],
+                    "words_array": words_array,
                 }
             )
 

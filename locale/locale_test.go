@@ -1,0 +1,116 @@
+package locale
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func TestLanguageDirection(t *testing.T) {
+	for _, code := range []string{"ar", "fa", "he", "ur", "AR", "ar-SA"} {
+		assert.Equal(t, "rtl", LanguageDirection(code), "expected rtl for %q", code)
+	}
+	for _, code := range []string{"en", "fi", "sv", "vi", "ja", "zh", "bn", "hi", "th", "sr", "", "xx"} {
+		assert.Equal(t, "ltr", LanguageDirection(code), "expected ltr for %q", code)
+	}
+}
+
+// TestAllSupportLocalesAreReconcilable guards the invariant the localization
+// service relies on at boot: every code the platform declares supported must
+// be shapeable into a valid localization.languages row (non-empty name +
+// a valid text direction). If this fails, ReconcileSupportedLanguages would
+// register a malformed row and the dynamic_translations FK drift returns.
+func TestAllSupportLocalesAreReconcilable(t *testing.T) {
+	for _, code := range AllSupportLocales() {
+		assert.NotEmpty(t, DisplayName(code, ""), "no display name for declared support locale %q", code)
+		dir := LanguageDirection(code)
+		assert.Contains(t, []string{"ltr", "rtl"}, dir, "invalid direction %q for %q", dir, code)
+		assert.True(t, IsSupportedSupportLanguage(code), "AllSupportLocales returned non-supported %q", code)
+	}
+}
+
+func TestNormalizeLocaleCode(t *testing.T) {
+	assert.Equal(t, "vi", NormalizeLocaleCode(" vn "))
+	assert.Equal(t, "vi", NormalizeLocaleCode("vi_VN"))
+	assert.Equal(t, "sv", NormalizeLocaleCode("sv-SE"))
+	assert.Equal(t, "sv", NormalizeLocaleCode("sv_se"))
+	assert.Equal(t, "vi", NormalizeLocaleCode("vn_vn"))
+	assert.Equal(t, "zh", NormalizeLocaleCode("zh-Hant-TW"))
+	assert.Equal(t, "pt", NormalizeLocaleCode(" pt_BR "))
+	assert.Equal(t, "", NormalizeLocaleCode(""))
+	assert.Equal(t, "", NormalizeLocaleCode("  "))
+}
+
+func TestNormalizeLearningLanguageCode(t *testing.T) {
+	assert.Equal(t, "", NormalizeLearningLanguageCode(" vn "))
+	assert.Equal(t, "", NormalizeLearningLanguageCode("vi_VN"))
+	assert.Equal(t, "sv", NormalizeLearningLanguageCode("sv-SE"))
+	assert.Equal(t, "sv", NormalizeLearningLanguageCode("sv_SE"))
+	assert.Equal(t, "", NormalizeLearningLanguageCode(""))
+}
+
+func TestNormalizeSourceLocale(t *testing.T) {
+	assert.Equal(t, "sv", NormalizeSourceLocale(" sv_SE "))
+	assert.Equal(t, "zh", NormalizeSourceLocale("zh-Hant-TW"))
+	assert.Equal(t, "vi", NormalizeSourceLocale("vn"))
+	assert.Equal(t, "", NormalizeSourceLocale(""))
+}
+
+func TestNormalizeAcceptLanguage(t *testing.T) {
+	assert.Equal(t, "pt", NormalizeAcceptLanguage(" pt_BR "))
+	assert.Equal(t, "zh", NormalizeAcceptLanguage("zh-Hant-TW,zh;q=0.9"))
+	assert.Equal(t, "vi", NormalizeAcceptLanguage(" vn "))
+	assert.Equal(t, "vi", NormalizeAcceptLanguage("vi_VN"))
+	assert.Equal(t, "de", NormalizeAcceptLanguage("de-DE,de;q=0.9"))
+	assert.Equal(t, "", NormalizeAcceptLanguage(""))
+}
+
+func TestSupportLocaleCandidates(t *testing.T) {
+	assert.Equal(t, []string{"vi", "en"}, SupportLocaleCandidates("vi_VN"))
+	assert.Equal(t, []string{"pt", "en"}, SupportLocaleCandidates(" pt_BR "))
+	assert.Equal(t, []string{"en"}, SupportLocaleCandidates("en_US"))
+	assert.Nil(t, SupportLocaleCandidates(""))
+}
+
+// TestSupportLocaleCandidates_EdgeCases pins dedup and Tier-A-fallback
+// behavior for shapes the main test didn't cover. These are the
+// invariants callers (LocalizationService.ResolveTemplate, mobile-bff
+// support-language resolver, email locale router) rely on to avoid
+// double-querying the translations table for the same code, or
+// double-appending English to the candidate list.
+func TestSupportLocaleCandidates_EdgeCases(t *testing.T) {
+	// Bare English: must NOT double-append — ["en"] not ["en", "en"].
+	// Would otherwise cause duplicate getApprovedTranslation calls
+	// for the same key_id + language_code pair.
+	assert.Equal(t, []string{"en"}, SupportLocaleCandidates("en"))
+
+	// Bare non-English base: 2-tier chain (self, then en). Since the
+	// base equals the normalized form, dedup collapses the middle
+	// entry, leaving [base, en].
+	assert.Equal(t, []string{"sv", "en"}, SupportLocaleCandidates("sv"))
+
+	// Legacy 'vn' alias canonicalizes to 'vi' before fanout.
+	assert.Equal(t, []string{"vi", "en"}, SupportLocaleCandidates("vn"))
+	assert.Equal(t, []string{"vi", "en"}, SupportLocaleCandidates("vn_vn"))
+
+	// Mixed-case input normalizes cleanly through the whole chain.
+	assert.Equal(t, []string{"sv", "en"}, SupportLocaleCandidates("SV_se"))
+
+	// Script subtag zh-Hant-TW: base is zh, en terminates the chain.
+	candidates := SupportLocaleCandidates("zh-Hant-TW")
+	assert.Equal(t, "zh", candidates[0])
+	assert.Equal(t, "en", candidates[len(candidates)-1])
+}
+
+// TestBaseLocale pins the behavior of the alias exported for
+// readability. Callers use BaseLocale when they mean "language subtag
+// only, not the full locale" — renaming or altering this must not
+// change semantics.
+func TestBaseLocale(t *testing.T) {
+	assert.Equal(t, "sv", BaseLocale("sv-SE"))
+	assert.Equal(t, "vi", BaseLocale("vi_VN"))
+	assert.Equal(t, "vi", BaseLocale("vn"))
+	assert.Equal(t, "en", BaseLocale("en-US"))
+	assert.Equal(t, "", BaseLocale(""))
+	assert.Equal(t, "", BaseLocale("  "))
+}

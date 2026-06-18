@@ -19,6 +19,8 @@ import (
 	"cloud.google.com/go/storage"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
+
+	"github.com/team-kielo-app/kielo-shared/observe/httputil"
 )
 
 // ClientInterface defines the interface for GCS operations
@@ -169,7 +171,7 @@ func (c *Client) DownloadBlob(ctx context.Context, bucketName, objectName, desti
 		return fmt.Errorf("os.MkdirAll %s: %w", destDir, err)
 	}
 
-	f, err := os.Create(destinationFile)
+	f, err := os.Create(destinationFile) //nolint:gosec // G304: destinationFile is service-controlled (download target, not user input)
 	if err != nil {
 		l.Error("Failed to create destination file", "error", err)
 		return fmt.Errorf("os.Create %s: %w", destinationFile, err)
@@ -199,7 +201,7 @@ func (c *Client) UploadBlob(ctx context.Context, sourceFile, bucketName, objectN
 	ulCtx, cancel := context.WithTimeout(ctx, time.Minute*3)
 	defer cancel()
 
-	f, err := os.Open(sourceFile)
+	f, err := os.Open(sourceFile) //nolint:gosec // G304: sourceFile is service-controlled local upload path
 	if err != nil {
 		l.Error("Failed to open source file for upload", "error", err)
 		return fmt.Errorf("os.Open %s: %w", sourceFile, err)
@@ -215,7 +217,12 @@ func (c *Client) UploadBlob(ctx context.Context, sourceFile, bucketName, objectN
 
 	if _, err = io.Copy(wc, f); err != nil {
 		l.Error("Failed to copy source file to GCS writer", "error", err)
-		_ = wc.CloseWithError(err) //nolint:staticcheck
+		// Per GCS SDK deprecation of Writer.CloseWithError, the canonical
+		// way to abort an in-flight upload is to cancel the context
+		// passed to NewWriter. The deferred cancel() above (from
+		// context.WithTimeout) handles the cleanup on the writer's
+		// background goroutine.
+		cancel()
 		return fmt.Errorf("io.Copy to GCS writer for %s: %w", objectName, err)
 	}
 
@@ -440,7 +447,7 @@ func (c *Client) generateEmulatorUploadURL(
 		req.Header.Set("X-Upload-Content-Type", opts.ContentType)
 	}
 
-	httpClient := &http.Client{Timeout: 10 * time.Second}
+	httpClient := httputil.NewClient(10 * time.Second)
 	resp, err := httpClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("failed to initialize emulator upload session: %w", err)
@@ -504,12 +511,13 @@ func (c *Client) Close() error {
 
 // ParseGCSURI parses a GCS URI (gs://bucket/path) and returns bucket and path
 func ParseGCSURI(uri string) (bucket, path string, err error) {
-	if !strings.HasPrefix(uri, "gs://") {
+	trimmedURI, ok := strings.CutPrefix(uri, "gs://")
+	if !ok {
 		return "", "", fmt.Errorf("invalid GCS URI format: %s", uri)
 	}
-	parts := strings.SplitN(strings.TrimPrefix(uri, "gs://"), "/", 2)
-	if len(parts) != 2 {
+	bucket, path, ok = strings.Cut(trimmedURI, "/")
+	if !ok {
 		return "", "", fmt.Errorf("invalid GCS URI format, missing path: %s", uri)
 	}
-	return parts[0], parts[1], nil
+	return bucket, path, nil
 }
