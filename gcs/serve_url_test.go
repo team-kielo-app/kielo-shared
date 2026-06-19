@@ -55,6 +55,14 @@ func TestBuildServeBaseURL_CDNEmptyPrefix(t *testing.T) {
 	assert.Equal(t, "https://cdn.kielo.app/", got)
 }
 
+func TestBuildServeBaseURL_CDNBucketPlaceholderSubstituted(t *testing.T) {
+	// CDN_SERVING_BASE_URL may be a "{bucket}" template so one CDN host can
+	// front multiple buckets; the placeholder must be replaced with the real
+	// bucket. Regression: kielotv thumbnails leaked the literal "{bucket}".
+	got := BuildServeBaseURL("kielo-media-prod", "kielotv/x/y", "https://media.kielo.app/{bucket}")
+	assert.Equal(t, "https://media.kielo.app/kielo-media-prod/kielotv/x/y/", got)
+}
+
 func TestBuildServeBaseURL_PublicGCSFallback(t *testing.T) {
 	// No CDN, no emulator → the canonical public GCS URL. Useful
 	// for dev without the emulator configured.
