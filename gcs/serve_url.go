@@ -23,6 +23,12 @@ func BuildServeBaseURL(bucket, pathPrefix, cdnBaseURL string) string {
 	// CDN overrides everything.
 	if cdnBaseURL != "" {
 		base := strings.TrimRight(cdnBaseURL, "/")
+		// CDN_SERVING_BASE_URL may carry a "{bucket}" placeholder (e.g.
+		// "https://media.kielo.app/{bucket}") so one CDN host can front
+		// multiple buckets — inject the real bucket here. No-op when the
+		// base has no placeholder. Without this the literal "{bucket}"
+		// leaks into served URLs (e.g. kielotv thumbnails).
+		base = strings.ReplaceAll(base, "{bucket}", bucket)
 		return fmt.Sprintf("%s/%s", base, prefix)
 	}
 
