@@ -143,12 +143,6 @@ def internal_client_async(
     ``headers`` is merged into the default header set; pass ``None`` to
     use only the canonical defaults.
     """
-    from kielo_shared.httpx_hooks import (
-        inject_active_language_query,
-        inject_active_support_language_query,
-        inject_trace_headers,
-    )
-
     default_headers: dict[str, str] = {}
     if api_key:
         default_headers[INTERNAL_API_KEY_HEADER] = api_key
@@ -161,22 +155,44 @@ def internal_client_async(
         headers=default_headers,
         transport=transport,
         follow_redirects=follow_redirects,
-        event_hooks={
-            "request": [
-                inject_active_language_query,
-                # Sweep SSSS-C: forward the active support (UI/translation)
-                # language so engine callbacks into Go services (e.g.
-                # content-service paragraph snippets during enrichment)
-                # return localized content in the user's locale instead of
-                # the engine's default "en" fallback. Sibling to the
-                # learning-language hook above. Mirrors the Go-side QQQQ
-                # wiring of ApplySupportLanguageQuery + Header into
-                # PrepareInternalJSONRequest.
-                inject_active_support_language_query,
-                inject_trace_headers,
-            ],
-        },
+        event_hooks={"request": _request_hooks_for(api_key, sync=False)},
     )
+
+
+def _request_hooks_for(api_key: Optional[str], *, sync: bool) -> list:
+    """Build the request-hook chain for the canonical httpx factories.
+
+    Trace headers are registered for EVERY client (internal + external) —
+    unknown headers are harmless to external hosts and keep callout latency
+    attributable to the worker context.
+
+    The active learning/support language QUERY PARAMS are registered ONLY for
+    internal Kielo peers (``api_key`` set). For external callouts
+    (``api_key is None``: OpenAI, GCS signed URLs, third-party CDNs) they MUST
+    NOT be injected: they leak an internal routing param off-platform, and on a
+    signed URL an extra query param invalidates the signature (403). Sweep
+    SSSS-C registered them unconditionally; that broke the invariant for
+    external URLs.
+    """
+    from kielo_shared.httpx_hooks import (
+        inject_active_language_query,
+        inject_active_language_query_sync,
+        inject_active_support_language_query,
+        inject_active_support_language_query_sync,
+        inject_trace_headers,
+        inject_trace_headers_sync,
+    )
+
+    hooks: list = []
+    if api_key:
+        if sync:
+            hooks.append(inject_active_language_query_sync)
+            hooks.append(inject_active_support_language_query_sync)
+        else:
+            hooks.append(inject_active_language_query)
+            hooks.append(inject_active_support_language_query)
+    hooks.append(inject_trace_headers_sync if sync else inject_trace_headers)
+    return hooks
 
 
 def internal_client_sync(
@@ -196,12 +212,6 @@ def internal_client_sync(
     for callers stuck in a sync code path (CLI tools, legacy worker
     threads).
     """
-    from kielo_shared.httpx_hooks import (
-        inject_active_language_query_sync,
-        inject_active_support_language_query_sync,
-        inject_trace_headers_sync,
-    )
-
     default_headers: dict[str, str] = {}
     if api_key:
         default_headers[INTERNAL_API_KEY_HEADER] = api_key
@@ -214,17 +224,7 @@ def internal_client_sync(
         headers=default_headers,
         transport=transport,
         follow_redirects=follow_redirects,
-        event_hooks={
-            "request": [
-                inject_active_language_query_sync,
-                # Sweep SSSS-C: sync sibling — see internal_client_async
-                # above for rationale. The sync variant exists because
-                # convo_service.py + skill_assessment.py + a few legacy
-                # background workers still use httpx.Client.
-                inject_active_support_language_query_sync,
-                inject_trace_headers_sync,
-            ],
-        },
+        event_hooks={"request": _request_hooks_for(api_key, sync=True)},
     )
 
 
