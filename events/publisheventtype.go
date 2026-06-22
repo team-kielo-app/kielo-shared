@@ -310,10 +310,13 @@ const (
 	// `kielo-ingest-processor-pull-sub`).
 	EventContentArticleSubmitted PublishEventType = "content.article.submitted.v1"
 
-	// EventCMSMediaRelocate fires when cms requests media-processor to
-	// move a media asset between buckets. Producer: kielo-cms. Consumer:
-	// kielo-media-processor.
-	EventCMSMediaRelocate PublishEventType = "cms.media.relocate.v1"
+	// EventCMSMediaRelocateDirect mirrors the outbox-side
+	// EventCMSMediaRelocate (cms.media.relocate.v1). cms now enqueues the
+	// relocate into cms.outbox_events inside the video-processed tx (durable,
+	// closing the prior fire-and-forget at-most-once gap); the outbox drainer
+	// publishes to media-processor via this direct-publish constant. Same wire
+	// string. Producer: kielo-cms outbox drainer. Consumer: kielo-media-processor.
+	EventCMSMediaRelocateDirect PublishEventType = "cms.media.relocate.v1"
 
 	// EventVideoCreated fires when cms creates a video content row
 	// pending media-processor pipeline. Producer: kielo-cms. Consumer:
@@ -564,7 +567,7 @@ var AllPublishEventTypes = []PublishEventType{
 	// EventUserAccountDeleted retired Sweep ZJ-A.1
 	EventUserRegistrationConfirmed,
 	EventContentArticleSubmitted,
-	EventCMSMediaRelocate,
+	EventCMSMediaRelocateDirect,
 	EventVideoCreated,
 	EventMediaUploaded,
 	EventMediaProcessing,

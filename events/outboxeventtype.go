@@ -76,6 +76,17 @@ const (
 	// latent at-most-once delivery gap on every delete. Sweep SSS-C
 	// closes the gap by routing the publishes through outbox.
 	EventCMSContentDeleted OutboxEventType = "cms.content.deleted.v1"
+
+	// EventCMSMediaRelocate fires when cms asks media-processor to move a
+	// media asset to its final bucket prefix (e.g. processed/<id>/ ->
+	// kielotv/<video_id>/<id>/) after ingest processing completes. Producer:
+	// kielo-cms (enqueued in the video-processed tx). Consumer:
+	// kielo-media-processor. Pre-Sweep this was a direct fire-and-forget
+	// publish (EventCMSMediaRelocateDirect) with no retry -- a dropped publish
+	// silently left the asset at its interim prefix forever; routing through
+	// the outbox makes it at-least-once. Language NULL (media-relocation is
+	// language-agnostic).
+	EventCMSMediaRelocate OutboxEventType = "cms.media.relocate.v1"
 )
 
 // User-service outbox events. Producer: kielo-user-service business
@@ -117,6 +128,7 @@ const (
 var AllOutboxEventTypes = []OutboxEventType{
 	EventCMSContentPublished,
 	EventCMSContentDeleted,
+	EventCMSMediaRelocate,
 	EventUserProfileUpdated,
 	EventUserDeleted,
 	EventUserAchievementAwarded,
