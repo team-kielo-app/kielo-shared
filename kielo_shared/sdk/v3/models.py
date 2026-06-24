@@ -3938,6 +3938,7 @@ class RoadmapLessonGenerationSettings(BaseModel):
     estimated_duration_minutes: conint(ge=3, le=120) | None = Field(
         10, title="Estimated Duration Minutes"
     )
+    force_regenerate: bool | None = Field(False, title="Force Regenerate")
     shape: str | None = Field(None, title="Shape")
     step_count: conint(ge=4, le=20) | None = Field(None, title="Step Count")
     tts_language: str | None = Field(None, title="Tts Language")
