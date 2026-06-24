@@ -6267,6 +6267,7 @@ type RoadmapLessonGenerationSettings struct {
 	CefrLevel                *string                                         `json:"cefr_level"`
 	DifficultyLevel          *RoadmapLessonGenerationSettingsDifficultyLevel `json:"difficulty_level"`
 	EstimatedDurationMinutes *int                                            `json:"estimated_duration_minutes,omitempty"`
+	ForceRegenerate          *bool                                           `json:"force_regenerate,omitempty"`
 	Shape                    *string                                         `json:"shape"`
 	StepCount                *int                                            `json:"step_count"`
 	TtsLanguage              *string                                         `json:"tts_language"`
