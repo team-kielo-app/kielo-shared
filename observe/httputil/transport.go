@@ -58,6 +58,20 @@ func InternalAuthTransport(base http.RoundTripper, apiKey string) http.RoundTrip
 	return &internalAuthTransport{base: base, apiKey: apiKey}
 }
 
+// tunedTransport clones [http.DefaultTransport] and raises the idle-connection
+// pool limits. Go's default MaxIdleConnsPerHost is 2, which starves clients
+// that fan heavy concurrent traffic to a few hosts (e.g. a BFF talking to
+// user-service, content-service, the learning engine) — every request beyond
+// the 2 idle conns/host opens a fresh connection and pays a full TLS handshake.
+// We keep the default dial/keep-alive/timeout behavior and only widen the pool.
+func tunedTransport() *http.Transport {
+	tr := http.DefaultTransport.(*http.Transport).Clone()
+	tr.MaxIdleConns = 100
+	tr.MaxIdleConnsPerHost = 32
+	tr.IdleConnTimeout = 90 * time.Second
+	return tr
+}
+
 // NewClient returns an [*http.Client] with the given timeout and an outbound
 // [TracingTransport] attached so every request propagates W3C traceparent
 // headers. Prefer this helper over ad-hoc &http.Client{Timeout: X} so trace
@@ -65,7 +79,7 @@ func InternalAuthTransport(base http.RoundTripper, apiKey string) http.RoundTrip
 func NewClient(timeout time.Duration) *http.Client {
 	return &http.Client{
 		Timeout:   timeout,
-		Transport: TracingTransport(nil),
+		Transport: TracingTransport(tunedTransport()),
 	}
 }
 
@@ -88,7 +102,7 @@ func NewClient(timeout time.Duration) *http.Client {
 func NewInternalClient(timeout time.Duration, apiKey string) *http.Client {
 	return &http.Client{
 		Timeout:   timeout,
-		Transport: TracingTransport(InternalAuthTransport(nil, apiKey)),
+		Transport: TracingTransport(InternalAuthTransport(tunedTransport(), apiKey)),
 	}
 }
 
