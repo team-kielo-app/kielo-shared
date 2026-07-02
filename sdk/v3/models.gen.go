@@ -23,13 +23,6 @@ const (
 	ChallengeSectionSectionTypeReview    ChallengeSectionSectionType = "review"
 )
 
-// Defines values for ChallengeSectionStatus.
-const (
-	ChallengeSectionStatusCompleted  ChallengeSectionStatus = "completed"
-	ChallengeSectionStatusInProgress ChallengeSectionStatus = "in_progress"
-	ChallengeSectionStatusPending    ChallengeSectionStatus = "pending"
-)
-
 // Defines values for ConceptHubGenerationJobResponseJobType.
 const (
 	ConceptHubGenerationJobResponseJobTypeConceptHub           ConceptHubGenerationJobResponseJobType = "concept_hub"
@@ -126,9 +119,7 @@ const (
 // Defines values for ExerciseStateStatus.
 const (
 	ExerciseStateStatusAnswered    ExerciseStateStatus = "answered"
-	ExerciseStateStatusFailed      ExerciseStateStatus = "failed"
 	ExerciseStateStatusNotAnswered ExerciseStateStatus = "not_answered"
-	ExerciseStateStatusPending     ExerciseStateStatus = "pending"
 	ExerciseStateStatusSkipped     ExerciseStateStatus = "skipped"
 )
 
@@ -336,21 +327,6 @@ const (
 	NextStepRecommendationTypeWordCluster     NextStepRecommendationType = "word_cluster"
 )
 
-// Defines values for PlaceholderExerciseItemTypeFk.
-const (
-	PlaceholderExerciseItemTypeFkBaseWord       PlaceholderExerciseItemTypeFk = "BaseWord"
-	PlaceholderExerciseItemTypeFkGrammarConcept PlaceholderExerciseItemTypeFk = "GrammarConcept"
-)
-
-// Defines values for PlaceholderExerciseSourceType.
-const (
-	PlaceholderExerciseSourceTypeCache      PlaceholderExerciseSourceType = "cache"
-	PlaceholderExerciseSourceTypeDatabase   PlaceholderExerciseSourceType = "database"
-	PlaceholderExerciseSourceTypeLlm        PlaceholderExerciseSourceType = "llm"
-	PlaceholderExerciseSourceTypeRepository PlaceholderExerciseSourceType = "repository"
-	PlaceholderExerciseSourceTypeRuleBased  PlaceholderExerciseSourceType = "rule_based"
-)
-
 // Defines values for PreferredDifficultyProfileUserSetCefrLevel.
 const (
 	A1 PreferredDifficultyProfileUserSetCefrLevel = "A1"
@@ -461,10 +437,10 @@ const (
 
 // Defines values for SessionReconcileItemResultStatus.
 const (
-	Applied   SessionReconcileItemResultStatus = "applied"
-	Duplicate SessionReconcileItemResultStatus = "duplicate"
-	Missing   SessionReconcileItemResultStatus = "missing"
-	Skipped   SessionReconcileItemResultStatus = "skipped"
+	SessionReconcileItemResultStatusApplied   SessionReconcileItemResultStatus = "applied"
+	SessionReconcileItemResultStatusDuplicate SessionReconcileItemResultStatus = "duplicate"
+	SessionReconcileItemResultStatusMissing   SessionReconcileItemResultStatus = "missing"
+	SessionReconcileItemResultStatusSkipped   SessionReconcileItemResultStatus = "skipped"
 )
 
 // Defines values for SessionResumeStateStatus.
@@ -482,11 +458,11 @@ const (
 
 // Defines values for SpellingChallengeExerciseSourceType.
 const (
-	SpellingChallengeExerciseSourceTypeCache      SpellingChallengeExerciseSourceType = "cache"
-	SpellingChallengeExerciseSourceTypeDatabase   SpellingChallengeExerciseSourceType = "database"
-	SpellingChallengeExerciseSourceTypeLlm        SpellingChallengeExerciseSourceType = "llm"
-	SpellingChallengeExerciseSourceTypeRepository SpellingChallengeExerciseSourceType = "repository"
-	SpellingChallengeExerciseSourceTypeRuleBased  SpellingChallengeExerciseSourceType = "rule_based"
+	Cache      SpellingChallengeExerciseSourceType = "cache"
+	Database   SpellingChallengeExerciseSourceType = "database"
+	Llm        SpellingChallengeExerciseSourceType = "llm"
+	Repository SpellingChallengeExerciseSourceType = "repository"
+	RuleBased  SpellingChallengeExerciseSourceType = "rule_based"
 )
 
 // Defines values for SubscriptionInfoGrantSource.
@@ -1475,12 +1451,8 @@ type ChallengeSection struct {
 	Exercises                []ChallengeSection_Exercises_Item `json:"exercises"`
 	LearningObjectiveSummary *string                           `json:"learning_objective_summary"`
 	ObjectiveId              *uuid.UUID                        `json:"objective_id"`
-	SectionIndex             *int                              `json:"section_index"`
-	SectionKey               *string                           `json:"section_key"`
 	SectionType              ChallengeSectionSectionType       `json:"section_type"`
 	SelectionSourceLabel     *string                           `json:"selection_source_label"`
-	Status                   *ChallengeSectionStatus           `json:"status,omitempty"`
-	StepIds                  *[]uuid.UUID                      `json:"step_ids,omitempty"`
 	Subtitle                 *string                           `json:"subtitle"`
 	Title                    string                            `json:"title"`
 	XpMultiplier             *int                              `json:"xp_multiplier,omitempty"`
@@ -1493,9 +1465,6 @@ type ChallengeSection_Exercises_Item struct {
 
 // ChallengeSectionSectionType defines model for ChallengeSection.SectionType.
 type ChallengeSectionSectionType string
-
-// ChallengeSectionStatus defines model for ChallengeSection.Status.
-type ChallengeSectionStatus string
 
 // ChallengeTheme defines model for ChallengeTheme.
 type ChallengeTheme struct {
@@ -2211,7 +2180,6 @@ type ContextMatchingExercise struct {
 	ExerciseType    string                            `json:"exercise_type"`
 	GenerationJobId *uuid.UUID                        `json:"generation_job_id"`
 	GenerationModel *string                           `json:"generation_model"`
-	IsPlaceholder   *bool                             `json:"is_placeholder,omitempty"`
 	ItemIdFk        uuid.UUID                         `json:"item_id_fk"`
 	ItemTypeFk      ContextMatchingExerciseItemTypeFk `json:"item_type_fk"`
 	ObjectiveId     *uuid.UUID                        `json:"objective_id"`
@@ -2223,8 +2191,6 @@ type ContextMatchingExercise struct {
 	QualityScore        *float32                           `json:"quality_score"`
 	ScenarioDescription *string                            `json:"scenario_description,omitempty"`
 	ScenarioImageHint   *string                            `json:"scenario_image_hint"`
-	SectionIndex        *int                               `json:"section_index"`
-	SectionKey          *string                            `json:"section_key"`
 	SourceType          *ContextMatchingExerciseSourceType `json:"source_type"`
 	State               *ExerciseState                     `json:"state,omitempty"`
 
@@ -3732,7 +3698,6 @@ type FillInTheBlankExercise struct {
 	ExerciseType        string                            `json:"exercise_type"`
 	GenerationJobId     *uuid.UUID                        `json:"generation_job_id"`
 	GenerationModel     *string                           `json:"generation_model"`
-	IsPlaceholder       *bool                             `json:"is_placeholder,omitempty"`
 	ItemIdFk            uuid.UUID                         `json:"item_id_fk"`
 	ItemTypeFk          FillInTheBlankExerciseItemTypeFk  `json:"item_type_fk"`
 	ObjectiveId         *uuid.UUID                        `json:"objective_id"`
@@ -3740,8 +3705,6 @@ type FillInTheBlankExercise struct {
 	Prompt              string                            `json:"prompt"`
 	PromptVersion       *string                           `json:"prompt_version"`
 	QualityScore        *float32                          `json:"quality_score"`
-	SectionIndex        *int                              `json:"section_index"`
-	SectionKey          *string                           `json:"section_key"`
 	SentenceWithBlank   string                            `json:"sentence_with_blank"`
 	SourceType          *FillInTheBlankExerciseSourceType `json:"source_type"`
 	State               *ExerciseState                    `json:"state,omitempty"`
@@ -3780,15 +3743,12 @@ type FlashcardExercise struct {
 	ExplanationHtml     *string                      `json:"explanation_html"`
 	GenerationJobId     *uuid.UUID                   `json:"generation_job_id"`
 	GenerationModel     *string                      `json:"generation_model"`
-	IsPlaceholder       *bool                        `json:"is_placeholder,omitempty"`
 	ItemIdFk            uuid.UUID                    `json:"item_id_fk"`
 	ItemTypeFk          FlashcardExerciseItemTypeFk  `json:"item_type_fk"`
 	ObjectiveId         *uuid.UUID                   `json:"objective_id"`
 	Prompt              string                       `json:"prompt"`
 	PromptVersion       *string                      `json:"prompt_version"`
 	QualityScore        *float32                     `json:"quality_score"`
-	SectionIndex        *int                         `json:"section_index"`
-	SectionKey          *string                      `json:"section_key"`
 	SourceType          *FlashcardExerciseSourceType `json:"source_type"`
 	State               *ExerciseState               `json:"state,omitempty"`
 	ValidationSignature *string                      `json:"validation_signature"`
@@ -4029,7 +3989,6 @@ type IdentifyConceptExercise struct {
 	ExerciseType    string                            `json:"exercise_type"`
 	GenerationJobId *uuid.UUID                        `json:"generation_job_id"`
 	GenerationModel *string                           `json:"generation_model"`
-	IsPlaceholder   *bool                             `json:"is_placeholder,omitempty"`
 	ItemIdFk        uuid.UUID                         `json:"item_id_fk"`
 	ItemTypeFk      IdentifyConceptExerciseItemTypeFk `json:"item_type_fk"`
 	ObjectiveId     *uuid.UUID                        `json:"objective_id"`
@@ -4039,8 +3998,6 @@ type IdentifyConceptExercise struct {
 	Prompt        string              `json:"prompt"`
 	PromptVersion *string             `json:"prompt_version"`
 	QualityScore  *float32            `json:"quality_score"`
-	SectionIndex  *int                `json:"section_index"`
-	SectionKey    *string             `json:"section_key"`
 
 	// Sentence Sentence containing the concept being tested
 	Sentence            *string                            `json:"sentence,omitempty"`
@@ -5090,7 +5047,6 @@ type ListVideoItem struct {
 	OriginalTitle                *string    `json:"original_title,omitempty"`
 	PublishedAt                  *time.Time `json:"published_at,omitempty"`
 	SourceLocale                 *string    `json:"source_locale,omitempty"`
-	Thumbhash                    *string    `json:"thumbhash,omitempty"`
 	ThumbnailUrl                 string     `json:"thumbnail_url"`
 	Title                        string     `json:"title"`
 	TitleTranslationFallback     *bool      `json:"title_translation_fallback,omitempty"`
@@ -5119,7 +5075,6 @@ type ListeningComprehensionExercise struct {
 	ExerciseType    string                                   `json:"exercise_type"`
 	GenerationJobId *uuid.UUID                               `json:"generation_job_id"`
 	GenerationModel *string                                  `json:"generation_model"`
-	IsPlaceholder   *bool                                    `json:"is_placeholder,omitempty"`
 	ItemIdFk        uuid.UUID                                `json:"item_id_fk"`
 	ItemTypeFk      ListeningComprehensionExerciseItemTypeFk `json:"item_type_fk"`
 	ObjectiveId     *uuid.UUID                               `json:"objective_id"`
@@ -5131,8 +5086,6 @@ type ListeningComprehensionExercise struct {
 	QualityScore        *float32                                  `json:"quality_score"`
 	Question            *string                                   `json:"question,omitempty"`
 	ReplayLimit         *int                                      `json:"replay_limit,omitempty"`
-	SectionIndex        *int                                      `json:"section_index"`
-	SectionKey          *string                                   `json:"section_key"`
 	SourceType          *ListeningComprehensionExerciseSourceType `json:"source_type"`
 	State               *ExerciseState                            `json:"state,omitempty"`
 	ValidationSignature *string                                   `json:"validation_signature"`
@@ -5391,7 +5344,6 @@ type MultipleChoiceTranslationExercise struct {
 	ExerciseType    string                                      `json:"exercise_type"`
 	GenerationJobId *uuid.UUID                                  `json:"generation_job_id"`
 	GenerationModel *string                                     `json:"generation_model"`
-	IsPlaceholder   *bool                                       `json:"is_placeholder,omitempty"`
 	ItemIdFk        uuid.UUID                                   `json:"item_id_fk"`
 	ItemTypeFk      MultipleChoiceTranslationExerciseItemTypeFk `json:"item_type_fk"`
 	ObjectiveId     *uuid.UUID                                  `json:"objective_id"`
@@ -5401,8 +5353,6 @@ type MultipleChoiceTranslationExercise struct {
 	Prompt        string              `json:"prompt"`
 	PromptVersion *string             `json:"prompt_version"`
 	QualityScore  *float32            `json:"quality_score"`
-	SectionIndex  *int                `json:"section_index"`
-	SectionKey    *string             `json:"section_key"`
 
 	// SourceLanguage Source language code (fi, sv, de, etc.)
 	SourceLanguage *string `json:"source_language,omitempty"`
@@ -5753,39 +5703,6 @@ type PhraseFrame struct {
 	Text               *string `json:"text,omitempty"`
 	Translation        *string `json:"translation,omitempty"`
 }
-
-// PlaceholderExercise defines model for PlaceholderExercise.
-type PlaceholderExercise struct {
-	CacheEntryId *string `json:"cache_entry_id"`
-
-	// ContextHint A specific concept or hint for the exercise, e.g., 'inessive case'.
-	ContextHint     *string `json:"context_hint"`
-	ErrorPatternTag *string `json:"error_pattern_tag"`
-
-	// ExerciseId Unique ID for this specific exercise instance.
-	ExerciseId          *uuid.UUID                     `json:"exercise_id,omitempty"`
-	ExerciseType        string                         `json:"exercise_type"`
-	GenerationJobId     *uuid.UUID                     `json:"generation_job_id"`
-	GenerationModel     *string                        `json:"generation_model"`
-	IsPlaceholder       *bool                          `json:"is_placeholder,omitempty"`
-	ItemIdFk            uuid.UUID                      `json:"item_id_fk"`
-	ItemTypeFk          PlaceholderExerciseItemTypeFk  `json:"item_type_fk"`
-	ObjectiveId         *uuid.UUID                     `json:"objective_id"`
-	Prompt              *string                        `json:"prompt,omitempty"`
-	PromptVersion       *string                        `json:"prompt_version"`
-	QualityScore        *float32                       `json:"quality_score"`
-	SectionIndex        *int                           `json:"section_index"`
-	SectionKey          *string                        `json:"section_key"`
-	SourceType          *PlaceholderExerciseSourceType `json:"source_type"`
-	State               *ExerciseState                 `json:"state,omitempty"`
-	ValidationSignature *string                        `json:"validation_signature"`
-}
-
-// PlaceholderExerciseItemTypeFk defines model for PlaceholderExercise.ItemTypeFk.
-type PlaceholderExerciseItemTypeFk string
-
-// PlaceholderExerciseSourceType defines model for PlaceholderExercise.SourceType.
-type PlaceholderExerciseSourceType string
 
 // PlacementItemV3 defines model for PlacementItemV3.
 type PlacementItemV3 struct {
@@ -6350,7 +6267,6 @@ type RoadmapLessonGenerationSettings struct {
 	CefrLevel                *string                                         `json:"cefr_level"`
 	DifficultyLevel          *RoadmapLessonGenerationSettingsDifficultyLevel `json:"difficulty_level"`
 	EstimatedDurationMinutes *int                                            `json:"estimated_duration_minutes,omitempty"`
-	ForceRegenerate          *bool                                           `json:"force_regenerate,omitempty"`
 	Shape                    *string                                         `json:"shape"`
 	StepCount                *int                                            `json:"step_count"`
 	TtsLanguage              *string                                         `json:"tts_language"`
@@ -6669,7 +6585,6 @@ type ScenarioChoiceExercise struct {
 	ExerciseType        string                            `json:"exercise_type"`
 	GenerationJobId     *uuid.UUID                        `json:"generation_job_id"`
 	GenerationModel     *string                           `json:"generation_model"`
-	IsPlaceholder       *bool                             `json:"is_placeholder,omitempty"`
 	ItemIdFk            uuid.UUID                         `json:"item_id_fk"`
 	ItemTypeFk          ScenarioChoiceExerciseItemTypeFk  `json:"item_type_fk"`
 	ObjectiveId         *uuid.UUID                        `json:"objective_id"`
@@ -6678,8 +6593,6 @@ type ScenarioChoiceExercise struct {
 	PromptVersion       *string                           `json:"prompt_version"`
 	QualityScore        *float32                          `json:"quality_score"`
 	ScenarioDescription *string                           `json:"scenario_description,omitempty"`
-	SectionIndex        *int                              `json:"section_index"`
-	SectionKey          *string                           `json:"section_key"`
 	SourceType          *ScenarioChoiceExerciseSourceType `json:"source_type"`
 	State               *ExerciseState                    `json:"state,omitempty"`
 	ValidationSignature *string                           `json:"validation_signature"`
@@ -6840,7 +6753,6 @@ type SentenceConstructionExercise struct {
 	ExerciseType        string                                  `json:"exercise_type"`
 	GenerationJobId     *uuid.UUID                              `json:"generation_job_id"`
 	GenerationModel     *string                                 `json:"generation_model"`
-	IsPlaceholder       *bool                                   `json:"is_placeholder,omitempty"`
 	ItemIdFk            uuid.UUID                               `json:"item_id_fk"`
 	ItemTypeFk          SentenceConstructionExerciseItemTypeFk  `json:"item_type_fk"`
 	ObjectiveId         *uuid.UUID                              `json:"objective_id"`
@@ -6848,8 +6760,6 @@ type SentenceConstructionExercise struct {
 	PromptVersion       *string                                 `json:"prompt_version"`
 	QualityScore        *float32                                `json:"quality_score"`
 	ScrambledWords      []WordScrambleItem                      `json:"scrambled_words"`
-	SectionIndex        *int                                    `json:"section_index"`
-	SectionKey          *string                                 `json:"section_key"`
 	SourceType          *SentenceConstructionExerciseSourceType `json:"source_type"`
 	State               *ExerciseState                          `json:"state,omitempty"`
 	TranslationPrompt   *string                                 `json:"translation_prompt"`
@@ -8398,15 +8308,12 @@ type SpellingChallengeExercise struct {
 	GenerationJobId     *uuid.UUID                           `json:"generation_job_id"`
 	GenerationModel     *string                              `json:"generation_model"`
 	Hint                *string                              `json:"hint,omitempty"`
-	IsPlaceholder       *bool                                `json:"is_placeholder,omitempty"`
 	ItemIdFk            uuid.UUID                            `json:"item_id_fk"`
 	ItemTypeFk          SpellingChallengeExerciseItemTypeFk  `json:"item_type_fk"`
 	ObjectiveId         *uuid.UUID                           `json:"objective_id"`
 	Prompt              string                               `json:"prompt"`
 	PromptVersion       *string                              `json:"prompt_version"`
 	QualityScore        *float32                             `json:"quality_score"`
-	SectionIndex        *int                                 `json:"section_index"`
-	SectionKey          *string                              `json:"section_key"`
 	SourceType          *SpellingChallengeExerciseSourceType `json:"source_type"`
 	State               *ExerciseState                       `json:"state,omitempty"`
 	ValidationSignature *string                              `json:"validation_signature"`
@@ -9576,7 +9483,6 @@ type Video struct {
 	OriginalTitle                      *string    `json:"original_title,omitempty"`
 	PublishedAt                        *time.Time `json:"published_at,omitempty"`
 	SourceLocale                       *string    `json:"source_locale,omitempty"`
-	Thumbhash                          *string    `json:"thumbhash,omitempty"`
 	ThumbnailUrl                       string     `json:"thumbnail_url"`
 	Title                              string     `json:"title"`
 	TitleTranslationFallback           *bool      `json:"title_translation_fallback,omitempty"`
@@ -11750,12 +11656,6 @@ type GetInternalMediaParams struct {
 	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
-// PostInternalMediaMediaIdUploadCompleteParams defines parameters for PostInternalMediaMediaIdUploadComplete.
-type PostInternalMediaMediaIdUploadCompleteParams struct {
-	// LearningLanguageCode Workspace language scope; used to attach the media to its per-language content_entry (KieloTV video/thumbnail).
-	LearningLanguageCode *string `form:"learning_language_code,omitempty" json:"learning_language_code,omitempty"`
-}
-
 // AnalyzeWordInternalMorphologyAnalyzeGetParams defines parameters for AnalyzeWordInternalMorphologyAnalyzeGet.
 type AnalyzeWordInternalMorphologyAnalyzeGetParams struct {
 	// Word Learning-language word to analyze
@@ -12713,9 +12613,6 @@ type EnrichWordsByIdsInternalEnrichWordsByIdsPostJSONRequestBody = EnrichWordsBy
 // BackfillExerciseVariantsInternalExerciseVariantsBackfillPostJSONRequestBody defines body for BackfillExerciseVariantsInternalExerciseVariantsBackfillPost for application/json ContentType.
 type BackfillExerciseVariantsInternalExerciseVariantsBackfillPostJSONRequestBody = ExerciseVariantBackfillRequest
 
-// PostInternalKielotvVideoIdClaimForTranscriptionJSONRequestBody defines body for PostInternalKielotvVideoIdClaimForTranscription for application/json ContentType.
-type PostInternalKielotvVideoIdClaimForTranscriptionJSONRequestBody = ClaimContentVersionForProcessingRequest
-
 // CreateConversationDrillsInternalKlearnConversationDrillsPostJSONRequestBody defines body for CreateConversationDrillsInternalKlearnConversationDrillsPost for application/json ContentType.
 type CreateConversationDrillsInternalKlearnConversationDrillsPostJSONRequestBody = CreateConversationDrillsRequest
 
@@ -13104,21 +13001,6 @@ func (t *ChallengeSection_Exercises_Item) FromScenarioChoiceExercise(v ScenarioC
 	return err
 }
 
-// AsPlaceholderExercise returns the union data inside the ChallengeSection_Exercises_Item as a PlaceholderExercise
-func (t ChallengeSection_Exercises_Item) AsPlaceholderExercise() (PlaceholderExercise, error) {
-	var body PlaceholderExercise
-	err := json.Unmarshal(t.union, &body)
-	return body, err
-}
-
-// FromPlaceholderExercise overwrites any union data inside the ChallengeSection_Exercises_Item as the provided PlaceholderExercise
-func (t *ChallengeSection_Exercises_Item) FromPlaceholderExercise(v PlaceholderExercise) error {
-	v.ExerciseType = "pending"
-	b, err := json.Marshal(v)
-	t.union = b
-	return err
-}
-
 func (t ChallengeSection_Exercises_Item) Discriminator() (string, error) {
 	var discriminator struct {
 		Discriminator string `json:"exercise_type"`
@@ -13145,8 +13027,6 @@ func (t ChallengeSection_Exercises_Item) ValueByDiscriminator() (interface{}, er
 		return t.AsListeningComprehensionExercise()
 	case "multiple_choice_translation":
 		return t.AsMultipleChoiceTranslationExercise()
-	case "pending":
-		return t.AsPlaceholderExercise()
 	case "scenario_choice":
 		return t.AsScenarioChoiceExercise()
 	case "sentence_construction":
@@ -13303,21 +13183,6 @@ func (t *LearningSession_Exercises_Item) FromScenarioChoiceExercise(v ScenarioCh
 	return err
 }
 
-// AsPlaceholderExercise returns the union data inside the LearningSession_Exercises_Item as a PlaceholderExercise
-func (t LearningSession_Exercises_Item) AsPlaceholderExercise() (PlaceholderExercise, error) {
-	var body PlaceholderExercise
-	err := json.Unmarshal(t.union, &body)
-	return body, err
-}
-
-// FromPlaceholderExercise overwrites any union data inside the LearningSession_Exercises_Item as the provided PlaceholderExercise
-func (t *LearningSession_Exercises_Item) FromPlaceholderExercise(v PlaceholderExercise) error {
-	v.ExerciseType = "pending"
-	b, err := json.Marshal(v)
-	t.union = b
-	return err
-}
-
 func (t LearningSession_Exercises_Item) Discriminator() (string, error) {
 	var discriminator struct {
 		Discriminator string `json:"exercise_type"`
@@ -13344,8 +13209,6 @@ func (t LearningSession_Exercises_Item) ValueByDiscriminator() (interface{}, err
 		return t.AsListeningComprehensionExercise()
 	case "multiple_choice_translation":
 		return t.AsMultipleChoiceTranslationExercise()
-	case "pending":
-		return t.AsPlaceholderExercise()
 	case "scenario_choice":
 		return t.AsScenarioChoiceExercise()
 	case "sentence_construction":
