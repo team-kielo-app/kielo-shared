@@ -49,6 +49,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	sharedDB "github.com/team-kielo-app/kielo-shared/db"
 )
 
 // CurrentSourceVersionFunc resolves the current source_version for a
@@ -386,7 +388,7 @@ func (r *Reaper) flipBatch(ctx context.Context, rows []scanRow) (int, error) {
 	`, values)
 	_ = flipQuery // retained for documentation; the ANY shape is unused
 
-	tag, err := r.pool.Exec(ctx, query, args...)
+	tag, err := sharedDB.ExecWithRetry(ctx, r.pool, query, args...)
 	if err != nil {
 		return 0, err
 	}
