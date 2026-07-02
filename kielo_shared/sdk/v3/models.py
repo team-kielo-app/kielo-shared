@@ -513,12 +513,6 @@ class SectionType(StrEnum):
     review = "review"
 
 
-class Status(StrEnum):
-    pending = "pending"
-    in_progress = "in_progress"
-    completed = "completed"
-
-
 class ChallengeTheme(BaseModel):
     emoji: str = Field(..., title="Emoji")
     gradient_colors: list[str] | None = Field(None, title="Gradient Colors")
@@ -899,7 +893,7 @@ class JobType(StrEnum):
     concept_hub_enrichment = "concept_hub_enrichment"
 
 
-class Status1(StrEnum):
+class Status(StrEnum):
     queued = "queued"
     running = "running"
     preview_ready = "preview_ready"
@@ -1873,17 +1867,15 @@ class ExerciseDeckTeaser(BaseModel):
     title: str = Field(..., title="Title")
 
 
-class Status2(StrEnum):
+class Status1(StrEnum):
     not_answered = "not_answered"
     answered = "answered"
     skipped = "skipped"
-    pending = "pending"
-    failed = "failed"
 
 
 class ExerciseState(BaseModel):
     is_correct: bool | None = Field(None, title="Is Correct")
-    status: Status2 | None = Field("not_answered", title="Status")
+    status: Status1 | None = Field("not_answered", title="Status")
     submitted_at: AwareDatetime | None = Field(None, title="Submitted At")
     user_answer: Any = Field(None, title="User Answer")
 
@@ -2082,7 +2074,6 @@ class FillInTheBlankExercise(BaseModel):
     )
     generation_job_id: UUID_aliased | None = Field(None, title="Generation Job Id")
     generation_model: str | None = Field(None, title="Generation Model")
-    is_placeholder: bool | None = Field(False, title="Is Placeholder")
     item_id_fk: UUID_aliased = Field(..., title="Item Id Fk")
     item_type_fk: ItemTypeFk = Field(..., title="Item Type Fk")
     objective_id: UUID_aliased | None = Field(None, title="Objective Id")
@@ -2090,8 +2081,6 @@ class FillInTheBlankExercise(BaseModel):
     prompt: str = Field(..., title="Prompt")
     prompt_version: str | None = Field(None, title="Prompt Version")
     quality_score: float | None = Field(None, title="Quality Score")
-    section_index: int | None = Field(None, title="Section Index")
-    section_key: str | None = Field(None, title="Section Key")
     sentence_with_blank: str = Field(..., title="Sentence With Blank")
     source_type: SourceType | None = Field(None, title="Source Type")
     state: ExerciseState | None = None
@@ -2129,15 +2118,12 @@ class FlashcardExercise(BaseModel):
     )
     generation_job_id: UUID_aliased | None = Field(None, title="Generation Job Id")
     generation_model: str | None = Field(None, title="Generation Model")
-    is_placeholder: bool | None = Field(False, title="Is Placeholder")
     item_id_fk: UUID_aliased = Field(..., title="Item Id Fk")
     item_type_fk: ItemTypeFk = Field(..., title="Item Type Fk")
     objective_id: UUID_aliased | None = Field(None, title="Objective Id")
     prompt: str = Field(..., title="Prompt")
     prompt_version: str | None = Field(None, title="Prompt Version")
     quality_score: float | None = Field(None, title="Quality Score")
-    section_index: int | None = Field(None, title="Section Index")
-    section_key: str | None = Field(None, title="Section Key")
     source_type: SourceType | None = Field(None, title="Source Type")
     state: ExerciseState | None = None
     validation_signature: str | None = Field(None, title="Validation Signature")
@@ -2253,7 +2239,7 @@ class HintResponse(BaseModel):
     source: str | None = None
 
 
-class Status3(StrEnum):
+class Status2(StrEnum):
     generating = "generating"
     published = "published"
 
@@ -2281,7 +2267,6 @@ class IdentifyConceptExercise(BaseModel):
     )
     generation_job_id: UUID_aliased | None = Field(None, title="Generation Job Id")
     generation_model: str | None = Field(None, title="Generation Model")
-    is_placeholder: bool | None = Field(False, title="Is Placeholder")
     item_id_fk: UUID_aliased = Field(..., title="Item Id Fk")
     item_type_fk: ItemTypeFk = Field(..., title="Item Type Fk")
     objective_id: UUID_aliased | None = Field(None, title="Objective Id")
@@ -2293,8 +2278,6 @@ class IdentifyConceptExercise(BaseModel):
     prompt: str = Field(..., title="Prompt")
     prompt_version: str | None = Field(None, title="Prompt Version")
     quality_score: float | None = Field(None, title="Quality Score")
-    section_index: int | None = Field(None, title="Section Index")
-    section_key: str | None = Field(None, title="Section Key")
     sentence: str | None = Field(
         "", description="Sentence containing the concept being tested", title="Sentence"
     )
@@ -2876,7 +2859,7 @@ class LanguageUpdateRequest(BaseModel):
     native_name: str | None = None
 
 
-class Status4(StrEnum):
+class Status3(StrEnum):
     completed = "completed"
     current = "current"
     upcoming = "upcoming"
@@ -2886,7 +2869,7 @@ class LearningArcStage(BaseModel):
     exercise_ids: list[UUID_aliased] | None = Field(None, title="Exercise Ids")
     objective_ids: list[UUID_aliased] | None = Field(None, title="Objective Ids")
     stage_key: str = Field(..., title="Stage Key")
-    status: Status4 | None = Field("upcoming", title="Status")
+    status: Status3 | None = Field("upcoming", title="Status")
     subtitle: str | None = Field(None, title="Subtitle")
     title: str = Field(..., title="Title")
 
@@ -3024,7 +3007,6 @@ class ListVideoItem(BaseModel):
     original_title: str | None = None
     published_at: AwareDatetime | None = None
     source_locale: str | None = None
-    thumbhash: str | None = None
     thumbnail_url: str
     title: str
     title_translation_fallback: bool | None = None
@@ -3060,7 +3042,6 @@ class ListeningComprehensionExercise(BaseModel):
     )
     generation_job_id: UUID_aliased | None = Field(None, title="Generation Job Id")
     generation_model: str | None = Field(None, title="Generation Model")
-    is_placeholder: bool | None = Field(False, title="Is Placeholder")
     item_id_fk: UUID_aliased = Field(..., title="Item Id Fk")
     item_type_fk: ItemTypeFk = Field(..., title="Item Type Fk")
     objective_id: UUID_aliased | None = Field(None, title="Objective Id")
@@ -3074,8 +3055,6 @@ class ListeningComprehensionExercise(BaseModel):
     quality_score: float | None = Field(None, title="Quality Score")
     question: str | None = Field("", title="Question")
     replay_limit: conint(ge=1, le=5) | None = Field(3, title="Replay Limit")
-    section_index: int | None = Field(None, title="Section Index")
-    section_key: str | None = Field(None, title="Section Key")
     source_type: SourceType | None = Field(None, title="Source Type")
     state: ExerciseState | None = None
     validation_signature: str | None = Field(None, title="Validation Signature")
@@ -3093,14 +3072,14 @@ class LocalizationLanguage(BaseModel):
     native_name: str | None = None
 
 
-class Status5(StrEnum):
+class Status4(StrEnum):
     pending = "pending"
     ready = "ready"
 
 
 class LocalizationStatus(BaseModel):
     locale: str | None = Field(None, title="Locale")
-    status: Status5 = Field(..., title="Status")
+    status: Status4 = Field(..., title="Status")
 
 
 class LoginRequest(BaseModel):
@@ -3292,7 +3271,6 @@ class MultipleChoiceTranslationExercise(BaseModel):
     )
     generation_job_id: UUID_aliased | None = Field(None, title="Generation Job Id")
     generation_model: str | None = Field(None, title="Generation Model")
-    is_placeholder: bool | None = Field(False, title="Is Placeholder")
     item_id_fk: UUID_aliased = Field(..., title="Item Id Fk")
     item_type_fk: ItemTypeFk = Field(..., title="Item Type Fk")
     objective_id: UUID_aliased | None = Field(None, title="Objective Id")
@@ -3304,8 +3282,6 @@ class MultipleChoiceTranslationExercise(BaseModel):
     prompt: str = Field(..., title="Prompt")
     prompt_version: str | None = Field(None, title="Prompt Version")
     quality_score: float | None = Field(None, title="Quality Score")
-    section_index: int | None = Field(None, title="Section Index")
-    section_key: str | None = Field(None, title="Section Key")
     source_language: str | None = Field(
         "",
         description="Source language code (fi, sv, de, etc.)",
@@ -3556,36 +3532,6 @@ class PhraseFrame(BaseModel):
     example_translation: str | None = None
     text: str | None = None
     translation: str | None = None
-
-
-class PlaceholderExercise(BaseModel):
-    cache_entry_id: str | None = Field(None, title="Cache Entry Id")
-    context_hint: str | None = Field(
-        None,
-        description="A specific concept or hint for the exercise, e.g., 'inessive case'.",
-        title="Context Hint",
-    )
-    error_pattern_tag: str | None = Field(None, title="Error Pattern Tag")
-    exercise_id: UUID_aliased | None = Field(
-        None,
-        description="Unique ID for this specific exercise instance.",
-        title="Exercise Id",
-    )
-    exercise_type: Literal["pending"] = Field("pending", title="Exercise Type")
-    generation_job_id: UUID_aliased | None = Field(None, title="Generation Job Id")
-    generation_model: str | None = Field(None, title="Generation Model")
-    is_placeholder: bool | None = Field(True, title="Is Placeholder")
-    item_id_fk: UUID_aliased = Field(..., title="Item Id Fk")
-    item_type_fk: ItemTypeFk = Field(..., title="Item Type Fk")
-    objective_id: UUID_aliased | None = Field(None, title="Objective Id")
-    prompt: str | None = Field("", title="Prompt")
-    prompt_version: str | None = Field(None, title="Prompt Version")
-    quality_score: float | None = Field(None, title="Quality Score")
-    section_index: int | None = Field(None, title="Section Index")
-    section_key: str | None = Field(None, title="Section Key")
-    source_type: SourceType | None = Field(None, title="Source Type")
-    state: ExerciseState | None = None
-    validation_signature: str | None = Field(None, title="Validation Signature")
 
 
 class PlacementItemV3(BaseModel):
@@ -3992,7 +3938,6 @@ class RoadmapLessonGenerationSettings(BaseModel):
     estimated_duration_minutes: conint(ge=3, le=120) | None = Field(
         10, title="Estimated Duration Minutes"
     )
-    force_regenerate: bool | None = Field(False, title="Force Regenerate")
     shape: str | None = Field(None, title="Shape")
     step_count: conint(ge=4, le=20) | None = Field(None, title="Step Count")
     tts_language: str | None = Field(None, title="Tts Language")
@@ -4265,7 +4210,6 @@ class ScenarioChoiceExercise(BaseModel):
     )
     generation_job_id: UUID_aliased | None = Field(None, title="Generation Job Id")
     generation_model: str | None = Field(None, title="Generation Model")
-    is_placeholder: bool | None = Field(False, title="Is Placeholder")
     item_id_fk: UUID_aliased = Field(..., title="Item Id Fk")
     item_type_fk: ItemTypeFk = Field(..., title="Item Type Fk")
     objective_id: UUID_aliased | None = Field(None, title="Objective Id")
@@ -4274,8 +4218,6 @@ class ScenarioChoiceExercise(BaseModel):
     prompt_version: str | None = Field(None, title="Prompt Version")
     quality_score: float | None = Field(None, title="Quality Score")
     scenario_description: str | None = Field("", title="Scenario Description")
-    section_index: int | None = Field(None, title="Section Index")
-    section_key: str | None = Field(None, title="Section Key")
     source_type: SourceType | None = Field(None, title="Source Type")
     state: ExerciseState | None = None
     validation_signature: str | None = Field(None, title="Validation Signature")
@@ -4419,7 +4361,7 @@ class SessionProgressSummary(BaseModel):
     total_stages: int | None = Field(0, title="Total Stages")
 
 
-class Status6(StrEnum):
+class Status5(StrEnum):
     applied = "applied"
     duplicate = "duplicate"
     skipped = "skipped"
@@ -4430,7 +4372,7 @@ class SessionReconcileRequest(BaseModel):
     submissions: list[ExerciseSubmission] | None = Field(None, title="Submissions")
 
 
-class Status7(StrEnum):
+class Status6(StrEnum):
     not_started = "not_started"
     in_progress = "in_progress"
     completed = "completed"
@@ -4441,7 +4383,7 @@ class SessionResumeState(BaseModel):
     current_exercise_index: int | None = Field(0, title="Current Exercise Index")
     current_stage_key: str | None = Field(None, title="Current Stage Key")
     current_stage_title: str | None = Field(None, title="Current Stage Title")
-    status: Status7 | None = Field("not_started", title="Status")
+    status: Status6 | None = Field("not_started", title="Status")
     total_exercises: int | None = Field(0, title="Total Exercises")
 
 
@@ -5207,15 +5149,12 @@ class SpellingChallengeExercise(BaseModel):
     generation_job_id: UUID_aliased | None = Field(None, title="Generation Job Id")
     generation_model: str | None = Field(None, title="Generation Model")
     hint: str | None = Field("", title="Hint")
-    is_placeholder: bool | None = Field(False, title="Is Placeholder")
     item_id_fk: UUID_aliased = Field(..., title="Item Id Fk")
     item_type_fk: ItemTypeFk = Field(..., title="Item Type Fk")
     objective_id: UUID_aliased | None = Field(None, title="Objective Id")
     prompt: str = Field(..., title="Prompt")
     prompt_version: str | None = Field(None, title="Prompt Version")
     quality_score: float | None = Field(None, title="Quality Score")
-    section_index: int | None = Field(None, title="Section Index")
-    section_key: str | None = Field(None, title="Section Key")
     source_type: SourceType | None = Field(None, title="Source Type")
     state: ExerciseState | None = None
     validation_signature: str | None = Field(None, title="Validation Signature")
@@ -5412,7 +5351,7 @@ class TTSGenerateRequest(BaseModel):
     language_code: str | None = Field("", title="Language Code")
 
 
-class Status8(StrEnum):
+class Status7(StrEnum):
     ready = "ready"
     generating = "generating"
     failed = "failed"
@@ -5423,10 +5362,10 @@ class TTSGenerateResponse(BaseModel):
     base_word_id: UUID_aliased = Field(..., title="Base Word Id")
     error_message: str | None = Field(None, title="Error Message")
     job_id: UUID_aliased | None = Field(None, title="Job Id")
-    job_status: Status1 | None = Field(None, title="Job Status")
+    job_status: Status | None = Field(None, title="Job Status")
     media_id: UUID_aliased | None = Field(None, title="Media Id")
     stage: str | None = Field(None, title="Stage")
-    status: Status8 = Field(..., title="Status")
+    status: Status7 = Field(..., title="Status")
 
 
 class TTSJobStatusResponse(BaseModel):
@@ -5436,7 +5375,7 @@ class TTSJobStatusResponse(BaseModel):
     job_id: UUID_aliased = Field(..., title="Job Id")
     media_id: UUID_aliased | None = Field(None, title="Media Id")
     stage: str | None = Field(None, title="Stage")
-    status: Status1 | None = Field(None, title="Status")
+    status: Status | None = Field(None, title="Status")
 
 
 class TTSParagraphGenerateRequest(BaseModel):
@@ -5450,11 +5389,11 @@ class TTSParagraphGenerateResponse(BaseModel):
     audio_url: str | None = Field(None, title="Audio Url")
     error_message: str | None = Field(None, title="Error Message")
     job_id: UUID_aliased | None = Field(None, title="Job Id")
-    job_status: Status1 | None = Field(None, title="Job Status")
+    job_status: Status | None = Field(None, title="Job Status")
     media_id: UUID_aliased | None = Field(None, title="Media Id")
     paragraph_id: UUID_aliased = Field(..., title="Paragraph Id")
     stage: str | None = Field(None, title="Stage")
-    status: Status8 = Field(..., title="Status")
+    status: Status7 = Field(..., title="Status")
 
 
 class TTSParagraphJobStatusResponse(BaseModel):
@@ -5464,7 +5403,7 @@ class TTSParagraphJobStatusResponse(BaseModel):
     media_id: UUID_aliased | None = Field(None, title="Media Id")
     paragraph_id: UUID_aliased = Field(..., title="Paragraph Id")
     stage: str | None = Field(None, title="Stage")
-    status: Status1 | None = Field(None, title="Status")
+    status: Status | None = Field(None, title="Status")
 
 
 class TTSParagraphStreamSessionResponse(TTSBaseWordStreamSessionResponse):
@@ -5568,7 +5507,7 @@ class TopicListResponse(BaseModel):
     word_count: int | None = Field(0, title="Word Count")
 
 
-class Status13(StrEnum):
+class Status12(StrEnum):
     found = "found"
     generating = "generating"
     draft_pending = "draft_pending"
@@ -5621,7 +5560,7 @@ class TrackListResponse(BaseModel):
     tracks: list[TrackListItem] = Field(..., title="Tracks")
 
 
-class Status14(StrEnum):
+class Status13(StrEnum):
     completed = "completed"
     active = "active"
     locked = "locked"
@@ -5631,7 +5570,7 @@ class TrackRoadmapLesson(BaseModel):
     kind: str | None = Field(None, title="Kind")
     lesson_id: UUID_aliased = Field(..., title="Lesson Id")
     order_index: int = Field(..., title="Order Index")
-    state: Status14 = Field(..., title="State")
+    state: Status13 = Field(..., title="State")
     thumbnail_url: str | None = Field(None, title="Thumbnail Url")
     title: str = Field(..., title="Title")
 
@@ -6099,7 +6038,6 @@ class Video(BaseModel):
     original_title: str | None = None
     published_at: AwareDatetime | None = None
     source_locale: str | None = None
-    thumbhash: str | None = None
     thumbnail_url: str
     title: str
     title_translation_fallback: bool | None = None
@@ -6606,7 +6544,6 @@ class ContextMatchingExercise(BaseModel):
     )
     generation_job_id: UUID_aliased | None = Field(None, title="Generation Job Id")
     generation_model: str | None = Field(None, title="Generation Model")
-    is_placeholder: bool | None = Field(False, title="Is Placeholder")
     item_id_fk: UUID_aliased = Field(..., title="Item Id Fk")
     item_type_fk: ItemTypeFk = Field(..., title="Item Type Fk")
     objective_id: UUID_aliased | None = Field(None, title="Objective Id")
@@ -6620,8 +6557,6 @@ class ContextMatchingExercise(BaseModel):
     quality_score: float | None = Field(None, title="Quality Score")
     scenario_description: str | None = Field("", title="Scenario Description")
     scenario_image_hint: str | None = Field(None, title="Scenario Image Hint")
-    section_index: int | None = Field(None, title="Section Index")
-    section_key: str | None = Field(None, title="Section Key")
     source_type: SourceType | None = Field(None, title="Source Type")
     state: ExerciseState | None = None
     target_items: list[dict[str, str]] = Field(
@@ -7259,7 +7194,6 @@ class SentenceConstructionExercise(BaseModel):
     )
     generation_job_id: UUID_aliased | None = Field(None, title="Generation Job Id")
     generation_model: str | None = Field(None, title="Generation Model")
-    is_placeholder: bool | None = Field(False, title="Is Placeholder")
     item_id_fk: UUID_aliased = Field(..., title="Item Id Fk")
     item_type_fk: ItemTypeFk = Field(..., title="Item Type Fk")
     objective_id: UUID_aliased | None = Field(None, title="Objective Id")
@@ -7267,8 +7201,6 @@ class SentenceConstructionExercise(BaseModel):
     prompt_version: str | None = Field(None, title="Prompt Version")
     quality_score: float | None = Field(None, title="Quality Score")
     scrambled_words: list[WordScrambleItem] = Field(..., title="Scrambled Words")
-    section_index: int | None = Field(None, title="Section Index")
-    section_key: str | None = Field(None, title="Section Key")
     source_type: SourceType | None = Field(None, title="Source Type")
     state: ExerciseState | None = None
     translation_prompt: str | None = Field(None, title="Translation Prompt")
@@ -7278,7 +7210,7 @@ class SentenceConstructionExercise(BaseModel):
 class SessionReconcileItemResult(BaseModel):
     exercise_id: UUID_aliased = Field(..., title="Exercise Id")
     result: SubmissionResult | None = None
-    status: Status6 | None = Field("applied", title="Status")
+    status: Status5 | None = Field("applied", title="Status")
     submission_id: str | None = Field(None, title="Submission Id")
 
 
@@ -7641,18 +7573,18 @@ class TopicListGenerationJobResponse(BaseModel):
     preview: TopicListPreview | None = None
     seed_word_id: UUID_aliased = Field(..., title="Seed Word Id")
     stage: str | None = Field(None, title="Stage")
-    status: Status1 = Field(..., title="Status")
+    status: Status = Field(..., title="Status")
     topic_list_id: UUID_aliased | None = Field(None, title="Topic List Id")
 
 
 class TopicListStatusResponse(BaseModel):
     job_id: UUID_aliased | None = Field(None, title="Job Id")
-    job_status: Status1 | None = Field(None, title="Job Status")
+    job_status: Status | None = Field(None, title="Job Status")
     message: str = Field(..., title="Message")
     preview: TopicListPreview | None = None
     seed_word_id: UUID_aliased = Field(..., title="Seed Word Id")
     stage: str | None = Field(None, title="Stage")
-    status: Status13 = Field(..., title="Status")
+    status: Status12 = Field(..., title="Status")
     topic_lists: list[TopicListTeaser] | None = Field(None, title="Topic Lists")
 
 
@@ -7663,7 +7595,7 @@ class TrackRoadmapChapter(BaseModel):
     id: UUID_aliased = Field(..., title="Id")
     lesson_count: int | None = Field(0, title="Lesson Count")
     lessons: list[TrackRoadmapLesson] | None = Field(None, title="Lessons")
-    status: Status14 = Field(..., title="Status")
+    status: Status13 = Field(..., title="Status")
     thumbnail_url: str | None = Field(None, title="Thumbnail Url")
     title: str = Field(..., title="Title")
 
@@ -7676,7 +7608,7 @@ class TrackRoadmapLevel(BaseModel):
     icon_emoji: str | None = Field(None, title="Icon Emoji")
     id: UUID_aliased = Field(..., title="Id")
     progress_percent: float | None = Field(0.0, title="Progress Percent")
-    status: Status14 = Field(..., title="Status")
+    status: Status13 = Field(..., title="Status")
     thumbnail_url: str | None = Field(None, title="Thumbnail Url")
     title: str = Field(..., title="Title")
 
@@ -7835,8 +7767,7 @@ class ChallengeSection(BaseModel):
             | ListeningComprehensionExercise
             | ContextMatchingExercise
             | SpellingChallengeExercise
-            | ScenarioChoiceExercise
-            | PlaceholderExercise,
+            | ScenarioChoiceExercise,
             Field(discriminator="exercise_type"),
         ]
     ] = Field(..., title="Exercises")
@@ -7844,12 +7775,8 @@ class ChallengeSection(BaseModel):
         None, title="Learning Objective Summary"
     )
     objective_id: UUID_aliased | None = Field(None, title="Objective Id")
-    section_index: int | None = Field(None, title="Section Index")
-    section_key: str | None = Field(None, title="Section Key")
     section_type: SectionType = Field(..., title="Section Type")
     selection_source_label: str | None = Field(None, title="Selection Source Label")
-    status: Status | None = Field("pending", title="Status")
-    step_ids: list[UUID_aliased] | None = Field(None, title="Step Ids")
     subtitle: str | None = Field(None, title="Subtitle")
     title: str = Field(..., title="Title")
     xp_multiplier: conint(ge=1, le=3) | None = Field(1, title="Xp Multiplier")
@@ -7976,15 +7903,15 @@ class DictionaryLookupResponse(BaseModel):
 class HubStatusResponse(BaseModel):
     concept_id: UUID_aliased = Field(..., title="Concept Id")
     enrichment_job_id: UUID_aliased | None = Field(None, title="Enrichment Job Id")
-    enrichment_job_status: Status1 | None = Field(None, title="Enrichment Job Status")
+    enrichment_job_status: Status | None = Field(None, title="Enrichment Job Status")
     enrichment_stage: str | None = Field(None, title="Enrichment Stage")
     enrichment_status: EnrichmentStatus | None = Field(None, title="Enrichment Status")
     job_id: UUID_aliased | None = Field(None, title="Job Id")
-    job_status: Status1 | None = Field(None, title="Job Status")
+    job_status: Status | None = Field(None, title="Job Status")
     message: str = Field(..., title="Message")
     preview: ConceptHubPreview | None = None
     stage: str | None = Field(None, title="Stage")
-    status: Status3 = Field(..., title="Status")
+    status: Status2 = Field(..., title="Status")
 
 
 class LearningSession(BaseModel):
@@ -8007,8 +7934,7 @@ class LearningSession(BaseModel):
             | ListeningComprehensionExercise
             | ContextMatchingExercise
             | SpellingChallengeExercise
-            | ScenarioChoiceExercise
-            | PlaceholderExercise,
+            | ScenarioChoiceExercise,
             Field(discriminator="exercise_type"),
         ]
     ] = Field(..., title="Exercises")
@@ -8179,7 +8105,7 @@ class ConceptHubGenerationJobResponse(BaseModel):
     job_type: JobType | None = Field("concept_hub", title="Job Type")
     preview: ConceptHubPreview | None = None
     stage: str | None = Field(None, title="Stage")
-    status: Status1 = Field(..., title="Status")
+    status: Status = Field(..., title="Status")
 
 
 class CursorPageArticleVersion(BaseModel):
