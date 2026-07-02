@@ -162,6 +162,25 @@ var profiles = map[string]MediaProfile{
 		Retention:    RetentionPolicy{DeleteOnOwnerDelete: true, OrphanGrace: 14 * day},
 		GDPR:         GDPRClass{SubjectFrom: "none", DedupAcrossSubjects: true},
 	},
+	"support-attachment": {
+		Key: "support-attachment",
+		// Support-chat (feedback thread) attachments: screenshots a user sends
+		// with a bug report, or images support staff send back. Owner = the
+		// feedback message row (users.feedback_messages). User-uploaded
+		// screenshots routinely contain personal data → PII with the uploader
+		// as data subject; erased with the account. Legal-holdable: support
+		// threads can become dispute evidence.
+		PathPrefix: "support", IncludeOwnerID: true,
+		AllowedMimes: []string{"image/jpeg", "image/png", "image/webp"},
+		Variants: []VariantSpec{
+			{Name: "main", MaxWidth: 1600, Format: "webp"},
+			{Name: "preview", MaxWidth: 300, Format: "webp"},
+		},
+		Access:        AccessSignedCDN,
+		Retention:     RetentionPolicy{TTL: 365 * day, DeleteOnOwnerDelete: true, OrphanGrace: 7 * day},
+		GDPR:          GDPRClass{ContainsPII: true, SubjectFrom: "uploader", ErasureSLA: 30 * day, DedupAcrossSubjects: false},
+		LegalHoldable: true,
+	},
 	"convo-transcript": {
 		Key: "convo-transcript", EntityType: EntityTypeConvoTranscript,
 		PathPrefix: "convo", IncludeOwnerID: true,
@@ -190,6 +209,28 @@ func ProfileForEntityType(t EntityType) (MediaProfile, bool) {
 		if p.EntityType != "" && p.EntityType == t {
 			return p, true
 		}
+	}
+	return MediaProfile{}, false
+}
+
+// relatedEntityAliases maps free-form related_entity_type wire strings (from
+// clients whose upload request predates the explicit `profile` field) onto
+// profile keys. Server-side inference so lifecycle/GDPR stamping doesn't
+// depend on every client remembering to send `profile`.
+var relatedEntityAliases = map[string]string{
+	"support-attachment": "support-attachment",
+	"FeedbackMessage":    "support-attachment",
+}
+
+// ProfileForRelatedEntity resolves a profile from a related_entity_type wire
+// string: first via the legacy EntityType bridge, then via the alias table.
+// Use when an upload request carries no explicit profile key.
+func ProfileForRelatedEntity(entityType string) (MediaProfile, bool) {
+	if p, ok := ProfileForEntityType(EntityType(entityType)); ok {
+		return p, true
+	}
+	if key, ok := relatedEntityAliases[entityType]; ok {
+		return ProfileFor(key)
 	}
 	return MediaProfile{}, false
 }
