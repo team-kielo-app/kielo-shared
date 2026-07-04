@@ -164,9 +164,10 @@ func TestProfileForEntityType_Unknown(t *testing.T) {
 		typ  EntityType
 	}{
 		// EntityTypeGeneric is "" and no profile maps it (the registry guards
-		// against p.EntityType == "" matches), so it must not resolve.
+		// against p.EntityType == "" matches), so it must not resolve. Every
+		// named legacy entity type now maps to a profile, so only the empty
+		// and bogus cases remain unresolvable.
 		{"generic/empty entity type", EntityTypeGeneric},
-		{"unmapped legacy entity type", EntityTypeKieloTVCarousel},
 		{"bogus entity type", EntityType("TotallyNotAThing")},
 	}
 	for _, c := range cases {

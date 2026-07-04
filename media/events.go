@@ -6,11 +6,17 @@ import "time"
 // attributes.event_type; see docs/architecture/media-lifecycle-platform.md and
 // docs/architecture/pubsub-events.md). Payload structs below are the message
 // bodies. Topic wiring + sharedevents registration live in the services.
+//
+// NOTE: the upload/processing pipeline events are NOT here — the live wire
+// values are sharedevents.EventMediaProcessing ("media.processing.v1") and
+// sharedevents.EventMediaProcessed ("media.processed.v1") in
+// kielo-shared/events. This package used to duplicate them under a
+// "kielo.media.*" spelling that no producer ever emitted; wiring a consumer to
+// those constants silently never matched, so they were removed. GDPR erasure
+// likewise has no dedicated request event: it is driven by the existing
+// sharedevents "user.deleted.v1" (see MediaErasureRequestedEvent below).
 const (
-	EventMediaUploaded         = "kielo.media.uploaded.v1"
-	EventMediaProcessed        = "kielo.media.processed.v1"
 	EventMediaOwnerDeleted     = "kielo.media.owner_deleted.v1"
-	EventMediaErasureRequested = "kielo.media.erasure_requested.v1"
 	EventMediaErasureCompleted = "kielo.media.erasure_completed.v1"
 	EventMediaLifecycleTick    = "kielo.media.lifecycle_tick.v1"
 )

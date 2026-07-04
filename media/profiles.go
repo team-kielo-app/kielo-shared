@@ -78,15 +78,28 @@ type MediaProfile struct {
 	IncludeOwnerID  bool
 	IncludeEntityID bool
 	AllowedMimes    []string // empty = any
-	Variants        []VariantSpec
-	Access          AccessClass
-	Retention       RetentionPolicy
-	GDPR            GDPRClass
-	Alerts          AlertPolicy
-	LegalHoldable   bool
+	MaxUploadBytes  int64    // reject uploads declared larger than this; 0 = service default cap
+	// AttachmentRole is the media_attachments.role written for this profile's
+	// uploads ("" = "primary"). Distinct roles let owners carry several
+	// attachment kinds (avatar vs transcript on a user) and detach one kind
+	// without touching the others.
+	AttachmentRole string
+	Variants       []VariantSpec
+	// SkipOriginalArchive suppresses the processor's unconditional archival of
+	// the full-resolution source as variant "original". Default false = archive.
+	SkipOriginalArchive bool
+	Access              AccessClass
+	Retention           RetentionPolicy
+	GDPR                GDPRClass
+	Alerts              AlertPolicy
+	LegalHoldable       bool
 }
 
-const day = 24 * time.Hour
+const (
+	day = 24 * time.Hour
+	mib = int64(1) << 20
+	gib = int64(1) << 30
+)
 
 // profiles is the canonical registry. Keys are stable wire identifiers used in
 // the upload contract + media_assets.profile column.
@@ -98,18 +111,27 @@ var profiles = map[string]MediaProfile{
 	"user-avatar": {
 		Key: "user-avatar", EntityType: EntityTypeUserAvatar,
 		PathPrefix: "user-assets", IncludeOwnerID: true,
-		AllowedMimes: []string{"image/jpeg", "image/png", "image/webp"},
-		Variants:     []VariantSpec{{Name: "main", MaxWidth: 256, Format: "webp"}},
-		Access:       AccessSignedCDN,
-		Retention:    RetentionPolicy{DeleteOnOwnerDelete: true, OrphanGrace: 7 * day},
-		GDPR:         GDPRClass{ContainsPII: true, SubjectFrom: "owner", ErasureSLA: 30 * day, DedupAcrossSubjects: false},
+		AllowedMimes:   []string{"image/jpeg", "image/png", "image/webp"},
+		MaxUploadBytes: 10 * mib,
+		AttachmentRole: "avatar",
+		Variants: []VariantSpec{
+			{Name: "main", MaxWidth: 256, Format: "webp"},
+			{Name: "preview", MaxWidth: 96, Format: "webp"},
+		},
+		Access:    AccessSignedCDN,
+		Retention: RetentionPolicy{DeleteOnOwnerDelete: true, OrphanGrace: 7 * day},
+		GDPR:      GDPRClass{ContainsPII: true, SubjectFrom: "owner", ErasureSLA: 30 * day, DedupAcrossSubjects: false},
 	},
 	"article-thumbnail": {
 		Key: "article-thumbnail", EntityType: EntityTypeArticleThumbnail,
 		PathPrefix: "articles", IncludeEntityID: true,
-		AllowedMimes: []string{"image/jpeg", "image/png", "image/webp"},
-		Variants:     []VariantSpec{{Name: "main", MaxWidth: 1200, Format: "webp"}},
-		Access:       AccessSignedCDN,
+		AllowedMimes:   []string{"image/jpeg", "image/png", "image/webp"},
+		MaxUploadBytes: 25 * mib,
+		Variants: []VariantSpec{
+			{Name: "main", MaxWidth: 1200, Format: "webp"},
+			{Name: "preview", MaxWidth: 300, Format: "webp"},
+		},
+		Access: AccessSignedCDN,
 		// Articles are re-scraped daily — media is ephemeral. 30d TTL (reaped by
 		// the reconciler, replacing the old blind GCS articles/ age-delete).
 		Retention: RetentionPolicy{TTL: 30 * day, DeleteOnOwnerDelete: true, OrphanGrace: 7 * day},
@@ -118,8 +140,12 @@ var profiles = map[string]MediaProfile{
 	"article-content": {
 		Key: "article-content", EntityType: EntityTypeArticleContent,
 		PathPrefix: "articles", IncludeEntityID: true,
-		Variants: []VariantSpec{{Name: "main", MaxWidth: 1200, Format: "webp"}},
-		Access:   AccessSignedCDN,
+		MaxUploadBytes: 64 * mib,
+		Variants: []VariantSpec{
+			{Name: "main", MaxWidth: 1200, Format: "webp"},
+			{Name: "preview", MaxWidth: 300, Format: "webp"},
+		},
+		Access: AccessSignedCDN,
 		// Ephemeral (daily re-scrape): 30d TTL, reconciler-reaped.
 		Retention: RetentionPolicy{TTL: 30 * day, DeleteOnOwnerDelete: true, OrphanGrace: 7 * day},
 		GDPR:      GDPRClass{SubjectFrom: "none", DedupAcrossSubjects: true},
@@ -127,7 +153,12 @@ var profiles = map[string]MediaProfile{
 	"kielotv-video": {
 		Key: "kielotv-video", EntityType: EntityTypeKieloTVVideo,
 		PathPrefix: "kielotv", IncludeEntityID: true,
-		Variants:  []VariantSpec{{Name: "preview", MaxWidth: 300, Format: "webp"}, {Name: "main", Format: "mp4"}},
+		MaxUploadBytes: 4 * gib,
+		// No "main" transcode: the toolbox-produced original IS the deliverable
+		// (content-service serves variant priority original,main — see
+		// docs/ktv-video-pipeline.md §5). Re-encoding it to 720p was pure waste.
+		// Legacy rows keep their main variant; "main" remains the read fallback.
+		Variants:  []VariantSpec{{Name: "preview", MaxWidth: 300, Format: "webp"}},
 		Access:    AccessSignedCDN,
 		Retention: RetentionPolicy{DeleteOnOwnerDelete: true, OrphanGrace: 14 * day},
 		GDPR:      GDPRClass{SubjectFrom: "none", DedupAcrossSubjects: true},
@@ -135,32 +166,102 @@ var profiles = map[string]MediaProfile{
 	"kielotv-thumbnail": {
 		Key: "kielotv-thumbnail", EntityType: EntityTypeKieloTVThumbnail,
 		PathPrefix: "kielotv", IncludeEntityID: true,
-		Variants:  []VariantSpec{{Name: "main", MaxWidth: 1200, Format: "webp"}},
+		MaxUploadBytes: 25 * mib,
+		Variants: []VariantSpec{
+			{Name: "main", MaxWidth: 1200, Format: "webp"},
+			{Name: "preview", MaxWidth: 300, Format: "webp"},
+		},
 		Access:    AccessSignedCDN,
 		Retention: RetentionPolicy{DeleteOnOwnerDelete: true, OrphanGrace: 14 * day},
 		GDPR:      GDPRClass{SubjectFrom: "none", DedupAcrossSubjects: true},
+	},
+	"kielotv-carousel": {
+		Key: "kielotv-carousel", EntityType: EntityTypeKieloTVCarousel,
+		PathPrefix: "kielotv", IncludeEntityID: true,
+		MaxUploadBytes: 25 * mib,
+		Variants: []VariantSpec{
+			{Name: "main", MaxWidth: 1200, Format: "webp"},
+			{Name: "preview", MaxWidth: 300, Format: "webp"},
+		},
+		Access:    AccessSignedCDN,
+		Retention: RetentionPolicy{DeleteOnOwnerDelete: true, OrphanGrace: 14 * day},
+		GDPR:      GDPRClass{SubjectFrom: "none", DedupAcrossSubjects: true},
+	},
+	"kielotv-workflow-variant": {
+		// Toolbox-produced KTV workflow variant videos (cms ktv_workflow_handler
+		// uploads with related_entity_type "KTVWorkflowVariant" — no legacy
+		// EntityType const; resolved via the alias table). Like kielotv-video,
+		// the toolbox output IS the deliverable: no main transcode.
+		Key:        "kielotv-workflow-variant",
+		PathPrefix: "kielotv", IncludeEntityID: true,
+		MaxUploadBytes: 4 * gib,
+		Variants:       []VariantSpec{{Name: "preview", MaxWidth: 300, Format: "webp"}},
+		Access:         AccessSignedCDN,
+		Retention:      RetentionPolicy{DeleteOnOwnerDelete: true, OrphanGrace: 14 * day},
+		GDPR:           GDPRClass{SubjectFrom: "none", DedupAcrossSubjects: true},
+	},
+	"kielotv-audio": {
+		Key: "kielotv-audio", EntityType: EntityTypeKieloTVAudio,
+		PathPrefix: "kielotv", IncludeEntityID: true,
+		MaxUploadBytes: 200 * mib,
+		Access:         AccessSignedCDN,
+		Retention:      RetentionPolicy{DeleteOnOwnerDelete: true, OrphanGrace: 14 * day},
+		GDPR:           GDPRClass{SubjectFrom: "none", DedupAcrossSubjects: true},
+	},
+	"base-word-audio": {
+		Key: "base-word-audio", EntityType: EntityTypeBaseWordAudio,
+		PathPrefix: "tts/base-words", IncludeEntityID: true,
+		MaxUploadBytes: 100 * mib,
+		Access:         AccessSignedCDN,
+		Retention:      RetentionPolicy{DeleteOnOwnerDelete: true, OrphanGrace: 14 * day},
+		GDPR:           GDPRClass{SubjectFrom: "none", DedupAcrossSubjects: true},
+	},
+	"paragraph-audio": {
+		Key: "paragraph-audio", EntityType: EntityTypeParagraphAudio,
+		PathPrefix: "tts/paragraphs", IncludeEntityID: true,
+		MaxUploadBytes: 100 * mib,
+		Access:         AccessSignedCDN,
+		// tts/paragraphs already COLDLINE-tiers at 30d via GCS (cost only).
+		Retention: RetentionPolicy{ColdlineAfter: 30 * day, DeleteOnOwnerDelete: true, OrphanGrace: 14 * day},
+		GDPR:      GDPRClass{SubjectFrom: "none", DedupAcrossSubjects: true},
+	},
+	"roadmap-step-audio": {
+		Key: "roadmap-step-audio", EntityType: EntityTypeRoadmapLessonStepAudio,
+		PathPrefix: "tts/roadmap-steps", IncludeEntityID: true,
+		MaxUploadBytes: 100 * mib,
+		Access:         AccessSignedCDN,
+		Retention:      RetentionPolicy{DeleteOnOwnerDelete: true, OrphanGrace: 14 * day},
+		GDPR:           GDPRClass{SubjectFrom: "none", DedupAcrossSubjects: true},
 	},
 	"voice-agent-avatar": {
 		Key: "voice-agent-avatar",
 		// New use-case (no legacy EntityType): voice-agent avatars currently
 		// stored as raw external URLs — migration target.
 		PathPrefix: "voice-agents", IncludeEntityID: true,
-		AllowedMimes: []string{"image/jpeg", "image/png", "image/webp"},
-		Variants:     []VariantSpec{{Name: "main", MaxWidth: 512, Format: "webp"}},
-		Access:       AccessSignedCDN,
-		Retention:    RetentionPolicy{DeleteOnOwnerDelete: true, OrphanGrace: 14 * day},
-		GDPR:         GDPRClass{SubjectFrom: "none", DedupAcrossSubjects: true},
+		AllowedMimes:   []string{"image/jpeg", "image/png", "image/webp"},
+		MaxUploadBytes: 10 * mib,
+		Variants: []VariantSpec{
+			{Name: "main", MaxWidth: 512, Format: "webp"},
+			{Name: "preview", MaxWidth: 128, Format: "webp"},
+		},
+		Access:    AccessSignedCDN,
+		Retention: RetentionPolicy{DeleteOnOwnerDelete: true, OrphanGrace: 14 * day},
+		GDPR:      GDPRClass{SubjectFrom: "none", DedupAcrossSubjects: true},
 	},
 	"curriculum-thumbnail": {
 		Key: "curriculum-thumbnail",
 		// New use-case: track/level/chapter/lesson thumbnails currently raw
 		// String(500) URLs in kielolearn-engine — primary migration target.
 		PathPrefix: "curriculum", IncludeEntityID: true,
-		AllowedMimes: []string{"image/jpeg", "image/png", "image/webp"},
-		Variants:     []VariantSpec{{Name: "main", MaxWidth: 1200, Format: "webp"}},
-		Access:       AccessSignedCDN,
-		Retention:    RetentionPolicy{DeleteOnOwnerDelete: true, OrphanGrace: 14 * day},
-		GDPR:         GDPRClass{SubjectFrom: "none", DedupAcrossSubjects: true},
+		AllowedMimes:   []string{"image/jpeg", "image/png", "image/webp"},
+		MaxUploadBytes: 25 * mib,
+		Variants: []VariantSpec{
+			{Name: "main", MaxWidth: 1200, Format: "webp"},
+			{Name: "preview", MaxWidth: 300, Format: "webp"},
+		},
+		Access:    AccessSignedCDN,
+		Retention: RetentionPolicy{DeleteOnOwnerDelete: true, OrphanGrace: 14 * day},
+		GDPR:      GDPRClass{SubjectFrom: "none", DedupAcrossSubjects: true},
 	},
 	"support-attachment": {
 		Key: "support-attachment",
@@ -171,7 +272,9 @@ var profiles = map[string]MediaProfile{
 		// as data subject; erased with the account. Legal-holdable: support
 		// threads can become dispute evidence.
 		PathPrefix: "support", IncludeOwnerID: true,
-		AllowedMimes: []string{"image/jpeg", "image/png", "image/webp"},
+		AllowedMimes:   []string{"image/jpeg", "image/png", "image/webp"},
+		MaxUploadBytes: 25 * mib,
+		AttachmentRole: "attachment",
 		Variants: []VariantSpec{
 			{Name: "main", MaxWidth: 1600, Format: "webp"},
 			{Name: "preview", MaxWidth: 300, Format: "webp"},
@@ -183,13 +286,28 @@ var profiles = map[string]MediaProfile{
 	},
 	"convo-transcript": {
 		Key: "convo-transcript", EntityType: EntityTypeConvoTranscript,
-		PathPrefix: "convo", IncludeOwnerID: true,
-		Access: AccessPrivate,
+		// "conversations" matches the live legacy-registry layout so the prefix
+		// stays continuous across the registry→profile migration.
+		PathPrefix: "conversations", IncludeOwnerID: true,
+		MaxUploadBytes: 500 * mib,
+		AttachmentRole: "transcript",
+		Access:         AccessPrivate,
 		// User conversation data = PII. TTL + erasure are compliance-driven.
 		Retention:     RetentionPolicy{TTL: 365 * day, DeleteOnOwnerDelete: true, OrphanGrace: 7 * day},
 		GDPR:          GDPRClass{ContainsPII: true, SubjectFrom: "owner", ErasureSLA: 30 * day, DedupAcrossSubjects: false},
 		Alerts:        AlertPolicy{Enabled: true, LookaheadDays: 7, Channels: []string{"slack:ops"}},
 		LegalHoldable: true,
+	},
+	"convo-review": {
+		Key: "convo-review", EntityType: EntityTypeConvoReview,
+		PathPrefix: "conversations", IncludeOwnerID: true,
+		MaxUploadBytes: 500 * mib,
+		AttachmentRole: "review",
+		Access:         AccessPrivate,
+		Retention:      RetentionPolicy{TTL: 365 * day, DeleteOnOwnerDelete: true, OrphanGrace: 7 * day},
+		GDPR:           GDPRClass{ContainsPII: true, SubjectFrom: "owner", ErasureSLA: 30 * day, DedupAcrossSubjects: false},
+		Alerts:         AlertPolicy{Enabled: true, LookaheadDays: 7, Channels: []string{"slack:ops"}},
+		LegalHoldable:  true,
 	},
 }
 
@@ -220,6 +338,7 @@ func ProfileForEntityType(t EntityType) (MediaProfile, bool) {
 var relatedEntityAliases = map[string]string{
 	"support-attachment": "support-attachment",
 	"FeedbackMessage":    "support-attachment",
+	"KTVWorkflowVariant": "kielotv-workflow-variant",
 }
 
 // ProfileForRelatedEntity resolves a profile from a related_entity_type wire
