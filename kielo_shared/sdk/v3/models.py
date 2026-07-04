@@ -1012,11 +1012,6 @@ class ContentEntrySummary(BaseModel):
     updated_by: UUID_aliased | None = None
 
 
-class ContentUploadURLs(BaseModel):
-    subtitle_upload_url: str
-    video_upload_url: str
-
-
 class ContentVersionStatusResponse(AppFeedbackUpdateStatusRequest):
     pass
 
@@ -3075,11 +3070,16 @@ class ListVideoItem(BaseModel):
     brand_id: UUID_aliased
     carousel_images: list[str] | None = None
     created_at: AwareDatetime
+    description: str
+    description_translation_fallback: bool | None = None
+    description_translation_locale: str | None = None
+    description_translation_source_locale: str | None = None
     duration_seconds: int
     format_type: str | None = None
     id: UUID_aliased
     learning_language_code: str | None = None
     locale: str | None = None
+    original_description: str | None = None
     original_title: str | None = None
     published_at: AwareDatetime | None = None
     source_locale: str | None = None
@@ -4758,10 +4758,6 @@ class SingletonContentEntrySummaryList(BaseModel):
     data: list[ContentEntrySummary]
 
 
-class SingletonContentUploadURLs(BaseModel):
-    data: ContentUploadURLs
-
-
 class SingletonContentVersionStatusResponse(BaseModel):
     data: ContentVersionStatusResponse
 
@@ -6207,33 +6203,8 @@ class VersionSummary(BaseModel):
     version_id: UUID_aliased
 
 
-class Video(BaseModel):
-    audio_url: str | None = None
-    brand_id: UUID_aliased
-    carousel_images: list[str] | None = None
-    created_at: AwareDatetime
-    description: str
-    description_translation_fallback: bool | None = None
-    description_translation_locale: str | None = None
-    description_translation_source_locale: str | None = None
-    duration_seconds: int
-    format_type: str | None = None
-    id: UUID_aliased
-    learning_language_code: str | None = None
-    locale: str | None = None
-    original_description: str | None = None
-    original_title: str | None = None
-    published_at: AwareDatetime | None = None
-    source_locale: str | None = None
-    thumbhash: str | None = None
-    thumbnail_url: str
-    title: str
-    title_translation_fallback: bool | None = None
-    title_translation_locale: str | None = None
-    title_translation_source_locale: str | None = None
-    transcription_status: str | None = None
-    updated_at: AwareDatetime
-    video_url: str
+class Video(ListVideoItem):
+    pass
 
 
 class VideoFeatureQuota(BaseModel):
@@ -7011,13 +6982,16 @@ class GenerateScenarioResponse(BaseModel):
 
 class GetMediaResponse(BaseModel):
     created_at: AwareDatetime
+    lqip_data_uri: str | None = None
     media_id: str
     media_type: str
     processing_error: str | None = None
     processing_status: str
     serve_base_url: str
     temporary_url: str | None = None
+    thumbhash: str | None = None
     updated_at: AwareDatetime
+    variant_urls: dict[str, str] | None = None
     variants: dict[str, MediaVariant] | None = None
 
 
