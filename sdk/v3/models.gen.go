@@ -2204,12 +2204,6 @@ type ContentEntrySummary struct {
 	UpdatedBy            *uuid.UUID              `json:"updated_by,omitempty"`
 }
 
-// ContentUploadURLs defines model for ContentUploadURLs.
-type ContentUploadURLs struct {
-	SubtitleUploadUrl string `json:"subtitle_upload_url"`
-	VideoUploadUrl    string `json:"video_upload_url"`
-}
-
 // ContentVersionStatusResponse defines model for ContentVersionStatusResponse.
 type ContentVersionStatusResponse struct {
 	Status string `json:"status"`
@@ -3973,13 +3967,16 @@ type GenerateUploadURLResponse struct {
 // GetMediaResponse defines model for GetMediaResponse.
 type GetMediaResponse struct {
 	CreatedAt        time.Time                `json:"created_at"`
+	LqipDataUri      *string                  `json:"lqip_data_uri,omitempty"`
 	MediaId          string                   `json:"media_id"`
 	MediaType        string                   `json:"media_type"`
 	ProcessingError  *string                  `json:"processing_error,omitempty"`
 	ProcessingStatus string                   `json:"processing_status"`
 	ServeBaseUrl     string                   `json:"serve_base_url"`
 	TemporaryUrl     *string                  `json:"temporary_url,omitempty"`
+	Thumbhash        *string                  `json:"thumbhash,omitempty"`
 	UpdatedAt        time.Time                `json:"updated_at"`
+	VariantUrls      *map[string]string       `json:"variant_urls,omitempty"`
 	Variants         *map[string]MediaVariant `json:"variants,omitempty"`
 }
 
@@ -5169,27 +5166,32 @@ type ListScenariosResponse struct {
 
 // ListVideoItem defines model for ListVideoItem.
 type ListVideoItem struct {
-	AudioUrl                     *string    `json:"audio_url,omitempty"`
-	BrandId                      uuid.UUID  `json:"brand_id"`
-	CarouselImages               *[]string  `json:"carousel_images,omitempty"`
-	CreatedAt                    time.Time  `json:"created_at"`
-	DurationSeconds              int        `json:"duration_seconds"`
-	FormatType                   *string    `json:"format_type,omitempty"`
-	Id                           uuid.UUID  `json:"id"`
-	LearningLanguageCode         *string    `json:"learning_language_code,omitempty"`
-	Locale                       *string    `json:"locale,omitempty"`
-	OriginalTitle                *string    `json:"original_title,omitempty"`
-	PublishedAt                  *time.Time `json:"published_at,omitempty"`
-	SourceLocale                 *string    `json:"source_locale,omitempty"`
-	Thumbhash                    *string    `json:"thumbhash,omitempty"`
-	ThumbnailUrl                 string     `json:"thumbnail_url"`
-	Title                        string     `json:"title"`
-	TitleTranslationFallback     *bool      `json:"title_translation_fallback,omitempty"`
-	TitleTranslationLocale       *string    `json:"title_translation_locale,omitempty"`
-	TitleTranslationSourceLocale *string    `json:"title_translation_source_locale,omitempty"`
-	TranscriptionStatus          *string    `json:"transcription_status,omitempty"`
-	UpdatedAt                    time.Time  `json:"updated_at"`
-	VideoUrl                     string     `json:"video_url"`
+	AudioUrl                           *string    `json:"audio_url,omitempty"`
+	BrandId                            uuid.UUID  `json:"brand_id"`
+	CarouselImages                     *[]string  `json:"carousel_images,omitempty"`
+	CreatedAt                          time.Time  `json:"created_at"`
+	Description                        string     `json:"description"`
+	DescriptionTranslationFallback     *bool      `json:"description_translation_fallback,omitempty"`
+	DescriptionTranslationLocale       *string    `json:"description_translation_locale,omitempty"`
+	DescriptionTranslationSourceLocale *string    `json:"description_translation_source_locale,omitempty"`
+	DurationSeconds                    int        `json:"duration_seconds"`
+	FormatType                         *string    `json:"format_type,omitempty"`
+	Id                                 uuid.UUID  `json:"id"`
+	LearningLanguageCode               *string    `json:"learning_language_code,omitempty"`
+	Locale                             *string    `json:"locale,omitempty"`
+	OriginalDescription                *string    `json:"original_description,omitempty"`
+	OriginalTitle                      *string    `json:"original_title,omitempty"`
+	PublishedAt                        *time.Time `json:"published_at,omitempty"`
+	SourceLocale                       *string    `json:"source_locale,omitempty"`
+	Thumbhash                          *string    `json:"thumbhash,omitempty"`
+	ThumbnailUrl                       string     `json:"thumbnail_url"`
+	Title                              string     `json:"title"`
+	TitleTranslationFallback           *bool      `json:"title_translation_fallback,omitempty"`
+	TitleTranslationLocale             *string    `json:"title_translation_locale,omitempty"`
+	TitleTranslationSourceLocale       *string    `json:"title_translation_source_locale,omitempty"`
+	TranscriptionStatus                *string    `json:"transcription_status,omitempty"`
+	UpdatedAt                          time.Time  `json:"updated_at"`
+	VideoUrl                           string     `json:"video_url"`
 }
 
 // ListeningComprehensionExercise defines model for ListeningComprehensionExercise.
@@ -7418,11 +7420,6 @@ type SingletonContentEntrySummary struct {
 // SingletonContentEntrySummaryList defines model for SingletonContentEntrySummaryList.
 type SingletonContentEntrySummaryList struct {
 	Data []ContentEntrySummary `json:"data"`
-}
-
-// SingletonContentUploadURLs defines model for SingletonContentUploadURLs.
-type SingletonContentUploadURLs struct {
-	Data ContentUploadURLs `json:"data"`
 }
 
 // SingletonContentVersionStatusResponse defines model for SingletonContentVersionStatusResponse.
