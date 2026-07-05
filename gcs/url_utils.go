@@ -67,11 +67,34 @@ func InternalEmulatorBaseURL() string {
 	return normalized
 }
 
+// RequestDerivedEmulatorBaseURL derives a device-reachable GCS emulator base
+// URL from the CALLER's host: a client that reached this service via
+// 192.168.1.227 has proven that address routes to this machine, so the
+// emulator is reachable there too (its port is published on all interfaces).
+// This self-corrects on every request when the machine changes networks —
+// unlike the HOST_IP env, which is frozen at stack-launch and goes stale
+// (doctor gate host_ip_frozen). Returns "" outside emulator mode, and for
+// internal/underivable callers (single-label Docker hostnames, empty host).
+func RequestDerivedEmulatorBaseURL(requestHostname string) string {
+	if strings.TrimSpace(os.Getenv("STORAGE_EMULATOR_HOST")) == "" {
+		return ""
+	}
+	host := strings.TrimSpace(strings.ToLower(requestHostname))
+	if h, _, err := net.SplitHostPort(host); err == nil {
+		host = h
+	}
+	if host == "" || (!IsLoopbackHostname(host) && !strings.Contains(host, ".")) {
+		return ""
+	}
+	return "http://" + net.JoinHostPort(host, ParseEmulatorPort())
+}
+
 // ContextualizeStorageURL rewrites a GCS storage URL based on the request context.
-// For loopback requests (localhost/127.x): rewrites to external emulator URL (using HOST_IP).
+// For loopback / LAN-IP / FQDN callers in emulator mode: rewrites to the
+// caller-derived emulator URL (RequestDerivedEmulatorBaseURL), falling back to
+// the HOST_IP-based ExternalEmulatorBaseURL when the caller host is unusable.
 // For internal Docker requests (single-word hostname): rewrites to internal emulator URL (gcs-emulator:port).
-// For any other caller (LAN IP, FQDN) in emulator mode: rewrites to external emulator URL. In
-// production (no emulator configured) ExternalEmulatorBaseURL returns empty and the URL is
+// In production (no emulator configured) both bases are empty and the URL is
 // returned unchanged, so real GCS URLs like storage.googleapis.com are never touched.
 // For non-storage URLs: returns the URL unchanged.
 func ContextualizeStorageURL(requestHostname, rawURL string) string {
@@ -102,16 +125,17 @@ func ContextualizeStorageURL(requestHostname, rawURL string) string {
 
 	var targetBase string
 	switch {
-	case IsLoopbackHostname(hostname):
-		targetBase = ExternalEmulatorBaseURL()
-	case !strings.Contains(hostname, "."):
+	case IsLoopbackHostname(hostname), strings.Contains(hostname, "."):
+		// External dev caller (loopback, LAN IP, or FQDN): the caller's own
+		// host is reachable by definition — prefer it over the launch-frozen
+		// HOST_IP env. In production both bases are empty ⇒ pass through.
+		targetBase = RequestDerivedEmulatorBaseURL(hostname)
+		if targetBase == "" {
+			targetBase = ExternalEmulatorBaseURL()
+		}
+	default:
 		// Single-label hostname ⇒ internal Docker service
 		targetBase = InternalEmulatorBaseURL()
-	default:
-		// LAN IP or FQDN. In emulator mode this is an external dev caller
-		// that needs the HOST_IP-based URL; in production ExternalEmulatorBaseURL
-		// returns empty, so real GCS URLs pass through untouched.
-		targetBase = ExternalEmulatorBaseURL()
 	}
 
 	if targetBase == "" {
@@ -173,14 +197,19 @@ func ContextualizeServiceURL(requestHostname, rawURL string) string {
 		return trimmed
 	}
 
-	// External caller (loopback, LAN IP, or FQDN). Rewrite to HOST_IP (or localhost).
-	// We preserve the original port: Docker services are expected to expose
-	// matching host ports (e.g. "8080:8080"), not gratuitously-renumbered ones.
-	hostIP := strings.TrimSpace(os.Getenv("HOST_IP"))
-	if hostIP == "" {
-		hostIP = "localhost"
+	// External caller (loopback, LAN IP, or FQDN). Rewrite to the caller's own
+	// host — reachable by definition and self-correcting across network
+	// changes — falling back to HOST_IP/localhost when unusable. We preserve
+	// the original port: Docker services are expected to expose matching host
+	// ports (e.g. "8080:8080"), not gratuitously-renumbered ones.
+	externalHost := reqHost
+	if externalHost == "" {
+		externalHost = strings.TrimSpace(os.Getenv("HOST_IP"))
 	}
-	parsed.Host = net.JoinHostPort(hostIP, parsed.Port())
+	if externalHost == "" {
+		externalHost = "localhost"
+	}
+	parsed.Host = net.JoinHostPort(externalHost, parsed.Port())
 	return parsed.String()
 }
 

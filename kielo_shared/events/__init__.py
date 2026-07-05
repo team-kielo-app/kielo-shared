@@ -169,6 +169,11 @@ TOPIC_EVENT_EXERCISE_REVALIDATION_V1: Final[BehavioralEventType] = (
 TOPIC_EVENT_DATA_QUALITY_SWEEP_V1: Final[BehavioralEventType] = (
     "kielo.data_quality.sweep.v1"
 )
+# Media lifecycle: emitted when an owning entity (curriculum/roadmap/...) is
+# deleted so kielo-media-processor cascades cleanup of its attached media.
+TOPIC_EVENT_MEDIA_OWNER_DELETED_V1: Final[BehavioralEventType] = (
+    "kielo.media.owner_deleted.v1"
+)
 
 # ----------------------------------------------------------------------
 # Tier E — concept-hub notification event_types (sibling vocabulary)
@@ -265,6 +270,7 @@ ALL_TIER_D_TOPIC_EVENTS: Final[FrozenSet[BehavioralEventType]] = frozenset(
         TOPIC_EVENT_TOPIC_LIST_GENERATION_V1,
         TOPIC_EVENT_EXERCISE_REVALIDATION_V1,
         TOPIC_EVENT_DATA_QUALITY_SWEEP_V1,
+        TOPIC_EVENT_MEDIA_OWNER_DELETED_V1,
     }
 )
 
@@ -374,6 +380,7 @@ __all__ = [
     "TOPIC_EVENT_TOPIC_LIST_GENERATION_V1",
     "TOPIC_EVENT_EXERCISE_REVALIDATION_V1",
     "TOPIC_EVENT_DATA_QUALITY_SWEEP_V1",
+    "TOPIC_EVENT_MEDIA_OWNER_DELETED_V1",
     # Tier E
     "EVENT_CONCEPT_HUB_FAILED",
     "EVENT_CONCEPT_HUB_GENERATED",
