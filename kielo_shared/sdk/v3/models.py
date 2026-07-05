@@ -283,6 +283,18 @@ class AuditLogsListResponse(BaseModel):
     total: int
 
 
+class AuditRow(BaseModel):
+    actor: str | None = None
+    completed_at: AwareDatetime | None = None
+    gcs_purged: bool
+    id: str
+    media_id: str
+    profile: str | None = None
+    reason: str
+    requested_at: AwareDatetime
+    subject_user_id: str | None = None
+
+
 class AvailableLocales(BaseModel):
     captions: list[str]
     mindmap: list[str]
@@ -948,6 +960,7 @@ class ConceptHubTeaser(BaseModel):
     description: str = Field(..., title="Description")
     grammar_concept_id: UUID_aliased = Field(..., title="Grammar Concept Id")
     id: UUID_aliased = Field(..., title="Id")
+    thumbnail_media_id: UUID_aliased | None = Field(None, title="Thumbnail Media Id")
     thumbnail_url: str | None = Field(None, title="Thumbnail Url")
     title: str = Field(..., title="Title")
     user_proficiency_score: confloat(ge=0.0, le=1.0) | None = Field(
@@ -963,6 +976,11 @@ class Confusable(BaseModel):
     source: str | None = None
     term: str | None = None
     translation: str | None = None
+
+
+class ConsistencyReport(BaseModel):
+    counts: dict[str, int]
+    samples: dict[str, list[str]]
 
 
 class ContentBrand(BaseModel):
@@ -992,11 +1010,6 @@ class ContentEntrySummary(BaseModel):
     translation_status: dict[str, Any] | None = None
     updated_at: AwareDatetime
     updated_by: UUID_aliased | None = None
-
-
-class ContentUploadURLs(BaseModel):
-    subtitle_upload_url: str
-    video_upload_url: str
 
 
 class ContentVersionStatusResponse(AppFeedbackUpdateStatusRequest):
@@ -1391,6 +1404,11 @@ class CreateFeatureRequestRequest(BaseModel):
     title: str
 
 
+class CreateFeedbackMessageRequest(BaseModel):
+    body: str | None = None
+    media_id: str | None = None
+
+
 class CreateJobRequest(BaseModel):
     body: str
     data: dict[str, Any]
@@ -1499,6 +1517,7 @@ class CurriculumChapterResponse(BaseModel):
     level_id: UUID_aliased = Field(..., title="Level Id")
     order_index: int = Field(..., title="Order Index")
     status: str = Field(..., title="Status")
+    thumbnail_media_id: UUID_aliased | None = Field(None, title="Thumbnail Media Id")
     thumbnail_url: str | None = Field(None, title="Thumbnail Url")
     title: str = Field(..., title="Title")
     updated_at: AwareDatetime = Field(..., title="Updated At")
@@ -1512,6 +1531,7 @@ class CurriculumChapterUpsertRequest(BaseModel):
     level_id: UUID_aliased = Field(..., title="Level Id")
     order_index: int | None = Field(0, title="Order Index")
     status: str | None = Field("draft", title="Status")
+    thumbnail_media_id: UUID_aliased | None = Field(None, title="Thumbnail Media Id")
     thumbnail_url: str | None = Field(None, title="Thumbnail Url")
     title: constr(min_length=2, max_length=255) = Field(..., title="Title")
 
@@ -1526,6 +1546,7 @@ class CurriculumLevelResponse(BaseModel):
     id: UUID_aliased = Field(..., title="Id")
     order_index: int = Field(..., title="Order Index")
     status: str = Field(..., title="Status")
+    thumbnail_media_id: UUID_aliased | None = Field(None, title="Thumbnail Media Id")
     thumbnail_url: str | None = Field(None, title="Thumbnail Url")
     title: str = Field(..., title="Title")
     track_id: UUID_aliased = Field(..., title="Track Id")
@@ -1539,6 +1560,7 @@ class CurriculumLevelUpsertRequest(BaseModel):
     icon_emoji: str | None = Field(None, title="Icon Emoji")
     order_index: int | None = Field(0, title="Order Index")
     status: str | None = Field("draft", title="Status")
+    thumbnail_media_id: UUID_aliased | None = Field(None, title="Thumbnail Media Id")
     thumbnail_url: str | None = Field(None, title="Thumbnail Url")
     title: constr(min_length=2, max_length=255) = Field(..., title="Title")
     track_id: UUID_aliased = Field(..., title="Track Id")
@@ -1573,6 +1595,7 @@ class CurriculumTrackResponse(BaseModel):
     order_index: int = Field(..., title="Order Index")
     slug: str = Field(..., title="Slug")
     status: str = Field(..., title="Status")
+    thumbnail_media_id: UUID_aliased | None = Field(None, title="Thumbnail Media Id")
     thumbnail_url: str | None = Field(None, title="Thumbnail Url")
     title: str = Field(..., title="Title")
     track_type: str = Field(..., title="Track Type")
@@ -1588,6 +1611,7 @@ class CurriculumTrackUpsertRequest(BaseModel):
     order_index: int | None = Field(0, title="Order Index")
     slug: constr(min_length=2, max_length=100) = Field(..., title="Slug")
     status: str | None = Field("draft", title="Status")
+    thumbnail_media_id: UUID_aliased | None = Field(None, title="Thumbnail Media Id")
     thumbnail_url: str | None = Field(None, title="Thumbnail Url")
     title: constr(min_length=2, max_length=255) = Field(..., title="Title")
     track_type: str | None = Field("general", title="Track Type")
@@ -2048,6 +2072,20 @@ class FeedbackListResponse(BaseModel):
     meta: FeedbackListMeta
 
 
+class FeedbackMessageCreateRequest(BaseModel):
+    body: str | None = None
+    media_id: UUID_aliased | None = None
+
+
+class FeedbackMessageMedia(BaseModel):
+    height: int | None = None
+    lqip_data_uri: str | None = None
+    thumbhash: str | None = None
+    url: str
+    variants: dict[str, str] | None = None
+    width: int | None = None
+
+
 class FeedbackUpdateRequest(AppFeedbackUpdateStatusRequest):
     pass
 
@@ -2103,6 +2141,11 @@ class FlashcardExercise(BaseModel):
         None,
         description="Optional rich answer block. Clients should render this instead of correct_answer when present.",
         title="Answer Html",
+    )
+    answer_is_support_text: bool | None = Field(
+        False,
+        description="True when correct_answer is the item's SUPPORT-language meaning (a 'what does X mean?' card), so the read-time localizer translates it. False for learning-language answer keys (conversation-drill corrections, 'recall the Finnish word' cards, daily 'English meaning' cards) which must never be machine-translated.",
+        title="Answer Is Support Text",
     )
     cache_entry_id: str | None = Field(None, title="Cache Entry Id")
     context_hint: str | None = Field(
@@ -2176,6 +2219,7 @@ class GenerateUploadURLRequest(BaseModel):
     file_hash_sha256: str | None = None
     filename: str
     mime_type: str
+    profile: str | None = None
     related_entity_id: str | None = None
     related_entity_type: str | None = None
     size: int | None = None
@@ -2186,8 +2230,13 @@ class GenerateUploadURLResponse(BaseModel):
     upload_url: str
 
 
-class GetUploadURLRequest(GenerateUploadURLRequest):
-    pass
+class GetUploadURLRequest(BaseModel):
+    file_hash_sha256: str | None = None
+    filename: str
+    mime_type: str
+    related_entity_id: str | None = None
+    related_entity_type: str | None = None
+    size: int | None = None
 
 
 class GetUploadURLResponse(GenerateUploadURLResponse):
@@ -3001,6 +3050,11 @@ class LearningStyleProfile(BaseModel):
     )
 
 
+class LegalHoldResult(BaseModel):
+    legal_hold: bool
+    media_id: str
+
+
 class LinkRevenueCatUserRequest(BaseModel):
     revenue_cat_user_id: str
 
@@ -3016,11 +3070,16 @@ class ListVideoItem(BaseModel):
     brand_id: UUID_aliased
     carousel_images: list[str] | None = None
     created_at: AwareDatetime
+    description: str
+    description_translation_fallback: bool | None = None
+    description_translation_locale: str | None = None
+    description_translation_source_locale: str | None = None
     duration_seconds: int
     format_type: str | None = None
     id: UUID_aliased
     learning_language_code: str | None = None
     locale: str | None = None
+    original_description: str | None = None
     original_title: str | None = None
     published_at: AwareDatetime | None = None
     source_locale: str | None = None
@@ -3153,6 +3212,7 @@ class MediaAsset(BaseModel):
     original_storage_path: str
     processing_error: str | None = None
     processing_status: str | None = None
+    related_entity_id: str | None = None
     related_entity_type: str
     serve_base_url: str | None = None
     storage_bucket: str
@@ -3172,6 +3232,19 @@ class MediaAssetResponse(BaseModel):
     temporary_url: str | None = None
     updated_at: AwareDatetime
     variants: Any | None = None
+
+
+class MediaLifecycleSummary(BaseModel):
+    active: int
+    audit_total: int
+    expiring_7d: int
+    failed: int
+    legal_hold: int
+    pending_deletion: int
+
+
+class MediaRef(FeedbackMessageMedia):
+    pass
 
 
 class MediaUploadCompleteResponse(BaseModel):
@@ -3548,6 +3621,17 @@ class PaymentHistory(BaseModel):
     status: str
     description: str
     event_type: str
+
+
+class PendingDeletionRow(BaseModel):
+    deleted_at: AwareDatetime | None = None
+    legal_hold: bool
+    media_id: str
+    processing_status: str
+    profile: str | None = None
+    storage_bucket: str | None = None
+    storage_path_prefix: str | None = None
+    subject_user_id: str | None = None
 
 
 class PhraseFrame(BaseModel):
@@ -3956,6 +4040,7 @@ class RoadmapAdminLessonResponse(BaseModel):
     lesson_content: dict[str, Any] = Field(..., title="Lesson Content")
     lesson_id: UUID_aliased = Field(..., title="Lesson Id")
     order_index: int = Field(..., title="Order Index")
+    thumbnail_media_id: UUID_aliased | None = Field(None, title="Thumbnail Media Id")
     thumbnail_url: str | None = Field(None, title="Thumbnail Url")
     title: str = Field(..., title="Title")
     updated_at: AwareDatetime = Field(..., title="Updated At")
@@ -4046,6 +4131,7 @@ class RoadmapLessonUpsertRequest(BaseModel):
     is_published: bool | None = Field(False, title="Is Published")
     lesson_content: dict[str, Any] = Field(..., title="Lesson Content")
     order_index: int | None = Field(0, title="Order Index")
+    thumbnail_media_id: UUID_aliased | None = Field(None, title="Thumbnail Media Id")
     thumbnail_url: str | None = Field(None, title="Thumbnail Url")
     title: str = Field(..., title="Title")
 
@@ -4466,6 +4552,10 @@ class SetDynamicTranslationStatusRequest(BaseModel):
     status: str
 
 
+class SetLegalHoldRequest(BaseModel):
+    hold: bool
+
+
 class SetTranslationStatusRequest(BaseModel):
     reviewed_by: UUID_aliased | None = None
     status: str
@@ -4504,7 +4594,7 @@ class SimplifiedArticleTeaser(BaseModel):
         ..., title="Estimated Reading Time Minutes"
     )
     simplification_level: str = Field(..., title="Simplification Level")
-    thumbnail_media_id: str | None = Field(None, title="Thumbnail Media Id")
+    thumbnail_media_id: UUID_aliased | None = Field(None, title="Thumbnail Media Id")
     title: str = Field(..., title="Title")
 
 
@@ -4550,6 +4640,10 @@ class SingletonArticleVersionIngestionWire(BaseModel):
 
 class SingletonAuditLogsListResponse(BaseModel):
     data: AuditLogsListResponse
+
+
+class SingletonAuditRowList(BaseModel):
+    data: list[AuditRow]
 
 
 class SingletonAvailableLocales(BaseModel):
@@ -4648,6 +4742,10 @@ class SingletonConceptHubSummaryList(BaseModel):
     data: list[ConceptHubSummary]
 
 
+class SingletonConsistencyReport(BaseModel):
+    data: ConsistencyReport
+
+
 class SingletonContentBrandList(BaseModel):
     data: list[ContentBrand]
 
@@ -4658,10 +4756,6 @@ class SingletonContentEntrySummary(BaseModel):
 
 class SingletonContentEntrySummaryList(BaseModel):
     data: list[ContentEntrySummary]
-
-
-class SingletonContentUploadURLs(BaseModel):
-    data: ContentUploadURLs
 
 
 class SingletonContentVersionStatusResponse(BaseModel):
@@ -4964,6 +5058,10 @@ class SingletonLearningSessionV3(BaseModel):
     data: LearningSessionV3
 
 
+class SingletonLegalHoldResult(BaseModel):
+    data: LegalHoldResult
+
+
 class SingletonLinkRevenueCatUserResponse(BaseModel):
     data: LinkRevenueCatUserResponse
 
@@ -4998,6 +5096,10 @@ class SingletonMediaAssetList(BaseModel):
 
 class SingletonMediaAssetResponse(BaseModel):
     data: MediaAssetResponse
+
+
+class SingletonMediaLifecycleSummary(BaseModel):
+    data: MediaLifecycleSummary
 
 
 class SingletonMediaUploadCompleteResponse(BaseModel):
@@ -5046,6 +5148,10 @@ class SingletonNotifyUploadCompleteResponse(BaseModel):
 
 class SingletonParagraphTranslationResponse(BaseModel):
     data: ParagraphTranslationResponse
+
+
+class SingletonPendingDeletionRowList(BaseModel):
+    data: list[PendingDeletionRow]
 
 
 class SingletonPlacementItemsV3(BaseModel):
@@ -5219,6 +5325,14 @@ class SpellingChallengeExercise(BaseModel):
     source_type: SourceType | None = Field(None, title="Source Type")
     state: ExerciseState | None = None
     validation_signature: str | None = Field(None, title="Validation Signature")
+
+
+class StaleRow(BaseModel):
+    created_at: AwareDatetime
+    has_owner: bool
+    media_id: str
+    processing_status: str
+    profile: str | None = None
 
 
 class Stats(CommsStats):
@@ -5612,6 +5726,7 @@ class TrackListItem(BaseModel):
     label: str | None = Field(None, title="Label")
     level_count: int | None = Field(0, title="Level Count")
     slug: str = Field(..., title="Slug")
+    thumbnail_media_id: UUID_aliased | None = Field(None, title="Thumbnail Media Id")
     thumbnail_url: str | None = Field(None, title="Thumbnail Url")
     title: str = Field(..., title="Title")
     total_lessons: int | None = Field(0, title="Total Lessons")
@@ -5632,6 +5747,7 @@ class TrackRoadmapLesson(BaseModel):
     lesson_id: UUID_aliased = Field(..., title="Lesson Id")
     order_index: int = Field(..., title="Order Index")
     state: Status14 = Field(..., title="State")
+    thumbnail_media_id: UUID_aliased | None = Field(None, title="Thumbnail Media Id")
     thumbnail_url: str | None = Field(None, title="Thumbnail Url")
     title: str = Field(..., title="Title")
 
@@ -5718,6 +5834,12 @@ class UnreadNotificationCountResponse(BaseModel):
 
 class UnreadNotificationCountResponseV3(UnreadNotificationCountResponse):
     pass
+
+
+class UpcomingExpiryRow(BaseModel):
+    expires_at: AwareDatetime
+    media_id: str
+    profile: str | None = None
 
 
 class UpdateAuthUserFirebaseUIDRequest(BaseModel):
@@ -6081,33 +6203,8 @@ class VersionSummary(BaseModel):
     version_id: UUID_aliased
 
 
-class Video(BaseModel):
-    audio_url: str | None = None
-    brand_id: UUID_aliased
-    carousel_images: list[str] | None = None
-    created_at: AwareDatetime
-    description: str
-    description_translation_fallback: bool | None = None
-    description_translation_locale: str | None = None
-    description_translation_source_locale: str | None = None
-    duration_seconds: int
-    format_type: str | None = None
-    id: UUID_aliased
-    learning_language_code: str | None = None
-    locale: str | None = None
-    original_description: str | None = None
-    original_title: str | None = None
-    published_at: AwareDatetime | None = None
-    source_locale: str | None = None
-    thumbhash: str | None = None
-    thumbnail_url: str
-    title: str
-    title_translation_fallback: bool | None = None
-    title_translation_locale: str | None = None
-    title_translation_source_locale: str | None = None
-    transcription_status: str | None = None
-    updated_at: AwareDatetime
-    video_url: str
+class Video(ListVideoItem):
+    pass
 
 
 class VideoFeatureQuota(BaseModel):
@@ -6708,6 +6805,7 @@ class CurriculumTreeChapter(BaseModel):
     lessons: list[CurriculumTreeLesson] | None = Field(None, title="Lessons")
     order_index: int = Field(..., title="Order Index")
     status: str = Field(..., title="Status")
+    thumbnail_media_id: UUID_aliased | None = Field(None, title="Thumbnail Media Id")
     thumbnail_url: str | None = Field(None, title="Thumbnail Url")
     title: str = Field(..., title="Title")
 
@@ -6721,6 +6819,7 @@ class CurriculumTreeLevel(BaseModel):
     id: UUID_aliased = Field(..., title="Id")
     order_index: int = Field(..., title="Order Index")
     status: str = Field(..., title="Status")
+    thumbnail_media_id: UUID_aliased | None = Field(None, title="Thumbnail Media Id")
     thumbnail_url: str | None = Field(None, title="Thumbnail Url")
     title: str = Field(..., title="Title")
 
@@ -6735,6 +6834,7 @@ class CurriculumTreeTrack(BaseModel):
     order_index: int = Field(..., title="Order Index")
     slug: str = Field(..., title="Slug")
     status: str = Field(..., title="Status")
+    thumbnail_media_id: UUID_aliased | None = Field(None, title="Thumbnail Media Id")
     thumbnail_url: str | None = Field(None, title="Thumbnail Url")
     title: str = Field(..., title="Title")
     track_type: str = Field(..., title="Track Type")
@@ -6830,6 +6930,25 @@ class EffectiveUserLimitsResponse(BaseModel):
     user_id: str
 
 
+class FeedbackMessage(BaseModel):
+    body: str
+    created_at: AwareDatetime
+    feedback_id: UUID_aliased
+    id: UUID_aliased
+    media: MediaRef | None = None
+    read_at: AwareDatetime | None = None
+    sender_type: str
+
+
+class FeedbackMessageList(BaseModel):
+    feedback_user_id: UUID_aliased | None = None
+    items: list[FeedbackMessage]
+
+
+class FeedbackMessageListResponse(FeedbackMessageList):
+    pass
+
+
 class FindBySourceResponse(BaseModel):
     scenarios: list[Scenario]
 
@@ -6863,13 +6982,16 @@ class GenerateScenarioResponse(BaseModel):
 
 class GetMediaResponse(BaseModel):
     created_at: AwareDatetime
+    lqip_data_uri: str | None = None
     media_id: str
     media_type: str
     processing_error: str | None = None
     processing_status: str
     serve_base_url: str
     temporary_url: str | None = None
+    thumbhash: str | None = None
     updated_at: AwareDatetime
+    variant_urls: dict[str, str] | None = None
     variants: dict[str, MediaVariant] | None = None
 
 
@@ -7149,6 +7271,7 @@ class RoadmapAdminGenerateLessonRequest(BaseModel):
     is_published: bool | None = Field(False, title="Is Published")
     order_index: int | None = Field(None, title="Order Index")
     settings: RoadmapLessonGenerationSettings | None = None
+    thumbnail_media_id: UUID_aliased | None = Field(None, title="Thumbnail Media Id")
     thumbnail_url: str | None = Field(None, title="Thumbnail Url")
     title: constr(min_length=3, max_length=255) = Field(..., title="Title")
 
@@ -7191,6 +7314,7 @@ class RoadmapLessonDetailResponse(BaseModel):
     )
     progress: RoadmapLessonProgressSnapshot
     state: State = Field(..., title="State")
+    thumbnail_media_id: UUID_aliased | None = Field(None, title="Thumbnail Media Id")
     thumbnail_url: str | None = Field(None, title="Thumbnail Url")
     title: str = Field(..., title="Title")
 
@@ -7207,6 +7331,7 @@ class RoadmapLessonListItem(BaseModel):
     order_index: int = Field(..., title="Order Index")
     progress: RoadmapLessonProgressSnapshot
     state: State = Field(..., title="State")
+    thumbnail_media_id: UUID_aliased | None = Field(None, title="Thumbnail Media Id")
     thumbnail_url: str | None = Field(None, title="Thumbnail Url")
     title: str = Field(..., title="Title")
 
@@ -7354,6 +7479,14 @@ class SingletonEffectiveUserLimitsResponse(BaseModel):
     data: EffectiveUserLimitsResponse
 
 
+class SingletonFeedbackMessage(BaseModel):
+    data: FeedbackMessage
+
+
+class SingletonFeedbackMessageList(BaseModel):
+    data: FeedbackMessageList
+
+
 class SingletonGetMediaResponse(BaseModel):
     data: GetMediaResponse
 
@@ -7416,6 +7549,10 @@ class SingletonSearchResponse(BaseModel):
 
 class SingletonSemanticSearchResponse(BaseModel):
     data: SemanticSearchResponse
+
+
+class SingletonStaleRowList(BaseModel):
+    data: list[StaleRow]
 
 
 class SingletonStats(BaseModel):
@@ -7504,6 +7641,10 @@ class SingletonUnreadNotificationCountResponse(BaseModel):
 
 class SingletonUnreadNotificationCountResponseV3(BaseModel):
     data: UnreadNotificationCountResponseV3
+
+
+class SingletonUpcomingExpiryRowList(BaseModel):
+    data: list[UpcomingExpiryRow]
 
 
 class SingletonUpdateFeatureCategoryResponse(BaseModel):
@@ -7664,6 +7805,7 @@ class TrackRoadmapChapter(BaseModel):
     lesson_count: int | None = Field(0, title="Lesson Count")
     lessons: list[TrackRoadmapLesson] | None = Field(None, title="Lessons")
     status: Status14 = Field(..., title="Status")
+    thumbnail_media_id: UUID_aliased | None = Field(None, title="Thumbnail Media Id")
     thumbnail_url: str | None = Field(None, title="Thumbnail Url")
     title: str = Field(..., title="Title")
 
@@ -7677,6 +7819,7 @@ class TrackRoadmapLevel(BaseModel):
     id: UUID_aliased = Field(..., title="Id")
     progress_percent: float | None = Field(0.0, title="Progress Percent")
     status: Status14 = Field(..., title="Status")
+    thumbnail_media_id: UUID_aliased | None = Field(None, title="Thumbnail Media Id")
     thumbnail_url: str | None = Field(None, title="Thumbnail Url")
     title: str = Field(..., title="Title")
 
@@ -7693,6 +7836,9 @@ class TrackRoadmapResponse(BaseModel):
     track_description: str | None = Field(None, title="Track Description")
     track_icon_emoji: str | None = Field(None, title="Track Icon Emoji")
     track_id: UUID_aliased = Field(..., title="Track Id")
+    track_thumbnail_media_id: UUID_aliased | None = Field(
+        None, title="Track Thumbnail Media Id"
+    )
     track_thumbnail_url: str | None = Field(None, title="Track Thumbnail Url")
     track_title: str = Field(..., title="Track Title")
 
@@ -7924,6 +8070,11 @@ class CurriculumTreeResponse(BaseModel):
     tracks: list[CurriculumTreeTrack] = Field(..., title="Tracks")
 
 
+class CursorPageFeedbackMessage(BaseModel):
+    items: list[FeedbackMessage]
+    next_page_key: str | None = None
+
+
 class DevicePreferences(BaseModel):
     device_id: str
     notifications: NotificationPreferences
@@ -8041,6 +8192,7 @@ class LearningSession(BaseModel):
     session_type: SessionType = Field(..., title="Session Type")
     stages: list[LearningArcStage] | None = Field(None, title="Stages")
     streak_days: int | None = Field(None, title="Streak Days")
+    support_language_code: str | None = Field("", title="Support Language Code")
     theme: ChallengeTheme | None = None
     title: str = Field(..., title="Title")
     user_id: UUID_aliased = Field(..., title="User Id")

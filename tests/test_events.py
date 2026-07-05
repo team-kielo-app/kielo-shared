@@ -43,14 +43,18 @@ def test_behavioral_event_tiers_are_disjoint():
 
 def test_behavioral_event_cardinality_matches_recon():
     """Sweep ZJ recon found 5 + 6 + 18 + 7 + 2 = 38 behavioral wire
-    strings across the 5 tiers. Pin the count so a future drop
-    surfaces the change explicitly."""
+    strings across the 5 tiers. The media-lifecycle platform adds
+    TOPIC_EVENT_MEDIA_OWNER_DELETED_V1 to Tier D, bringing the total to
+    5 + 6 + 18 + 8 + 2 = 39. Pin the count so a future drop surfaces the
+    change explicitly."""
     assert len(events.ALL_TIER_A_BEHAVIORAL_EVENTS) == 5
     # Tier B includes LEARNING_VIEWED_ITEM_V1 (6 total; cross-vocabulary
     # ADR-011 wire string that doubles as behavioral dispatch key)
     assert len(events.ALL_TIER_B_BEHAVIORAL_EVENTS) == 6
     assert len(events.ALL_TIER_C_BEHAVIORAL_EVENTS) == 18
-    assert len(events.ALL_TIER_D_TOPIC_EVENTS) == 7
+    # Tier D includes TOPIC_EVENT_MEDIA_OWNER_DELETED_V1
+    # ("kielo.media.owner_deleted.v1"), the owner-deletion cascade trigger.
+    assert len(events.ALL_TIER_D_TOPIC_EVENTS) == 8
     assert len(events.ALL_TIER_E_NOTIFICATION_EVENTS) == 2
 
 
