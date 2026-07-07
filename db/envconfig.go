@@ -40,6 +40,41 @@ func EnvString(key, fallback string) string {
 	return raw
 }
 
+// CheckProdServiceURLs logs a loud ERROR for any cross-service URL still
+// pointing at localhost/loopback when the service runs in production — the
+// dev-default-leaked-to-prod class that caused silent connection-refused /
+// DNS failures (e.g. MEDIA_UPLOAD_SERVICE_URL, EVENTS_SERVICE_URL). Call once
+// after config load with the service's resolved internal URLs, keyed by their
+// env-var name.
+//
+// Non-fatal by design: a Cloud Monitoring log-based alert on "MISCONFIG"
+// surfaces it at deploy time, but a degraded dependency must not block boot
+// and turn a partial degradation into a full outage. Only localhost/loopback
+// is flagged — single-label VPC-internal DNS names (e.g. "kielo-models:8080")
+// are legitimate service targets in production.
+func CheckProdServiceURLs(environment string, urls map[string]string) {
+	// Accept both spellings the fleet uses ("production" from the cloud-run
+	// module's baseline ENVIRONMENT var, "prod" from older ENV conventions),
+	// matching kielo-shared/gcs config detection.
+	switch strings.ToLower(strings.TrimSpace(environment)) {
+	case "production", "prod":
+	default:
+		return
+	}
+	for name, u := range urls {
+		lu := strings.ToLower(u)
+		if strings.Contains(lu, "localhost") ||
+			strings.Contains(lu, "127.0.0.1") ||
+			strings.Contains(lu, "[::1]") {
+			log.Printf(
+				"ERROR: MISCONFIG: %s=%q is a dev default in production; set it in terraform "+
+					"(cross-service calls will fail with connection-refused/DNS errors otherwise)",
+				name, u,
+			)
+		}
+	}
+}
+
 // EnvBool parses an environment variable as a boolean using
 // strconv.ParseBool semantics (1/t/T/TRUE/true/True and 0/f/F/FALSE/false/False).
 // Falls back when unset; logs WARN and returns fallback when set but
