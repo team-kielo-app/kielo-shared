@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
+	safego "github.com/team-kielo-app/kielo-shared/observe/safego"
 )
 
 // Event represents an SSE event
@@ -90,7 +91,7 @@ func (w *Writer) SendComment(comment string) error {
 
 // StartHeartbeat starts sending periodic heartbeat comments to keep the connection alive
 func (w *Writer) StartHeartbeat() {
-	go func() {
+	safego.Go("sse_echo_heartbeat", func() {
 		ticker := time.NewTicker(w.heartbeatDelay)
 		defer ticker.Stop()
 
@@ -104,7 +105,7 @@ func (w *Writer) StartHeartbeat() {
 				return
 			}
 		}
-	}()
+	})
 }
 
 // StopHeartbeat stops the heartbeat goroutine

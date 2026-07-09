@@ -3,6 +3,8 @@ package dynamicregistry
 import (
 	"context"
 	"sync"
+
+	safego "github.com/team-kielo-app/kielo-shared/observe/safego"
 )
 
 // Translator is the dynamicregistry's autotranslate-on-miss hook
@@ -121,10 +123,10 @@ func (r *Registry) queueAutotranslate(ctx context.Context, key, sourceVersion, s
 		return
 	}
 	bgCtx := context.WithoutCancel(ctx)
-	go func() {
+	safego.Go("dynamicregistry_autotranslate", func() {
 		defer r.autotranslateInflight.Delete(dedupeKey)
 		r.translator.Translate(bgCtx, r.resType, key, sourceVersion, sourceText, locale)
-	}()
+	})
 }
 
 // autotranslateInflight is a process-local sync.Map (string ->
