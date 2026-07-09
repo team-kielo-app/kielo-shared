@@ -37,6 +37,8 @@ import (
 	"net/http"
 	"sync"
 	"time"
+
+	safego "github.com/team-kielo-app/kielo-shared/observe/safego"
 )
 
 // StdlibWriter is the chi/net-http equivalent of Writer. It wraps a
@@ -155,7 +157,7 @@ func (w *StdlibWriter) SendRetry(retryMs int) error {
 // running streams. Call StopHeartbeat (or just let the request context
 // cancel) to stop.
 func (w *StdlibWriter) StartHeartbeat() {
-	go func() {
+	safego.Go("sse_stdlib_heartbeat", func() {
 		ticker := time.NewTicker(w.heartbeatDelay)
 		defer ticker.Stop()
 		for {
@@ -168,7 +170,7 @@ func (w *StdlibWriter) StartHeartbeat() {
 				return
 			}
 		}
-	}()
+	})
 }
 
 // StopHeartbeat stops the heartbeat goroutine. Idempotent.

@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/rsa"
 	"crypto/subtle"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -85,34 +84,19 @@ type JWTOptions struct {
 func JWTAuthWithOptions(jwtSecret string, userChecker UserExistenceChecker, options *JWTOptions) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			// Check for API Gateway user info header first (for mobile-bff compatibility)
-			userInfo := c.Request().Header.Get("x-apigateway-api-userinfo")
-			if userInfo != "" && hasValidInternalAPIKey(c.Request()) {
-				// Parse the user info as JSON claims
-				var claims Claims
-				if err := json.Unmarshal([]byte(userInfo), &claims); err == nil {
-					// Check user existence if checker provided
-					if userChecker != nil {
-						exists, err := userChecker.UserExists(c.Request().Context(), claims.UserID)
-						if err != nil {
-							// Sweep ZZZZ: typed code so client can branch
-							// (transient infra issue → retry vs hard auth fail).
-							c.Logger().Errorf("JWT middleware userChecker failed: %v", err)
-							return authErr(http.StatusInternalServerError, AuthCodeUserCheckFailed,
-								"Unable to verify your account right now. Please try again in a moment.")
-						}
-						if !exists {
-							return authErr(http.StatusUnauthorized, AuthCodeUserDeleted,
-								"Your account is no longer available. Please contact support if this is unexpected.")
-						}
-					}
-					// Set claims in context
-					setClaimsInContext(c, claims, options)
-					return next(c)
-				}
-			}
+			// SECURITY (S4, sweep 2026-07-06): the previously-trusted
+			// `x-apigateway-api-userinfo` header path was REMOVED. It parsed
+			// an UNSIGNED JSON claims blob — including `role` — straight into
+			// the request identity whenever a valid X-Internal-API-Key was
+			// present. No component anywhere in the fleet ever SET that header
+			// (the external LB is a plain HTTPS LB, not an API Gateway, and
+			// does not strip client-supplied copies), so on internet-facing
+			// services it was pure attack surface: anyone holding the single
+			// shared internal key could forge `role:admin` for any user_id.
+			// Identity now comes ONLY from a signature-verified JWT (below) or
+			// the explicit X-User-ID service handshake in FlexibleAuthWithOptions.
 
-			// Fallback to traditional Bearer token parsing
+			// Bearer token parsing (signature-verified).
 			authHeader := c.Request().Header.Get("Authorization")
 			if authHeader == "" {
 				// Sweep ZZZZ: dedicated AUTH_TOKEN_MISSING (was default

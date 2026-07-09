@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	safego "github.com/team-kielo-app/kielo-shared/observe/safego"
 	"golang.org/x/sync/singleflight"
 )
 
@@ -534,12 +535,12 @@ func (s *Seam) kickoffSWR(ctx context.Context, ref SourceRef, target, cacheKey s
 	if _, loaded := s.swrInFlight.LoadOrStore(cacheKey, struct{}{}); loaded {
 		return
 	}
-	go func() {
+	safego.Go("localization_seam_swr", func() {
 		defer s.swrInFlight.Delete(cacheKey)
 		bgCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
 		defer cancel()
 		s.callProvider(bgCtx, ref, target, cacheKey)
-	}()
+	})
 }
 
 // callProvider routes through the registry, applies the suspicious-
