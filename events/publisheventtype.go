@@ -355,6 +355,11 @@ const (
 	// retire this constant.
 	EventCMSContentPublishedDirect PublishEventType = "cms.content.published.v1"
 
+	// EventCMSContentUnpublishedDirect is the direct-publish mirror of
+	// EventCMSContentUnpublished (outboxeventtype.go). Same wire string.
+	// Emitted through the outbox drainer's publisher path (like published).
+	EventCMSContentUnpublishedDirect PublishEventType = "cms.content.unpublished.v1"
+
 	// EventCMSContentDeletedDirect is the direct-publish mirror of
 	// EventCMSContentDeleted (outboxeventtype.go). Same wire string.
 	// Same TTT-I durability gap as above.
@@ -573,6 +578,7 @@ var AllPublishEventTypes = []PublishEventType{
 	EventMediaProcessing,
 	EventMediaProcessed,
 	EventCMSContentPublishedDirect,
+	EventCMSContentUnpublishedDirect,
 	EventCMSContentDeletedDirect,
 	// EventConversationStarted retired Sweep ZJ-A.2
 }

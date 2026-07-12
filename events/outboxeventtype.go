@@ -60,12 +60,24 @@ func (o OutboxEventType) String() string {
 // CMS-side outbox events. Producer: kielo-cms business txs; written
 // to cms.outbox_events.
 const (
-	// EventCMSContentPublished fires when an admin publishes a CMS
-	// content row (article, kielotv card, scenario, daily-word).
-	// Consumed by kielo-content-service (search index update),
-	// kielo-communications-service (push notification dispatch),
-	// kielo-user-service (badge cache invalidate).
+	// EventCMSContentPublished fires when a CMS content row (article,
+	// kielotv video, scenario, daily-word) transitions to `published`.
+	// Consumed by kielo-communications-service (push-notification
+	// dispatch) — the SOLE subscriber. NOTE: content-service does NOT
+	// consume this (it reads cms_<lang>.* directly, status-filtered);
+	// the earlier "search index update" claim was aspirational — no such
+	// index exists. Part of the content-lifecycle contract; see
+	// docs/architecture/content-lifecycle-events.md.
 	EventCMSContentPublished OutboxEventType = "cms.content.published.v1"
+
+	// EventCMSContentUnpublished fires when a published CMS content row
+	// transitions back to `draft`/`archived` (an admin unpublish). It is
+	// the missing counterpart to EventCMSContentPublished: consumers that
+	// reacted to publish (notifications, caches, derived copies) need a
+	// signal to retract/evict. Same payload shape + topic as
+	// content.published (subscribers filter by event_type attribute).
+	// Part of the content-lifecycle contract.
+	EventCMSContentUnpublished OutboxEventType = "cms.content.unpublished.v1"
 
 	// EventCMSContentDeleted fires when an admin deletes a published
 	// CMS content row. Consumed by kielo-media-processor (asset
