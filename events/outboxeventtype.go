@@ -79,6 +79,14 @@ const (
 	// Part of the content-lifecycle contract.
 	EventCMSContentUnpublished OutboxEventType = "cms.content.unpublished.v1"
 
+	// EventCMSContentUpdated fires when ALREADY-published CMS content is
+	// edited in place (title, thumbnail, media, body) without a status
+	// change. Lets TTL caches / derived copies refresh instead of serving
+	// the stale title/hero until expiry. Same payload shape + topic as
+	// content.published (subscribers filter by event_type attribute). Part
+	// of the content-lifecycle contract.
+	EventCMSContentUpdated OutboxEventType = "cms.content.updated.v1"
+
 	// EventCMSContentDeleted fires when an admin deletes a published
 	// CMS content row. Consumed by kielo-media-processor (asset
 	// cleanup) and kielo-user-service (saved-items cascade).
