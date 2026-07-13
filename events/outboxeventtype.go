@@ -147,6 +147,8 @@ const (
 // enumerate every event_type the system can emit.
 var AllOutboxEventTypes = []OutboxEventType{
 	EventCMSContentPublished,
+	EventCMSContentUnpublished,
+	EventCMSContentUpdated,
 	EventCMSContentDeleted,
 	EventCMSMediaRelocate,
 	EventUserProfileUpdated,
