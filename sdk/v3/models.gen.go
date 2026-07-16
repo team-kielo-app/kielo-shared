@@ -12164,8 +12164,8 @@ type GetInAppNudgeInternalMeInAppNudgesGetParams struct {
 	Context string    `form:"context" json:"context"`
 	XUserID uuid.UUID `json:"X-User-ID"`
 
-	// XKieloLearningLanguage Canonical learning language code (fi, sv).
-	XKieloLearningLanguage string `json:"X-Kielo-Learning-Language"`
+	// XKieloLearningLanguage Canonical learning language code (fi, sv). Optional: the claim is absent on tokens minted before the user picked a language (90-day TTL). A nudge is optional decoration — no language means no nudge (null), never a 4xx.
+	XKieloLearningLanguage *string `json:"X-Kielo-Learning-Language,omitempty"`
 }
 
 // PostInAppNudgeStateInternalMeInAppNudgesNudgeIdStatePostParams defines parameters for PostInAppNudgeStateInternalMeInAppNudgesNudgeIdStatePost.
