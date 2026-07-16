@@ -264,7 +264,8 @@ const (
 	// EventUserNotificationCreated fires after a notification inbox
 	// row is created. Producer: kielo-user-service notification path.
 	// Consumer: kielo-communications-service notification_events.go.
-	EventUserNotificationCreated PublishEventType = "user.notification.created.v1"
+	EventUserNotificationCreated   PublishEventType = "user.notification.created.v1"
+	EventUserNotificationRetracted PublishEventType = "user.notification.retracted.v1"
 )
 
 // Auth events (direct-publish path, auth-service producer).
@@ -572,6 +573,7 @@ var AllPublishEventTypes = []PublishEventType{
 	// Sweep ZI-B.1 additions (chatgpt Finding 2 closure)
 	EventUserAchievementAwardedDirect,
 	EventUserNotificationCreated,
+	EventUserNotificationRetracted,
 	EventUserPasswordResetRequested,
 	// EventUserAccountDeleted retired Sweep ZJ-A.1
 	EventUserRegistrationConfirmed,

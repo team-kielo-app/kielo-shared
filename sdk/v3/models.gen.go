@@ -904,6 +904,13 @@ type AppFeedbackUpdateStatusRequest struct {
 	Status string `json:"status"`
 }
 
+// ApproveTransactionResponse defines model for ApproveTransactionResponse.
+type ApproveTransactionResponse struct {
+	Message       string `json:"message"`
+	Success       bool   `json:"success"`
+	TransactionId string `json:"transaction_id"`
+}
+
 // ArticleBrand defines model for ArticleBrand.
 type ArticleBrand struct {
 	DisplayName              string  `json:"display_name"`
@@ -1982,6 +1989,7 @@ type CommunicationHistoryListResponse struct {
 // CommunicationLog defines model for CommunicationLog.
 type CommunicationLog struct {
 	CreatedAt  time.Time              `json:"CreatedAt"`
+	DeliveryID *uuid.UUID             `json:"DeliveryID,omitempty"`
 	EventType  string                 `json:"EventType"`
 	ID         uuid.UUID              `json:"ID"`
 	Metadata   map[string]interface{} `json:"Metadata"`
@@ -2582,6 +2590,12 @@ type ConvoVoiceAgent struct {
 	Name         string  `json:"name"`
 	UpdatedAt    string  `json:"updated_at"`
 	VoiceId      string  `json:"voice_id"`
+}
+
+// CopyMediaResponse defines model for CopyMediaResponse.
+type CopyMediaResponse struct {
+	CopiedFrom string `json:"copied_from"`
+	MediaId    string `json:"media_id"`
 }
 
 // CoreContent defines model for CoreContent.
@@ -3476,8 +3490,8 @@ type EndSessionResponse struct {
 
 // Example defines model for Example.
 type Example struct {
-	En string `json:"en"`
-	Fi string `json:"fi"`
+	Text        string `json:"text"`
+	Translation string `json:"translation"`
 }
 
 // ExampleSentencePair defines model for ExampleSentencePair.
@@ -4799,6 +4813,7 @@ type KTVWorkflowStatusUpdateRequest struct {
 type KTVWorkflowSubmitRequest struct {
 	BrandId                *uuid.UUID `json:"brand_id,omitempty"`
 	Description            *string    `json:"description,omitempty"`
+	FormatType             *string    `json:"format_type,omitempty"`
 	LearningLanguageCode   *string    `json:"learning_language_code,omitempty"`
 	Status                 *string    `json:"status,omitempty"`
 	Target                 *string    `json:"target,omitempty"`
@@ -4865,26 +4880,61 @@ type KieloTVMindmapUpsertRequest struct {
 	TranslationStatus *map[string]interface{} `json:"translation_status,omitempty"`
 }
 
+// KieloTVPipeline defines model for KieloTVPipeline.
+type KieloTVPipeline struct {
+	Blocked bool                  `json:"blocked"`
+	Live    bool                  `json:"live"`
+	Steps   []KieloTVPipelineStep `json:"steps"`
+	VideoId uuid.UUID             `json:"video_id"`
+}
+
+// KieloTVPipelineStep defines model for KieloTVPipelineStep.
+type KieloTVPipelineStep struct {
+	Action *string `json:"action,omitempty"`
+	Detail *string `json:"detail,omitempty"`
+	Key    string  `json:"key"`
+	State  string  `json:"state"`
+}
+
+// KieloTVToolboxJobState defines model for KieloTVToolboxJobState.
+type KieloTVToolboxJobState struct {
+	CompletedAt *string          `json:"completed_at,omitempty"`
+	Error       *string          `json:"error,omitempty"`
+	JobId       string           `json:"job_id"`
+	MediaId     *string          `json:"media_id,omitempty"`
+	Profile     *string          `json:"profile,omitempty"`
+	StartedAt   *string          `json:"started_at,omitempty"`
+	Status      string           `json:"status"`
+	Steps       *map[string]bool `json:"steps,omitempty"`
+}
+
+// KieloTVToolboxProcessRequest defines model for KieloTVToolboxProcessRequest.
+type KieloTVToolboxProcessRequest struct {
+	Profile *string          `json:"profile,omitempty"`
+	Steps   *map[string]bool `json:"steps,omitempty"`
+}
+
 // KieloTVVideo defines model for KieloTVVideo.
 type KieloTVVideo struct {
-	AudioUrl             *string    `json:"audio_url,omitempty"`
-	BrandId              uuid.UUID  `json:"brand_id"`
-	CarouselImages       *[]string  `json:"carousel_images,omitempty"`
-	CreatedAt            time.Time  `json:"created_at"`
-	Description          string     `json:"description"`
-	DurationSeconds      int        `json:"duration_seconds"`
-	FormatType           string     `json:"format_type"`
-	Id                   uuid.UUID  `json:"id"`
-	LearningLanguageCode *string    `json:"learning_language_code,omitempty"`
-	Locale               *string    `json:"locale,omitempty"`
-	MediaAssetId         *uuid.UUID `json:"media_asset_id,omitempty"`
-	PublishedAt          time.Time  `json:"published_at"`
-	Status               *string    `json:"status,omitempty"`
-	ThumbnailUrl         string     `json:"thumbnail_url"`
-	Title                string     `json:"title"`
-	TranscriptionStatus  string     `json:"transcription_status"`
-	UpdatedAt            time.Time  `json:"updated_at"`
-	VideoUrl             string     `json:"video_url"`
+	AudioUrl             *string          `json:"audio_url,omitempty"`
+	BrandId              uuid.UUID        `json:"brand_id"`
+	CarouselImages       *[]string        `json:"carousel_images,omitempty"`
+	CreatedAt            time.Time        `json:"created_at"`
+	Description          string           `json:"description"`
+	DurationSeconds      int              `json:"duration_seconds"`
+	FormatType           string           `json:"format_type"`
+	Id                   uuid.UUID        `json:"id"`
+	LearningLanguageCode *string          `json:"learning_language_code,omitempty"`
+	Locale               *string          `json:"locale,omitempty"`
+	MediaAssetId         *uuid.UUID       `json:"media_asset_id,omitempty"`
+	Pipeline             *KieloTVPipeline `json:"pipeline,omitempty"`
+	PublishedAt          time.Time        `json:"published_at"`
+	Status               *string          `json:"status,omitempty"`
+	ThumbnailUrl         string           `json:"thumbnail_url"`
+	Title                string           `json:"title"`
+	TranscriptionStatus  string           `json:"transcription_status"`
+	UpdatedAt            time.Time        `json:"updated_at"`
+	VideoUrl             string           `json:"video_url"`
 }
 
 // KieloTVVideoUpsertRequest defines model for KieloTVVideoUpsertRequest.
@@ -5277,9 +5327,10 @@ type LoginResponse struct {
 
 // LoginSocialRequest defines model for LoginSocialRequest.
 type LoginSocialRequest struct {
-	AccessToken string  `json:"access_token"`
-	Nonce       *string `json:"nonce,omitempty"`
-	Provider    string  `json:"provider"`
+	AccessToken          string  `json:"access_token"`
+	LearningLanguageCode *string `json:"learning_language_code,omitempty"`
+	Nonce                *string `json:"nonce,omitempty"`
+	Provider             string  `json:"provider"`
 }
 
 // LogoutRequest defines model for LogoutRequest.
@@ -5311,23 +5362,27 @@ type MarkArticleAsReadRequest struct {
 
 // MediaAsset defines model for MediaAsset.
 type MediaAsset struct {
-	CreatedAt           time.Time               `json:"created_at"`
-	FileHashSha256      string                  `json:"file_hash_sha256"`
-	Filename            string                  `json:"filename"`
-	MediaId             uuid.UUID               `json:"media_id"`
-	Metadata            *map[string]interface{} `json:"metadata,omitempty"`
-	MimeType            string                  `json:"mime_type"`
-	OriginalStoragePath string                  `json:"original_storage_path"`
-	ProcessingError     *string                 `json:"processing_error,omitempty"`
-	ProcessingStatus    *string                 `json:"processing_status,omitempty"`
-	RelatedEntityId     *string                 `json:"related_entity_id,omitempty"`
-	RelatedEntityType   string                  `json:"related_entity_type"`
-	ServeBaseUrl        *string                 `json:"serve_base_url,omitempty"`
-	StorageBucket       string                  `json:"storage_bucket"`
-	StoragePathPrefix   *string                 `json:"storage_path_prefix,omitempty"`
-	UpdatedAt           time.Time               `json:"updated_at"`
-	UploaderUserId      uuid.UUID               `json:"uploader_user_id"`
-	Variants            *map[string]interface{} `json:"variants,omitempty"`
+	CreatedAt             time.Time               `json:"created_at"`
+	FileHashSha256        string                  `json:"file_hash_sha256"`
+	Filename              string                  `json:"filename"`
+	MediaId               uuid.UUID               `json:"media_id"`
+	Metadata              *map[string]interface{} `json:"metadata,omitempty"`
+	MimeType              string                  `json:"mime_type"`
+	OriginalStorageBucket *string                 `json:"original_storage_bucket,omitempty"`
+	OriginalStoragePath   string                  `json:"original_storage_path"`
+	ProcessingError       *string                 `json:"processing_error,omitempty"`
+	ProcessingStatus      *string                 `json:"processing_status,omitempty"`
+	RelatedEntityId       *string                 `json:"related_entity_id,omitempty"`
+	RelatedEntityType     string                  `json:"related_entity_type"`
+	ServeBaseUrl          *string                 `json:"serve_base_url,omitempty"`
+	StorageBucket         string                  `json:"storage_bucket"`
+	StoragePathPrefix     *string                 `json:"storage_path_prefix,omitempty"`
+	TemporaryUrl          *string                 `json:"temporary_url,omitempty"`
+	UpdatedAt             time.Time               `json:"updated_at"`
+	UploaderUserId        uuid.UUID               `json:"uploader_user_id"`
+	UsageCount            int                     `json:"usage_count"`
+	UsedBy                *[]string               `json:"used_by,omitempty"`
+	Variants              *map[string]interface{} `json:"variants,omitempty"`
 }
 
 // MediaAssetResponse defines model for MediaAssetResponse.
@@ -5595,16 +5650,6 @@ type NextStepRecommendationItemType string
 // NextStepRecommendationType defines model for NextStepRecommendation.Type.
 type NextStepRecommendationType string
 
-// Notification defines model for Notification.
-type Notification struct {
-	Body        string                  `json:"body"`
-	Data        *map[string]interface{} `json:"data,omitempty"`
-	DeviceToken *string                 `json:"device_token,omitempty"`
-	Title       string                  `json:"title"`
-	Type        string                  `json:"type"`
-	UserId      *uuid.UUID              `json:"user_id,omitempty"`
-}
-
 // NotificationEngagementRequest defines model for NotificationEngagementRequest.
 type NotificationEngagementRequest struct {
 	Action string `json:"action"`
@@ -5665,7 +5710,9 @@ type NotificationPushPreferences struct {
 	Enabled                   bool `json:"enabled"`
 	FeatureUpdates            bool `json:"feature_updates"`
 	FeedbackResponses         bool `json:"feedback_responses"`
+	LearningReminders         bool `json:"learning_reminders"`
 	NewContent                bool `json:"new_content"`
+	Recommendations           bool `json:"recommendations"`
 	SystemUpdates             bool `json:"system_updates"`
 }
 
@@ -5869,6 +5916,27 @@ type PendingDeletionRow struct {
 	StorageBucket     *string    `json:"storage_bucket,omitempty"`
 	StoragePathPrefix *string    `json:"storage_path_prefix,omitempty"`
 	SubjectUserId     *string    `json:"subject_user_id,omitempty"`
+}
+
+// PendingTransactionEntry defines model for PendingTransactionEntry.
+type PendingTransactionEntry struct {
+	Amount        float32   `json:"amount"`
+	CreatedAt     time.Time `json:"created_at"`
+	Currency      string    `json:"currency"`
+	Environment   string    `json:"environment"`
+	ProductId     string    `json:"product_id"`
+	PurchasedAt   time.Time `json:"purchased_at"`
+	Source        string    `json:"source"`
+	Status        string    `json:"status"`
+	Store         string    `json:"store"`
+	TransactionId string    `json:"transaction_id"`
+	UserId        string    `json:"user_id"`
+}
+
+// PendingTransactionsResponse defines model for PendingTransactionsResponse.
+type PendingTransactionsResponse struct {
+	TotalCount   int                       `json:"total_count"`
+	Transactions []PendingTransactionEntry `json:"transactions"`
 }
 
 // PhraseFrame defines model for PhraseFrame.
@@ -6175,9 +6243,10 @@ type RegisterPushTokenResponse struct {
 
 // RegisterRequest defines model for RegisterRequest.
 type RegisterRequest struct {
-	Email    string `json:"email"`
-	Name     string `json:"name"`
-	Password string `json:"password"`
+	Email                string  `json:"email"`
+	LearningLanguageCode *string `json:"learning_language_code,omitempty"`
+	Name                 string  `json:"name"`
+	Password             string  `json:"password"`
 }
 
 // RegisterResponse defines model for RegisterResponse.
@@ -6263,6 +6332,22 @@ type ReportErrorRequest struct {
 	ErrorType   string `json:"error_type"`
 	ItemId      string `json:"item_id"`
 	ItemType    string `json:"item_type"`
+}
+
+// ReportPurchaseRequest defines model for ReportPurchaseRequest.
+type ReportPurchaseRequest struct {
+	Amount        float32 `json:"amount"`
+	Currency      string  `json:"currency"`
+	Environment   string  `json:"environment"`
+	ProductId     string  `json:"product_id"`
+	Store         string  `json:"store"`
+	TransactionId string  `json:"transaction_id"`
+}
+
+// ReportPurchaseResponse defines model for ReportPurchaseResponse.
+type ReportPurchaseResponse struct {
+	Status  string `json:"status"`
+	Success bool   `json:"success"`
 }
 
 // ResetPasswordRequest defines model for ResetPasswordRequest.
@@ -6939,10 +7024,11 @@ type SendEmailResult struct {
 
 // SendNotificationRequest defines model for SendNotificationRequest.
 type SendNotificationRequest struct {
-	Body    string                  `json:"body"`
-	Data    *map[string]interface{} `json:"data,omitempty"`
-	Title   string                  `json:"title"`
-	UserIds []string                `json:"user_ids"`
+	Body   string                  `json:"body"`
+	Data   *map[string]interface{} `json:"data,omitempty"`
+	Title  string                  `json:"title"`
+	Type   string                  `json:"type"`
+	UserId uuid.UUID               `json:"user_id"`
 }
 
 // Sense defines model for Sense.
@@ -7185,6 +7271,11 @@ type SingletonAllFeatureLimitsResponse struct {
 // SingletonAppFeedback defines model for SingletonAppFeedback.
 type SingletonAppFeedback struct {
 	Data AppFeedback `json:"data"`
+}
+
+// SingletonApproveTransactionResponse defines model for SingletonApproveTransactionResponse.
+type SingletonApproveTransactionResponse struct {
+	Data ApproveTransactionResponse `json:"data"`
 }
 
 // SingletonArticleParagraphTranslationsResponse defines model for SingletonArticleParagraphTranslationsResponse.
@@ -7861,6 +7952,11 @@ type SingletonKieloTVMindmap struct {
 	Data KieloTVMindmap `json:"data"`
 }
 
+// SingletonKieloTVToolboxJobState defines model for SingletonKieloTVToolboxJobState.
+type SingletonKieloTVToolboxJobState struct {
+	Data KieloTVToolboxJobState `json:"data"`
+}
+
 // SingletonKieloTVVideo defines model for SingletonKieloTVVideo.
 type SingletonKieloTVVideo struct {
 	Data KieloTVVideo `json:"data"`
@@ -8041,6 +8137,11 @@ type SingletonPendingDeletionRowList struct {
 	Data []PendingDeletionRow `json:"data"`
 }
 
+// SingletonPendingTransactionsResponse defines model for SingletonPendingTransactionsResponse.
+type SingletonPendingTransactionsResponse struct {
+	Data PendingTransactionsResponse `json:"data"`
+}
+
 // SingletonPlacementItemsV3 defines model for SingletonPlacementItemsV3.
 type SingletonPlacementItemsV3 struct {
 	Data PlacementItemsV3 `json:"data"`
@@ -8114,6 +8215,11 @@ type SingletonRelatedWordsResponse struct {
 // SingletonRelatedWordsSummaryResponse defines model for SingletonRelatedWordsSummaryResponse.
 type SingletonRelatedWordsSummaryResponse struct {
 	Data RelatedWordsSummaryResponse `json:"data"`
+}
+
+// SingletonReportPurchaseResponse defines model for SingletonReportPurchaseResponse.
+type SingletonReportPurchaseResponse struct {
+	Data ReportPurchaseResponse `json:"data"`
 }
 
 // SingletonResetPasswordResponse defines model for SingletonResetPasswordResponse.
@@ -10171,6 +10277,15 @@ type GetAdminApiV3FeedbackFeaturesFeatureIdCommentsParams struct {
 	Offset *int `form:"offset,omitempty" json:"offset,omitempty"`
 }
 
+// GetAdminApiV3SubscriptionTransactionsPendingParams defines parameters for GetAdminApiV3SubscriptionTransactionsPending.
+type GetAdminApiV3SubscriptionTransactionsPendingParams struct {
+	// OlderThanMinutes Only rows pending longer than this many minutes.
+	OlderThanMinutes *int `form:"older_than_minutes,omitempty" json:"older_than_minutes,omitempty"`
+
+	// Limit Max rows (default 100, cap 500).
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
 // GetAdminApiV3UsersUserIdFeatureLimitsEffectiveParams defines parameters for GetAdminApiV3UsersUserIdFeatureLimitsEffective.
 type GetAdminApiV3UsersUserIdFeatureLimitsEffectiveParams struct {
 	// Tier Optional subscription tier override for resolving effective limits.
@@ -10294,6 +10409,12 @@ type GetApiV3CommunicationsHistoryParams struct {
 	Status *string `form:"status,omitempty" json:"status,omitempty"`
 }
 
+// PostApiV3CommunicationsHistoryCommunicationIdRetryParams defines parameters for PostApiV3CommunicationsHistoryCommunicationIdRetry.
+type PostApiV3CommunicationsHistoryCommunicationIdRetryParams struct {
+	// IdempotencyKey Stable semantic key reused when retrying the same operator action.
+	IdempotencyKey string `json:"Idempotency-Key"`
+}
+
 // GetApiV3CommunicationsJobsParams defines parameters for GetApiV3CommunicationsJobs.
 type GetApiV3CommunicationsJobsParams struct {
 	// Limit Legacy offset-pagination limit. Prefer page_size on new routes.
@@ -10313,6 +10434,18 @@ type GetApiV3CommunicationsJobsParams struct {
 type GetApiV3CommunicationsNotificationRulesParams struct {
 	// EventType Filter by event type
 	EventType *string `form:"event_type,omitempty" json:"event_type,omitempty"`
+}
+
+// PostApiV3CommunicationsNotificationsParams defines parameters for PostApiV3CommunicationsNotifications.
+type PostApiV3CommunicationsNotificationsParams struct {
+	// IdempotencyKey Stable semantic key reused when retrying the same operator action.
+	IdempotencyKey string `json:"Idempotency-Key"`
+}
+
+// PostApiV3CommunicationsNotificationsBroadcastParams defines parameters for PostApiV3CommunicationsNotificationsBroadcast.
+type PostApiV3CommunicationsNotificationsBroadcastParams struct {
+	// IdempotencyKey Stable semantic key reused when retrying the same operator action.
+	IdempotencyKey string `json:"Idempotency-Key"`
 }
 
 // GetApiV3CommunicationsRecommendationCampaignsParams defines parameters for GetApiV3CommunicationsRecommendationCampaigns.
@@ -10433,6 +10566,39 @@ type GetApiV3ContentParams struct {
 
 	// WithTranslation Admin-tooling toggle: include translation + translation_fallback fields in the response.
 	WithTranslation *bool `form:"with_translation,omitempty" json:"with_translation,omitempty"`
+}
+
+// GetApiV3ContentBridgeItemsItemIdSurfacesParams defines parameters for GetApiV3ContentBridgeItemsItemIdSurfaces.
+type GetApiV3ContentBridgeItemsItemIdSurfacesParams struct {
+	// LearningLanguageCode Learning language scope. Defaults to the JWT-derived active learning language.
+	LearningLanguageCode *string `form:"learning_language_code,omitempty" json:"learning_language_code,omitempty"`
+
+	// SurfaceType Comma-separated subset of {article, video_caption, scenario, exercise_prompt}. Empty = all four.
+	SurfaceType *string `form:"surface_type,omitempty" json:"surface_type,omitempty"`
+
+	// Limit Page size (default 50, max 200).
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// NextPageKey Opaque pagination cursor returned by a previous response.
+	NextPageKey *string `form:"next_page_key,omitempty" json:"next_page_key,omitempty"`
+
+	// ExcludeSurfaceEntryIds Comma-separated UUIDs to drop from results.
+	ExcludeSurfaceEntryIds *string `form:"exclude_surface_entry_ids,omitempty" json:"exclude_surface_entry_ids,omitempty"`
+
+	// DistinctBy Set to 'surface_entry_id' to collapse row-per-occurrence into row-per-surface.
+	DistinctBy *string `form:"distinct_by,omitempty" json:"distinct_by,omitempty"`
+
+	// Caller Consumer identifier for metric attribution.
+	Caller *string `form:"caller,omitempty" json:"caller,omitempty"`
+}
+
+// GetApiV3ContentBridgeItemsItemIdSurfacesCountParams defines parameters for GetApiV3ContentBridgeItemsItemIdSurfacesCount.
+type GetApiV3ContentBridgeItemsItemIdSurfacesCountParams struct {
+	// LearningLanguageCode Learning language scope. Defaults to the JWT-derived active learning language.
+	LearningLanguageCode *string `form:"learning_language_code,omitempty" json:"learning_language_code,omitempty"`
+
+	// Caller Consumer identifier for metric attribution.
+	Caller *string `form:"caller,omitempty" json:"caller,omitempty"`
 }
 
 // GetApiV3ContentBaseWordsBaseWordIdParams defines parameters for GetApiV3ContentBaseWordsBaseWordId.
@@ -10790,6 +10956,12 @@ type GetApiV3HistoryParams struct {
 
 	// Status Filter by delivery status (sent, delivered, opened, bounced, failed)
 	Status *string `form:"status,omitempty" json:"status,omitempty"`
+}
+
+// PostApiV3HistoryCommunicationIdRetryParams defines parameters for PostApiV3HistoryCommunicationIdRetry.
+type PostApiV3HistoryCommunicationIdRetryParams struct {
+	// IdempotencyKey Stable semantic key reused when retrying the same operator action.
+	IdempotencyKey string `json:"Idempotency-Key"`
 }
 
 // GetApiV3JobsParams defines parameters for GetApiV3Jobs.
@@ -11353,6 +11525,18 @@ type GetApiV3NotificationRulesParams struct {
 	EventType *string `form:"event_type,omitempty" json:"event_type,omitempty"`
 }
 
+// PostApiV3NotificationsParams defines parameters for PostApiV3Notifications.
+type PostApiV3NotificationsParams struct {
+	// IdempotencyKey Stable semantic key reused when retrying the same operator action.
+	IdempotencyKey string `json:"Idempotency-Key"`
+}
+
+// PostApiV3NotificationsBroadcastParams defines parameters for PostApiV3NotificationsBroadcast.
+type PostApiV3NotificationsBroadcastParams struct {
+	// IdempotencyKey Stable semantic key reused when retrying the same operator action.
+	IdempotencyKey string `json:"Idempotency-Key"`
+}
+
 // GetApiV3PlacementItemsParams defines parameters for GetApiV3PlacementItems.
 type GetApiV3PlacementItemsParams struct {
 	// CountPerLevel Number of items per level for stratified recommendations.
@@ -11688,14 +11872,20 @@ type GetInternalApiV3UsersUserIdConversationsDiscoveryParams struct {
 
 // DeleteInternalApiV3UsersUserIdDeviceTokenParams defines parameters for DeleteInternalApiV3UsersUserIdDeviceToken.
 type DeleteInternalApiV3UsersUserIdDeviceTokenParams struct {
-	// Token The device token to remove
-	Token string `form:"token" json:"token"`
+	// Token The raw device token to remove
+	Token *string `form:"token,omitempty" json:"token,omitempty"`
+
+	// TokenHash Lowercase SHA-256 hash of the device token to remove
+	TokenHash *string `form:"token_hash,omitempty" json:"token_hash,omitempty"`
 }
 
 // DeleteInternalApiV3UsersUserIdPushTokenParams defines parameters for DeleteInternalApiV3UsersUserIdPushToken.
 type DeleteInternalApiV3UsersUserIdPushTokenParams struct {
-	// Token The push token to remove
-	Token string `form:"token" json:"token"`
+	// Token The raw push token to remove
+	Token *string `form:"token,omitempty" json:"token,omitempty"`
+
+	// TokenHash Lowercase SHA-256 hash of the push token to remove
+	TokenHash *string `form:"token_hash,omitempty" json:"token_hash,omitempty"`
 }
 
 // GetInternalApiV3UsersUserIdWatchedVideosParams defines parameters for GetInternalApiV3UsersUserIdWatchedVideos.
@@ -12044,6 +12234,12 @@ type SuggestSpellingInternalMorphologySuggestGetParams struct {
 
 	// LearningLanguageCode Learning-language code (canonical)
 	LearningLanguageCode *string `form:"learning_language_code,omitempty" json:"learning_language_code,omitempty"`
+}
+
+// PostInternalPubsubNotificationControlPlaneTickParams defines parameters for PostInternalPubsubNotificationControlPlaneTick.
+type PostInternalPubsubNotificationControlPlaneTickParams struct {
+	// Stage One of schedules, campaigns, jobs, provider_receipts, inbox_outbox; omitted runs all stages for compatibility.
+	Stage *string `form:"stage,omitempty" json:"stage,omitempty"`
 }
 
 // GetInternalSearchSemanticParams defines parameters for GetInternalSearchSemantic.
@@ -12524,8 +12720,14 @@ type PostApiV3KielotvJSONRequestBody = KieloTVVideoUpsertRequest
 // PatchApiV3KielotvVideoIdJSONRequestBody defines body for PatchApiV3KielotvVideoId for application/json ContentType.
 type PatchApiV3KielotvVideoIdJSONRequestBody = KieloTVVideoUpsertRequest
 
+// PutApiV3KielotvVideoIdCaptionsJSONRequestBody defines body for PutApiV3KielotvVideoIdCaptions for application/json ContentType.
+type PutApiV3KielotvVideoIdCaptionsJSONRequestBody = KieloTVCaptions
+
 // PutApiV3KielotvVideoIdMindmapJSONRequestBody defines body for PutApiV3KielotvVideoIdMindmap for application/json ContentType.
 type PutApiV3KielotvVideoIdMindmapJSONRequestBody = KieloTVMindmapUpsertRequest
+
+// PostApiV3KielotvVideoIdToolboxProcessJSONRequestBody defines body for PostApiV3KielotvVideoIdToolboxProcess for application/json ContentType.
+type PostApiV3KielotvVideoIdToolboxProcessJSONRequestBody = KieloTVToolboxProcessRequest
 
 // PostApiV3KlearnTtsBaseWordsStreamJSONRequestBody defines body for PostApiV3KlearnTtsBaseWordsStream for application/json ContentType.
 type PostApiV3KlearnTtsBaseWordsStreamJSONRequestBody = BaseWordTTSRequest
@@ -12714,7 +12916,7 @@ type PostApiV3NewsArticlesArticleIdParagraphTranslationsJSONRequestBody = Articl
 type PostApiV3NotificationRulesJSONRequestBody = NotificationRule
 
 // PostApiV3NotificationsJSONRequestBody defines body for PostApiV3Notifications for application/json ContentType.
-type PostApiV3NotificationsJSONRequestBody = Notification
+type PostApiV3NotificationsJSONRequestBody = SendNotificationRequest
 
 // PostApiV3NotificationsAdminBroadcastJSONRequestBody defines body for PostApiV3NotificationsAdminBroadcast for application/json ContentType.
 type PostApiV3NotificationsAdminBroadcastJSONRequestBody = AdminBroadcastRequest
@@ -12751,6 +12953,9 @@ type PostApiV3SubscriptionsCancelJSONRequestBody = CancelSubscriptionRequest
 
 // PostApiV3SubscriptionsLinkRevenuecatUserJSONRequestBody defines body for PostApiV3SubscriptionsLinkRevenuecatUser for application/json ContentType.
 type PostApiV3SubscriptionsLinkRevenuecatUserJSONRequestBody = LinkRevenueCatUserRequest
+
+// PostApiV3SubscriptionsPurchasesJSONRequestBody defines body for PostApiV3SubscriptionsPurchases for application/json ContentType.
+type PostApiV3SubscriptionsPurchasesJSONRequestBody = ReportPurchaseRequest
 
 // PostApiV3SubscriptionsRestoreAccessJSONRequestBody defines body for PostApiV3SubscriptionsRestoreAccess for application/json ContentType.
 type PostApiV3SubscriptionsRestoreAccessJSONRequestBody = RestoreAccessRequest
@@ -12923,6 +13128,9 @@ type PutInternalApiV3UsersUserIdSkillLevelJSONRequestBody = UpdateSkillLevelRequ
 // PostInternalApiV3UsersUserIdSubscriptionLinkRevenuecatUserJSONRequestBody defines body for PostInternalApiV3UsersUserIdSubscriptionLinkRevenuecatUser for application/json ContentType.
 type PostInternalApiV3UsersUserIdSubscriptionLinkRevenuecatUserJSONRequestBody = LinkRevenueCatUserRequest
 
+// PostInternalApiV3UsersUserIdSubscriptionPurchasesJSONRequestBody defines body for PostInternalApiV3UsersUserIdSubscriptionPurchases for application/json ContentType.
+type PostInternalApiV3UsersUserIdSubscriptionPurchasesJSONRequestBody = ReportPurchaseRequest
+
 // PostInternalApiV3UsersUserIdSubscriptionRestoreJSONRequestBody defines body for PostInternalApiV3UsersUserIdSubscriptionRestore for application/json ContentType.
 type PostInternalApiV3UsersUserIdSubscriptionRestoreJSONRequestBody = RestoreSubscriptionRequest
 
@@ -13016,6 +13224,9 @@ type HandleChallengeGenerationInternalWorkerHandleChallengeGenerationPostJSONReq
 // HandleConceptHubGenerationInternalWorkerHandleConceptHubGenerationPostJSONRequestBody defines body for HandleConceptHubGenerationInternalWorkerHandleConceptHubGenerationPost for application/json ContentType.
 type HandleConceptHubGenerationInternalWorkerHandleConceptHubGenerationPostJSONRequestBody = PubSubMessage
 
+// HandleContentLifecycleInternalWorkerHandleContentLifecyclePostJSONRequestBody defines body for HandleContentLifecycleInternalWorkerHandleContentLifecyclePost for application/json ContentType.
+type HandleContentLifecycleInternalWorkerHandleContentLifecyclePostJSONRequestBody = PubSubMessage
+
 // HandleDataQualitySweepInternalWorkerHandleDataQualitySweepPostJSONRequestBody defines body for HandleDataQualitySweepInternalWorkerHandleDataQualitySweepPost for application/json ContentType.
 type HandleDataQualitySweepInternalWorkerHandleDataQualitySweepPostJSONRequestBody = PubSubMessage
 
@@ -13027,6 +13238,9 @@ type HandleGrammarExampleEnrichmentInternalWorkerHandleGrammarExampleEnrichmentP
 
 // HandleLessonGenerationInternalWorkerHandleLessonGenerationPostJSONRequestBody defines body for HandleLessonGenerationInternalWorkerHandleLessonGenerationPost for application/json ContentType.
 type HandleLessonGenerationInternalWorkerHandleLessonGenerationPostJSONRequestBody = PubSubMessage
+
+// HandleNotificationScanInternalWorkerHandleNotificationScanPostJSONRequestBody defines body for HandleNotificationScanInternalWorkerHandleNotificationScanPost for application/json ContentType.
+type HandleNotificationScanInternalWorkerHandleNotificationScanPostJSONRequestBody = PubSubMessage
 
 // HandleTopicListGenerationInternalWorkerHandleTopicListGenerationPostJSONRequestBody defines body for HandleTopicListGenerationInternalWorkerHandleTopicListGenerationPost for application/json ContentType.
 type HandleTopicListGenerationInternalWorkerHandleTopicListGenerationPostJSONRequestBody = PubSubMessage
