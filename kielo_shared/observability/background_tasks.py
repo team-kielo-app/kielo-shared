@@ -40,6 +40,9 @@ from typing import Any, Coroutine, Optional
 
 logger = logging.getLogger(__name__)
 
+# In-flight background tasks (strong refs; see spawn_background_task).
+_BACKGROUND_TASKS: set = set()
+
 
 def spawn_background_task(
     coro: Coroutine[Any, Any, Any],
@@ -91,6 +94,13 @@ def spawn_background_task(
             )
 
     task.add_done_callback(_on_done)
+    # Strong reference until completion: the event loop keeps only weak
+    # refs to tasks, so a background task whose returned handle the caller
+    # discards (the common fire-and-forget pattern this helper exists for)
+    # can be garbage-collected mid-run and silently vanish. Discard runs
+    # after _on_done, so the set stays bounded to in-flight tasks.
+    _BACKGROUND_TASKS.add(task)
+    task.add_done_callback(_BACKGROUND_TASKS.discard)
     return task
 
 
