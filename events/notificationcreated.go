@@ -34,6 +34,17 @@ type NotificationCreatedEvent struct {
 	CreatedAt      time.Time      `json:"created_at"`
 }
 
+type NotificationRetractedEvent struct {
+	NotificationID uuid.UUID `json:"notification_id"`
+	UserID         uuid.UUID `json:"user_id"`
+	Reason         string    `json:"reason"`
+	RetractedAt    time.Time `json:"retracted_at"`
+}
+
+func (e *NotificationRetractedEvent) Validate() bool {
+	return e != nil && e.NotificationID != uuid.Nil && e.UserID != uuid.Nil && strings.TrimSpace(e.Reason) != ""
+}
+
 // Validate returns true when the event has the minimum required fields.
 // Mirrors the pre-Bucket-4 validation logic from
 // kielo-user-service/internal/models/notification.go (the strictest

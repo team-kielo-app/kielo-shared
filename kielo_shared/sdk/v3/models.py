@@ -210,6 +210,12 @@ class AppFeedbackUpdateStatusRequest(BaseModel):
     status: str
 
 
+class ApproveTransactionResponse(BaseModel):
+    message: str
+    success: bool
+    transaction_id: str
+
+
 class ArticleBrand(BaseModel):
     display_name: str
     logo_url: str | None = None
@@ -881,6 +887,7 @@ class CommsUserSearchHit(BaseModel):
 
 class CommunicationLog(BaseModel):
     CreatedAt: AwareDatetime
+    DeliveryID: UUID_aliased | None = None
     EventType: str
     ID: UUID_aliased
     Metadata: dict[str, Any]
@@ -1250,6 +1257,11 @@ class ConvoVoiceAgent(BaseModel):
     name: str
     updated_at: str
     voice_id: str
+
+
+class CopyMediaResponse(BaseModel):
+    copied_from: str
+    media_id: str
 
 
 class CoreContent(BaseModel):
@@ -1860,8 +1872,8 @@ class EndSessionResponse(AppFeedbackUpdateStatusRequest):
 
 
 class Example(BaseModel):
-    en: str
-    fi: str
+    text: str
+    translation: str
 
 
 class ExampleSentencePair(ConceptHubExample):
@@ -2772,6 +2784,7 @@ class KTVWorkflowStatusUpdateRequest(AppFeedbackUpdateStatusRequest):
 class KTVWorkflowSubmitRequest(BaseModel):
     brand_id: UUID_aliased | None = None
     description: str | None = None
+    format_type: str | None = None
     learning_language_code: str | None = None
     status: str | None = None
     target: str | None = None
@@ -2832,25 +2845,27 @@ class KieloTVMindmapUpsertRequest(BaseModel):
     translation_status: dict[str, Any] | None = None
 
 
-class KieloTVVideo(BaseModel):
-    audio_url: str | None = None
-    brand_id: UUID_aliased
-    carousel_images: list[str] | None = None
-    created_at: AwareDatetime
-    description: str
-    duration_seconds: int
-    format_type: str
-    id: UUID_aliased
-    learning_language_code: str | None = None
-    locale: str | None = None
-    media_asset_id: UUID_aliased | None = None
-    published_at: AwareDatetime
-    status: str | None = None
-    thumbnail_url: str
-    title: str
-    transcription_status: str
-    updated_at: AwareDatetime
-    video_url: str
+class KieloTVPipelineStep(BaseModel):
+    action: str | None = None
+    detail: str | None = None
+    key: str
+    state: str
+
+
+class KieloTVToolboxJobState(BaseModel):
+    completed_at: str | None = None
+    error: str | None = None
+    job_id: str
+    media_id: str | None = None
+    profile: str | None = None
+    started_at: str | None = None
+    status: str
+    steps: dict[str, bool] | None = None
+
+
+class KieloTVToolboxProcessRequest(BaseModel):
+    profile: str | None = None
+    steps: dict[str, bool] | None = None
 
 
 class KieloTVVideoUpsertRequest(BaseModel):
@@ -3177,6 +3192,7 @@ class LoginResponse(BaseModel):
 
 class LoginSocialRequest(BaseModel):
     access_token: str
+    learning_language_code: str | None = None
     nonce: str | None = None
     provider: str
 
@@ -3209,6 +3225,7 @@ class MediaAsset(BaseModel):
     media_id: UUID_aliased
     metadata: dict[str, Any] | None = None
     mime_type: str
+    original_storage_bucket: str | None = None
     original_storage_path: str
     processing_error: str | None = None
     processing_status: str | None = None
@@ -3217,8 +3234,11 @@ class MediaAsset(BaseModel):
     serve_base_url: str | None = None
     storage_bucket: str
     storage_path_prefix: str | None = None
+    temporary_url: str | None = None
     updated_at: AwareDatetime
     uploader_user_id: UUID_aliased
+    usage_count: int
+    used_by: list[str] | None = None
     variants: dict[str, Any] | None = None
 
 
@@ -3457,15 +3477,6 @@ class Type(StrEnum):
     saved_collection = "saved_collection"
 
 
-class Notification(BaseModel):
-    body: str
-    data: dict[str, Any] | None = None
-    device_token: str | None = None
-    title: str
-    type: str
-    user_id: UUID_aliased | None = None
-
-
 class NotificationEngagementRequest(BaseModel):
     action: str
 
@@ -3509,7 +3520,9 @@ class NotificationPushPreferences(BaseModel):
     enabled: bool
     feature_updates: bool
     feedback_responses: bool
+    learning_reminders: bool
     new_content: bool
+    recommendations: bool
     system_updates: bool
 
 
@@ -3632,6 +3645,25 @@ class PendingDeletionRow(BaseModel):
     storage_bucket: str | None = None
     storage_path_prefix: str | None = None
     subject_user_id: str | None = None
+
+
+class PendingTransactionEntry(BaseModel):
+    amount: float
+    created_at: AwareDatetime
+    currency: str
+    environment: str
+    product_id: str
+    purchased_at: AwareDatetime
+    source: str
+    status: str
+    store: str
+    transaction_id: str
+    user_id: str
+
+
+class PendingTransactionsResponse(BaseModel):
+    total_count: int
+    transactions: list[PendingTransactionEntry]
 
 
 class PhraseFrame(BaseModel):
@@ -3877,6 +3909,7 @@ class RegisterPushTokenResponse(CancelSubscriptionResponse):
 
 class RegisterRequest(BaseModel):
     email: str
+    learning_language_code: str | None = None
     name: str
     password: str
 
@@ -3939,6 +3972,20 @@ class ReportErrorRequest(BaseModel):
     error_type: str
     item_id: str
     item_type: str
+
+
+class ReportPurchaseRequest(BaseModel):
+    amount: float
+    currency: str
+    environment: str
+    product_id: str
+    store: str
+    transaction_id: str
+
+
+class ReportPurchaseResponse(BaseModel):
+    status: str
+    success: bool
 
 
 class ResetPasswordRequest(BaseModel):
@@ -4456,7 +4503,8 @@ class SendNotificationRequest(BaseModel):
     body: str
     data: dict[str, Any] | None = None
     title: str
-    user_ids: list[str]
+    type: str
+    user_id: UUID_aliased
 
 
 class Sense(BaseModel):
@@ -4628,6 +4676,10 @@ class SingletonAdminContentSyncResponse(BaseModel):
 
 class SingletonAppFeedback(BaseModel):
     data: AppFeedback
+
+
+class SingletonApproveTransactionResponse(BaseModel):
+    data: ApproveTransactionResponse
 
 
 class SingletonArticleParagraphTranslationsResponse(BaseModel):
@@ -5022,12 +5074,8 @@ class SingletonKieloTVMindmap(BaseModel):
     data: KieloTVMindmap
 
 
-class SingletonKieloTVVideo(BaseModel):
-    data: KieloTVVideo
-
-
-class SingletonKieloTVVideoList(BaseModel):
-    data: list[KieloTVVideo]
+class SingletonKieloTVToolboxJobState(BaseModel):
+    data: KieloTVToolboxJobState
 
 
 class SingletonLanguage(BaseModel):
@@ -5154,6 +5202,10 @@ class SingletonPendingDeletionRowList(BaseModel):
     data: list[PendingDeletionRow]
 
 
+class SingletonPendingTransactionsResponse(BaseModel):
+    data: PendingTransactionsResponse
+
+
 class SingletonPlacementItemsV3(BaseModel):
     data: PlacementItemsV3
 
@@ -5200,6 +5252,10 @@ class SingletonRelatedWordsResponse(BaseModel):
 
 class SingletonRelatedWordsSummaryResponse(BaseModel):
     data: RelatedWordsSummaryResponse
+
+
+class SingletonReportPurchaseResponse(BaseModel):
+    data: ReportPurchaseResponse
 
 
 class SingletonResetPasswordResponse(BaseModel):
@@ -7146,6 +7202,35 @@ class KTVSpeechFixResponse(BaseModel):
     workflow: KTVWorkflow | None = None
 
 
+class KieloTVPipeline(BaseModel):
+    blocked: bool
+    live: bool
+    steps: list[KieloTVPipelineStep]
+    video_id: UUID_aliased
+
+
+class KieloTVVideo(BaseModel):
+    audio_url: str | None = None
+    brand_id: UUID_aliased
+    carousel_images: list[str] | None = None
+    created_at: AwareDatetime
+    description: str
+    duration_seconds: int
+    format_type: str
+    id: UUID_aliased
+    learning_language_code: str | None = None
+    locale: str | None = None
+    media_asset_id: UUID_aliased | None = None
+    pipeline: KieloTVPipeline | None = None
+    published_at: AwareDatetime
+    status: str | None = None
+    thumbnail_url: str
+    title: str
+    transcription_status: str
+    updated_at: AwareDatetime
+    video_url: str
+
+
 class ListScenariosResponse(BaseModel):
     items: list[ScenarioListItem]
 
@@ -7521,6 +7606,14 @@ class SingletonKTVSocialSheetExportResponse(BaseModel):
 
 class SingletonKTVSpeechFixResponse(BaseModel):
     data: KTVSpeechFixResponse
+
+
+class SingletonKieloTVVideo(BaseModel):
+    data: KieloTVVideo
+
+
+class SingletonKieloTVVideoList(BaseModel):
+    data: list[KieloTVVideo]
 
 
 class SingletonMediaMetadata(BaseModel):

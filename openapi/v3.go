@@ -66,16 +66,18 @@ type routeEntry struct {
 	tag             string
 	pathParams      []paramSpec
 	queryParams     []paramSpec
+	headerParams    []paramSpec
 	requestBody     any   // value of struct type (zero); nil if no body
 	responseBody    any   // zero value of response struct
 	untypedResponse bool  // true if route returns JSON but the schema is upstream-owned
 	binaryResponse  bool  // true if route streams binary (application/octet-stream)
+	successStatus   int   // explicit 2xx status; zero keeps the body-derived default
 	errorCodes      []int // additional non-2xx HTTP codes documented
 }
 
 type paramSpec struct {
 	Name        string
-	In          string // "path" | "query"
+	In          string // "path" | "query" | "header"
 	Type        string // "string" | "integer" | ...
 	Required    bool
 	Description string
@@ -131,8 +133,9 @@ type Route struct {
 	// string and validated against the supplied PathParams (so a typo
 	// in either is caught at boot). Each entry also carries a type and
 	// description for the spec.
-	PathParams  []ParamSpec
-	QueryParams []ParamSpec
+	PathParams   []ParamSpec
+	QueryParams  []ParamSpec
+	HeaderParams []ParamSpec
 
 	// RequestBody is a zero-value of the request struct (e.g.
 	// `models.UpdateProfileRequest{}`). Use nil for GET/DELETE.
@@ -162,6 +165,10 @@ type Route struct {
 	// generated client doesn't crash on non-JSON bytes.
 	BinaryResponse bool
 
+	// SuccessStatus overrides the default success code inferred from the
+	// response shape (200 with a body, 204 without one).
+	SuccessStatus int
+
 	// ErrorCodes are HTTP codes (besides 200/201/204 implied by the
 	// method) that the handler can return. The canonical error envelope
 	// is auto-documented for each.
@@ -170,7 +177,7 @@ type Route struct {
 
 type ParamSpec struct {
 	Name        string
-	In          string // "path" | "query"
+	In          string // "path" | "query" | "header"
 	Type        string // "string" | "integer" | "boolean"
 	Required    bool
 	Description string
@@ -233,10 +240,12 @@ func (w *Wrapper) register(method, path string, h echo.HandlerFunc, route Route,
 		tag:             route.Tag,
 		pathParams:      toParamSpecs(route.PathParams),
 		queryParams:     toParamSpecs(route.QueryParams),
+		headerParams:    toParamSpecs(route.HeaderParams),
 		requestBody:     route.RequestBody,
 		responseBody:    route.Response,
 		untypedResponse: route.UntypedResponse,
 		binaryResponse:  route.BinaryResponse,
+		successStatus:   route.SuccessStatus,
 		errorCodes:      route.ErrorCodes,
 	})
 	return er
@@ -266,10 +275,12 @@ func (r *Registry) Record(method, path string, route Route) {
 		tag:             route.Tag,
 		pathParams:      toParamSpecs(route.PathParams),
 		queryParams:     toParamSpecs(route.QueryParams),
+		headerParams:    toParamSpecs(route.HeaderParams),
 		requestBody:     route.RequestBody,
 		responseBody:    route.Response,
 		untypedResponse: route.UntypedResponse,
 		binaryResponse:  route.BinaryResponse,
+		successStatus:   route.SuccessStatus,
 		errorCodes:      route.ErrorCodes,
 	})
 }
@@ -393,6 +404,9 @@ func (r *Registry) operationDoc(rt routeEntry) map[string]any {
 	for _, p := range rt.queryParams {
 		params = append(params, paramDoc(p, p.Required))
 	}
+	for _, p := range rt.headerParams {
+		params = append(params, paramDoc(p, p.Required))
+	}
 	if len(params) > 0 {
 		op["parameters"] = params
 	}
@@ -408,10 +422,28 @@ func (r *Registry) operationDoc(rt routeEntry) map[string]any {
 		}
 	}
 
+	op["responses"] = r.responsesDoc(rt)
+
+	return op
+}
+
+// responsesDoc renders the OpenAPI responses object for a route: the success
+// response (typed body, binary stream, upstream-owned JSON, or no-content) plus
+// the canonical error envelope every v3 endpoint can return (ADR-004).
+func (r *Registry) responsesDoc(rt routeEntry) map[string]any {
 	resp := map[string]any{}
+	successCode := rt.successStatus
+	if successCode == 0 {
+		if rt.responseBody != nil || rt.binaryResponse || rt.untypedResponse {
+			successCode = 200
+		} else {
+			successCode = 204
+		}
+	}
+	successKey := fmt.Sprintf("%d", successCode)
 	switch {
 	case rt.responseBody != nil:
-		resp["200"] = map[string]any{
+		resp[successKey] = map[string]any{
 			"description": "Success",
 			"content": map[string]any{
 				"application/json": map[string]any{
@@ -425,7 +457,7 @@ func (r *Registry) operationDoc(rt routeEntry) map[string]any {
 		// `application/octet-stream` + `format: binary`, so the
 		// generated SDK fn returns a Blob the caller can hand to
 		// URL.createObjectURL or pipe to FileSaver.
-		resp["200"] = map[string]any{
+		resp[successKey] = map[string]any{
 			"description": "Binary stream",
 			"content": map[string]any{
 				"application/octet-stream": map[string]any{
@@ -438,7 +470,7 @@ func (r *Registry) operationDoc(rt routeEntry) map[string]any {
 		// upstream service we don't yet import. Emit the 200 + content
 		// type so codegen knows there's a body, but leave the schema open
 		// (`{}` accepts any JSON value per OpenAPI 3.x).
-		resp["200"] = map[string]any{
+		resp[successKey] = map[string]any{
 			"description": "Success (schema upstream-owned)",
 			"content": map[string]any{
 				"application/json": map[string]any{
@@ -447,7 +479,11 @@ func (r *Registry) operationDoc(rt routeEntry) map[string]any {
 			},
 		}
 	default:
-		resp["204"] = map[string]any{"description": "No Content"}
+		description := "No Content"
+		if successCode == 202 {
+			description = "Accepted"
+		}
+		resp[successKey] = map[string]any{"description": description}
 	}
 	// Always document the canonical error envelope — every v3 endpoint
 	// can return it (per ADR-004). Specific endpoints add more codes.
@@ -459,9 +495,7 @@ func (r *Registry) operationDoc(rt routeEntry) map[string]any {
 			"$ref": "#/components/responses/CanonicalError",
 		}
 	}
-	op["responses"] = resp
-
-	return op
+	return resp
 }
 
 func paramDoc(p paramSpec, required bool) map[string]any {
