@@ -79,7 +79,9 @@ class DeepgramLiveKitSTTProvider:
             return deepgram.STT(
                 model=request.model,
                 language=request.language or None,
-                keyterm=list(request.keyterms) if request.keyterms else None,
+                # The livekit deepgram plugin does `list(keyterm)` unguarded, so
+                # None crashes it — pass [] (no biasing) when we have no keyterms.
+                keyterm=list(request.keyterms) if request.keyterms else [],
                 smart_format=request.smart_format,
                 punctuate=request.punctuate,
                 filler_words=request.filler_words,
