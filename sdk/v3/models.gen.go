@@ -1988,18 +1988,21 @@ type CommunicationHistoryListResponse struct {
 
 // CommunicationLog defines model for CommunicationLog.
 type CommunicationLog struct {
-	CreatedAt  time.Time              `json:"CreatedAt"`
-	DeliveryID *uuid.UUID             `json:"DeliveryID,omitempty"`
-	EventType  string                 `json:"EventType"`
-	ID         uuid.UUID              `json:"ID"`
-	Metadata   map[string]interface{} `json:"Metadata"`
-	Recipient  string                 `json:"Recipient"`
-	RuleID     *uuid.UUID             `json:"RuleID,omitempty"`
-	Source     string                 `json:"Source"`
-	Status     string                 `json:"Status"`
-	TemplateID string                 `json:"TemplateID"`
-	Type       string                 `json:"Type"`
-	UserID     *uuid.UUID             `json:"UserID,omitempty"`
+	AllowContentRepush bool                   `json:"AllowContentRepush"`
+	ContentID          string                 `json:"ContentID"`
+	ContentType        string                 `json:"ContentType"`
+	CreatedAt          time.Time              `json:"CreatedAt"`
+	DeliveryID         *uuid.UUID             `json:"DeliveryID,omitempty"`
+	EventType          string                 `json:"EventType"`
+	ID                 uuid.UUID              `json:"ID"`
+	Metadata           map[string]interface{} `json:"Metadata"`
+	Recipient          string                 `json:"Recipient"`
+	RuleID             *uuid.UUID             `json:"RuleID,omitempty"`
+	Source             string                 `json:"Source"`
+	Status             string                 `json:"Status"`
+	TemplateID         string                 `json:"TemplateID"`
+	Type               string                 `json:"Type"`
+	UserID             *uuid.UUID             `json:"UserID,omitempty"`
 }
 
 // CompleteRoadmapStepRequest defines model for CompleteRoadmapStepRequest.
@@ -8332,6 +8335,11 @@ type SingletonSetUserOverrideResponse struct {
 	Data SetUserOverrideResponse `json:"data"`
 }
 
+// SingletonSpeechTranscriptionResponse defines model for SingletonSpeechTranscriptionResponse.
+type SingletonSpeechTranscriptionResponse struct {
+	Data SpeechTranscriptionResponse `json:"data"`
+}
+
 // SingletonStaleRowList defines model for SingletonStaleRowList.
 type SingletonStaleRowList struct {
 	Data []StaleRow `json:"data"`
@@ -8660,6 +8668,22 @@ type SingletonWhisperModelManifest struct {
 // SingletonstringList defines model for SingletonstringList.
 type SingletonstringList struct {
 	Data []string `json:"data"`
+}
+
+// SpeechReferenceAudioRequest defines model for SpeechReferenceAudioRequest.
+type SpeechReferenceAudioRequest struct {
+	Language string `json:"language"`
+	Text     string `json:"text"`
+}
+
+// SpeechTranscriptionResponse defines model for SpeechTranscriptionResponse.
+type SpeechTranscriptionResponse struct {
+	Confidence   float32  `json:"confidence"`
+	KeytermsUsed []string `json:"keyterms_used"`
+	Language     string   `json:"language"`
+	LatencyMs    int      `json:"latency_ms"`
+	Provider     string   `json:"provider"`
+	Transcript   string   `json:"transcript"`
 }
 
 // SpellingChallengeExercise defines model for SpellingChallengeExercise.
@@ -12647,6 +12671,9 @@ type PostApiV3ConversationsSessionsSessionIdCommandsJSONRequestBody = Conversati
 
 // PostApiV3ConversationsSessionsSessionIdHintJSONRequestBody defines body for PostApiV3ConversationsSessionsSessionIdHint for application/json ContentType.
 type PostApiV3ConversationsSessionsSessionIdHintJSONRequestBody = GenerateHintRequest
+
+// PostApiV3ConversationsSpeechReferenceAudioJSONRequestBody defines body for PostApiV3ConversationsSpeechReferenceAudio for application/json ContentType.
+type PostApiV3ConversationsSpeechReferenceAudioJSONRequestBody = SpeechReferenceAudioRequest
 
 // PostApiV3CurriculumChaptersJSONRequestBody defines body for PostApiV3CurriculumChapters for application/json ContentType.
 type PostApiV3CurriculumChaptersJSONRequestBody = CurriculumChapterUpsertRequest

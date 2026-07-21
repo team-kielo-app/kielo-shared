@@ -886,6 +886,9 @@ class CommsUserSearchHit(BaseModel):
 
 
 class CommunicationLog(BaseModel):
+    AllowContentRepush: bool
+    ContentID: str
+    ContentType: str
     CreatedAt: AwareDatetime
     DeliveryID: UUID_aliased | None = None
     EventType: str
@@ -5346,6 +5349,20 @@ class SingletonstringList(BaseModel):
     data: list[str]
 
 
+class SpeechReferenceAudioRequest(BaseModel):
+    language: str
+    text: str
+
+
+class SpeechTranscriptionResponse(BaseModel):
+    confidence: float
+    keyterms_used: list[str]
+    language: str
+    latency_ms: int
+    provider: str
+    transcript: str
+
+
 class SpellingChallengeExercise(BaseModel):
     accept_typos: bool | None = Field(False, title="Accept Typos")
     audio_text: str | None = Field("", title="Audio Text")
@@ -7642,6 +7659,10 @@ class SingletonSearchResponse(BaseModel):
 
 class SingletonSemanticSearchResponse(BaseModel):
     data: SemanticSearchResponse
+
+
+class SingletonSpeechTranscriptionResponse(BaseModel):
+    data: SpeechTranscriptionResponse
 
 
 class SingletonStaleRowList(BaseModel):
