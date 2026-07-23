@@ -120,3 +120,33 @@ func TestServeBaseURL_DelegatesToGCSHelper(t *testing.T) {
 	assert.True(t, strings.HasSuffix(got, "/media/"),
 		"serve base URL must end with '/<prefix>/' for downstream joins")
 }
+
+// StreamingVariantURLForRequest must ALWAYS produce a path-style URL —
+// HLS players resolve playlists' relative segment URIs against the master
+// URL, which breaks on the emulator's JSON-API object form.
+func TestStreamingVariantURLForRequest_ProdIsPathStyle(t *testing.T) {
+	variants := map[string]Variant{
+		"hls": {Path: "hls/master.m3u8", MimeType: "application/vnd.apple.mpegurl"},
+	}
+	got := StreamingVariantURLForRequest("api.kielo.app", "bkt", "kielotv/abc", variants, "hls")
+	assert.Equal(t, "https://storage.googleapis.com/bkt/kielotv/abc/hls/master.m3u8", got)
+}
+
+func TestStreamingVariantURLForRequest_EmulatorConvertsToPathStyle(t *testing.T) {
+	t.Setenv("STORAGE_EMULATOR_HOST", "http://gcs-emulator:4443")
+	variants := map[string]Variant{
+		"hls": {Path: "hls/master.m3u8"},
+	}
+	// Internal caller: host stays the docker-internal emulator host, but the
+	// path must be genuine segments (no /storage/v1/b/…/o/<escaped>).
+	got := StreamingVariantURLForRequest("kielo-mobile-bff", "bkt", "kielotv/abc", variants, "hls")
+	require.NotEmpty(t, got)
+	assert.NotContains(t, got, "/storage/v1/")
+	assert.NotContains(t, got, "%2F")
+	assert.True(t, strings.HasSuffix(got, "/bkt/kielotv/abc/hls/master.m3u8"), got)
+}
+
+func TestStreamingVariantURLForRequest_MissingVariantFallsThrough(t *testing.T) {
+	got := StreamingVariantURLForRequest("api.kielo.app", "bkt", "kielotv/abc", map[string]Variant{}, "hls")
+	assert.Empty(t, got)
+}
