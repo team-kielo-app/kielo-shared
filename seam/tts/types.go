@@ -35,6 +35,8 @@ type Request struct {
 	// Model is the provider-specific model identifier (e.g.
 	// OpenAI "tts-1", "gpt-4o-mini-tts"). Empty ⇒ provider default.
 	Model string
+	// LanguageCode is an optional BCP-47 language hint.
+	LanguageCode string
 	// Instructions is an optional natural-language style hint, used
 	// by `gpt-4o-mini-tts` ("speak slowly with a calm tone").
 	// Ignored by providers that don't support it.

@@ -5,6 +5,7 @@ auditable. Provider unit tests cover transport classification + the
 bounded ErrorClass mapping. Decorator tests cover the bounded label
 contract on `kielo_tts_calls_total`.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -13,6 +14,7 @@ import httpx
 import pytest
 
 from kielo_shared.seam.tts import (
+    ElevenLabsTTSProvider,
     Error,
     ErrorClass,
     OpenAITTSProvider,
@@ -21,6 +23,50 @@ from kielo_shared.seam.tts import (
     class_of,
     with_metrics,
 )
+
+
+@pytest.mark.asyncio
+async def test_elevenlabs_tts_happy_path():
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path.endswith("/voice-123/stream")
+        assert request.url.params["output_format"] == "mp3_44100_128"
+        assert request.headers["xi-api-key"] == "test-key"
+        assert b'"model_id":"eleven_flash_v2_5"' in request.content
+        assert b'"language_code":"fi"' in request.content
+        return httpx.Response(200, content=b"\xff\xfb\x90mp3-bytes")
+
+    transport = httpx.MockTransport(handler)
+    async with httpx.AsyncClient(transport=transport) as client:
+        provider = ElevenLabsTTSProvider(
+            "test-key",
+            client,
+            endpoint="https://example.test/v1/text-to-speech",
+            language_code="fi",
+        )
+        result = await provider.synthesize(
+            Request(
+                text="Tervetuloa!",
+                voice_id="voice-123",
+                speed=1.0,
+                task="convo_greeting_prime",
+            )
+        )
+
+    assert result.audio.startswith(b"\xff\xfb\x90")
+    assert result.provider == "elevenlabs-tts:eleven_flash_v2_5"
+
+
+@pytest.mark.asyncio
+async def test_elevenlabs_tts_4xx_classified_client_error():
+    transport = httpx.MockTransport(lambda _r: httpx.Response(401, text="unauth"))
+    async with httpx.AsyncClient(transport=transport) as client:
+        provider = ElevenLabsTTSProvider("k", client)
+        with pytest.raises(Error) as error:
+            await provider.synthesize(
+                Request(text="hi", voice_id="voice-123", task="convo_greeting_prime")
+            )
+
+    assert error.value.error_class == ErrorClass.CLIENT_ERROR
 
 
 # ─────────────────────── provider unit tests ──────────────────────────
@@ -36,12 +82,14 @@ async def test_openai_tts_happy_path():
     transport = httpx.MockTransport(handler)
     async with httpx.AsyncClient(transport=transport) as client:
         provider = OpenAITTSProvider("test-key", client, default_model="tts-1")
-        res = await provider.synthesize(Request(
-            text="hello",
-            voice_id="alloy",
-            speed=1.0,
-            task="klearn_tts_baseword",
-        ))
+        res = await provider.synthesize(
+            Request(
+                text="hello",
+                voice_id="alloy",
+                speed=1.0,
+                task="klearn_tts_baseword",
+            )
+        )
 
     assert isinstance(res, Result)
     assert res.audio.startswith(b"\xff\xfb\x90")
@@ -54,7 +102,9 @@ async def test_openai_tts_5xx_classified_server_error():
     async with httpx.AsyncClient(transport=transport) as client:
         provider = OpenAITTSProvider("k", client)
         with pytest.raises(Error) as ei:
-            await provider.synthesize(Request(text="hi", voice_id="alloy", task="klearn_tts_baseword"))
+            await provider.synthesize(
+                Request(text="hi", voice_id="alloy", task="klearn_tts_baseword")
+            )
     assert ei.value.error_class == ErrorClass.SERVER_ERROR
 
 
@@ -64,7 +114,9 @@ async def test_openai_tts_4xx_classified_client_error():
     async with httpx.AsyncClient(transport=transport) as client:
         provider = OpenAITTSProvider("k", client)
         with pytest.raises(Error) as ei:
-            await provider.synthesize(Request(text="hi", voice_id="alloy", task="klearn_tts_baseword"))
+            await provider.synthesize(
+                Request(text="hi", voice_id="alloy", task="klearn_tts_baseword")
+            )
     assert ei.value.error_class == ErrorClass.CLIENT_ERROR
 
 
@@ -77,7 +129,9 @@ async def test_openai_tts_timeout_classified():
     async with httpx.AsyncClient(transport=transport) as client:
         provider = OpenAITTSProvider("k", client)
         with pytest.raises(Error) as ei:
-            await provider.synthesize(Request(text="hi", voice_id="alloy", task="klearn_tts_baseword"))
+            await provider.synthesize(
+                Request(text="hi", voice_id="alloy", task="klearn_tts_baseword")
+            )
     assert ei.value.error_class == ErrorClass.TIMEOUT
 
 
@@ -90,7 +144,9 @@ async def test_openai_tts_connection_error_classified():
     async with httpx.AsyncClient(transport=transport) as client:
         provider = OpenAITTSProvider("k", client)
         with pytest.raises(Error) as ei:
-            await provider.synthesize(Request(text="hi", voice_id="alloy", task="klearn_tts_baseword"))
+            await provider.synthesize(
+                Request(text="hi", voice_id="alloy", task="klearn_tts_baseword")
+            )
     assert ei.value.error_class == ErrorClass.CONNECTION
 
 
@@ -100,7 +156,9 @@ async def test_openai_tts_empty_response_rejected():
     async with httpx.AsyncClient(transport=transport) as client:
         provider = OpenAITTSProvider("k", client)
         with pytest.raises(Error) as ei:
-            await provider.synthesize(Request(text="hi", voice_id="alloy", task="klearn_tts_baseword"))
+            await provider.synthesize(
+                Request(text="hi", voice_id="alloy", task="klearn_tts_baseword")
+            )
     assert ei.value.error_class == ErrorClass.EMPTY_RESPONSE
 
 
@@ -108,7 +166,9 @@ async def test_openai_tts_empty_response_rejected():
 async def test_openai_tts_missing_api_key_rejected():
     provider = OpenAITTSProvider("", None)
     with pytest.raises(Error) as ei:
-        await provider.synthesize(Request(text="hi", voice_id="alloy", task="klearn_tts_baseword"))
+        await provider.synthesize(
+            Request(text="hi", voice_id="alloy", task="klearn_tts_baseword")
+        )
     assert ei.value.error_class == ErrorClass.CLIENT_ERROR
 
 
@@ -116,7 +176,9 @@ async def test_openai_tts_missing_api_key_rejected():
 async def test_openai_tts_empty_text_rejected():
     provider = OpenAITTSProvider("k", None)
     with pytest.raises(Error) as ei:
-        await provider.synthesize(Request(text="", voice_id="alloy", task="klearn_tts_baseword"))
+        await provider.synthesize(
+            Request(text="", voice_id="alloy", task="klearn_tts_baseword")
+        )
     assert ei.value.error_class == ErrorClass.CLIENT_ERROR
 
 
@@ -130,7 +192,9 @@ def test_class_of_handles_seam_and_unknown_errors():
 
 
 class _StubProvider:
-    def __init__(self, result: Result | None = None, error: BaseException | None = None):
+    def __init__(
+        self, result: Result | None = None, error: BaseException | None = None
+    ):
         self.result = result
         self.error = error
         self.last: Request | None = None
@@ -148,9 +212,13 @@ class _StubProvider:
 
 @pytest.mark.asyncio
 async def test_decorator_passes_request_through_on_success():
-    stub = _StubProvider(result=Result(audio=b"ok", provider="stub-tts:v0", latency_ms=1))
+    stub = _StubProvider(
+        result=Result(audio=b"ok", provider="stub-tts:v0", latency_ms=1)
+    )
     dec = with_metrics(stub)
-    res = await dec.synthesize(Request(text="hi", voice_id="alloy", task="klearn_tts_baseword"))
+    res = await dec.synthesize(
+        Request(text="hi", voice_id="alloy", task="klearn_tts_baseword")
+    )
     assert res.audio == b"ok"
     assert stub.last is not None and stub.last.text == "hi"
 
@@ -160,7 +228,9 @@ async def test_decorator_preserves_provider_error():
     stub = _StubProvider(error=Error(ErrorClass.SERVER_ERROR, RuntimeError("503")))
     dec = with_metrics(stub)
     with pytest.raises(Error) as ei:
-        await dec.synthesize(Request(text="hi", voice_id="alloy", task="klearn_tts_baseword"))
+        await dec.synthesize(
+            Request(text="hi", voice_id="alloy", task="klearn_tts_baseword")
+        )
     assert ei.value.error_class == ErrorClass.SERVER_ERROR
 
 
@@ -176,7 +246,9 @@ async def test_decorator_increments_counter_with_bounded_labels():
     from kielo_shared.observability import metrics as m
 
     # Cache hit: success path with empty error label.
-    stub_ok = _StubProvider(result=Result(audio=b"ok", provider="stub-tts:v0", latency_ms=1))
+    stub_ok = _StubProvider(
+        result=Result(audio=b"ok", provider="stub-tts:v0", latency_ms=1)
+    )
     await with_metrics(stub_ok).synthesize(
         Request(text="x", voice_id="alloy", task="klearn_tts_baseword"),
     )
@@ -190,7 +262,10 @@ async def test_decorator_increments_counter_with_bounded_labels():
     seen_errors: set[str] = set()
     for sample_family in m.TTS_CALLS_TOTAL.collect():
         for s in sample_family.samples:
-            if s.name.endswith("_total") and s.labels.get("task") == "klearn_tts_baseword":
+            if (
+                s.name.endswith("_total")
+                and s.labels.get("task") == "klearn_tts_baseword"
+            ):
                 seen_errors.add(s.labels.get("error", ""))
     assert "" in seen_errors, "success path should emit empty error label"
     assert "http_5xx" in seen_errors, "server error should emit bounded http_5xx label"
@@ -198,7 +273,9 @@ async def test_decorator_increments_counter_with_bounded_labels():
 
 def test_decorator_does_not_block_event_loop():
     """Sanity: provider runs on the same loop the caller awaits on."""
-    stub = _StubProvider(result=Result(audio=b"ok", provider="stub-tts:v0", latency_ms=0))
+    stub = _StubProvider(
+        result=Result(audio=b"ok", provider="stub-tts:v0", latency_ms=0)
+    )
     asyncio.run(
         with_metrics(stub).synthesize(
             Request(text="hi", voice_id="alloy", task="klearn_tts_baseword"),
@@ -235,7 +312,9 @@ async def test_openai_tts_stream_4xx_raises_seam_error_before_iteration():
         provider = OpenAITTSProvider("k", client)
         with pytest.raises(Error) as ei:
             async for _ in provider.synthesize_stream(
-                Request(text="hi", voice_id="alloy", task="klearn_tts_baseword_streaming"),
+                Request(
+                    text="hi", voice_id="alloy", task="klearn_tts_baseword_streaming"
+                ),
             ):
                 pass
     assert ei.value.error_class == ErrorClass.CLIENT_ERROR
@@ -258,7 +337,9 @@ class _StreamStubProvider:
     """Stub that exercises the decorator's streaming path without
     a real HTTP client."""
 
-    def __init__(self, chunks: list[bytes] | None = None, error: BaseException | None = None):
+    def __init__(
+        self, chunks: list[bytes] | None = None, error: BaseException | None = None
+    ):
         self._chunks = chunks or []
         self._error = error
 
@@ -303,7 +384,9 @@ async def test_decorator_emits_error_label_on_stream_failure():
     pytest.importorskip("prometheus_client")
     from kielo_shared.observability import metrics as m
 
-    stub = _StreamStubProvider(error=Error(ErrorClass.SERVER_ERROR, RuntimeError("503")))
+    stub = _StreamStubProvider(
+        error=Error(ErrorClass.SERVER_ERROR, RuntimeError("503"))
+    )
     dec = with_metrics(stub)
 
     with pytest.raises(Error):
@@ -327,7 +410,9 @@ async def test_decorator_emits_error_label_on_stream_failure():
 async def test_decorator_streaming_raises_when_inner_lacks_streaming():
     """Decorator must not silently fall back to one-shot when caller
     asked for streaming — that would mask an unimplemented path."""
-    stub_no_stream = _StubProvider(result=Result(audio=b"ok", provider="x", latency_ms=0))
+    stub_no_stream = _StubProvider(
+        result=Result(audio=b"ok", provider="x", latency_ms=0)
+    )
     # Strip the streaming method to simulate a Provider without it.
     assert not hasattr(stub_no_stream, "synthesize_stream")
     dec = with_metrics(stub_no_stream)

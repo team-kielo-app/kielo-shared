@@ -41,6 +41,7 @@ class Request:
     voice_id: str = ""
     speed: float = 0.0
     model: str = ""
+    language_code: str = ""
     instructions: str = ""
 
 
