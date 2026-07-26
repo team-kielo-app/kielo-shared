@@ -49,35 +49,20 @@ func (p *ElevenLabsProvider) ProviderID(req Request) string {
 
 func (p *ElevenLabsProvider) Synthesize(ctx context.Context, req Request) (*Result, error) {
 	if p.APIKey == "" {
-		return nil, &Error{Class: ErrorClassClientError, Err: errors.New("ElevenLabs API key not configured")}
+		return nil, &Error{Class: ErrorClassClientError, Err: errors.New("elevenlabs API key not configured")}
 	}
 	if req.Text == "" {
 		return nil, &Error{Class: ErrorClassClientError, Err: errors.New("empty text")}
 	}
 	if req.VoiceID == "" {
-		return nil, &Error{Class: ErrorClassClientError, Err: errors.New("ElevenLabs voice ID not configured")}
+		return nil, &Error{Class: ErrorClassClientError, Err: errors.New("elevenlabs voice ID not configured")}
 	}
 
 	model := req.Model
 	if model == "" {
 		model = p.DefaultModel
 	}
-	payload := map[string]any{
-		"text":     req.Text,
-		"model_id": model,
-	}
-	if req.LanguageCode != "" && model != "eleven_multilingual_v2" {
-		payload["language_code"] = strings.ToLower(strings.TrimSpace(req.LanguageCode))
-	}
-	if req.Speed > 0 {
-		payload["voice_settings"] = map[string]float64{
-			"stability":        0.5,
-			"similarity_boost": 0.75,
-			"speed":            max(0.7, min(req.Speed, 1.2)),
-		}
-	}
-
-	body, err := json.Marshal(payload)
+	body, err := json.Marshal(buildElevenLabsPayload(req, model))
 	if err != nil {
 		return nil, &Error{Class: ErrorClassMarshal, Err: err}
 	}
@@ -126,4 +111,22 @@ func (p *ElevenLabsProvider) Synthesize(ctx context.Context, req Request) (*Resu
 		Provider:  p.ProviderID(req),
 		LatencyMs: time.Since(started).Milliseconds(),
 	}, nil
+}
+
+func buildElevenLabsPayload(req Request, model string) map[string]any {
+	payload := map[string]any{
+		"text":     req.Text,
+		"model_id": model,
+	}
+	if req.LanguageCode != "" && model != "eleven_multilingual_v2" {
+		payload["language_code"] = strings.ToLower(strings.TrimSpace(req.LanguageCode))
+	}
+	if req.Speed > 0 {
+		payload["voice_settings"] = map[string]float64{
+			"stability":        0.5,
+			"similarity_boost": 0.75,
+			"speed":            max(0.7, min(req.Speed, 1.2)),
+		}
+	}
+	return payload
 }

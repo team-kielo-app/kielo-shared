@@ -1059,6 +1059,17 @@ type ArticleVersionSnippet struct {
 	TitleTranslationSourceLocale *string             `json:"title_translation_source_locale,omitempty"`
 }
 
+// Asset defines model for Asset.
+type Asset struct {
+	Duration     *float32 `json:"duration,omitempty"`
+	Height       *int     `json:"height,omitempty"`
+	MimeType     *string  `json:"mime_type,omitempty"`
+	Slug         string   `json:"slug"`
+	ThumbnailUrl *string  `json:"thumbnail_url,omitempty"`
+	VideoUrl     string   `json:"video_url"`
+	Width        *int     `json:"width,omitempty"`
+}
+
 // AuditLog defines model for AuditLog.
 type AuditLog struct {
 	Action      string       `json:"action"`
@@ -2392,6 +2403,8 @@ type ConversationPersona struct {
 // ConversationScenario defines model for ConversationScenario.
 type ConversationScenario struct {
 	AgentAvatarUrl       *string             `json:"agent_avatar_url,omitempty"`
+	AgentName            *string             `json:"agent_name,omitempty"`
+	AgentRole            *string             `json:"agent_role,omitempty"`
 	AmbientAudioUrl      *string             `json:"ambient_audio_url,omitempty"`
 	AvatarWaveReversed   *bool               `json:"avatar_wave_reversed,omitempty"`
 	Category             *string             `json:"category,omitempty"`
@@ -2403,6 +2416,7 @@ type ConversationScenario struct {
 	Id                   string              `json:"id"`
 	IsFeatured           bool                `json:"is_featured"`
 	LearningLanguageCode *string             `json:"learning_language_code,omitempty"`
+	LearningObjective    *string             `json:"learning_objective,omitempty"`
 	Localization         *LocalizationStatus `json:"localization,omitempty"`
 	SampleTranscript     *[]string           `json:"sample_transcript,omitempty"`
 	SceneImageUrl        *string             `json:"scene_image_url,omitempty"`
@@ -2446,6 +2460,18 @@ type ConversationSessionMeta struct {
 type ConversationSetting struct {
 	Background string `json:"background"`
 	Location   string `json:"location"`
+}
+
+// ConversationSkillScore defines model for ConversationSkillScore.
+type ConversationSkillScore struct {
+	Score    float32 `json:"score"`
+	SkillKey string  `json:"skill_key"`
+}
+
+// ConversationSkillScoreV3 defines model for ConversationSkillScoreV3.
+type ConversationSkillScoreV3 struct {
+	Score    float32 `json:"score"`
+	SkillKey string  `json:"skill_key"`
 }
 
 // ConversationUserLevel defines model for ConversationUserLevel.
@@ -6033,36 +6059,40 @@ type PreferredDifficultyProfileUserSetCefrLevel string
 
 // ProgressSummary defines model for ProgressSummary.
 type ProgressSummary struct {
-	AchievementsEarnedCount int                 `json:"achievements_earned_count"`
-	ArticlesReadCount       int                 `json:"articles_read_count"`
-	CategoryProgress        []CategoryProgress  `json:"category_progress"`
-	ExercisesCompletedCount int                 `json:"exercises_completed_count"`
-	LearnedWordsCount       int                 `json:"learned_words_count"`
-	LearningWordsCount      int                 `json:"learning_words_count"`
-	Level                   int                 `json:"level"`
-	ListeningSeconds        int                 `json:"listening_seconds"`
-	ProgressToNextLevel     float32             `json:"progress_to_next_level"`
-	SpeakingSeconds         int                 `json:"speaking_seconds"`
-	Streak                  StreakInfo          `json:"streak"`
-	TotalStudyTimeMinutes   int                 `json:"total_study_time_minutes"`
-	WeeklyActivity          []WeeklyActivityDay `json:"weekly_activity"`
+	AchievementsEarnedCount int                      `json:"achievements_earned_count"`
+	ArticlesReadCount       int                      `json:"articles_read_count"`
+	CategoryProgress        []CategoryProgress       `json:"category_progress"`
+	ConversationCefr        *string                  `json:"conversation_cefr,omitempty"`
+	ConversationSkills      []ConversationSkillScore `json:"conversation_skills"`
+	ExercisesCompletedCount int                      `json:"exercises_completed_count"`
+	LearnedWordsCount       int                      `json:"learned_words_count"`
+	LearningWordsCount      int                      `json:"learning_words_count"`
+	Level                   int                      `json:"level"`
+	ListeningSeconds        int                      `json:"listening_seconds"`
+	ProgressToNextLevel     float32                  `json:"progress_to_next_level"`
+	SpeakingSeconds         int                      `json:"speaking_seconds"`
+	Streak                  StreakInfo               `json:"streak"`
+	TotalStudyTimeMinutes   int                      `json:"total_study_time_minutes"`
+	WeeklyActivity          []WeeklyActivityDay      `json:"weekly_activity"`
 }
 
 // ProgressSummaryV3 defines model for ProgressSummaryV3.
 type ProgressSummaryV3 struct {
-	AchievementsEarnedCount int                   `json:"achievements_earned_count"`
-	ArticlesReadCount       int                   `json:"articles_read_count"`
-	CategoryProgress        []CategoryProgressV3  `json:"category_progress"`
-	ExercisesCompletedCount int                   `json:"exercises_completed_count"`
-	LearnedWordsCount       int                   `json:"learned_words_count"`
-	LearningWordsCount      int                   `json:"learning_words_count"`
-	Level                   int                   `json:"level"`
-	ListeningSeconds        int                   `json:"listening_seconds"`
-	ProgressToNextLevel     float32               `json:"progress_to_next_level"`
-	SpeakingSeconds         int                   `json:"speaking_seconds"`
-	Streak                  StreakInfoV3          `json:"streak"`
-	TotalStudyTimeMinutes   int                   `json:"total_study_time_minutes"`
-	WeeklyActivity          []WeeklyActivityDayV3 `json:"weekly_activity"`
+	AchievementsEarnedCount int                        `json:"achievements_earned_count"`
+	ArticlesReadCount       int                        `json:"articles_read_count"`
+	CategoryProgress        []CategoryProgressV3       `json:"category_progress"`
+	ConversationCefr        *string                    `json:"conversation_cefr,omitempty"`
+	ConversationSkills      []ConversationSkillScoreV3 `json:"conversation_skills"`
+	ExercisesCompletedCount int                        `json:"exercises_completed_count"`
+	LearnedWordsCount       int                        `json:"learned_words_count"`
+	LearningWordsCount      int                        `json:"learning_words_count"`
+	Level                   int                        `json:"level"`
+	ListeningSeconds        int                        `json:"listening_seconds"`
+	ProgressToNextLevel     float32                    `json:"progress_to_next_level"`
+	SpeakingSeconds         int                        `json:"speaking_seconds"`
+	Streak                  StreakInfoV3               `json:"streak"`
+	TotalStudyTimeMinutes   int                        `json:"total_study_time_minutes"`
+	WeeklyActivity          []WeeklyActivityDayV3      `json:"weekly_activity"`
 }
 
 // PubSubMessage defines model for PubSubMessage.
@@ -8676,6 +8706,14 @@ type SpeechReferenceAudioRequest struct {
 	Text     string `json:"text"`
 }
 
+// SpeechTranscriptionRequest defines model for SpeechTranscriptionRequest.
+type SpeechTranscriptionRequest struct {
+	AudioBase64  string `json:"audio_base64"`
+	ContentType  string `json:"content_type"`
+	ExpectedText string `json:"expected_text"`
+	Language     string `json:"language"`
+}
+
 // SpeechTranscriptionResponse defines model for SpeechTranscriptionResponse.
 type SpeechTranscriptionResponse struct {
 	Confidence   float32  `json:"confidence"`
@@ -9017,6 +9055,7 @@ type TTSParagraphJobStatusResponse struct {
 	ParagraphId  uuid.UUID                            `json:"paragraph_id"`
 	Stage        *string                              `json:"stage"`
 	Status       *TTSParagraphJobStatusResponseStatus `json:"status"`
+	WordTimings  *[]TTSWordTiming                     `json:"word_timings"`
 }
 
 // TTSParagraphJobStatusResponseStatus defines model for TTSParagraphJobStatusResponse.Status.
@@ -9024,11 +9063,18 @@ type TTSParagraphJobStatusResponseStatus string
 
 // TTSParagraphStreamSessionResponse defines model for TTSParagraphStreamSessionResponse.
 type TTSParagraphStreamSessionResponse struct {
-	CacheHit  *bool      `json:"cache_hit,omitempty"`
-	ExpiresAt time.Time  `json:"expires_at"`
-	JobId     *uuid.UUID `json:"job_id"`
-	SessionId uuid.UUID  `json:"session_id"`
-	Token     string     `json:"token"`
+	CacheHit    *bool            `json:"cache_hit,omitempty"`
+	ExpiresAt   time.Time        `json:"expires_at"`
+	JobId       *uuid.UUID       `json:"job_id"`
+	SessionId   uuid.UUID        `json:"session_id"`
+	Token       string           `json:"token"`
+	WordTimings *[]TTSWordTiming `json:"word_timings"`
+}
+
+// TTSWordTiming defines model for TTSWordTiming.
+type TTSWordTiming struct {
+	EndMs   int `json:"end_ms"`
+	StartMs int `json:"start_ms"`
 }
 
 // Tag defines model for Tag.
@@ -12675,6 +12721,9 @@ type PostApiV3ConversationsSessionsSessionIdHintJSONRequestBody = GenerateHintRe
 // PostApiV3ConversationsSpeechReferenceAudioJSONRequestBody defines body for PostApiV3ConversationsSpeechReferenceAudio for application/json ContentType.
 type PostApiV3ConversationsSpeechReferenceAudioJSONRequestBody = SpeechReferenceAudioRequest
 
+// PostApiV3ConversationsSpeechTranscribeJSONRequestBody defines body for PostApiV3ConversationsSpeechTranscribe for application/json ContentType.
+type PostApiV3ConversationsSpeechTranscribeJSONRequestBody = SpeechTranscriptionRequest
+
 // PostApiV3CurriculumChaptersJSONRequestBody defines body for PostApiV3CurriculumChapters for application/json ContentType.
 type PostApiV3CurriculumChaptersJSONRequestBody = CurriculumChapterUpsertRequest
 
@@ -13275,6 +13324,9 @@ type HandleTopicListGenerationInternalWorkerHandleTopicListGenerationPostJSONReq
 // HandleUserActionInternalWorkerHandleUserActionPostJSONRequestBody defines body for HandleUserActionInternalWorkerHandleUserActionPost for application/json ContentType.
 type HandleUserActionInternalWorkerHandleUserActionPostJSONRequestBody = PubSubMessage
 
+// HandleUserDeletedEventInternalWorkerHandleUserDeletedEventPostJSONRequestBody defines body for HandleUserDeletedEventInternalWorkerHandleUserDeletedEventPost for application/json ContentType.
+type HandleUserDeletedEventInternalWorkerHandleUserDeletedEventPostJSONRequestBody = PubSubMessage
+
 // HandleUserProfileEventInternalWorkerHandleUserProfileEventPostJSONRequestBody defines body for HandleUserProfileEventInternalWorkerHandleUserProfileEventPost for application/json ContentType.
 type HandleUserProfileEventInternalWorkerHandleUserProfileEventPostJSONRequestBody = PubSubMessage
 
@@ -13367,6 +13419,9 @@ type AddTopicListItemKlearnApiV3TopicListsTopicListIdItemsPostJSONRequestBody = 
 
 // UpdateUserPersonalizationProfileKlearnApiV3UserUserIdProfilePersonalizationPutJSONRequestBody defines body for UpdateUserPersonalizationProfileKlearnApiV3UserUserIdProfilePersonalizationPut for application/json ContentType.
 type UpdateUserPersonalizationProfileKlearnApiV3UserUserIdProfilePersonalizationPutJSONRequestBody = UserProfilePersonalizationUpdate
+
+// PostSpeechTranscribeJSONRequestBody defines body for PostSpeechTranscribe for application/json ContentType.
+type PostSpeechTranscribeJSONRequestBody = SpeechTranscriptionRequest
 
 // AsSimpleAiConversationFlow returns the union data inside the AiConversationContent_Flows_Item as a SimpleAiConversationFlow
 func (t AiConversationContent_Flows_Item) AsSimpleAiConversationFlow() (SimpleAiConversationFlow, error) {

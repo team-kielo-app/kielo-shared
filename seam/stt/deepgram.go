@@ -36,7 +36,7 @@ func NewDeepgramProvider(apiKey string, client *http.Client) *DeepgramProvider {
 
 func (p *DeepgramProvider) Transcribe(ctx context.Context, req Request) (*Result, error) {
 	if p.APIKey == "" {
-		return nil, &Error{Class: ErrorClassClientError, Err: errors.New("Deepgram API key not configured")}
+		return nil, &Error{Class: ErrorClassClientError, Err: errors.New("deepgram API key not configured")}
 	}
 	if len(req.Audio) == 0 {
 		return nil, &Error{Class: ErrorClassClientError, Err: errors.New("empty audio")}
@@ -49,27 +49,12 @@ func (p *DeepgramProvider) Transcribe(ctx context.Context, req Request) (*Result
 	if model == "" {
 		model = p.DefaultModel
 	}
-	endpoint := p.Endpoint
-	if endpoint == "" {
-		endpoint = "https://api.deepgram.com/v1/listen"
-	}
-	parsed, err := url.Parse(endpoint)
+	requestURL, err := p.buildRequestURL(req, model)
 	if err != nil {
 		return nil, &Error{Class: ErrorClassClientError, Err: err}
 	}
-	query := parsed.Query()
-	query.Set("model", model)
-	query.Set("language", req.Language)
-	query.Set("smart_format", "true")
-	query.Set("punctuate", "true")
-	for _, keyterm := range req.Keyterms {
-		if trimmed := strings.TrimSpace(keyterm); trimmed != "" {
-			query.Add("keyterm", trimmed)
-		}
-	}
-	parsed.RawQuery = query.Encode()
 
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, parsed.String(), bytes.NewReader(req.Audio))
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, requestURL, bytes.NewReader(req.Audio))
 	if err != nil {
 		return nil, &Error{Class: ErrorClassClientError, Err: err}
 	}
@@ -99,6 +84,33 @@ func (p *DeepgramProvider) Transcribe(ctx context.Context, req Request) (*Result
 		}
 	}
 
+	return parseDeepgramResponse(resp.Body, req.Language, model, started)
+}
+
+func (p *DeepgramProvider) buildRequestURL(req Request, model string) (string, error) {
+	endpoint := p.Endpoint
+	if endpoint == "" {
+		endpoint = "https://api.deepgram.com/v1/listen"
+	}
+	parsed, err := url.Parse(endpoint)
+	if err != nil {
+		return "", err
+	}
+	query := parsed.Query()
+	query.Set("model", model)
+	query.Set("language", req.Language)
+	query.Set("smart_format", "true")
+	query.Set("punctuate", "true")
+	for _, keyterm := range req.Keyterms {
+		if trimmed := strings.TrimSpace(keyterm); trimmed != "" {
+			query.Add("keyterm", trimmed)
+		}
+	}
+	parsed.RawQuery = query.Encode()
+	return parsed.String(), nil
+}
+
+func parseDeepgramResponse(body io.Reader, requestLanguage, model string, started time.Time) (*Result, error) {
 	var payload struct {
 		Results struct {
 			Channels []struct {
@@ -110,7 +122,7 @@ func (p *DeepgramProvider) Transcribe(ctx context.Context, req Request) (*Result
 			} `json:"channels"`
 		} `json:"results"`
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+	if err := json.NewDecoder(body).Decode(&payload); err != nil {
 		return nil, &Error{Class: ErrorClassDecode, Err: err}
 	}
 	if len(payload.Results.Channels) == 0 || len(payload.Results.Channels[0].Alternatives) == 0 {
@@ -125,7 +137,7 @@ func (p *DeepgramProvider) Transcribe(ctx context.Context, req Request) (*Result
 	}
 	language := channel.DetectedLanguage
 	if language == "" {
-		language = req.Language
+		language = requestLanguage
 	}
 	return &Result{
 		Transcript: alternative.Transcript,

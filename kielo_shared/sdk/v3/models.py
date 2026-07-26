@@ -270,6 +270,16 @@ class ArticleVersionIngestionWire(BaseModel):
     version_number: int
 
 
+class Asset(BaseModel):
+    duration: float | None = None
+    height: int | None = None
+    mime_type: str | None = None
+    slug: str
+    thumbnail_url: str | None = None
+    video_url: str
+    width: int | None = None
+
+
 class AuditLog(BaseModel):
     action: str
     entity_id: UUID_aliased
@@ -1122,6 +1132,15 @@ class ConversationSessionMeta(BaseModel):
 class ConversationSetting(BaseModel):
     background: str
     location: str
+
+
+class ConversationSkillScore(BaseModel):
+    score: float
+    skill_key: str
+
+
+class ConversationSkillScoreV3(ConversationSkillScore):
+    pass
 
 
 class ConversationUserLevel(BaseModel):
@@ -5354,6 +5373,13 @@ class SpeechReferenceAudioRequest(BaseModel):
     text: str
 
 
+class SpeechTranscriptionRequest(BaseModel):
+    audio_base64: str
+    content_type: str
+    expected_text: str
+    language: str
+
+
 class SpeechTranscriptionResponse(BaseModel):
     confidence: float
     keyterms_used: list[str]
@@ -5644,18 +5670,9 @@ class TTSParagraphGenerateResponse(BaseModel):
     status: Status8 = Field(..., title="Status")
 
 
-class TTSParagraphJobStatusResponse(BaseModel):
-    audio_url: str | None = Field(None, title="Audio Url")
-    error_message: str | None = Field(None, title="Error Message")
-    job_id: UUID_aliased = Field(..., title="Job Id")
-    media_id: UUID_aliased | None = Field(None, title="Media Id")
-    paragraph_id: UUID_aliased = Field(..., title="Paragraph Id")
-    stage: str | None = Field(None, title="Stage")
-    status: Status1 | None = Field(None, title="Status")
-
-
-class TTSParagraphStreamSessionResponse(TTSBaseWordStreamSessionResponse):
-    pass
+class TTSWordTiming(BaseModel):
+    end_ms: int = Field(..., title="End Ms")
+    start_ms: int = Field(..., title="Start Ms")
 
 
 class Tag(BaseModel):
@@ -6831,6 +6848,8 @@ class ConversationDiscoveryScenario(BaseModel):
 
 class ConversationScenario(BaseModel):
     agent_avatar_url: str | None = None
+    agent_name: str | None = None
+    agent_role: str | None = None
     ambient_audio_url: str | None = None
     avatar_wave_reversed: bool | None = None
     category: str | None = None
@@ -6842,6 +6861,7 @@ class ConversationScenario(BaseModel):
     id: str
     is_featured: bool
     learning_language_code: str | None = None
+    learning_objective: str | None = None
     localization: LocalizationStatus | None = None
     sample_transcript: list[str] | None = None
     scene_image_url: str | None = None
@@ -7332,6 +7352,8 @@ class ProgressSummary(BaseModel):
     achievements_earned_count: int
     articles_read_count: int
     category_progress: list[CategoryProgress]
+    conversation_cefr: str | None = None
+    conversation_skills: list[ConversationSkillScore]
     exercises_completed_count: int
     learned_words_count: int
     learning_words_count: int
@@ -7348,6 +7370,8 @@ class ProgressSummaryV3(BaseModel):
     achievements_earned_count: int
     articles_read_count: int
     category_progress: list[CategoryProgressV3]
+    conversation_cefr: str | None = None
+    conversation_skills: list[ConversationSkillScoreV3]
     exercises_completed_count: int
     learned_words_count: int
     learning_words_count: int
@@ -7888,6 +7912,26 @@ class SingletonWhisperModelManifest(BaseModel):
 class StatsChartResponse(BaseModel):
     data: list[TimeSeriesPoint]
     days: int
+
+
+class TTSParagraphJobStatusResponse(BaseModel):
+    audio_url: str | None = Field(None, title="Audio Url")
+    error_message: str | None = Field(None, title="Error Message")
+    job_id: UUID_aliased = Field(..., title="Job Id")
+    media_id: UUID_aliased | None = Field(None, title="Media Id")
+    paragraph_id: UUID_aliased = Field(..., title="Paragraph Id")
+    stage: str | None = Field(None, title="Stage")
+    status: Status1 | None = Field(None, title="Status")
+    word_timings: list[TTSWordTiming] | None = Field(None, title="Word Timings")
+
+
+class TTSParagraphStreamSessionResponse(BaseModel):
+    cache_hit: bool | None = Field(False, title="Cache Hit")
+    expires_at: AwareDatetime = Field(..., title="Expires At")
+    job_id: UUID_aliased | None = Field(None, title="Job Id")
+    session_id: UUID_aliased = Field(..., title="Session Id")
+    token: str = Field(..., title="Token")
+    word_timings: list[TTSWordTiming] | None = Field(None, title="Word Timings")
 
 
 class TopicListGenerationJobResponse(BaseModel):

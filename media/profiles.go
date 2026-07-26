@@ -217,9 +217,9 @@ var profiles = map[string]MediaProfile{
 			{Name: "mobile", MaxShortSide: 720, MaxFps: 30, Quality: 26, Format: "mp4"},
 			{Name: "hls", Format: "hls"},
 		},
-		Access: AccessSignedCDN,
-		Retention:      RetentionPolicy{DeleteOnOwnerDelete: true, OrphanGrace: 14 * day},
-		GDPR:           GDPRClass{SubjectFrom: "none", DedupAcrossSubjects: true},
+		Access:    AccessSignedCDN,
+		Retention: RetentionPolicy{DeleteOnOwnerDelete: true, OrphanGrace: 14 * day},
+		GDPR:      GDPRClass{SubjectFrom: "none", DedupAcrossSubjects: true},
 	},
 	"app-asset": {
 		// Platform-owned media shipped to app clients by stable slug (intro
@@ -229,8 +229,8 @@ var profiles = map[string]MediaProfile{
 		// in the bucket (assets/kielo-intro.mp4) that no lifecycle, rendition,
 		// or serving policy could reach. Video-only until the image processor
 		// learns to skip video-format specs.
-		Key:        "app-asset",
-		PathPrefix: "app-assets",
+		Key:            "app-asset",
+		PathPrefix:     "app-assets",
 		AllowedMimes:   []string{"video/mp4", "video/quicktime", "video/webm"},
 		MaxUploadBytes: 2 * gib,
 		Variants: []VariantSpec{
