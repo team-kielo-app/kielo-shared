@@ -125,6 +125,12 @@ func TestServeBaseURL_DelegatesToGCSHelper(t *testing.T) {
 // HLS players resolve playlists' relative segment URIs against the master
 // URL, which breaks on the emulator's JSON-API object form.
 func TestStreamingVariantURLForRequest_ProdIsPathStyle(t *testing.T) {
+	// Pin the prod branch: the containerized test harness carries
+	// STORAGE_EMULATOR_HOST from the stack env, which silently flips
+	// BuildServeBaseURL into the emulator branch and fails the
+	// storage.googleapis.com assertion (harness-only failure; passes in
+	// any shell without the env). Same pinning as the sibling tests.
+	t.Setenv("STORAGE_EMULATOR_HOST", "")
 	variants := map[string]Variant{
 		"hls": {Path: "hls/master.m3u8", MimeType: "application/vnd.apple.mpegurl"},
 	}
