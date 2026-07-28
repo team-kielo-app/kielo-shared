@@ -95,11 +95,15 @@ type MediaProfile struct {
 	// SkipOriginalArchive suppresses the processor's unconditional archival of
 	// the full-resolution source as variant "original". Default false = archive.
 	SkipOriginalArchive bool
-	Access              AccessClass
-	Retention           RetentionPolicy
-	GDPR                GDPRClass
-	Alerts              AlertPolicy
-	LegalHoldable       bool
+	// DisableHashDedup prevents two owners from sharing one mutable storage
+	// location. Use it for assets that are relocated into an owner-specific
+	// path after upload; a shared media_id cannot be relocated for both owners.
+	DisableHashDedup bool
+	Access           AccessClass
+	Retention        RetentionPolicy
+	GDPR             GDPRClass
+	Alerts           AlertPolicy
+	LegalHoldable    bool
 }
 
 const (
@@ -209,8 +213,9 @@ var profiles = map[string]MediaProfile{
 		// uploads with related_entity_type "KTVWorkflowVariant" — no legacy
 		// EntityType const; resolved via the alias table). Like kielotv-video,
 		// the toolbox output IS the deliverable: no main transcode.
-		Key:        "kielotv-workflow-variant",
-		PathPrefix: "kielotv", IncludeEntityID: true,
+		Key:              "kielotv-workflow-variant",
+		DisableHashDedup: true,
+		PathPrefix:       "kielotv", IncludeEntityID: true,
 		MaxUploadBytes: 4 * gib,
 		Variants: []VariantSpec{
 			{Name: "preview", MaxWidth: 300, Format: "webp"},
