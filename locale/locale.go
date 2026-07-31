@@ -62,10 +62,48 @@ func NormalizeLocaleCode(code string) string {
 	}
 	base, _, _ := strings.Cut(code, "-")
 	base = strings.ToLower(strings.TrimSpace(base))
-	if base == "vn" {
-		return "vi"
+	if alias, ok := languageCodeAliases[base]; ok {
+		return alias
 	}
 	return base
+}
+
+// languageCodeAliases folds non-ISO-639-1 spellings onto the canonical
+// two-letter code.
+//
+// Cutting at "-" already handles region and script subtags ("ar-SA", "pt-BR",
+// "zh-Hans"), but leaves a whole shape untouched: three-letter ISO 639-2/639-3
+// codes, which real clients do send. Before this map 29 of 37 realistic
+// locale spellings whose language we DO support normalized to themselves and
+// then failed IsSupportedSupportLanguage — every 639-2/3 form.
+//
+// That is not cosmetic. localization.dynamic_translations.language_code is a
+// foreign key onto localization.languages, so an unfolded code makes the
+// translation cache write fail. The write is deliberately fail-soft
+// (translations are still served), which means the failure is silent and the
+// "next request will retry" comment never comes true: the locale can never
+// become valid, so every request re-translates forever. Prod hit exactly this
+// with "ars" (Najdi Arabic) while the equivalent "ar-SA" worked fine.
+//
+// Only unambiguous folds onto languages Kielo actually supports are listed.
+// Macrolanguage members are included only where the collapse is uncontested
+// (arb/ars -> ar, cmn -> zh); genuinely contested ones such as yue are
+// deliberately absent, and codes for unsupported languages are left alone so
+// IsSupportedSupportLanguage still reports false rather than silently
+// pretending we have content.
+var languageCodeAliases = map[string]string{
+	"vn": "vi", // country code, not a language code; seen on real accounts
+
+	// ISO 639-2/T and 639-2/B for the supported set.
+	"ara": "ar", "ben": "bn", "deu": "de", "ger": "de", "eng": "en",
+	"spa": "es", "fin": "fi", "fra": "fr", "fre": "fr", "hin": "hi",
+	"hun": "hu", "ita": "it", "jpn": "ja", "kor": "ko", "nld": "nl",
+	"dut": "nl", "pol": "pl", "por": "pt", "rus": "ru", "srp": "sr",
+	"swe": "sv", "tha": "th", "tur": "tr", "ukr": "uk", "vie": "vi",
+	"zho": "zh", "chi": "zh",
+
+	// Macrolanguage members that collapse without ambiguity.
+	"arb": "ar", "ars": "ar", "cmn": "zh",
 }
 
 // NormalizeLearningLanguageCode normalizes locale-like input and returns it

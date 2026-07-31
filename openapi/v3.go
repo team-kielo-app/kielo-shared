@@ -69,6 +69,7 @@ type routeEntry struct {
 	headerParams    []paramSpec
 	requestBody     any   // value of struct type (zero); nil if no body
 	responseBody    any   // zero value of response struct
+	acceptedBody    any   // optional zero value for an additional typed 202 response
 	untypedResponse bool  // true if route returns JSON but the schema is upstream-owned
 	binaryResponse  bool  // true if route streams binary (application/octet-stream)
 	successStatus   int   // explicit 2xx status; zero keeps the body-derived default
@@ -145,6 +146,11 @@ type Route struct {
 	// pagination.CursorPage[T]{} for lists, pagination.Envelope[T]{} for
 	// singletons, T{} for the rare bare-object response.
 	Response any
+
+	// AcceptedResponse documents an additional typed 202 response for routes
+	// that can either complete synchronously with Response or return an async
+	// handoff payload. Leave nil when 202 is not part of the route contract.
+	AcceptedResponse any
 
 	// UntypedResponse marks routes that return JSON but whose schema
 	// lives in an upstream service that mobile-bff does not import.
@@ -243,6 +249,7 @@ func (w *Wrapper) register(method, path string, h echo.HandlerFunc, route Route,
 		headerParams:    toParamSpecs(route.HeaderParams),
 		requestBody:     route.RequestBody,
 		responseBody:    route.Response,
+		acceptedBody:    route.AcceptedResponse,
 		untypedResponse: route.UntypedResponse,
 		binaryResponse:  route.BinaryResponse,
 		successStatus:   route.SuccessStatus,
@@ -278,6 +285,7 @@ func (r *Registry) Record(method, path string, route Route) {
 		headerParams:    toParamSpecs(route.HeaderParams),
 		requestBody:     route.RequestBody,
 		responseBody:    route.Response,
+		acceptedBody:    route.AcceptedResponse,
 		untypedResponse: route.UntypedResponse,
 		binaryResponse:  route.BinaryResponse,
 		successStatus:   route.SuccessStatus,
@@ -345,6 +353,9 @@ func (r *Registry) MarshalJSON() ([]byte, error) {
 		}
 		if rt.responseBody != nil {
 			r.collectSchema(rt.responseBody)
+		}
+		if rt.acceptedBody != nil {
+			r.collectSchema(rt.acceptedBody)
 		}
 	}
 
@@ -484,6 +495,16 @@ func (r *Registry) responsesDoc(rt routeEntry) map[string]any {
 			description = "Accepted"
 		}
 		resp[successKey] = map[string]any{"description": description}
+	}
+	if rt.acceptedBody != nil {
+		resp["202"] = map[string]any{
+			"description": "Accepted",
+			"content": map[string]any{
+				"application/json": map[string]any{
+					"schema": responseSchema(rt.acceptedBody, r),
+				},
+			},
+		}
 	}
 	// Always document the canonical error envelope — every v3 endpoint
 	// can return it (per ADR-004). Specific endpoints add more codes.

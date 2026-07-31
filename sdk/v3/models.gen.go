@@ -3227,6 +3227,15 @@ type DailyChallengePendingAccepted struct {
 	Status          string     `json:"status"`
 }
 
+// DailyChallengePendingV3 defines model for DailyChallengePendingV3.
+type DailyChallengePendingV3 struct {
+	ChallengeDate   string  `json:"challenge_date"`
+	EventStreamPath *string `json:"event_stream_path,omitempty"`
+	JobId           *string `json:"job_id,omitempty"`
+	Stage           *string `json:"stage,omitempty"`
+	Status          string  `json:"status"`
+}
+
 // DailyChallengeV3 defines model for DailyChallengeV3.
 type DailyChallengeV3 struct {
 	Completed   *bool                     `json:"completed,omitempty"`
@@ -7651,6 +7660,11 @@ type SingletonCurriculumTreeResponse struct {
 	Data CurriculumTreeResponse `json:"data"`
 }
 
+// SingletonDailyChallengePendingV3 defines model for SingletonDailyChallengePendingV3.
+type SingletonDailyChallengePendingV3 struct {
+	Data DailyChallengePendingV3 `json:"data"`
+}
+
 // SingletonDailyChallengeV3 defines model for SingletonDailyChallengeV3.
 type SingletonDailyChallengeV3 struct {
 	Data DailyChallengeV3 `json:"data"`
@@ -8420,6 +8434,21 @@ type SingletonSurfacesResponse struct {
 	Data SurfacesResponse `json:"data"`
 }
 
+// SingletonTTSBaseWordStreamSession defines model for SingletonTTSBaseWordStreamSession.
+type SingletonTTSBaseWordStreamSession struct {
+	Data TTSBaseWordStreamSession `json:"data"`
+}
+
+// SingletonTTSParagraphJobStatus defines model for SingletonTTSParagraphJobStatus.
+type SingletonTTSParagraphJobStatus struct {
+	Data TTSParagraphJobStatus `json:"data"`
+}
+
+// SingletonTTSStreamSession defines model for SingletonTTSStreamSession.
+type SingletonTTSStreamSession struct {
+	Data TTSStreamSession `json:"data"`
+}
+
 // SingletonTargetedSuggestionsResponse defines model for SingletonTargetedSuggestionsResponse.
 type SingletonTargetedSuggestionsResponse struct {
 	Data TargetedSuggestionsResponse `json:"data"`
@@ -8972,6 +9001,15 @@ type SurfacesResponse struct {
 	NextPageKey *string            `json:"next_page_key,omitempty"`
 }
 
+// TTSBaseWordStreamSession defines model for TTSBaseWordStreamSession.
+type TTSBaseWordStreamSession struct {
+	CacheHit  *bool   `json:"cache_hit,omitempty"`
+	ExpiresAt string  `json:"expires_at"`
+	JobId     *string `json:"job_id,omitempty"`
+	SessionId string  `json:"session_id"`
+	Token     string  `json:"token"`
+}
+
 // TTSBaseWordStreamSessionResponse defines model for TTSBaseWordStreamSessionResponse.
 type TTSBaseWordStreamSessionResponse struct {
 	CacheHit  *bool      `json:"cache_hit,omitempty"`
@@ -9046,6 +9084,18 @@ type TTSParagraphGenerateResponseJobStatus string
 // TTSParagraphGenerateResponseStatus defines model for TTSParagraphGenerateResponse.Status.
 type TTSParagraphGenerateResponseStatus string
 
+// TTSParagraphJobStatus defines model for TTSParagraphJobStatus.
+type TTSParagraphJobStatus struct {
+	AudioUrl     *string          `json:"audio_url,omitempty"`
+	ErrorMessage *string          `json:"error_message,omitempty"`
+	JobId        string           `json:"job_id"`
+	MediaId      *string          `json:"media_id,omitempty"`
+	ParagraphId  string           `json:"paragraph_id"`
+	Stage        *string          `json:"stage,omitempty"`
+	Status       *string          `json:"status,omitempty"`
+	WordTimings  *[]TTSWordTiming `json:"word_timings,omitempty"`
+}
+
 // TTSParagraphJobStatusResponse defines model for TTSParagraphJobStatusResponse.
 type TTSParagraphJobStatusResponse struct {
 	AudioUrl     *string                              `json:"audio_url"`
@@ -9069,6 +9119,16 @@ type TTSParagraphStreamSessionResponse struct {
 	SessionId   uuid.UUID        `json:"session_id"`
 	Token       string           `json:"token"`
 	WordTimings *[]TTSWordTiming `json:"word_timings"`
+}
+
+// TTSStreamSession defines model for TTSStreamSession.
+type TTSStreamSession struct {
+	CacheHit    *bool            `json:"cache_hit,omitempty"`
+	ExpiresAt   string           `json:"expires_at"`
+	JobId       *string          `json:"job_id,omitempty"`
+	SessionId   string           `json:"session_id"`
+	Token       string           `json:"token"`
+	WordTimings *[]TTSWordTiming `json:"word_timings,omitempty"`
 }
 
 // TTSWordTiming defines model for TTSWordTiming.
@@ -12182,7 +12242,8 @@ type GetDiscoveryItemsInternalKlearnDiscoveryItemsGetParams struct {
 // CreateCustomExerciseDeckInternalKlearnExerciseDecksPostParams defines parameters for CreateCustomExerciseDeckInternalKlearnExerciseDecksPost.
 type CreateCustomExerciseDeckInternalKlearnExerciseDecksPostParams struct {
 	// UserId The ID of the user
-	UserId uuid.UUID `form:"user_id" json:"user_id"`
+	UserId               uuid.UUID `form:"user_id" json:"user_id"`
+	LearningLanguageCode *string   `form:"learning_language_code,omitempty" json:"learning_language_code,omitempty"`
 }
 
 // GetInternalKlearnGrammarConceptsGrammarConceptIdExampleSentencesParams defines parameters for GetInternalKlearnGrammarConceptsGrammarConceptIdExampleSentences.

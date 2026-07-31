@@ -1730,6 +1730,14 @@ class DailyChallengePendingAccepted(BaseModel):
     status: str = Field(..., title="Status")
 
 
+class DailyChallengePendingV3(BaseModel):
+    challenge_date: str
+    event_stream_path: str | None = None
+    job_id: str | None = None
+    stage: str | None = None
+    status: str
+
+
 class DailyChallengeV3(BaseModel):
     completed: bool | None = None
     description: str | None = None
@@ -4900,6 +4908,10 @@ class SingletonCurriculumTracksV3(BaseModel):
     data: CurriculumTracksV3
 
 
+class SingletonDailyChallengePendingV3(BaseModel):
+    data: DailyChallengePendingV3
+
+
 class SingletonDailyChallengeV3(BaseModel):
     data: DailyChallengeV3
 
@@ -5609,6 +5621,14 @@ class SurfaceReference(BaseModel):
 class SurfacesResponse(BaseModel):
     items: list[SurfaceReference]
     next_page_key: str | None = None
+
+
+class TTSBaseWordStreamSession(BaseModel):
+    cache_hit: bool | None = None
+    expires_at: str
+    job_id: str | None = None
+    session_id: str
+    token: str
 
 
 class TTSBaseWordStreamSessionResponse(BaseModel):
@@ -7729,6 +7749,10 @@ class SingletonSurfacesResponse(BaseModel):
     data: SurfacesResponse
 
 
+class SingletonTTSBaseWordStreamSession(BaseModel):
+    data: TTSBaseWordStreamSession
+
+
 class SingletonTargetedSuggestionsResponse(BaseModel):
     data: TargetedSuggestionsResponse
 
@@ -7914,6 +7938,17 @@ class StatsChartResponse(BaseModel):
     days: int
 
 
+class TTSParagraphJobStatus(BaseModel):
+    audio_url: str | None = None
+    error_message: str | None = None
+    job_id: str
+    media_id: str | None = None
+    paragraph_id: str
+    stage: str | None = None
+    status: str | None = None
+    word_timings: list[TTSWordTiming] | None = None
+
+
 class TTSParagraphJobStatusResponse(BaseModel):
     audio_url: str | None = Field(None, title="Audio Url")
     error_message: str | None = Field(None, title="Error Message")
@@ -7932,6 +7967,15 @@ class TTSParagraphStreamSessionResponse(BaseModel):
     session_id: UUID_aliased = Field(..., title="Session Id")
     token: str = Field(..., title="Token")
     word_timings: list[TTSWordTiming] | None = Field(None, title="Word Timings")
+
+
+class TTSStreamSession(BaseModel):
+    cache_hit: bool | None = None
+    expires_at: str
+    job_id: str | None = None
+    session_id: str
+    token: str
+    word_timings: list[TTSWordTiming] | None = None
 
 
 class TopicListGenerationJobResponse(BaseModel):
@@ -8409,6 +8453,14 @@ class SingletonDictionaryLookupResponse(BaseModel):
 
 class SingletonLearningSession(BaseModel):
     data: LearningSession
+
+
+class SingletonTTSParagraphJobStatus(BaseModel):
+    data: TTSParagraphJobStatus
+
+
+class SingletonTTSStreamSession(BaseModel):
+    data: TTSStreamSession
 
 
 class SingletonTranslationKey(BaseModel):

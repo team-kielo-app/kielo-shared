@@ -422,6 +422,7 @@ func (s *Seam) providerBatchCall(
 			Text:     r.ref.SourceText,
 			Role:     role,
 			CacheKey: r.key,
+			Context:  refTranslationContext(r.ref),
 		}
 	}
 	results, err := provider.TranslateBatch(ctx, items, TranslateOptions{
@@ -568,6 +569,7 @@ func (s *Seam) callProvider(ctx context.Context, ref SourceRef, target, cacheKey
 		Text:     ref.SourceText,
 		Role:     role,
 		CacheKey: cacheKey,
+		Context:  refTranslationContext(ref),
 	}}
 	results, err := provider.TranslateBatch(ctx, items, TranslateOptions{
 		SourceLocale: TierASupportLocale,
@@ -609,3 +611,31 @@ func (s *Seam) cacheKey(ref SourceRef, target string) string {
 // dependency (locale imports nothing; localization imports nothing
 // app-specific). Keep in sync with locale.TierASupportLocale.
 const TierASupportLocale = "en"
+
+// refTranslationContext builds the disambiguation hint handed to the
+// translation provider for a ref.
+//
+// Short UI strings are ambiguous out of context and the provider used to see
+// nothing but the bare word: asking for "Sun" returned the Finnish "Aurinko"
+// and the Vietnamese "Mặt Trời" — the celestial body — which the seam then
+// persisted as the weekday abbreviation. The key ("ui.day_abbr.Sun") already
+// says what the string is for, and it is right here; it simply was never sent.
+//
+// Returns nil when there is nothing useful to say, so providers that ignore
+// context (and the opus-mt NMT backend, which cannot take instructions) see
+// exactly the payload they saw before.
+func refTranslationContext(ref SourceRef) map[string]any {
+	sourceID := strings.TrimSpace(ref.SourceID)
+	namespace := strings.TrimSpace(ref.Namespace)
+	if sourceID == "" && namespace == "" {
+		return nil
+	}
+	ctx := make(map[string]any, 2)
+	if sourceID != "" {
+		ctx["key"] = sourceID
+	}
+	if namespace != "" {
+		ctx["namespace"] = namespace
+	}
+	return ctx
+}
