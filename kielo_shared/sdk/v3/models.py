@@ -2991,6 +2991,7 @@ class LearningItemV3(BaseModel):
     item_details: dict[str, Any] | None = None
     item_id: str
     item_type: str
+    next_review_at: str | None = None
     status: str | None = None
     updated_at: str | None = None
 
@@ -3000,7 +3001,10 @@ class LearningItemsCountsResponse(BaseModel):
     average_saved_cefr: float
     average_vocabulary_cefr: float
     base_words: int
+    due_items: int
     grammar_concepts: int
+    known_items: int
+    learning_items: int
     saved_items: int
 
 
@@ -6559,6 +6563,7 @@ class WordScrambleItem(BaseModel):
 
 class FieldTranslateBatchRequest(BaseModel):
     batch_size: int | None = Field(16, title="Batch Size")
+    contexts: list[str] | None = Field(None, title="Contexts")
     source_lang: str = Field(..., title="Source Lang")
     target_lang: str = Field(..., title="Target Lang")
     texts: list[str] | None = Field(None, title="Texts")

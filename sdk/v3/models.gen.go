@@ -5073,13 +5073,14 @@ type LearningArcStageStatus string
 
 // LearningItemV3 defines model for LearningItemV3.
 type LearningItemV3 struct {
-	DisplayText *string                 `json:"display_text,omitempty"`
-	IsSaved     *bool                   `json:"is_saved,omitempty"`
-	ItemDetails *map[string]interface{} `json:"item_details,omitempty"`
-	ItemId      string                  `json:"item_id"`
-	ItemType    string                  `json:"item_type"`
-	Status      *string                 `json:"status,omitempty"`
-	UpdatedAt   *string                 `json:"updated_at,omitempty"`
+	DisplayText  *string                 `json:"display_text,omitempty"`
+	IsSaved      *bool                   `json:"is_saved,omitempty"`
+	ItemDetails  *map[string]interface{} `json:"item_details,omitempty"`
+	ItemId       string                  `json:"item_id"`
+	ItemType     string                  `json:"item_type"`
+	NextReviewAt *string                 `json:"next_review_at,omitempty"`
+	Status       *string                 `json:"status,omitempty"`
+	UpdatedAt    *string                 `json:"updated_at,omitempty"`
 }
 
 // LearningItemsCountsResponse defines model for LearningItemsCountsResponse.
@@ -5088,7 +5089,10 @@ type LearningItemsCountsResponse struct {
 	AverageSavedCefr      float32 `json:"average_saved_cefr"`
 	AverageVocabularyCefr float32 `json:"average_vocabulary_cefr"`
 	BaseWords             int     `json:"base_words"`
+	DueItems              int     `json:"due_items"`
 	GrammarConcepts       int     `json:"grammar_concepts"`
+	KnownItems            int     `json:"known_items"`
+	LearningItems         int     `json:"learning_items"`
 	SavedItems            int     `json:"saved_items"`
 }
 
@@ -5098,7 +5102,10 @@ type LearningItemsCountsResponseV3 struct {
 	AverageSavedCefr      float32 `json:"average_saved_cefr"`
 	AverageVocabularyCefr float32 `json:"average_vocabulary_cefr"`
 	BaseWords             int     `json:"base_words"`
+	DueItems              int     `json:"due_items"`
 	GrammarConcepts       int     `json:"grammar_concepts"`
+	KnownItems            int     `json:"known_items"`
+	LearningItems         int     `json:"learning_items"`
 	SavedItems            int     `json:"saved_items"`
 }
 
@@ -10337,6 +10344,7 @@ type WordScrambleItem struct {
 // TranslateBatchRequest defines model for _TranslateBatchRequest.
 type TranslateBatchRequest struct {
 	BatchSize  *int      `json:"batch_size,omitempty"`
+	Contexts   *[]string `json:"contexts"`
 	SourceLang string    `json:"source_lang"`
 	TargetLang string    `json:"target_lang"`
 	Texts      *[]string `json:"texts,omitempty"`
@@ -11428,6 +11436,9 @@ type GetApiV3MeLearningItemsParams struct {
 
 	// SavedOnly If true, only saved items
 	SavedOnly *bool `form:"saved_only,omitempty" json:"saved_only,omitempty"`
+
+	// DueOnly If true, only items whose spaced-repetition review is due now, oldest first
+	DueOnly *bool `form:"due_only,omitempty" json:"due_only,omitempty"`
 
 	// Status Filter by learning status (Learning, Reviewing, Mastered, ...)
 	Status *string `form:"status,omitempty" json:"status,omitempty"`
