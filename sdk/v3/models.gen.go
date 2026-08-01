@@ -5073,12 +5073,15 @@ type LearningArcStageStatus string
 
 // LearningItemV3 defines model for LearningItemV3.
 type LearningItemV3 struct {
+	CorrectCount int                     `json:"correct_count"`
 	DisplayText  *string                 `json:"display_text,omitempty"`
 	IsSaved      *bool                   `json:"is_saved,omitempty"`
 	ItemDetails  *map[string]interface{} `json:"item_details,omitempty"`
 	ItemId       string                  `json:"item_id"`
 	ItemType     string                  `json:"item_type"`
 	NextReviewAt *string                 `json:"next_review_at,omitempty"`
+	Proficiency  float32                 `json:"proficiency"`
+	ReviewCount  int                     `json:"review_count"`
 	Status       *string                 `json:"status,omitempty"`
 	UpdatedAt    *string                 `json:"updated_at,omitempty"`
 }
@@ -5093,6 +5096,7 @@ type LearningItemsCountsResponse struct {
 	GrammarConcepts       int     `json:"grammar_concepts"`
 	KnownItems            int     `json:"known_items"`
 	LearningItems         int     `json:"learning_items"`
+	OldestDueAt           *string `json:"oldest_due_at,omitempty"`
 	SavedItems            int     `json:"saved_items"`
 }
 
@@ -5106,6 +5110,7 @@ type LearningItemsCountsResponseV3 struct {
 	GrammarConcepts       int     `json:"grammar_concepts"`
 	KnownItems            int     `json:"known_items"`
 	LearningItems         int     `json:"learning_items"`
+	OldestDueAt           *string `json:"oldest_due_at,omitempty"`
 	SavedItems            int     `json:"saved_items"`
 }
 
@@ -6878,12 +6883,14 @@ type SavedItemsCountsResponseV3 struct {
 type SavedItemsDashboardResponse struct {
 	Counts      map[string]int         `json:"counts"`
 	RecentItems map[string][]SavedItem `json:"recent_items"`
+	Totals      *map[string]int        `json:"totals,omitempty"`
 }
 
 // SavedItemsDashboardResponseV3 defines model for SavedItemsDashboardResponseV3.
 type SavedItemsDashboardResponseV3 struct {
 	Counts      map[string]int         `json:"counts"`
 	RecentItems map[string][]SavedItem `json:"recent_items"`
+	Totals      *map[string]int        `json:"totals,omitempty"`
 }
 
 // Scenario defines model for Scenario.

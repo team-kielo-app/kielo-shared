@@ -2986,12 +2986,15 @@ class LearningArcStage(BaseModel):
 
 
 class LearningItemV3(BaseModel):
+    correct_count: int
     display_text: str | None = None
     is_saved: bool | None = None
     item_details: dict[str, Any] | None = None
     item_id: str
     item_type: str
     next_review_at: str | None = None
+    proficiency: float
+    review_count: int
     status: str | None = None
     updated_at: str | None = None
 
@@ -3005,6 +3008,7 @@ class LearningItemsCountsResponse(BaseModel):
     grammar_concepts: int
     known_items: int
     learning_items: int
+    oldest_due_at: str | None = None
     saved_items: int
 
 
@@ -4374,6 +4378,7 @@ class SavedItemsCountsResponseV3(SavedItemsCountsResponse):
 class SavedItemsDashboardResponse(BaseModel):
     counts: dict[str, int]
     recent_items: dict[str, list[SavedItem]]
+    totals: dict[str, int] | None = None
 
 
 class SavedItemsDashboardResponseV3(SavedItemsDashboardResponse):
