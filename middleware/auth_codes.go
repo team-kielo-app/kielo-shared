@@ -74,27 +74,27 @@ func classifyJWTError(err error) (code, message string) {
 	switch {
 	case isJWTErr(err, jwt.ErrTokenExpired):
 		return AuthCodeTokenExpired,
-			"Your session has expired. Please log in again."
+			"You've been signed out. Please log in again."
 	case isJWTErr(err, jwt.ErrTokenSignatureInvalid):
 		return AuthCodeTokenSignatureInvalid,
-			"Your session is no longer valid. Please log in again."
+			"You've been signed out. Please log in again."
 	case isJWTErr(err, jwt.ErrTokenInvalidIssuer):
 		return AuthCodeTokenIssuerInvalid,
-			"Your session is from a different environment. Please log in again."
+			"You've been signed out. Please log in again."
 	case isJWTErr(err, jwt.ErrTokenMalformed):
 		return AuthCodeTokenMalformed,
-			"Your session token is corrupted. Please log in again."
+			"You've been signed out. Please log in again."
 	case isJWTErr(err, jwt.ErrTokenRequiredClaimMissing):
 		return AuthCodeTokenClaimsInvalid,
-			"Your session token is missing required information. Please log in again."
+			"You've been signed out. Please log in again."
 	case isJWTErr(err, jwt.ErrTokenNotValidYet):
 		return AuthCodeTokenClaimsInvalid,
-			"Your session token is not yet valid. Please try again in a moment."
+			"You've been signed out for a moment. Please try again."
 	default:
 		// Unknown JWT error shape — return generic AUTH_SESSION_INVALID
 		// so the client still gets a typed code, not a default-401.
 		return AuthCodeSessionInvalid,
-			"Your session is no longer valid. Please log in again."
+			"You've been signed out. Please log in again."
 	}
 }
 

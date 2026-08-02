@@ -113,7 +113,7 @@ func JWTAuthWithOptions(jwtSecret string, userChecker UserExistenceChecker, opti
 				// 401 + AUTH_TOKEN_MALFORMED so the client treats it as
 				// "force re-login" not "fix your request".
 				return authErr(http.StatusUnauthorized, AuthCodeTokenMalformed,
-					"Your session token format is invalid. Please log in again.")
+					"You've been signed out. Please log in again.")
 			}
 
 			keyFunc := func(token *jwt.Token) (any, error) {
@@ -162,7 +162,7 @@ func JWTAuthWithOptions(jwtSecret string, userChecker UserExistenceChecker, opti
 					if err != nil {
 						c.Logger().Errorf("JWT middleware userChecker failed: %v", err)
 						return authErr(http.StatusInternalServerError, AuthCodeUserCheckFailed,
-							"Unable to verify your account right now. Please try again in a moment.")
+							"We couldn't check your account right now. Please try again in a moment.")
 					}
 					if !exists {
 						return authErr(http.StatusUnauthorized, AuthCodeUserDeleted,
@@ -176,7 +176,7 @@ func JWTAuthWithOptions(jwtSecret string, userChecker UserExistenceChecker, opti
 			}
 
 			return authErr(http.StatusUnauthorized, AuthCodeTokenClaimsInvalid,
-				"Your session token is missing required information. Please log in again.")
+				"You've been signed out. Please log in again.")
 		}
 	}
 }
@@ -335,7 +335,7 @@ func FlexibleAuthWithOptions(jwtSecret string, userChecker UserExistenceChecker,
 					// X-User-ID — internal infra bug or bad upstream call.
 					c.Logger().Warnf("FlexibleAuth: invalid X-User-ID format: %v", err)
 					return authErr(http.StatusUnauthorized, AuthCodeTokenClaimsInvalid,
-						"Your session token is missing required information. Please log in again.")
+						"You've been signed out. Please log in again.")
 				}
 				// Check user existence if checker provided
 				if userChecker != nil {
@@ -343,7 +343,7 @@ func FlexibleAuthWithOptions(jwtSecret string, userChecker UserExistenceChecker,
 					if err != nil {
 						c.Logger().Errorf("FlexibleAuth userChecker failed: %v", err)
 						return authErr(http.StatusInternalServerError, AuthCodeUserCheckFailed,
-							"Unable to verify your account right now. Please try again in a moment.")
+							"We couldn't check your account right now. Please try again in a moment.")
 					}
 					if !exists {
 						return authErr(http.StatusUnauthorized, AuthCodeUserDeleted,

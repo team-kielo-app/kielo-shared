@@ -33,7 +33,7 @@ import (
 // immediately", which would invite a hot loop.
 func WriteRateLimitDenied(c echo.Context, message string, retryAfter time.Duration) error {
 	if message == "" {
-		message = "Too many requests. Please try again later."
+		message = "Too many attempts. Please wait a moment and try again."
 	}
 
 	errorBody := map[string]any{
