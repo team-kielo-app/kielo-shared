@@ -73,10 +73,64 @@ func TestUpsert_PropagatesNon2xxStatus(t *testing.T) {
 	defer srv.Close()
 
 	c := New(srv.URL, "key", nil)
-	_, err := c.Upsert(context.Background(), UpsertRequest{})
+	// A supported LanguageCode is needed to reach the transport at all: Upsert
+	// refuses unsupported codes locally because they cannot satisfy the
+	// languages foreign key. This test is about propagating a SERVER error, so
+	// it must get past that precondition rather than trip it.
+	_, err := c.Upsert(context.Background(), UpsertRequest{LanguageCode: "vi"})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "400")
 	assert.Contains(t, err.Error(), "resource_type is required")
+}
+
+// The languages foreign key makes an unsupported code unwritable, so Upsert
+// must refuse it locally instead of spending a round-trip to learn that.
+// seam_autotranslate_comms hit this with "fa" across ui.string,
+// notification.title and notification.body; content did the same with cs/sl.
+func TestUpsert_RefusesUnsupportedLanguageWithoutCallingServer(t *testing.T) {
+	called := false
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		called = true
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	c := New(srv.URL, "key", nil)
+	for _, code := range []string{"fa", "cs", "sl", ""} {
+		_, err := c.Upsert(context.Background(), UpsertRequest{
+			ResourceType: "ui.string", ResourceID: "x", LanguageCode: code,
+			TranslatedText: "t", SourceVersion: "v",
+		})
+		require.Error(t, err, "code %q must be refused", code)
+		require.ErrorIs(t, err, ErrUnsupportedLanguage,
+			"callers distinguish skip from failure via this sentinel")
+	}
+	assert.False(t, called,
+		"no HTTP request may be made for a locale the foreign key cannot accept")
+}
+
+// The refusal must be exact: anything the foreign key accepts still goes out,
+// including a code that only becomes valid after folding (ars -> ar).
+func TestUpsert_SupportedAndFoldableLanguagesStillReachServer(t *testing.T) {
+	var gotCodes []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var req UpsertRequest
+		_ = json.NewDecoder(r.Body).Decode(&req)
+		gotCodes = append(gotCodes, req.LanguageCode)
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"row":null,"inserted":true}`))
+	}))
+	defer srv.Close()
+
+	c := New(srv.URL, "key", nil)
+	for _, code := range []string{"vi", "fi", "ars"} {
+		_, err := c.Upsert(context.Background(), UpsertRequest{
+			ResourceType: "ui.string", ResourceID: "x", LanguageCode: code,
+			TranslatedText: "t", SourceVersion: "v",
+		})
+		require.NoError(t, err, "code %q is supported and must be sent", code)
+	}
+	assert.Equal(t, []string{"vi", "fi", "ars"}, gotCodes)
 }
 
 func TestFetchByResources_PostsBodyAndDecodes(t *testing.T) {

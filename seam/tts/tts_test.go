@@ -2,6 +2,7 @@ package tts_test
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -118,6 +119,75 @@ func TestOpenAITTSProvider_MissingAPIKeyRejected(t *testing.T) {
 	_, err := p.Synthesize(context.Background(), tts.Request{Text: "x", VoiceID: "alloy", Task: "convo_playback"})
 	if got := tts.ClassOf(err); got != tts.ErrorClassClientError {
 		t.Errorf("ClassOf = %q, want http_4xx for missing key", got)
+	}
+}
+
+func TestElevenLabsProvider_HappyPath(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got := r.URL.Path; got != "/voice-123/stream" {
+			t.Errorf("path = %q", got)
+		}
+		if got := r.URL.Query().Get("output_format"); got != "mp3_44100_128" {
+			t.Errorf("output_format = %q", got)
+		}
+		if got := r.Header.Get("xi-api-key"); got != "test-eleven-key" {
+			t.Errorf("xi-api-key = %q", got)
+		}
+		var payload struct {
+			Text          string `json:"text"`
+			ModelID       string `json:"model_id"`
+			LanguageCode  string `json:"language_code"`
+			VoiceSettings struct {
+				Stability       float64 `json:"stability"`
+				SimilarityBoost float64 `json:"similarity_boost"`
+				Speed           float64 `json:"speed"`
+			} `json:"voice_settings"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			t.Fatalf("decode payload: %v", err)
+		}
+		if payload.Text != "Totta kai!" || payload.ModelID != "eleven_flash_v2_5" || payload.LanguageCode != "fi" {
+			t.Errorf("unexpected payload: %+v", payload)
+		}
+		if payload.VoiceSettings.Stability != 0.5 ||
+			payload.VoiceSettings.SimilarityBoost != 0.75 ||
+			payload.VoiceSettings.Speed != 0.85 {
+			t.Errorf("unexpected voice settings: %+v", payload.VoiceSettings)
+		}
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("\xff\xfb\x90eleven-audio"))
+	}))
+	defer srv.Close()
+
+	p := tts.NewElevenLabsProvider("test-eleven-key", srv.Client())
+	p.Endpoint = srv.URL
+
+	res, err := p.Synthesize(context.Background(), tts.Request{
+		Text:         "Totta kai!",
+		VoiceID:      "voice-123",
+		Speed:        0.85,
+		LanguageCode: "fi",
+		Task:         "convo_playback",
+	})
+	if err != nil {
+		t.Fatalf("Synthesize: %v", err)
+	}
+	if res.Provider != "elevenlabs-tts:eleven_flash_v2_5" {
+		t.Errorf("provider id = %q", res.Provider)
+	}
+	if !strings.HasPrefix(string(res.Audio), "\xff\xfb\x90") {
+		t.Errorf("expected mp3 audio bytes, got %d bytes", len(res.Audio))
+	}
+}
+
+func TestElevenLabsProvider_RejectsMissingVoice(t *testing.T) {
+	p := tts.NewElevenLabsProvider("test-eleven-key", nil)
+	_, err := p.Synthesize(context.Background(), tts.Request{
+		Text: "hello",
+		Task: "convo_playback",
+	})
+	if got := tts.ClassOf(err); got != tts.ErrorClassClientError {
+		t.Errorf("ClassOf = %q, want http_4xx for missing voice", got)
 	}
 }
 

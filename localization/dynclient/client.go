@@ -25,6 +25,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -32,6 +33,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
+	"github.com/team-kielo-app/kielo-shared/locale"
 
 	"github.com/team-kielo-app/kielo-shared/observe/httputil"
 )
@@ -124,12 +127,37 @@ type UpsertResponse struct {
 	Inserted bool                `json:"inserted"`
 }
 
+// ErrUnsupportedLanguage is returned instead of attempting a write whose
+// language_code cannot satisfy the localization.languages foreign key. Callers
+// that fill translations opportunistically should treat it as "skip", not as a
+// failure — and must not retry, since no retry can make the locale supported.
+var ErrUnsupportedLanguage = errors.New("dynclient: unsupported language_code")
+
 // Upsert posts one row. Returns the persisted row + a bool that
 // distinguishes a fresh insert from an update on an existing
 // row. ctx deadlines are honored by the underlying http.Client.
 func (c *Client) Upsert(ctx context.Context, req UpsertRequest) (*UpsertResponse, error) {
 	if c == nil {
 		return nil, fmt.Errorf("dynclient: nil client")
+	}
+	// localization.dynamic_translations.language_code is a foreign key onto
+	// localization.languages, which kielo-localization reconciles from
+	// locale.AllSupportLocales at boot. So an unsupported code cannot be
+	// persisted, and sending it buys nothing but a 500 and a log line.
+	//
+	// Refusing here rather than at each call site because every autotranslate
+	// seam funnels through this method: seam_autotranslate_comms hit it with
+	// "fa" (Persian — in rtlLanguages but deliberately NOT in
+	// languageDisplayNames) across ui.string, notification.title and
+	// notification.body, and seam_autotranslate_content had already done the
+	// same with cs/sl/fa on paragraph translations.
+	//
+	// ErrUnsupportedLanguage is typed so callers can tell "we don't serve this
+	// locale" apart from "the write failed". Seams treat it as a skip; nothing
+	// should log it as a fault, and nothing should retry it — retrying cannot
+	// make the locale supported.
+	if !locale.IsSupportedSupportLanguage(req.LanguageCode) {
+		return nil, fmt.Errorf("%w: %q", ErrUnsupportedLanguage, req.LanguageCode)
 	}
 	body, err := json.Marshal(req)
 	if err != nil {

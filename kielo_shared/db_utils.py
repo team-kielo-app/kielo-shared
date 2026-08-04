@@ -591,7 +591,12 @@ def register_search_path_listener(
             return
         cursor = dbapi_connection.cursor()
         try:
-            cursor.execute(f"SET search_path TO {static_normalized}")
+            cursor.execute(  # guc-session-ok: "connect" hook — this engine owns the
+                # connection from birth for its whole lifetime, and the
+                # "begin" hook below re-applies SET LOCAL every transaction,
+                # so nothing is ever inherited from another client.
+                f"SET search_path TO {static_normalized}"
+            )
         finally:
             cursor.close()
 

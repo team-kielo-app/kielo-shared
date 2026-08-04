@@ -17,6 +17,7 @@ package translateprovider
 
 import (
 	"context"
+	"strings"
 
 	"github.com/team-kielo-app/kielo-shared/localization"
 	sharedtranslation "github.com/team-kielo-app/kielo-shared/translation"
@@ -70,10 +71,18 @@ func (p *Provider) TranslateBatch(
 		return nil, nil
 	}
 	texts := make([]string, len(items))
+	// Parallel hint array. Empty string means "no hint for this item"; the
+	// client omits the whole array when every entry is empty, so the wire
+	// payload for un-hinted batches is byte-identical to the pre-context form
+	// and their LLM cache entries stay valid.
+	contexts := make([]string, len(items))
 	for i, item := range items {
 		texts[i] = item.Text
+		contexts[i] = translationContextHint(item.Context)
 	}
-	translated := p.client.TranslateBatch(ctx, texts, opts.SourceLocale, opts.TargetLocale)
+	translated := p.client.TranslateBatchWithContexts(
+		ctx, texts, contexts, opts.SourceLocale, opts.TargetLocale,
+	)
 	// Underlying client returns nil on full-batch failure — seam treats
 	// that as provider_error.
 	if len(translated) == 0 {
@@ -91,4 +100,32 @@ func (p *Provider) TranslateBatch(
 		}
 	}
 	return out, nil
+}
+
+// translationContextHint renders a TranslationItem.Context map into the short
+// natural-language hint the LLM backend consumes.
+//
+// Deliberately a plain sentence rather than serialized JSON: it is injected
+// into a prompt, and the engine's contract is that the hint is read for
+// meaning and never echoed. Only the keys the seam actually sets are
+// recognized, so an unrelated Context payload cannot leak arbitrary text into
+// a prompt.
+func translationContextHint(meta map[string]any) string {
+	if len(meta) == 0 {
+		return ""
+	}
+	key, _ := meta["key"].(string)
+	namespace, _ := meta["namespace"].(string)
+	key = strings.TrimSpace(key)
+	namespace = strings.TrimSpace(namespace)
+	switch {
+	case key != "" && namespace != "":
+		return "UI string " + key + " (" + namespace + ")"
+	case key != "":
+		return "UI string " + key
+	case namespace != "":
+		return "UI string in " + namespace
+	default:
+		return ""
+	}
 }

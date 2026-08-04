@@ -270,6 +270,16 @@ class ArticleVersionIngestionWire(BaseModel):
     version_number: int
 
 
+class Asset(BaseModel):
+    duration: float | None = None
+    height: int | None = None
+    mime_type: str | None = None
+    slug: str
+    thumbnail_url: str | None = None
+    video_url: str
+    width: int | None = None
+
+
 class AuditLog(BaseModel):
     action: str
     entity_id: UUID_aliased
@@ -886,6 +896,9 @@ class CommsUserSearchHit(BaseModel):
 
 
 class CommunicationLog(BaseModel):
+    AllowContentRepush: bool
+    ContentID: str
+    ContentType: str
     CreatedAt: AwareDatetime
     DeliveryID: UUID_aliased | None = None
     EventType: str
@@ -1119,6 +1132,15 @@ class ConversationSessionMeta(BaseModel):
 class ConversationSetting(BaseModel):
     background: str
     location: str
+
+
+class ConversationSkillScore(BaseModel):
+    score: float
+    skill_key: str
+
+
+class ConversationSkillScoreV3(ConversationSkillScore):
+    pass
 
 
 class ConversationUserLevel(BaseModel):
@@ -1706,6 +1728,14 @@ class DailyChallengePendingAccepted(BaseModel):
     job_id: UUID_aliased | None = Field(None, title="Job Id")
     stage: str | None = Field(None, title="Stage")
     status: str = Field(..., title="Status")
+
+
+class DailyChallengePendingV3(BaseModel):
+    challenge_date: str
+    event_stream_path: str | None = None
+    job_id: str | None = None
+    stage: str | None = None
+    status: str
 
 
 class DailyChallengeV3(BaseModel):
@@ -2956,11 +2986,15 @@ class LearningArcStage(BaseModel):
 
 
 class LearningItemV3(BaseModel):
+    correct_count: int
     display_text: str | None = None
     is_saved: bool | None = None
     item_details: dict[str, Any] | None = None
     item_id: str
     item_type: str
+    next_review_at: str | None = None
+    proficiency: float
+    review_count: int
     status: str | None = None
     updated_at: str | None = None
 
@@ -2970,7 +3004,11 @@ class LearningItemsCountsResponse(BaseModel):
     average_saved_cefr: float
     average_vocabulary_cefr: float
     base_words: int
+    due_items: int
     grammar_concepts: int
+    known_items: int
+    learning_items: int
+    oldest_due_at: str | None = None
     saved_items: int
 
 
@@ -4340,6 +4378,7 @@ class SavedItemsCountsResponseV3(SavedItemsCountsResponse):
 class SavedItemsDashboardResponse(BaseModel):
     counts: dict[str, int]
     recent_items: dict[str, list[SavedItem]]
+    totals: dict[str, int] | None = None
 
 
 class SavedItemsDashboardResponseV3(SavedItemsDashboardResponse):
@@ -4878,6 +4917,10 @@ class SingletonCurriculumTracksV3(BaseModel):
     data: CurriculumTracksV3
 
 
+class SingletonDailyChallengePendingV3(BaseModel):
+    data: DailyChallengePendingV3
+
+
 class SingletonDailyChallengeV3(BaseModel):
     data: DailyChallengeV3
 
@@ -5346,6 +5389,27 @@ class SingletonstringList(BaseModel):
     data: list[str]
 
 
+class SpeechReferenceAudioRequest(BaseModel):
+    language: str
+    text: str
+
+
+class SpeechTranscriptionRequest(BaseModel):
+    audio_base64: str
+    content_type: str
+    expected_text: str
+    language: str
+
+
+class SpeechTranscriptionResponse(BaseModel):
+    confidence: float
+    keyterms_used: list[str]
+    language: str
+    latency_ms: int
+    provider: str
+    transcript: str
+
+
 class SpellingChallengeExercise(BaseModel):
     accept_typos: bool | None = Field(False, title="Accept Typos")
     audio_text: str | None = Field("", title="Audio Text")
@@ -5568,6 +5632,14 @@ class SurfacesResponse(BaseModel):
     next_page_key: str | None = None
 
 
+class TTSBaseWordStreamSession(BaseModel):
+    cache_hit: bool | None = None
+    expires_at: str
+    job_id: str | None = None
+    session_id: str
+    token: str
+
+
 class TTSBaseWordStreamSessionResponse(BaseModel):
     cache_hit: bool | None = Field(False, title="Cache Hit")
     expires_at: AwareDatetime = Field(..., title="Expires At")
@@ -5627,18 +5699,9 @@ class TTSParagraphGenerateResponse(BaseModel):
     status: Status8 = Field(..., title="Status")
 
 
-class TTSParagraphJobStatusResponse(BaseModel):
-    audio_url: str | None = Field(None, title="Audio Url")
-    error_message: str | None = Field(None, title="Error Message")
-    job_id: UUID_aliased = Field(..., title="Job Id")
-    media_id: UUID_aliased | None = Field(None, title="Media Id")
-    paragraph_id: UUID_aliased = Field(..., title="Paragraph Id")
-    stage: str | None = Field(None, title="Stage")
-    status: Status1 | None = Field(None, title="Status")
-
-
-class TTSParagraphStreamSessionResponse(TTSBaseWordStreamSessionResponse):
-    pass
+class TTSWordTiming(BaseModel):
+    end_ms: int = Field(..., title="End Ms")
+    start_ms: int = Field(..., title="Start Ms")
 
 
 class Tag(BaseModel):
@@ -6505,6 +6568,7 @@ class WordScrambleItem(BaseModel):
 
 class FieldTranslateBatchRequest(BaseModel):
     batch_size: int | None = Field(16, title="Batch Size")
+    contexts: list[str] | None = Field(None, title="Contexts")
     source_lang: str = Field(..., title="Source Lang")
     target_lang: str = Field(..., title="Target Lang")
     texts: list[str] | None = Field(None, title="Texts")
@@ -6814,6 +6878,8 @@ class ConversationDiscoveryScenario(BaseModel):
 
 class ConversationScenario(BaseModel):
     agent_avatar_url: str | None = None
+    agent_name: str | None = None
+    agent_role: str | None = None
     ambient_audio_url: str | None = None
     avatar_wave_reversed: bool | None = None
     category: str | None = None
@@ -6825,6 +6891,7 @@ class ConversationScenario(BaseModel):
     id: str
     is_featured: bool
     learning_language_code: str | None = None
+    learning_objective: str | None = None
     localization: LocalizationStatus | None = None
     sample_transcript: list[str] | None = None
     scene_image_url: str | None = None
@@ -7315,6 +7382,8 @@ class ProgressSummary(BaseModel):
     achievements_earned_count: int
     articles_read_count: int
     category_progress: list[CategoryProgress]
+    conversation_cefr: str | None = None
+    conversation_skills: list[ConversationSkillScore]
     exercises_completed_count: int
     learned_words_count: int
     learning_words_count: int
@@ -7331,6 +7400,8 @@ class ProgressSummaryV3(BaseModel):
     achievements_earned_count: int
     articles_read_count: int
     category_progress: list[CategoryProgressV3]
+    conversation_cefr: str | None = None
+    conversation_skills: list[ConversationSkillScoreV3]
     exercises_completed_count: int
     learned_words_count: int
     learning_words_count: int
@@ -7644,6 +7715,10 @@ class SingletonSemanticSearchResponse(BaseModel):
     data: SemanticSearchResponse
 
 
+class SingletonSpeechTranscriptionResponse(BaseModel):
+    data: SpeechTranscriptionResponse
+
+
 class SingletonStaleRowList(BaseModel):
     data: list[StaleRow]
 
@@ -7682,6 +7757,10 @@ class SingletonSubscriptionInfo(BaseModel):
 
 class SingletonSurfacesResponse(BaseModel):
     data: SurfacesResponse
+
+
+class SingletonTTSBaseWordStreamSession(BaseModel):
+    data: TTSBaseWordStreamSession
 
 
 class SingletonTargetedSuggestionsResponse(BaseModel):
@@ -7867,6 +7946,46 @@ class SingletonWhisperModelManifest(BaseModel):
 class StatsChartResponse(BaseModel):
     data: list[TimeSeriesPoint]
     days: int
+
+
+class TTSParagraphJobStatus(BaseModel):
+    audio_url: str | None = None
+    error_message: str | None = None
+    job_id: str
+    media_id: str | None = None
+    paragraph_id: str
+    stage: str | None = None
+    status: str | None = None
+    word_timings: list[TTSWordTiming] | None = None
+
+
+class TTSParagraphJobStatusResponse(BaseModel):
+    audio_url: str | None = Field(None, title="Audio Url")
+    error_message: str | None = Field(None, title="Error Message")
+    job_id: UUID_aliased = Field(..., title="Job Id")
+    media_id: UUID_aliased | None = Field(None, title="Media Id")
+    paragraph_id: UUID_aliased = Field(..., title="Paragraph Id")
+    stage: str | None = Field(None, title="Stage")
+    status: Status1 | None = Field(None, title="Status")
+    word_timings: list[TTSWordTiming] | None = Field(None, title="Word Timings")
+
+
+class TTSParagraphStreamSessionResponse(BaseModel):
+    cache_hit: bool | None = Field(False, title="Cache Hit")
+    expires_at: AwareDatetime = Field(..., title="Expires At")
+    job_id: UUID_aliased | None = Field(None, title="Job Id")
+    session_id: UUID_aliased = Field(..., title="Session Id")
+    token: str = Field(..., title="Token")
+    word_timings: list[TTSWordTiming] | None = Field(None, title="Word Timings")
+
+
+class TTSStreamSession(BaseModel):
+    cache_hit: bool | None = None
+    expires_at: str
+    job_id: str | None = None
+    session_id: str
+    token: str
+    word_timings: list[TTSWordTiming] | None = None
 
 
 class TopicListGenerationJobResponse(BaseModel):
@@ -8344,6 +8463,14 @@ class SingletonDictionaryLookupResponse(BaseModel):
 
 class SingletonLearningSession(BaseModel):
     data: LearningSession
+
+
+class SingletonTTSParagraphJobStatus(BaseModel):
+    data: TTSParagraphJobStatus
+
+
+class SingletonTTSStreamSession(BaseModel):
+    data: TTSStreamSession
 
 
 class SingletonTranslationKey(BaseModel):

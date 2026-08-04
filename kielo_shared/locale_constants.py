@@ -86,6 +86,61 @@ def language_display_name(code: str | None, fallback: str = "") -> str:
     return LANGUAGE_DISPLAY_NAMES.get(normalized, fallback or normalized)
 
 
+# Non-ISO-639-1 spellings folded onto the canonical two-letter code.
+#
+# Mirrors languageCodeAliases in the Go kielo-shared/locale package — the two
+# MUST stay identical, or the same request normalizes differently depending on
+# which service handles it.
+#
+# Splitting on "-" already covers region and script subtags ("ar-SA", "pt-BR",
+# "zh-Hans"), but three-letter ISO 639-2/639-3 codes were left untouched even
+# though real clients send them. That matters because
+# localization.dynamic_translations.language_code is a foreign key onto
+# localization.languages: an unfolded code makes the translation cache write
+# fail, and because that write is fail-soft the failure is silent — the
+# paragraph is served, never cached, and re-translated on every subsequent
+# request forever. Prod hit this with "ars" while "ar-SA" worked.
+#
+# Only unambiguous folds onto supported languages are listed. Codes for
+# languages Kielo has no content for are deliberately left alone so support
+# checks still report False instead of pretending we can serve them.
+LANGUAGE_CODE_ALIASES: dict[str, str] = {
+    "vn": "vi",  # country code, not a language code; seen on real accounts
+    # ISO 639-2/T and 639-2/B for the supported set.
+    "ara": "ar",
+    "ben": "bn",
+    "deu": "de",
+    "ger": "de",
+    "eng": "en",
+    "spa": "es",
+    "fin": "fi",
+    "fra": "fr",
+    "fre": "fr",
+    "hin": "hi",
+    "hun": "hu",
+    "ita": "it",
+    "jpn": "ja",
+    "kor": "ko",
+    "nld": "nl",
+    "dut": "nl",
+    "pol": "pl",
+    "por": "pt",
+    "rus": "ru",
+    "srp": "sr",
+    "swe": "sv",
+    "tha": "th",
+    "tur": "tr",
+    "ukr": "uk",
+    "vie": "vi",
+    "zho": "zh",
+    "chi": "zh",
+    # Macrolanguage members that collapse without ambiguity.
+    "arb": "ar",
+    "ars": "ar",
+    "cmn": "zh",
+}
+
+
 def normalize_locale_code(code: str | None) -> str:
     """Normalize locale-like input to the platform's base language code."""
     if not isinstance(code, str):
@@ -95,7 +150,7 @@ def normalize_locale_code(code: str | None) -> str:
         return ""
 
     base = code.split("-", 1)[0].strip().lower()
-    return "vi" if base == "vn" else base
+    return LANGUAGE_CODE_ALIASES.get(base, base)
 
 
 def normalize_learning_language_code(code: str | None) -> str:
