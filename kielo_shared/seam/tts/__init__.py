@@ -7,6 +7,7 @@ is the choke point for outbound TTS HTTP traffic, NOT a kitchen sink.
 
 Vertical slice today:
   * OpenAITTSProvider — POST to api.openai.com/v1/audio/speech.
+  * ElevenLabsTTSProvider — POST to ElevenLabs streaming TTS.
   * MetricsDecorator   — emits `kielo_tts_calls_total` mirroring the
     Go-side family registered in
     `kielo-shared/observe/metrics/tts.go` so cross-process dashboards
@@ -36,12 +37,14 @@ from kielo_shared.seam.tts.types import (
     class_of,
 )
 from kielo_shared.seam.tts.openai_provider import OpenAITTSProvider
+from kielo_shared.seam.tts.elevenlabs_provider import ElevenLabsTTSProvider
 from kielo_shared.seam.tts.metrics import MetricsDecorator, with_metrics
 
 
 __all__ = [
     "Error",
     "ErrorClass",
+    "ElevenLabsTTSProvider",
     "MetricsDecorator",
     "OpenAITTSProvider",
     "Provider",

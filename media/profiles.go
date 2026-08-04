@@ -28,10 +28,17 @@ const (
 // VariantSpec declares one rendition the processor should produce. The set is
 // per-profile (per use-case), not inferred from MIME type alone.
 type VariantSpec struct {
-	Name     string // "main" | "preview" | "thumb"
+	Name     string // "main" | "preview" | "thumb" | "mobile"
 	MaxWidth int    // 0 = keep source width
-	Quality  int    // codec quality (webp/mp3/…); 0 = processor default
-	Format   string // "webp" | "mp3" | "mp4"; "" = keep source
+	// MaxShortSide (mp4 only) caps the SHORT side of the frame, preserving
+	// orientation: 720 means 1280x720 for landscape AND 720x1280 for portrait.
+	// (Capping a portrait 1080x1920 reel's *height* at 720 is what produced
+	// the blurry 406x720 rendition — docs/ktv-video-pipeline.md §5.)
+	// 0 = processor default height cap (legacy behavior).
+	MaxShortSide int
+	MaxFps       int    // mp4 only: frame-rate cap; 0 = keep source fps
+	Quality      int    // codec quality (webp/mp3/CRF for mp4); 0 = processor default
+	Format       string // "webp" | "mp3" | "mp4"; "" = keep source
 }
 
 // RetentionPolicy is a profile's lifecycle contract — the single source of
@@ -88,11 +95,15 @@ type MediaProfile struct {
 	// SkipOriginalArchive suppresses the processor's unconditional archival of
 	// the full-resolution source as variant "original". Default false = archive.
 	SkipOriginalArchive bool
-	Access              AccessClass
-	Retention           RetentionPolicy
-	GDPR                GDPRClass
-	Alerts              AlertPolicy
-	LegalHoldable       bool
+	// DisableHashDedup prevents two owners from sharing one mutable storage
+	// location. Use it for assets that are relocated into an owner-specific
+	// path after upload; a shared media_id cannot be relocated for both owners.
+	DisableHashDedup bool
+	Access           AccessClass
+	Retention        RetentionPolicy
+	GDPR             GDPRClass
+	Alerts           AlertPolicy
+	LegalHoldable    bool
 }
 
 const (
@@ -155,10 +166,20 @@ var profiles = map[string]MediaProfile{
 		PathPrefix: "kielotv", IncludeEntityID: true,
 		MaxUploadBytes: 4 * gib,
 		// No "main" transcode: the toolbox-produced original IS the deliverable
-		// (content-service serves variant priority original,main — see
-		// docs/ktv-video-pipeline.md §5). Re-encoding it to 720p was pure waste.
-		// Legacy rows keep their main variant; "main" remains the read fallback.
-		Variants:  []VariantSpec{{Name: "preview", MaxWidth: 300, Format: "webp"}},
+		// for large screens. "hls" is the primary playback variant — an
+		// adaptive ladder (processor-owned tiers, capped master for
+		// constrained devices) whose master playlist is served PATH-STYLE
+		// (StreamingVariantURLForRequest) so relative segment URIs resolve.
+		// "mobile" (720x1280@30 progressive mp4) is the simple fallback; the
+		// 1080x1920@60 ~7.2 Mbps original exhausted MediaCodec buffers on
+		// low-RAM Android (prod OOM cluster 2026-07). content-service serves
+		// priority hls,mobile,original,main so unbackfilled rows degrade
+		// gracefully. Legacy rows keep their main variant as last fallback.
+		Variants: []VariantSpec{
+			{Name: "preview", MaxWidth: 300, Format: "webp"},
+			{Name: "mobile", MaxShortSide: 720, MaxFps: 30, Quality: 26, Format: "mp4"},
+			{Name: "hls", Format: "hls"},
+		},
 		Access:    AccessSignedCDN,
 		Retention: RetentionPolicy{DeleteOnOwnerDelete: true, OrphanGrace: 14 * day},
 		GDPR:      GDPRClass{SubjectFrom: "none", DedupAcrossSubjects: true},
@@ -192,13 +213,41 @@ var profiles = map[string]MediaProfile{
 		// uploads with related_entity_type "KTVWorkflowVariant" — no legacy
 		// EntityType const; resolved via the alias table). Like kielotv-video,
 		// the toolbox output IS the deliverable: no main transcode.
-		Key:        "kielotv-workflow-variant",
-		PathPrefix: "kielotv", IncludeEntityID: true,
+		Key:              "kielotv-workflow-variant",
+		DisableHashDedup: true,
+		PathPrefix:       "kielotv", IncludeEntityID: true,
 		MaxUploadBytes: 4 * gib,
-		Variants:       []VariantSpec{{Name: "preview", MaxWidth: 300, Format: "webp"}},
-		Access:         AccessSignedCDN,
-		Retention:      RetentionPolicy{DeleteOnOwnerDelete: true, OrphanGrace: 14 * day},
-		GDPR:           GDPRClass{SubjectFrom: "none", DedupAcrossSubjects: true},
+		Variants: []VariantSpec{
+			{Name: "preview", MaxWidth: 300, Format: "webp"},
+			{Name: "mobile", MaxShortSide: 720, MaxFps: 30, Quality: 26, Format: "mp4"},
+			{Name: "hls", Format: "hls"},
+		},
+		Access:    AccessSignedCDN,
+		Retention: RetentionPolicy{DeleteOnOwnerDelete: true, OrphanGrace: 14 * day},
+		GDPR:      GDPRClass{SubjectFrom: "none", DedupAcrossSubjects: true},
+	},
+	"app-asset": {
+		// Platform-owned media shipped to app clients by stable slug (intro
+		// video, onboarding clips, …), uploaded from the admin UI and
+		// resolved via content-service GET /api/v3/app-assets/{slug}
+		// (slug = original filename base). Replaces loose objects hand-placed
+		// in the bucket (assets/kielo-intro.mp4) that no lifecycle, rendition,
+		// or serving policy could reach. Video-only until the image processor
+		// learns to skip video-format specs.
+		Key:            "app-asset",
+		PathPrefix:     "app-assets",
+		AllowedMimes:   []string{"video/mp4", "video/quicktime", "video/webm"},
+		MaxUploadBytes: 2 * gib,
+		Variants: []VariantSpec{
+			{Name: "preview", MaxWidth: 300, Format: "webp"},
+			{Name: "mobile", MaxShortSide: 720, MaxFps: 30, Quality: 26, Format: "mp4"},
+			{Name: "hls", Format: "hls"},
+		},
+		Access: AccessSignedCDN,
+		// Keep indefinitely; never orphan-reap — app assets are referenced by
+		// shipped clients via slug, not by DB links the reconciler can see.
+		Retention: RetentionPolicy{},
+		GDPR:      GDPRClass{SubjectFrom: "none", DedupAcrossSubjects: true},
 	},
 	"kielotv-audio": {
 		Key: "kielotv-audio", EntityType: EntityTypeKieloTVAudio,
@@ -339,6 +388,7 @@ var relatedEntityAliases = map[string]string{
 	"support-attachment": "support-attachment",
 	"FeedbackMessage":    "support-attachment",
 	"KTVWorkflowVariant": "kielotv-workflow-variant",
+	"AppAsset":           "app-asset",
 }
 
 // ProfileForRelatedEntity resolves a profile from a related_entity_type wire

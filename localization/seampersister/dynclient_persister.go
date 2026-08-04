@@ -24,6 +24,7 @@ package seampersister
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 
@@ -117,6 +118,20 @@ func (p *DynClient) Persist(ctx context.Context, ref localization.SourceRef, tar
 		TranslatorSource: p.translatorSource,
 	}
 	if _, err := p.client.Upsert(ctx, req); err != nil {
+		// An unsupported locale is not a fault, so it must not raise the WARN
+		// rate this seam is alerted on. We simply have no languages row for it,
+		// nothing is retryable, and the reader already has their text. Logged at
+		// DEBUG so the demand is still discoverable without looking like an
+		// incident — a burst of these means "consider supporting this locale",
+		// not "the persister is broken".
+		if errors.Is(err, dynclient.ErrUnsupportedLanguage) {
+			p.logger.DebugContext(ctx, "seam dynclient persister skipped unsupported locale",
+				slog.String("namespace", ref.Namespace),
+				slog.String("source_id", ref.SourceID),
+				slog.String("target_locale", targetLocale),
+			)
+			return nil
+		}
 		// Swallow per the TranslationPersister contract. The
 		// translation already returned to the user; losing this
 		// persistence row only means the next request re-runs the

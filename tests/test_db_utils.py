@@ -182,6 +182,9 @@ def test_register_search_path_listener_sync_engine_uses_cursor():
     # Round E used for the Go template (ZE.5 gate at baseline 0) plus
     # NNN.5's strict admin-endpoint gate (kielolearn-engine a98f0c7).
     dbapi_conn.cursor.return_value.execute.assert_called_once_with(
+        # guc-session-ok: asserts the "connect" hook's session-scoped SET, which
+        # is correct there — the engine owns that connection for its lifetime and
+        # the "begin" hook re-applies SET LOCAL per transaction.
         "SET search_path TO public,users"
     )
     dbapi_conn.cursor.return_value.close.assert_called_once()

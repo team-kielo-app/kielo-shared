@@ -98,12 +98,14 @@ def test_provider_propagates_api_key_to_env(monkeypatch, stub_deepgram):
     assert os.environ.get("DEEPGRAM_API_KEY") == "test-key"
 
 
-def test_provider_skips_keyterms_when_empty(stub_deepgram):
+def test_provider_passes_empty_keyterm_list_not_none(stub_deepgram):
+    # The livekit deepgram plugin does `list(keyterm)` unguarded, so passing
+    # None crashes session creation. With no keyterms we must pass [], not None.
     p = DeepgramLiveKitSTTProvider("test-key")
     p.create_realtime_stt(
         RealtimeSTTRequest(task="convo_realtime_stt", model="nova-3", language="fi"),
     )
-    assert stub_deepgram["keyterm"] is None
+    assert stub_deepgram["keyterm"] == []
 
 
 def test_provider_id_is_stable_string(stub_deepgram):

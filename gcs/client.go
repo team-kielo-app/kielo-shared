@@ -262,6 +262,39 @@ func (c *Client) DownloadToBytes(ctx context.Context, bucketName, objectName str
 	return data, nil
 }
 
+// ObjectSize returns the byte size of an object in GCS.
+//
+// Added 2026-08-04 for the presigned-URL upload flow. When a client PUTs
+// straight to a signed URL the API never sees the bytes, so nothing ever
+// recorded how large the object was: measured on prod, EVERY client-uploaded
+// asset had size 0 (all 76 UserAvatar rows, all 877 ArticleContentMedia rows),
+// while server-written media (2,550 RoadmapLessonStepAudio, 1,330
+// ParagraphAudio, 602 KieloTVVideo) was fully populated — because those paths
+// upload the bytes themselves and already know the length.
+//
+// Returns storage.ErrObjectNotExist unwrapped so callers can distinguish "not
+// uploaded yet" from a transport failure; the upload-complete caller treats
+// both as non-fatal, since the upload itself already succeeded and the size is
+// bookkeeping.
+func (c *Client) ObjectSize(ctx context.Context, bucketName, objectName string) (int64, error) {
+	l := c.logger.With("operation", "ObjectSize", "bucket", bucketName, "object", objectName)
+
+	statCtx, cancel := context.WithTimeout(ctx, time.Second*15)
+	defer cancel()
+
+	attrs, err := c.Client.Bucket(bucketName).Object(objectName).Attrs(statCtx)
+	if err != nil {
+		if errors.Is(err, storage.ErrObjectNotExist) {
+			l.Warn("Object does not exist; cannot determine size")
+			return 0, err
+		}
+		l.Error("Failed to stat GCS object", "error", err)
+		return 0, fmt.Errorf("Object(%q).Attrs: %w", objectName, err)
+	}
+	l.Debug("Object size resolved", "size_bytes", attrs.Size)
+	return attrs.Size, nil
+}
+
 // DeleteBlob deletes a blob from GCS
 func (c *Client) DeleteBlob(ctx context.Context, bucketName, objectName string) error {
 	l := c.logger.With("operation", "DeleteBlob", "bucket", bucketName, "object", objectName)

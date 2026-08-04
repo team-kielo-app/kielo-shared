@@ -34,6 +34,13 @@ type batchRequest struct {
 	Texts      []string `json:"texts"`
 	SourceLang string   `json:"source_lang"`
 	TargetLang string   `json:"target_lang"`
+	// Optional per-text disambiguation hints, parallel to Texts. Omitted
+	// entirely when empty (omitempty) so an un-hinted batch serializes exactly
+	// as before — which matters because the engine keys its LLM cache off the
+	// texts, and a changed payload shape would otherwise orphan every existing
+	// entry. Only the Gemini/LLM backend can act on these; opus-mt is an NMT
+	// model that cannot take instructions and ignores the field.
+	Contexts []string `json:"contexts,omitempty"`
 }
 
 type batchResponse struct {
@@ -94,6 +101,18 @@ func (c *Client) Translate(ctx context.Context, text, sourceLang, targetLang str
 // falling back to the source text — the existing pattern in
 // kielo-convo + kielo-communications.
 func (c *Client) TranslateBatch(ctx context.Context, texts []string, sourceLang, targetLang string) []string {
+	return c.TranslateBatchWithContexts(ctx, texts, nil, sourceLang, targetLang)
+}
+
+// TranslateBatchWithContexts is TranslateBatch plus per-text disambiguation
+// hints parallel to `texts` (nil, or a shorter slice, means no hint).
+//
+// Additive rather than a signature change on TranslateBatch: that method has
+// ~47 call sites across four submodules, none of which have a hint to pass.
+// Only the localization seam knows the UI key behind a string, so only its
+// provider adapter calls this. Hints reach the LLM backend only —
+// see batchRequest.Contexts.
+func (c *Client) TranslateBatchWithContexts(ctx context.Context, texts, contexts []string, sourceLang, targetLang string) []string {
 	if !c.IsAvailable() || len(texts) == 0 {
 		return nil
 	}
@@ -103,9 +122,11 @@ func (c *Client) TranslateBatch(ctx context.Context, texts []string, sourceLang,
 	case BackendPassthrough:
 		return slices.Clone(texts)
 	case BackendOpusMT:
+		// opus-mt cannot use hints — drop them rather than send a field the
+		// NMT service would have to ignore.
 		return c.dispatchOpusMT(ctx, texts, sourceLang, targetLang)
 	case BackendGemini:
-		return c.dispatchGemini(ctx, texts, sourceLang, targetLang)
+		return c.dispatchGemini(ctx, texts, contexts, sourceLang, targetLang)
 	default:
 		return nil
 	}
@@ -126,12 +147,14 @@ func (c *Client) dispatchOpusMT(ctx context.Context, texts []string, sourceLang,
 // dispatchGemini POSTs to kielolearn-engine /internal/translate-batch.
 // Same payload + response shape as opus-mt so the wire format is
 // uniform across backends.
-func (c *Client) dispatchGemini(ctx context.Context, texts []string, sourceLang, targetLang string) []string {
+func (c *Client) dispatchGemini(ctx context.Context, texts, contexts []string, sourceLang, targetLang string) []string {
 	if strings.TrimSpace(c.engineURL) == "" {
 		// EEE routed here but engine URL is missing — degrade.
 		return nil
 	}
-	return c.postBatch(ctx, c.engineURL+"/internal/translate-batch", texts, sourceLang, targetLang)
+	return c.postBatchWithContexts(
+		ctx, c.engineURL+"/internal/translate-batch", texts, contexts, sourceLang, targetLang,
+	)
 }
 
 // postBatch sends the wire-uniform translation batch request and
@@ -139,8 +162,26 @@ func (c *Client) dispatchGemini(ctx context.Context, texts []string, sourceLang,
 // helper shared by the two backend dispatch functions so the HTTP
 // plumbing isn't duplicated.
 func (c *Client) postBatch(ctx context.Context, url string, texts []string, sourceLang, targetLang string) []string {
+	return c.postBatchWithContexts(ctx, url, texts, nil, sourceLang, targetLang)
+}
+
+// postBatchWithContexts is postBatch plus the optional hint array. Hints are
+// dropped when every entry is blank so the serialized body — and therefore the
+// engine's cache key — is unchanged for un-hinted batches.
+func (c *Client) postBatchWithContexts(ctx context.Context, url string, texts, contexts []string, sourceLang, targetLang string) []string {
+	hasHint := false
+	for _, h := range contexts {
+		if strings.TrimSpace(h) != "" {
+			hasHint = true
+			break
+		}
+	}
+	if !hasHint {
+		contexts = nil
+	}
 	payload, err := json.Marshal(batchRequest{
 		Texts:      texts,
+		Contexts:   contexts,
 		SourceLang: sourceLang,
 		TargetLang: targetLang,
 	})

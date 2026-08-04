@@ -215,6 +215,16 @@ func TestComputeExpiresAt_ZeroAndTTL(t *testing.T) {
 	})
 }
 
+func TestKieloTVWorkflowVariantDisablesHashDedup(t *testing.T) {
+	profile, ok := ProfileFor("kielotv-workflow-variant")
+	if !ok {
+		t.Fatal("kielotv-workflow-variant profile missing")
+	}
+	if !profile.DisableHashDedup {
+		t.Fatal("relocatable workflow media must not share a media_id across workflows")
+	}
+}
+
 func TestAssetMetadataFromJSON_EmptyAndMalformed(t *testing.T) {
 	t.Run("nil input returns zero value, no error", func(t *testing.T) {
 		m, err := AssetMetadataFromJSON(nil)

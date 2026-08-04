@@ -91,6 +91,32 @@ func PreferredVariantURLForRequest(
 	return PreferredVariantURL(base, variants, keyPriority...)
 }
 
+// StreamingVariantURLForRequest returns a PATH-STYLE, request-contextualized
+// URL for a streaming-manifest variant (HLS master playlist). Streaming
+// manifests reference their segments with relative URIs, which players
+// resolve against the manifest URL — so unlike PreferredVariantURLForRequest
+// this never emits the emulator's JSON-API (?alt=media, escaped-object) form.
+// Returns "" when the variant is absent so callers can fall through to the
+// progressive-mp4 priority chain.
+func StreamingVariantURLForRequest(
+	requestHost, storageBucket, storagePathPrefix string,
+	variants map[string]Variant,
+	key string,
+) string {
+	v, ok := variants[key]
+	if !ok || strings.TrimSpace(v.Path) == "" {
+		return ""
+	}
+	// Host contextualization only understands storage-API-shaped URLs, so
+	// build the standard base, rewrite the host, THEN normalize to path-style.
+	base := ServeBaseURL(storageBucket, storagePathPrefix)
+	if base == "" {
+		return ""
+	}
+	base = gcs.PathStyleFromServeBase(gcs.ContextualizeStorageURL(requestHost, base))
+	return strings.TrimRight(base, "/") + "/" + strings.TrimLeft(v.Path, "/")
+}
+
 // PreferredVariantURL returns the URL of the first matching variant in
 // keyPriority order. Variants whose Path is empty are skipped.
 //

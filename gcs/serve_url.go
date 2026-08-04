@@ -44,6 +44,40 @@ func BuildServeBaseURL(bucket, pathPrefix, cdnBaseURL string) string {
 	return fmt.Sprintf("https://storage.googleapis.com/%s/%s", bucket, prefix)
 }
 
+// PathStyleFromServeBase converts a storage-API-shaped serve base
+// (…/storage/v1/b/<bucket>/o/<prefix>/) into its PATH-STYLE equivalent
+// (scheme://host/<bucket>/<prefix>/); any other base (prod GCS public URL,
+// CDN base — both already path-style) passes through unchanged.
+//
+// Required for HLS/DASH playlists: players resolve a playlist's RELATIVE
+// segment URIs against the playlist URL, which only works when the object
+// path is genuine path segments — the storage-API object form
+// (/o/<escaped-object>?alt=media) collapses the object into one escaped
+// segment. fake-gcs-server serves the path-style route as raw bytes when the
+// request Host matches -public-host, which holds for device traffic (devices
+// reach the emulator via HOST_IP). Call AFTER ContextualizeStorageURL — that
+// helper only rewrites hosts on storage-API-shaped URLs.
+func PathStyleFromServeBase(serveBase string) string {
+	base := strings.TrimSpace(serveBase)
+	if base == "" {
+		return base
+	}
+	parsed, err := url.Parse(base)
+	if err != nil || parsed == nil || !IsStorageAPIPath(parsed.Path) {
+		return base
+	}
+	bucketAndPrefix := strings.TrimPrefix(parsed.Path, StorageAPIPath)
+	bucket, prefix, ok := strings.Cut(bucketAndPrefix, "/o/")
+	if !ok || bucket == "" {
+		return base
+	}
+	prefix = strings.Trim(prefix, "/")
+	if prefix != "" {
+		prefix += "/"
+	}
+	return fmt.Sprintf("%s://%s/%s/%s", parsed.Scheme, parsed.Host, bucket, prefix)
+}
+
 // StorageAPIPath is the GCS JSON API path prefix for object operations.
 const StorageAPIPath = "/storage/v1/b/"
 
