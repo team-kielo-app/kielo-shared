@@ -29,7 +29,7 @@ from __future__ import annotations
 import os
 import re
 from pathlib import Path
-from typing import Any, AsyncIterator
+from typing import Any, AsyncIterator, NoReturn
 
 import pytest
 import pytest_asyncio
@@ -39,6 +39,23 @@ from kielo_shared.localization.seam import source_version_from_text
 asyncpg = pytest.importorskip("asyncpg")
 
 _PREFIX = "convo.evaluation_fallback."
+
+
+def _skip_or_fail(reason: str) -> NoReturn:
+    """Skip normally; FAIL when the caller declared this suite mandatory.
+
+    integration-test's strict mode exports KIELO_TEST_PG_REQUIRED=1 and then
+    treats any skip from this suite as a false green (`require_zero_skips`).
+    That check reports only a count — "skipped 1 mandatory tests" — which says
+    nothing about WHICH precondition was missing. Observed 2026-08-04: a run
+    failed exactly that way and was not reproducible afterwards (both
+    preconditions held, 536 passed / 0 skipped), most likely a concurrent suite
+    emptying localization.dynamic_translations mid-run. Failing with the reason
+    makes the next occurrence self-diagnosing.
+    """
+    if os.environ.get("KIELO_TEST_PG_REQUIRED") == "1":
+        pytest.fail(f"{reason} (mandatory: KIELO_TEST_PG_REQUIRED=1)")
+    pytest.skip(reason)
 
 
 def _dsn() -> str:
@@ -53,9 +70,7 @@ async def real_pool() -> AsyncIterator[Any]:
     try:
         pool = await asyncpg.create_pool(dsn=_dsn(), min_size=1, max_size=2)
     except Exception as exc:
-        if os.environ.get("KIELO_TEST_PG_REQUIRED") == "1":
-            pytest.fail(f"asyncpg.create_pool failed: {exc}")
-        pytest.skip(f"postgres unreachable: {exc}")
+        _skip_or_fail(f"postgres unreachable: {exc}")
     try:
         yield pool
     finally:
@@ -73,7 +88,7 @@ def _convo_canonical_strings() -> set[str]:
         / "evaluation_fallbacks.py"
     )
     if not module.is_file():
-        pytest.skip("kielo-convo checkout not present next to kielo-shared")
+        _skip_or_fail("kielo-convo checkout not present next to kielo-shared")
     text = module.read_text(encoding="utf-8")
     match = re.search(
         r"^_TRANSLATIONS[^=]*=\s*\{$(.*?)^\}$", text, re.M | re.S
@@ -140,7 +155,7 @@ async def test_convo_code_strings_keep_their_curated_locales(real_pool: Any) -> 
         row["resource_id"] for row in await _english_keyed_rows(real_pool)
     }
     if not seeded_ids:
-        pytest.skip("no seeded evaluation-fallback rows in this database")
+        _skip_or_fail("no seeded evaluation-fallback rows in this database")
     missing = [
         english
         for english in sorted(canonical)
