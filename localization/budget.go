@@ -108,6 +108,24 @@ func BudgetSnapshotFromContext(ctx context.Context) BudgetSnapshot {
 	return bc.snapshot()
 }
 
+// DetachBudget returns ctx carrying a FRESH counter, so work done under
+// it is not attributed to the request the ctx came from.
+//
+// Background fills are spawned with context.WithoutCancel, which drops
+// cancellation but preserves every value — including the request's
+// counter. The async seam work then lands on whichever request spawned
+// it, racing that response's header flush: convo's GET /scenarios
+// reported refs=0 when the seam was cold (goroutine slower than the
+// flush) and refs=3 once warm (override-store hit, goroutine faster),
+// for byte-identical requests. That inverts the metric's whole purpose,
+// which is to show that work moved OFF the hot path.
+//
+// Use at every `go`-spawn that inherits a request ctx. WithBudget can't
+// serve here: it deliberately no-ops when a budget is already wired.
+func DetachBudget(ctx context.Context) context.Context {
+	return context.WithValue(ctx, budgetCtxKey{}, &budgetCounters{})
+}
+
 // RecordBudget bumps the counter for `kind` by `n`. No-op when no
 // budget is wired (background workers). The seam calls this internally
 // from Translate / TranslateBatch / the batch phase helpers; external

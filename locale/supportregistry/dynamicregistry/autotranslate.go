@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 
+	"github.com/team-kielo-app/kielo-shared/localization"
 	safego "github.com/team-kielo-app/kielo-shared/observe/safego"
 )
 
@@ -122,7 +123,7 @@ func (r *Registry) queueAutotranslate(ctx context.Context, key, sourceVersion, s
 	if _, loaded := r.autotranslateInflight.LoadOrStore(dedupeKey, struct{}{}); loaded {
 		return
 	}
-	bgCtx := context.WithoutCancel(ctx)
+	bgCtx := localization.DetachBudget(context.WithoutCancel(ctx))
 	safego.Go("dynamicregistry_autotranslate", func() {
 		defer r.autotranslateInflight.Delete(dedupeKey)
 		r.translator.Translate(bgCtx, r.resType, key, sourceVersion, sourceText, locale)
