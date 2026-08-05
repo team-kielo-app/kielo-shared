@@ -538,7 +538,7 @@ func (s *Seam) kickoffSWR(ctx context.Context, ref SourceRef, target, cacheKey s
 	}
 	safego.Go("localization_seam_swr", func() {
 		defer s.swrInFlight.Delete(cacheKey)
-		bgCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
+		bgCtx, cancel := context.WithTimeout(DetachBudget(context.WithoutCancel(ctx)), 30*time.Second)
 		defer cancel()
 		s.callProvider(bgCtx, ref, target, cacheKey)
 	})
