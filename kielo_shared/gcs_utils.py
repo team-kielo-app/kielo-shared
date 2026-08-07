@@ -27,8 +27,18 @@ def is_storage_api_path(url_path: str) -> bool:
 
 
 def ensure_alt_media(url: str) -> str:
-    """Append ?alt=media to a URL if not already present."""
+    """Append ?alt=media to GCS JSON-API object URLs so they return content.
+
+    Only JSON-API paths (/storage/v1/... or /upload/storage/v1/...) need the
+    parameter. Signed URLs must pass through untouched: a V4 signature covers
+    the whole query string, so appending anything invalidates it and GCS
+    returns 403 SignatureDoesNotMatch. Public XML-API/CDN URLs don't need it.
+    """
     if ALT_MEDIA_PARAM in url:
+        return url
+    if "X-Goog-Signature" in url or "X-Goog-Algorithm" in url:
+        return url
+    if not is_storage_api_path(urlparse(url).path):
         return url
     separator = "&" if "?" in url else "?"
     return f"{url}{separator}{ALT_MEDIA_PARAM}"
