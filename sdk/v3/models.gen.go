@@ -3184,6 +3184,19 @@ type DLQAuditListResponse struct {
 	NextPageKey *string            `json:"next_page_key,omitempty"`
 }
 
+// DLQAuditReplayRequest defines model for DLQAuditReplayRequest.
+type DLQAuditReplayRequest struct {
+	Force         *bool   `json:"force,omitempty"`
+	OperatorNotes *string `json:"operator_notes,omitempty"`
+	ResolvedBy    string  `json:"resolved_by"`
+}
+
+// DLQAuditReplayResponse defines model for DLQAuditReplayResponse.
+type DLQAuditReplayResponse struct {
+	MessageId   string `json:"message_id"`
+	SourceTopic string `json:"source_topic"`
+}
+
 // DLQAuditResolveRequest defines model for DLQAuditResolveRequest.
 type DLQAuditResolveRequest struct {
 	OperatorNotes *string `json:"operator_notes,omitempty"`
@@ -4187,19 +4200,6 @@ type IdentifyConceptExerciseItemTypeFk string
 
 // IdentifyConceptExerciseSourceType defines model for IdentifyConceptExercise.SourceType.
 type IdentifyConceptExerciseSourceType string
-
-// ImportJob defines model for ImportJob.
-type ImportJob struct {
-	DoneAt    *time.Time `json:"doneAt,omitempty"`
-	Error     *string    `json:"error,omitempty"`
-	FileName  string     `json:"fileName"`
-	Id        string     `json:"id"`
-	Md5       *string    `json:"md5,omitempty"`
-	Repo      string     `json:"repo"`
-	SizeBytes int        `json:"sizeBytes"`
-	StartedAt time.Time  `json:"startedAt"`
-	Status    string     `json:"status"`
-}
 
 // InAppNudge One in-app nudge for the requested context.
 //
@@ -5556,33 +5556,6 @@ type Mindmap struct {
 	VideoId              uuid.UUID   `json:"video_id"`
 }
 
-// ModelChecksum defines model for ModelChecksum.
-type ModelChecksum struct {
-	Algorithm string `json:"algorithm"`
-	Value     string `json:"value"`
-}
-
-// ModelDescriptor defines model for ModelDescriptor.
-type ModelDescriptor struct {
-	Checksum     *ModelChecksum `json:"checksum,omitempty"`
-	DownloadUrl  string         `json:"downloadUrl"`
-	FileName     string         `json:"fileName"`
-	Id           string         `json:"id"`
-	IsDefault    *bool          `json:"isDefault,omitempty"`
-	Locale       string         `json:"locale"`
-	MinimumRamMb *int           `json:"minimumRamMb,omitempty"`
-	Name         string         `json:"name"`
-	SizeBytes    int            `json:"sizeBytes"`
-	Variant      string         `json:"variant"`
-}
-
-// ModelManifest defines model for ModelManifest.
-type ModelManifest struct {
-	GeneratedAt     string            `json:"generatedAt"`
-	ManifestVersion string            `json:"manifestVersion"`
-	Models          []ModelDescriptor `json:"models"`
-}
-
 // Morphology defines model for Morphology.
 type Morphology struct {
 	Case    *string   `json:"case,omitempty"`
@@ -6831,9 +6804,10 @@ type SaveConversationTranscriptRequest struct {
 
 // SaveItemRequest defines model for SaveItemRequest.
 type SaveItemRequest struct {
-	ItemId   string  `json:"item_id"`
-	ItemType string  `json:"item_type"`
-	Notes    *string `json:"notes,omitempty"`
+	ItemId       string                  `json:"item_id"`
+	ItemType     string                  `json:"item_type"`
+	Notes        *string                 `json:"notes,omitempty"`
+	SavedContext *map[string]interface{} `json:"saved_context,omitempty"`
 }
 
 // SavedCollectionPracticeRequest defines model for SavedCollectionPracticeRequest.
@@ -6859,12 +6833,13 @@ type SavedCollectionPracticeRequestIntent string
 
 // SavedItem defines model for SavedItem.
 type SavedItem struct {
-	Id       string  `json:"id"`
-	ItemId   string  `json:"item_id"`
-	ItemType string  `json:"item_type"`
-	Notes    *string `json:"notes,omitempty"`
-	SavedAt  string  `json:"saved_at"`
-	UserId   string  `json:"user_id"`
+	Id           string                  `json:"id"`
+	ItemId       string                  `json:"item_id"`
+	ItemType     string                  `json:"item_type"`
+	Notes        *string                 `json:"notes,omitempty"`
+	SavedAt      string                  `json:"saved_at"`
+	SavedContext *map[string]interface{} `json:"saved_context,omitempty"`
+	UserId       string                  `json:"user_id"`
 }
 
 // SavedItemsCountsResponse defines model for SavedItemsCountsResponse.
@@ -7854,11 +7829,6 @@ type SingletonHintResponse struct {
 	Data HintResponse `json:"data"`
 }
 
-// SingletonImportJob defines model for SingletonImportJob.
-type SingletonImportJob struct {
-	Data ImportJob `json:"data"`
-}
-
 // SingletonInAppNudge defines model for SingletonInAppNudge.
 type SingletonInAppNudge struct {
 	// Data One in-app nudge for the requested context.
@@ -8151,11 +8121,6 @@ type SingletonMicroDrill struct {
 // SingletonMindmap defines model for SingletonMindmap.
 type SingletonMindmap struct {
 	Data Mindmap `json:"data"`
-}
-
-// SingletonModelManifest defines model for SingletonModelManifest.
-type SingletonModelManifest struct {
-	Data ModelManifest `json:"data"`
 }
 
 // SingletonNamespace defines model for SingletonNamespace.
@@ -8716,26 +8681,6 @@ type SingletonWebIngestTarget struct {
 // SingletonWebIngestTargetList defines model for SingletonWebIngestTargetList.
 type SingletonWebIngestTargetList struct {
 	Data []WebIngestTarget `json:"data"`
-}
-
-// SingletonWhisperCacheInvalidateResponse defines model for SingletonWhisperCacheInvalidateResponse.
-type SingletonWhisperCacheInvalidateResponse struct {
-	Data WhisperCacheInvalidateResponse `json:"data"`
-}
-
-// SingletonWhisperHFModelsListResponse defines model for SingletonWhisperHFModelsListResponse.
-type SingletonWhisperHFModelsListResponse struct {
-	Data WhisperHFModelsListResponse `json:"data"`
-}
-
-// SingletonWhisperImportJobList defines model for SingletonWhisperImportJobList.
-type SingletonWhisperImportJobList struct {
-	Data []WhisperImportJob `json:"data"`
-}
-
-// SingletonWhisperModelManifest defines model for SingletonWhisperModelManifest.
-type SingletonWhisperModelManifest struct {
-	Data WhisperModelManifest `json:"data"`
 }
 
 // SingletonstringList defines model for SingletonstringList.
@@ -10185,70 +10130,6 @@ type WeeklyActivityDayV3 struct {
 	Minutes int    `json:"minutes"`
 }
 
-// WhisperCacheInvalidateResponse defines model for WhisperCacheInvalidateResponse.
-type WhisperCacheInvalidateResponse struct {
-	Reason *string `json:"reason,omitempty"`
-	Status string  `json:"status"`
-}
-
-// WhisperHFImportRequest defines model for WhisperHFImportRequest.
-type WhisperHFImportRequest struct {
-	FileName string  `json:"fileName"`
-	Repo     *string `json:"repo,omitempty"`
-}
-
-// WhisperHFModelEntry defines model for WhisperHFModelEntry.
-type WhisperHFModelEntry struct {
-	FileName  string `json:"fileName"`
-	SizeBytes int    `json:"sizeBytes"`
-}
-
-// WhisperHFModelsListResponse defines model for WhisperHFModelsListResponse.
-type WhisperHFModelsListResponse struct {
-	Models []WhisperHFModelEntry `json:"models"`
-	Repo   string                `json:"repo"`
-}
-
-// WhisperImportJob defines model for WhisperImportJob.
-type WhisperImportJob struct {
-	DoneAt    *string `json:"doneAt,omitempty"`
-	Error     *string `json:"error,omitempty"`
-	FileName  string  `json:"fileName"`
-	Id        string  `json:"id"`
-	Md5       *string `json:"md5,omitempty"`
-	Repo      string  `json:"repo"`
-	SizeBytes int     `json:"sizeBytes"`
-	StartedAt string  `json:"startedAt"`
-	Status    string  `json:"status"`
-}
-
-// WhisperModelChecksum defines model for WhisperModelChecksum.
-type WhisperModelChecksum struct {
-	Algorithm string `json:"algorithm"`
-	Value     string `json:"value"`
-}
-
-// WhisperModelDescriptor defines model for WhisperModelDescriptor.
-type WhisperModelDescriptor struct {
-	Checksum     *WhisperModelChecksum `json:"checksum,omitempty"`
-	DownloadUrl  string                `json:"downloadUrl"`
-	FileName     string                `json:"fileName"`
-	Id           string                `json:"id"`
-	IsDefault    *bool                 `json:"isDefault,omitempty"`
-	Locale       string                `json:"locale"`
-	MinimumRamMb *int                  `json:"minimumRamMb,omitempty"`
-	Name         string                `json:"name"`
-	SizeBytes    int                   `json:"sizeBytes"`
-	Variant      string                `json:"variant"`
-}
-
-// WhisperModelManifest defines model for WhisperModelManifest.
-type WhisperModelManifest struct {
-	GeneratedAt     string                   `json:"generatedAt"`
-	ManifestVersion string                   `json:"manifestVersion"`
-	Models          []WhisperModelDescriptor `json:"models"`
-}
-
 // WontFixIssueRequest defines model for WontFixIssueRequest.
 type WontFixIssueRequest struct {
 	Notes *string `json:"notes,omitempty"`
@@ -10754,18 +10635,6 @@ type GetApiV3ContentBaseWordsBaseWordIdParams struct {
 
 // GetApiV3ContentGrammarConceptsGrammarConceptIdParams defines parameters for GetApiV3ContentGrammarConceptsGrammarConceptId.
 type GetApiV3ContentGrammarConceptsGrammarConceptIdParams struct {
-	// SupportLanguageCode Two-letter ISO 639-1 code for translated UI strings (per ADR-006 §3.83).
-	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
-}
-
-// GetApiV3ConversationsHistoryParams defines parameters for GetApiV3ConversationsHistory.
-type GetApiV3ConversationsHistoryParams struct {
-	// PageSize Maximum number of items per page. Handler default applies if omitted.
-	PageSize *int `form:"page_size,omitempty" json:"page_size,omitempty"`
-
-	// NextPageKey Opaque pagination cursor returned by the previous response.
-	NextPageKey *string `form:"next_page_key,omitempty" json:"next_page_key,omitempty"`
-
 	// SupportLanguageCode Two-letter ISO 639-1 code for translated UI strings (per ADR-006 §3.83).
 	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
 }
@@ -11853,15 +11722,6 @@ type GetApiV3WebIngestTargetsParams struct {
 	LearningLanguageCode *string `form:"learning_language_code,omitempty" json:"learning_language_code,omitempty"`
 }
 
-// GetApiV3WhisperHuggingfaceModelsParams defines parameters for GetApiV3WhisperHuggingfaceModels.
-type GetApiV3WhisperHuggingfaceModelsParams struct {
-	// Repo HuggingFace repo (owner/name). Defaults to ggerganov/whisper.cpp.
-	Repo *string `form:"repo,omitempty" json:"repo,omitempty"`
-
-	// Ext File extension filter (default .bin)
-	Ext *string `form:"ext,omitempty" json:"ext,omitempty"`
-}
-
 // GetInternalAdminBaseWordsParams defines parameters for GetInternalAdminBaseWords.
 type GetInternalAdminBaseWordsParams struct {
 	// LearningLanguageCode Two-letter ISO 639-1 code for the language being learned (per ADR-006 §3.83).
@@ -12830,6 +12690,9 @@ type PutApiV3CurriculumTracksTrackIdJSONRequestBody = CurriculumTrackUpsertReque
 // PostApiV3DataQualityIssuesIssueIdWontFixJSONRequestBody defines body for PostApiV3DataQualityIssuesIssueIdWontFix for application/json ContentType.
 type PostApiV3DataQualityIssuesIssueIdWontFixJSONRequestBody = WontFixIssueRequest
 
+// PostApiV3DlqAuditIdReplayJSONRequestBody defines body for PostApiV3DlqAuditIdReplay for application/json ContentType.
+type PostApiV3DlqAuditIdReplayJSONRequestBody = DLQAuditReplayRequest
+
 // PatchApiV3DlqAuditIdResolveJSONRequestBody defines body for PatchApiV3DlqAuditIdResolve for application/json ContentType.
 type PatchApiV3DlqAuditIdResolveJSONRequestBody = DLQAuditResolveRequest
 
@@ -13165,12 +13028,6 @@ type PostApiV3WebIngestTargetsJSONRequestBody = WebIngestTargetRequest
 
 // PatchApiV3WebIngestTargetsTargetIdJSONRequestBody defines body for PatchApiV3WebIngestTargetsTargetId for application/json ContentType.
 type PatchApiV3WebIngestTargetsTargetIdJSONRequestBody = WebIngestTargetRequest
-
-// PostApiV3WhisperHuggingfaceImportJSONRequestBody defines body for PostApiV3WhisperHuggingfaceImport for application/json ContentType.
-type PostApiV3WhisperHuggingfaceImportJSONRequestBody = WhisperHFImportRequest
-
-// PutApiV3WhisperManifestJSONRequestBody defines body for PutApiV3WhisperManifest for application/json ContentType.
-type PutApiV3WhisperManifestJSONRequestBody = WhisperModelManifest
 
 // PutInternalAdminMediaLifecycleMediaIdLegalHoldJSONRequestBody defines body for PutInternalAdminMediaLifecycleMediaIdLegalHold for application/json ContentType.
 type PutInternalAdminMediaLifecycleMediaIdLegalHoldJSONRequestBody = SetLegalHoldRequest

@@ -8,7 +8,6 @@
     "mediaProcessor": "kielo-media-processor",
     "convoCache": "kielo-convo-cache",
     "localization": "kielo-localization",
-    "whisperModels": "kielo-whisper-models",
     "publicAssets": "kielo-public-assets"
   },
   "envVars": {
