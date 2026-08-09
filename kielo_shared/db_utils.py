@@ -119,9 +119,7 @@ _active_support_language: contextvars.ContextVar[str | None] = contextvars.Conte
 # comms `go test` truncated the live dev DB. Any enumerating cleanup must
 # union its skip set with this constant (Go twin:
 # kielo-shared/db/migrationtables.go).
-MIGRATION_BOOKKEEPING_TABLES = frozenset(
-    {"alembic_version", "flyway_schema_history"}
-)
+MIGRATION_BOOKKEEPING_TABLES = frozenset({"alembic_version", "flyway_schema_history"})
 
 
 def normalize_search_path(search_path: str) -> str:
