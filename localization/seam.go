@@ -390,6 +390,78 @@ func (s *Seam) batchCacheGet(
 	return hits
 }
 
+// batchUnitKey identifies one translation unit: everything the provider
+// actually sees. Two remaining entries with an equal key would reach it as
+// byte-identical input, so they can only come back with the same answer.
+//
+// namespace+sourceID are in the key even though they don't change the text:
+// refTranslationContext puts them in the prompt as disambiguating hints,
+// precisely so two occurrences of a short ambiguous string ("Home" as
+// navigation vs. as a noun) CAN translate differently. Collapsing across
+// them would silently discard that. cacheKey is in the key so a collapsed
+// item never carries a sibling's CacheKey into the provider's own cache
+// decorator.
+//
+// This makes Go's dedup narrower than the Python seam's
+// (seam.py::_provider_batch_call), which collapses on (text, role) alone —
+// correct there because that path sends no context, so the provider has no
+// hint to distinguish by.
+type batchUnitKey struct {
+	text      string
+	role      TranslationRole
+	namespace string
+	sourceID  string
+	cacheKey  string
+}
+
+// dedupeBatchItems collapses `remaining` into the distinct provider items it
+// contains, and returns a function that re-expands the provider's results
+// back to one-per-entry order. Callers do produce duplicates: a base word
+// cited by two exercises in one batch, a string reused across steps of one
+// lesson. Every original entry still gets its own cache write, persist and
+// metric — only the provider fan-out collapses.
+func dedupeBatchItems(remaining []residueEntry) (
+	items []TranslationItem,
+	expand func([]TranslationResult) []TranslationResult,
+) {
+	itemIndexOfUnit := make(map[batchUnitKey]int, len(remaining))
+	unitOf := make([]batchUnitKey, len(remaining))
+	items = make([]TranslationItem, 0, len(remaining))
+	for i, r := range remaining {
+		role := r.ref.Role
+		if role == "" {
+			role = RolePlain
+		}
+		unit := batchUnitKey{
+			text:      r.ref.SourceText,
+			role:      role,
+			namespace: r.ref.Namespace,
+			sourceID:  r.ref.SourceID,
+			cacheKey:  r.key,
+		}
+		unitOf[i] = unit
+		if _, seen := itemIndexOfUnit[unit]; seen {
+			continue
+		}
+		itemIndexOfUnit[unit] = len(items)
+		items = append(items, TranslationItem{
+			Text:     r.ref.SourceText,
+			Role:     role,
+			CacheKey: r.key,
+			Context:  refTranslationContext(r.ref),
+		})
+	}
+
+	expand = func(deduped []TranslationResult) []TranslationResult {
+		results := make([]TranslationResult, len(unitOf))
+		for i, unit := range unitOf {
+			results[i] = deduped[itemIndexOfUnit[unit]]
+		}
+		return results
+	}
+	return items, expand
+}
+
 // providerBatchCall issues one provider.TranslateBatch for all
 // cache-miss refs, then persists results to cache via BatchSet (when
 // supported) or per-key Set fallback. Records per-ref metrics.
@@ -408,34 +480,24 @@ func (s *Seam) providerBatchCall(
 		return
 	}
 
-	// Build the provider items + use singleflight per ref so concurrent
-	// requests for the same cache key dedup. The shared/owner split
-	// here mirrors the single-Translate behavior so metrics stay
-	// faithful.
-	items := make([]TranslationItem, len(remaining))
-	for i, r := range remaining {
-		role := r.ref.Role
-		if role == "" {
-			role = RolePlain
-		}
-		items[i] = TranslationItem{
-			Text:     r.ref.SourceText,
-			Role:     role,
-			CacheKey: r.key,
-			Context:  refTranslationContext(r.ref),
-		}
-	}
-	results, err := provider.TranslateBatch(ctx, items, TranslateOptions{
+	items, expand := dedupeBatchItems(remaining)
+
+	providerResults, err := provider.TranslateBatch(ctx, items, TranslateOptions{
 		SourceLocale: TierASupportLocale,
 		TargetLocale: target,
 	})
-	if err != nil || len(results) != len(remaining) {
+	// Length is checked against the DEDUPED item list. Comparing against
+	// len(remaining) would reject every correct response to a batch that
+	// contained a duplicate.
+	if err != nil || len(providerResults) != len(items) {
 		for _, r := range remaining {
 			out[r.idx] = r.ref.SourceText
 			s.metrics.Record(ctx, r.ref.Namespace, target, "provider_error")
 		}
 		return
 	}
+
+	results := expand(providerResults)
 
 	// Persist + assign. Build a write-set for BatchSet when available.
 	// Round 10D: parallel persistList tracks (ref, value) pairs that
