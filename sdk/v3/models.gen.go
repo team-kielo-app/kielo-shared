@@ -2446,16 +2446,6 @@ type ConversationScenariosResponse struct {
 	Total     int                    `json:"total"`
 }
 
-// ConversationSessionMeta defines model for ConversationSessionMeta.
-type ConversationSessionMeta struct {
-	Evaluation       *map[string]interface{}   `json:"evaluation,omitempty"`
-	State            string                    `json:"state"`
-	TranscriptBucket string                    `json:"transcript_bucket"`
-	TranscriptEvents *[]map[string]interface{} `json:"transcript_events,omitempty"`
-	TranscriptPath   string                    `json:"transcript_path"`
-	TranscriptSrt    *string                   `json:"transcript_srt,omitempty"`
-}
-
 // ConversationSetting defines model for ConversationSetting.
 type ConversationSetting struct {
 	Background string `json:"background"`
@@ -3525,13 +3515,6 @@ type EffectiveUserLimitsResponse struct {
 	EffectiveLimits []FeatureLimitWithUsage `json:"effective_limits"`
 	Tier            string                  `json:"tier"`
 	UserId          string                  `json:"user_id"`
-}
-
-// EndConversationSessionRequest defines model for EndConversationSessionRequest.
-type EndConversationSessionRequest struct {
-	DurationSeconds  int    `json:"duration_seconds"`
-	TranscriptBucket string `json:"transcript_bucket"`
-	TranscriptPath   string `json:"transcript_path"`
 }
 
 // EndSessionResponse defines model for EndSessionResponse.
@@ -6222,15 +6205,6 @@ type RecommendationLaunchParams struct {
 // RecommendationLaunchParamsItemType defines model for RecommendationLaunchParams.ItemType.
 type RecommendationLaunchParamsItemType string
 
-// RecordConversationSessionRequest defines model for RecordConversationSessionRequest.
-type RecordConversationSessionRequest struct {
-	ScenarioId   string  `json:"scenario_id"`
-	ScenarioUuid *string `json:"scenario_uuid,omitempty"`
-	SessionId    string  `json:"session_id"`
-	State        string  `json:"state"`
-	UserId       string  `json:"user_id"`
-}
-
 // RefreshTokenRequest defines model for RefreshTokenRequest.
 type RefreshTokenRequest struct {
 	RefreshToken string `json:"refresh_token"`
@@ -6794,12 +6768,6 @@ type RunRow struct {
 	StartedAt      time.Time   `json:"started_at"`
 	Trigger        string      `json:"trigger"`
 	TriggeredBy    *string     `json:"triggered_by,omitempty"`
-}
-
-// SaveConversationTranscriptRequest defines model for SaveConversationTranscriptRequest.
-type SaveConversationTranscriptRequest struct {
-	Events []map[string]interface{} `json:"events"`
-	Srt    string                   `json:"srt"`
 }
 
 // SaveItemRequest defines model for SaveItemRequest.
@@ -7582,11 +7550,6 @@ type SingletonConversationScenarioStepsResponse struct {
 // SingletonConversationScenariosResponse defines model for SingletonConversationScenariosResponse.
 type SingletonConversationScenariosResponse struct {
 	Data ConversationScenariosResponse `json:"data"`
-}
-
-// SingletonConversationSessionMeta defines model for SingletonConversationSessionMeta.
-type SingletonConversationSessionMeta struct {
-	Data ConversationSessionMeta `json:"data"`
 }
 
 // SingletonConvoScenario defines model for SingletonConvoScenario.
@@ -12831,6 +12794,9 @@ type PostApiV3KtvWorkflowsWorkflowIdVariantsJSONRequestBody = KTVVariantCreateRe
 // PostApiV3LocalizationCacheInvalidateJSONRequestBody defines body for PostApiV3LocalizationCacheInvalidate for application/json ContentType.
 type PostApiV3LocalizationCacheInvalidateJSONRequestBody = LocalizationInvalidateCacheRequest
 
+// PostApiV3LocalizationCacheInvalidateLangJSONRequestBody defines body for PostApiV3LocalizationCacheInvalidateLang for application/json ContentType.
+type PostApiV3LocalizationCacheInvalidateLangJSONRequestBody = LocalizationInvalidateCacheRequest
+
 // PostApiV3LocalizationDynamicTranslationsJSONRequestBody defines body for PostApiV3LocalizationDynamicTranslations for application/json ContentType.
 type PostApiV3LocalizationDynamicTranslationsJSONRequestBody = CreateDynamicTranslationRequest
 
@@ -13041,17 +13007,8 @@ type PostInternalApiV3AchievementsCheckAndAwardJSONRequestBody = CheckAndAwardRe
 // PostInternalApiV3AchievementsProgressJSONRequestBody defines body for PostInternalApiV3AchievementsProgress for application/json ContentType.
 type PostInternalApiV3AchievementsProgressJSONRequestBody = UpdateProgressRequest
 
-// PostInternalApiV3ConversationsSessionsJSONRequestBody defines body for PostInternalApiV3ConversationsSessions for application/json ContentType.
-type PostInternalApiV3ConversationsSessionsJSONRequestBody = RecordConversationSessionRequest
-
-// PostInternalApiV3ConversationsSessionsSessionIdEndJSONRequestBody defines body for PostInternalApiV3ConversationsSessionsSessionIdEnd for application/json ContentType.
-type PostInternalApiV3ConversationsSessionsSessionIdEndJSONRequestBody = EndConversationSessionRequest
-
 // PostInternalApiV3ConversationsSessionsSessionIdEvaluationJSONRequestBody defines body for PostInternalApiV3ConversationsSessionsSessionIdEvaluation for application/json ContentType.
 type PostInternalApiV3ConversationsSessionsSessionIdEvaluationJSONRequestBody = UpdateConversationSessionEvaluationRequest
-
-// PostInternalApiV3ConversationsSessionsSessionIdTranscriptJSONRequestBody defines body for PostInternalApiV3ConversationsSessionsSessionIdTranscript for application/json ContentType.
-type PostInternalApiV3ConversationsSessionsSessionIdTranscriptJSONRequestBody = SaveConversationTranscriptRequest
 
 // PostInternalApiV3EventsJSONRequestBody defines body for PostInternalApiV3Events for application/json ContentType.
 type PostInternalApiV3EventsJSONRequestBody = UserActionEnvelope

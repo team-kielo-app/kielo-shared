@@ -1120,15 +1120,6 @@ class ConversationScenarioStepsResponse(BaseModel):
     total: int
 
 
-class ConversationSessionMeta(BaseModel):
-    evaluation: dict[str, Any] | None = None
-    state: str
-    transcript_bucket: str
-    transcript_events: list[dict[str, Any]] | None = None
-    transcript_path: str
-    transcript_srt: str | None = None
-
-
 class ConversationSetting(BaseModel):
     background: str
     location: str
@@ -1900,12 +1891,6 @@ class DynamicTranslationListResponse(BaseModel):
     page: int
     page_size: int
     total: int
-
-
-class EndConversationSessionRequest(BaseModel):
-    duration_seconds: int
-    transcript_bucket: str
-    transcript_path: str
 
 
 class EndSessionResponse(AppFeedbackUpdateStatusRequest):
@@ -3885,14 +3870,6 @@ class RecommendationLaunchParams(BaseModel):
     topic_list_id: UUID_aliased | None = Field(None, title="Topic List Id")
 
 
-class RecordConversationSessionRequest(BaseModel):
-    scenario_id: str
-    scenario_uuid: str | None = None
-    session_id: str
-    state: str
-    user_id: str
-
-
 class RefreshTokenRequest(BaseModel):
     refresh_token: str
 
@@ -4288,11 +4265,6 @@ class RunRow(BaseModel):
     started_at: AwareDatetime
     trigger: str
     triggered_by: str | None = None
-
-
-class SaveConversationTranscriptRequest(BaseModel):
-    events: list[dict[str, Any]]
-    srt: str
 
 
 class SaveItemRequest(BaseModel):
@@ -4844,10 +4816,6 @@ class SingletonConversationLooseResponse(BaseModel):
 
 class SingletonConversationScenarioStepsResponse(BaseModel):
     data: ConversationScenarioStepsResponse
-
-
-class SingletonConversationSessionMeta(BaseModel):
-    data: ConversationSessionMeta
 
 
 class SingletonConvoScenario(BaseModel):
