@@ -410,11 +410,38 @@ _CAPABILITIES: dict[str, Capability] = {
             # (settings.OPENAI_TTS_FI_INSTRUCTIONS) when set, falling
             # back to this default; python_agent's _build_tts_instructions
             # reads this directly.
+            # The first two rules below are not decoration — each fixes a
+            # learner-reported defect (2026-08):
+            #
+            #   "The Pronounciation of Joo is not correct. AI says Ju but the
+            #    correct pronunciation is Yo"
+            #     -> Finnish <j> is /j/ as in English "yes". The model read it
+            #        as an English <j> (/dʒ/). Needs the letter named
+            #        explicitly; "native Finnish phonetics" did not carry it.
+            #
+            #   "asiaの発音が違う"  (the pronunciation of "asia" is wrong)
+            #     -> "asia" is also an English word, so the model reached for
+            #        /ˈeɪʒə/ instead of /ˈɑsiɑ/. Generic instructions lose to a
+            #        familiar spelling; the model has to be told that a word
+            #        LOOKING English is still Finnish.
+            #
+            # Both were previously invisible because this text was shadowed —
+            # the engine's settings.OPENAI_TTS_FI_INSTRUCTIONS default won and
+            # said only "clear native Finnish accent".
             pronunciation_instructions=(
-                "Pronounce Finnish naturally with native Finnish phonetics: "
-                "double consonants and long vowels held distinctly, stress on "
-                "the first syllable of each word, clear ä/ö/y vowels (not "
-                "anglicised). Use a warm, friendly, conversational tone."
+                "Read the text as Finnish. Every word is Finnish even when it "
+                "resembles an English word (for example 'asia' is /ˈɑsiɑ/, "
+                "AH-see-ah, never English 'Asia'). "
+                "The letter j is always /j/, like English y in 'yes' — never "
+                "an English j sound ('joo' is /joː/, YOH). "
+                "Vowels are pure and never reduced to a schwa: a=/ɑ/, e=/e/, "
+                "i=/i/, o=/o/, u=/u/, y=/y/, ä=/æ/, ö=/ø/. "
+                "Doubled letters are held roughly twice as long, and the "
+                "length changes the word, so keep it audible: long vowels "
+                "(oo, aa, uu) and double consonants (kk, tt, ss). "
+                "Stress always falls on the first syllable. "
+                "Pronounce every letter; s is always /s/, never /z/. "
+                "Use a warm, friendly, conversational tone."
             ),
         ),
         stt=STTCapability(),
