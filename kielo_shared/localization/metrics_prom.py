@@ -53,7 +53,8 @@ _COUNTER_HELP = (
     "Localization seam resolution counter. "
     "Labels: namespace (resource type), target_locale (BCP-47 base), "
     "source (english_passthrough|override|cache_hit|cache_swr|"
-    "cache_miss_share|provider_call|provider_error)."
+    "cache_miss_share|provider_call|provider_error|empty_translation|"
+    "guard_rejected)."
 )
 
 

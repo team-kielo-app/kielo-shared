@@ -548,13 +548,20 @@ class Seam:
         fan-out (matching pre-AAAAA behaviour); only the batch-
         protocol path collapses to O(1) non-REF counters.
 
-        Single-flight tradeoff: batch path doesn't dedupe against
-        in-flight per-key translate() calls. Concurrent
-        translate_batch + translate on the same source_version may
-        issue duplicate provider calls. Acceptable because the
-        provider's own caching layer (RedisCacheDecorator in the
-        engine chain) catches the duplicate before it reaches the
-        LLM. Same tradeoff as Go seam.go:184 documents.
+        Dedup, in two layers:
+          - WITHIN one batch, refs sharing a (source_text, role) pair
+            collapse to a single provider item and the result fans back
+            out (see _provider_batch_call). Callers routinely produce
+            such duplicates — the same string under different source_ids
+            (shared step instructions, a base word cited by several
+            exercises), or one resource listed twice.
+          - ACROSS calls, the batch path does NOT dedupe against
+            in-flight per-key translate() calls: concurrent
+            translate_batch + translate on the same source_version may
+            issue duplicate provider calls. Acceptable because the
+            provider's own caching layer (RedisCacheDecorator in the
+            engine chain) catches the duplicate before it reaches the
+            LLM. Same tradeoff as Go seam.go:184 documents.
 
         Never returns empty for a non-empty source_text — every error
         path falls back to source.
@@ -612,7 +619,7 @@ class Seam:
         # fallback to per-key gather when the cache doesn't implement it.
         _record_budget(_BudgetKind.CACHE_GET, 1)
         cache_hits = await self._batch_cache_get(
-            [k for _, _, k in remaining_after_overrides]
+            list(dict.fromkeys(k for _, _, k in remaining_after_overrides))
         )
         remaining_after_cache: list[tuple[int, SourceRef, str]] = []
         for idx, ref, key in remaining_after_overrides:
@@ -711,10 +718,35 @@ class Seam:
                 self._metrics.record(ref.namespace, target, "provider_error")
             return
 
-        items = [
-            TranslationItem(text=r.source_text, role=r.role, cache_key=k)
-            for _, r, k in remaining
+        # Intra-batch dedup. The provider translates each item purely from
+        # (text, role, source_locale, target_locale), so two refs sharing
+        # that tuple can only ever get the same answer — sending both buys
+        # nothing and costs tokens. Callers legitimately produce duplicates:
+        # source_id differs per resource while the string does not (shared
+        # step instructions, repeated CTA copy, the same base word cited by
+        # several exercises), and a caller may list one resource twice.
+        # Each ORIGINAL ref still gets its own cache write-back, persist and
+        # metric below — only the provider fan-out collapses.
+        unit_of: list[tuple[str, str]] = [
+            (r.source_text, str(r.role)) for _, r, _ in remaining
         ]
+        item_index_of_unit: dict[tuple[str, str], int] = {}
+        items: list[TranslationItem] = []
+        for (_, ref, key), unit in zip(remaining, unit_of):
+            if unit in item_index_of_unit:
+                continue
+            item_index_of_unit[unit] = len(items)
+            items.append(
+                TranslationItem(text=ref.source_text, role=ref.role, cache_key=key)
+            )
+        collapsed = len(remaining) - len(items)
+        if collapsed:
+            logger.debug(
+                "seam batch collapsed %d duplicate unit(s) of %d before provider call",
+                collapsed,
+                len(remaining),
+            )
+
         try:
             results = await provider.translate_batch(
                 items,
@@ -730,29 +762,35 @@ class Seam:
 
         # Provider contract: results align 1-1 with items, in order.
         # Any length mismatch is a provider bug; fall back to source.
-        if len(results) != len(remaining):
+        if len(results) != len(items):
             logger.error(
                 "seam batch provider returned %d results for %d items",
                 len(results),
-                len(remaining),
+                len(items),
             )
             for idx, ref, _ in remaining:
                 out[idx] = ref.source_text
                 self._metrics.record(ref.namespace, target, "provider_error")
             return
 
+        # Re-expand: every original position reads the result of the unit it
+        # shares, so `results` lines up 1-1 with `remaining` again from here.
+        results = [results[item_index_of_unit[unit]] for unit in unit_of]
+
         # Round 10A: guard + persist contracts mirror _call_provider.
         # write_set is cache-writes; persist_set is dynamic_translations
         # writes. Guard rejection at this layer falls back to source +
         # records provider_error metric (visible to operators in the
         # same dashboard as natural provider failures).
+        # write_set is keyed, so it dedupes itself; persist_set is a list, so
+        # a ref listed twice would issue the same upsert twice.
         write_set: dict[str, str] = {}
-        persist_set: list[tuple[SourceRef, str]] = []
+        persist_set: dict[str, tuple[SourceRef, str]] = {}
         for (idx, ref, key), result in zip(remaining, results):
             value = (result.text or "").strip()
             if not value:
                 out[idx] = ref.source_text
-                self._metrics.record(ref.namespace, target, "provider_error")
+                self._metrics.record(ref.namespace, target, "empty_translation")
                 continue
             if self._guard.is_suspicious(ref.source_text, value, target):
                 logger.warning(
@@ -764,11 +802,11 @@ class Seam:
                     },
                 )
                 out[idx] = ref.source_text
-                self._metrics.record(ref.namespace, target, "provider_error")
+                self._metrics.record(ref.namespace, target, "guard_rejected")
                 continue
             out[idx] = value
             write_set[key] = value
-            persist_set.append((ref, value))
+            persist_set[key] = (ref, value)
             self._metrics.record(ref.namespace, target, "provider_call")
 
         # Cache write-back.
@@ -798,7 +836,7 @@ class Seam:
                 await asyncio.gather(
                     *(
                         self._persister.persist(ref, target, value)
-                        for ref, value in persist_set
+                        for ref, value in persist_set.values()
                     ),
                     return_exceptions=True,
                 )
@@ -875,7 +913,7 @@ class Seam:
             return "cache_miss_share", value
 
         try:
-            value = await self._call_provider(ref, target, cache_key)
+            source, value = await self._call_provider(ref, target, cache_key)
         except Exception:
             logger.exception(
                 "seam provider call failed",
@@ -897,9 +935,25 @@ class Seam:
         future.set_result(value)
         async with self._lock:
             self._inflight.pop(cache_key, None)
-        return "provider_call", value
+        return source, value
 
-    async def _call_provider(self, ref: SourceRef, target: str, cache_key: str) -> str:
+    async def _call_provider(
+        self, ref: SourceRef, target: str, cache_key: str
+    ) -> tuple[str, str]:
+        """Returns (metric_source_tag, value).
+
+        The tag is what the operator sees. It must distinguish the three
+        ways a provider round-trip can fail to produce a usable string,
+        because they have different owners: `provider_error` is the
+        provider's, `empty_translation` means it answered with nothing
+        (the learner silently gets English), and `guard_rejected` means
+        it answered with something we refused — the wrong-language leak
+        of 2026-08 is exactly this. Pre-fix this method returned only the
+        value, so its caller tagged all three as `provider_call`: a
+        SUCCESS. A guard rejection was indistinguishable from a good
+        translation in metrics. Tags match the Go seam's vocabulary
+        (seam.go:406-463, 561-592) so one dashboard serves both.
+        """
         # Sweep YYYY: count each unique provider dispatch. Sibling of
         # Go seam's RecordBudget(PROVIDER_CALL) in the provider-path.
         # Single-flight coalescing in _provider_path means we only land
@@ -922,10 +976,10 @@ class Seam:
             target_locale=target,
         )
         if not results:
-            return ref.source_text
+            return "provider_error", ref.source_text
         value = (results[0].text or "").strip()
         if not value:
-            return ref.source_text
+            return "empty_translation", ref.source_text
         # Round 10A: suspicious-translation guard at the seam layer.
         # Pre-Round-10A the guard ran only at _via_registry — every
         # other seam consumer (autotranslate-callback, structured
@@ -942,7 +996,7 @@ class Seam:
                     "target": target,
                 },
             )
-            return ref.source_text
+            return "guard_rejected", ref.source_text
         # Cache write-through. Cache failures swallowed at impl layer
         # (NoopCache no-op; production RedisCache logs + returns).
         await self._cache.set(
@@ -966,7 +1020,7 @@ class Seam:
                     "target": target,
                 },
             )
-        return value
+        return "provider_call", value
 
     def _kickoff_swr(self, ref: SourceRef, target: str, cache_key: str) -> None:
         if cache_key in self._swr_inflight:

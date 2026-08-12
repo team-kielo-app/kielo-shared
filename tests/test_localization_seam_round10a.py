@@ -289,11 +289,21 @@ async def test_t8_persister_failures_are_swallowed():
 
 
 @pytest.mark.asyncio
-async def test_t9_metrics_record_provider_error_on_guard_rejection_in_batch():
-    """Batch path with AlwaysSuspiciousGuard: metric records
-    provider_error tag (not provider_call) so operators see the
-    guard rejections in the same dashboard as natural provider
-    failures."""
+async def test_t9_metrics_record_guard_rejected_on_guard_rejection_in_batch():
+    """Batch path with AlwaysSuspiciousGuard: metric records the
+    guard_rejected tag — not provider_call (which would report a
+    rejection as a success) and no longer provider_error either.
+
+    This assertion was relaxed from provider_error on 2026-08-11. Round
+    10A deliberately reused provider_error so rejections were at least
+    visible somewhere, but sharing a tag with genuine provider failures
+    means the two can't be alerted on separately, and they have
+    different owners: provider_error is the provider's problem, while
+    guard_rejected means the provider answered and we refused the answer
+    — the signal for the 2026-08 wrong-language leak. The Go seam
+    already split them (seam_round10d_test.go:322 asserts exactly this
+    pair), so Python was the odd one out.
+    """
     provider = StubProvider(fixed_output="JUNK")
     metrics = CountingMetrics()
     seam = Seam(
@@ -305,5 +315,49 @@ async def test_t9_metrics_record_provider_error_on_guard_rejection_in_batch():
     refs = [SourceRef(namespace="ui.string", source_id="k", source_version="v", source_text="Source")]
     await seam.translate_batch(refs, "ja")
 
-    assert metrics.count("ui.string", "ja", "provider_error") == 1
+    assert metrics.count("ui.string", "ja", "guard_rejected") == 1
+    assert metrics.count("ui.string", "ja", "provider_call") == 0
+    assert metrics.count("ui.string", "ja", "provider_error") == 0
+
+
+@pytest.mark.asyncio
+async def test_t10_single_item_path_tags_guard_rejection_not_success():
+    """The single-item sibling of T9, and the more serious half of the
+    2026-08-11 fix.
+
+    _call_provider used to return only the value, so both a guard
+    rejection and an empty provider answer came back indistinguishable
+    from a good translation and _provider_path tagged them
+    `provider_call` — a SUCCESS. Every guard rejection on the per-key
+    path was therefore invisible: the wrong-language leak could run at
+    100% rejection and the dashboard would show a healthy provider.
+    """
+    provider = StubProvider(fixed_output="JUNK")
+    metrics = CountingMetrics()
+    seam = Seam(
+        registry=StubRegistry(provider),
+        metrics=metrics,
+        guard=AlwaysSuspiciousGuard(),
+    )
+
+    val = await seam.translate(_ref(source_text="Source"), "ja")
+
+    assert val == "Source", "rejected output falls back to source, never empty"
+    assert metrics.count("ui.string", "ja", "guard_rejected") == 1
+    assert metrics.count("ui.string", "ja", "provider_call") == 0
+
+
+@pytest.mark.asyncio
+async def test_t11_single_item_path_tags_empty_provider_output():
+    """Empty output is the provider answering with nothing — the learner
+    silently gets English. Distinct from guard_rejected (we refused an
+    answer) and from provider_error (no answer at all)."""
+    provider = StubProvider(fixed_output="   ")
+    metrics = CountingMetrics()
+    seam = Seam(registry=StubRegistry(provider), metrics=metrics)
+
+    val = await seam.translate(_ref(source_text="Source"), "ja")
+
+    assert val == "Source"
+    assert metrics.count("ui.string", "ja", "empty_translation") == 1
     assert metrics.count("ui.string", "ja", "provider_call") == 0

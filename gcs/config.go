@@ -52,7 +52,6 @@ type Config struct {
 	ProcessedMediaBucket string
 	ConvoCacheBucket     string
 	LocalizationBucket   string
-	WhisperModelsBucket  string
 	PublicAssetsBucket   string
 	SocialMediaBucket    string
 }
@@ -63,7 +62,6 @@ const (
 	ProcessedMediaBucketBase = "kielo-media-processor"
 	ConvoCacheBucketBase     = "kielo-convo-cache"
 	LocalizationBucketBase   = "kielo-localization"
-	WhisperModelsBucketBase  = "kielo-whisper-models"
 	PublicAssetsBucketBase   = "kielo-public-assets"
 	SocialMediaBucketBase    = "kielo-social-media"
 )
@@ -111,7 +109,6 @@ func LoadConfig() Config {
 		ProcessedMediaBucket: GetBucketName(ProcessedMediaBucketBase, env, projectID),
 		ConvoCacheBucket:     GetBucketName(ConvoCacheBucketBase, env, projectID),
 		LocalizationBucket:   GetBucketName(LocalizationBucketBase, env, projectID),
-		WhisperModelsBucket:  GetBucketName(WhisperModelsBucketBase, env, projectID),
 		PublicAssetsBucket:   GetBucketName(PublicAssetsBucketBase, env, projectID),
 		SocialMediaBucket:    SocialMediaBucketBase,
 	}
@@ -127,9 +124,6 @@ func LoadConfig() Config {
 	}
 	if override := strings.TrimSpace(os.Getenv("LOCALIZATION_BUCKET")); override != "" {
 		cfg.LocalizationBucket = override
-	}
-	if override := strings.TrimSpace(os.Getenv("WHISPER_MODELS_BUCKET")); override != "" {
-		cfg.WhisperModelsBucket = override
 	}
 	if override := strings.TrimSpace(os.Getenv("PUBLIC_ASSETS_BUCKET")); override != "" {
 		cfg.PublicAssetsBucket = override

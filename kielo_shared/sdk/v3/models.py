@@ -1120,15 +1120,6 @@ class ConversationScenarioStepsResponse(BaseModel):
     total: int
 
 
-class ConversationSessionMeta(BaseModel):
-    evaluation: dict[str, Any] | None = None
-    state: str
-    transcript_bucket: str
-    transcript_events: list[dict[str, Any]] | None = None
-    transcript_path: str
-    transcript_srt: str | None = None
-
-
 class ConversationSetting(BaseModel):
     background: str
     location: str
@@ -1693,6 +1684,17 @@ class DLQAuditListResponse(BaseModel):
     next_page_key: str | None = None
 
 
+class DLQAuditReplayRequest(BaseModel):
+    force: bool | None = None
+    operator_notes: str | None = None
+    resolved_by: str
+
+
+class DLQAuditReplayResponse(BaseModel):
+    message_id: str
+    source_topic: str
+
+
 class DLQAuditResolveRequest(CommsDLQAuditResolveRequest):
     pass
 
@@ -1889,12 +1891,6 @@ class DynamicTranslationListResponse(BaseModel):
     page: int
     page_size: int
     total: int
-
-
-class EndConversationSessionRequest(BaseModel):
-    duration_seconds: int
-    transcript_bucket: str
-    transcript_path: str
 
 
 class EndSessionResponse(AppFeedbackUpdateStatusRequest):
@@ -2392,18 +2388,6 @@ class IdentifyConceptExercise(BaseModel):
     source_type: SourceType | None = Field(None, title="Source Type")
     state: ExerciseState | None = None
     validation_signature: str | None = Field(None, title="Validation Signature")
-
-
-class ImportJob(BaseModel):
-    doneAt: AwareDatetime | None = None
-    error: str | None = None
-    fileName: str
-    id: str
-    md5: str | None = None
-    repo: str
-    sizeBytes: int
-    startedAt: AwareDatetime
-    status: str
 
 
 class InAppNudgeData(BaseModel):
@@ -3366,30 +3350,6 @@ class Mindmap(BaseModel):
     video_id: UUID_aliased
 
 
-class ModelChecksum(BaseModel):
-    algorithm: str
-    value: str
-
-
-class ModelDescriptor(BaseModel):
-    checksum: ModelChecksum | None = None
-    downloadUrl: str
-    fileName: str
-    id: str
-    isDefault: bool | None = None
-    locale: str
-    minimumRamMb: int | None = None
-    name: str
-    sizeBytes: int
-    variant: str
-
-
-class ModelManifest(BaseModel):
-    generatedAt: str
-    manifestVersion: str
-    models: list[ModelDescriptor]
-
-
 class Morphology(BaseModel):
     case: str | None = None
     clitics: list[str] | None = None
@@ -3910,14 +3870,6 @@ class RecommendationLaunchParams(BaseModel):
     topic_list_id: UUID_aliased | None = Field(None, title="Topic List Id")
 
 
-class RecordConversationSessionRequest(BaseModel):
-    scenario_id: str
-    scenario_uuid: str | None = None
-    session_id: str
-    state: str
-    user_id: str
-
-
 class RefreshTokenRequest(BaseModel):
     refresh_token: str
 
@@ -4315,15 +4267,11 @@ class RunRow(BaseModel):
     triggered_by: str | None = None
 
 
-class SaveConversationTranscriptRequest(BaseModel):
-    events: list[dict[str, Any]]
-    srt: str
-
-
 class SaveItemRequest(BaseModel):
     item_id: str
     item_type: str
     notes: str | None = None
+    saved_context: dict[str, Any] | None = None
 
 
 class Intent2(StrEnum):
@@ -4363,6 +4311,7 @@ class SavedItem(BaseModel):
     item_type: str
     notes: str | None = None
     saved_at: str
+    saved_context: dict[str, Any] | None = None
     user_id: str
 
 
@@ -4869,10 +4818,6 @@ class SingletonConversationScenarioStepsResponse(BaseModel):
     data: ConversationScenarioStepsResponse
 
 
-class SingletonConversationSessionMeta(BaseModel):
-    data: ConversationSessionMeta
-
-
 class SingletonConvoScenario(BaseModel):
     data: ConvoScenario
 
@@ -5023,10 +4968,6 @@ class SingletonGrantSubscriptionResponse(BaseModel):
 
 class SingletonHintResponse(BaseModel):
     data: HintResponse
-
-
-class SingletonImportJob(BaseModel):
-    data: ImportJob
 
 
 class SingletonInvalidateCacheResponse(BaseModel):
@@ -5211,10 +5152,6 @@ class SingletonMicroDrill(BaseModel):
 
 class SingletonMindmap(BaseModel):
     data: Mindmap
-
-
-class SingletonModelManifest(BaseModel):
-    data: ModelManifest
 
 
 class SingletonNamespace(BaseModel):
@@ -6428,61 +6365,6 @@ class WeeklyActivityDay(BaseModel):
 
 class WeeklyActivityDayV3(WeeklyActivityDay):
     pass
-
-
-class WhisperCacheInvalidateResponse(BaseModel):
-    reason: str | None = None
-    status: str
-
-
-class WhisperHFImportRequest(BaseModel):
-    fileName: str
-    repo: str | None = None
-
-
-class WhisperHFModelEntry(BaseModel):
-    fileName: str
-    sizeBytes: int
-
-
-class WhisperHFModelsListResponse(BaseModel):
-    models: list[WhisperHFModelEntry]
-    repo: str
-
-
-class WhisperImportJob(BaseModel):
-    doneAt: str | None = None
-    error: str | None = None
-    fileName: str
-    id: str
-    md5: str | None = None
-    repo: str
-    sizeBytes: int
-    startedAt: str
-    status: str
-
-
-class WhisperModelChecksum(ModelChecksum):
-    pass
-
-
-class WhisperModelDescriptor(BaseModel):
-    checksum: WhisperModelChecksum | None = None
-    downloadUrl: str
-    fileName: str
-    id: str
-    isDefault: bool | None = None
-    locale: str
-    minimumRamMb: int | None = None
-    name: str
-    sizeBytes: int
-    variant: str
-
-
-class WhisperModelManifest(BaseModel):
-    generatedAt: str
-    manifestVersion: str
-    models: list[WhisperModelDescriptor]
 
 
 class WontFixIssueRequest(BaseModel):
@@ -7925,22 +7807,6 @@ class SingletonWebIngestTarget(BaseModel):
 
 class SingletonWebIngestTargetList(BaseModel):
     data: list[WebIngestTarget]
-
-
-class SingletonWhisperCacheInvalidateResponse(BaseModel):
-    data: WhisperCacheInvalidateResponse
-
-
-class SingletonWhisperHFModelsListResponse(BaseModel):
-    data: WhisperHFModelsListResponse
-
-
-class SingletonWhisperImportJobList(BaseModel):
-    data: list[WhisperImportJob]
-
-
-class SingletonWhisperModelManifest(BaseModel):
-    data: WhisperModelManifest
 
 
 class StatsChartResponse(BaseModel):

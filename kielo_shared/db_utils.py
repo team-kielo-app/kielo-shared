@@ -109,6 +109,19 @@ _active_support_language: contextvars.ContextVar[str | None] = contextvars.Conte
 )
 
 
+# Tables that test cleanups must NEVER truncate/delete, regardless of how
+# they enumerate tables. Bare-name enumeration under a per-language
+# search_path resolves these to the FIRST schema on the path — three real
+# incidents in one week (2026-08): engine conftest truncated
+# klearn_fi.flyway_schema_history (next `make dev-up` failed with
+# "relation already exists" on V001), cms SetupTestDB deleted the
+# migration-seeded convo copy from localization.dynamic_translations, and
+# comms `go test` truncated the live dev DB. Any enumerating cleanup must
+# union its skip set with this constant (Go twin:
+# kielo-shared/db/migrationtables.go).
+MIGRATION_BOOKKEEPING_TABLES = frozenset({"alembic_version", "flyway_schema_history"})
+
+
 def normalize_search_path(search_path: str) -> str:
     return ",".join(part.strip() for part in search_path.split(",") if part.strip())
 
