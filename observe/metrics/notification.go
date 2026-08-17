@@ -473,7 +473,8 @@ var NotificationJobDispatchPrunedTotal = promauto.NewCounter(
 var NotificationLaneFunnel24h = promauto.NewGaugeVec(
 	prometheus.GaugeOpts{
 		Name: "kielo_notification_lane_funnel_24h",
-		Help: "Rolling-24h per-lane delivery funnel (delivered/opened/suppressed_<reason>/failed) recomputed from the deliveries ledger; displacement = one lane's delivered falling while another's budget suppressions rise.",
+		Help: "Rolling-24h per-lane delivery funnel (delivered/opened/suppressed_<reason>/failed) recomputed from the" +
+			" deliveries ledger; displacement = one lane's delivered falling while another's budget suppressions rise.",
 	},
 	[]string{"intent", "outcome"},
 )
