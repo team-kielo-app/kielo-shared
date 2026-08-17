@@ -21,6 +21,14 @@ import (
 // importing this package's concrete error type.
 var ErrLanguageRequired = errors.New("learning_language_code is required on ctx / Pub/Sub message attributes")
 
+// ErrLanguageInvalid is returned by WithLanguageFromAttributesStrict when
+// the attribute is PRESENT but is not an attachable learning language.
+// Distinct from ErrLanguageRequired so a consumer's logs name which
+// publisher-contract violation it saw — both are permanent for the
+// message either way (attributes are immutable, so redelivery can only
+// reproduce them).
+var ErrLanguageInvalid = errors.New("learning_language_code is not a supported learning language")
+
 // LanguageAttribute is the canonical Pub/Sub message attribute name used
 // to propagate the active learning language from publishers to consumers.
 // Keep in sync with the Python kielo_shared equivalent and the
@@ -157,16 +165,63 @@ func EventAttributesStrict(ctx context.Context, eventType string) (map[string]st
 // content path MUST use this variant and nack / drop the message on
 // error — running the consumer in fallback schema corrupts the
 // per-language data integrity contract.
+// The returned ctx is GUARANTEED to carry an attachable language when err
+// is nil. That guarantee is asserted here rather than inherited: until
+// 2026-08-17 it rested on LanguageFromAttributes normalizing against
+// locale.supportedLearningLanguages while sharedDB.WithLanguage validated
+// against db.supportedLearningLanguageIdents — two independently-maintained
+// sets in two packages. They agree today, so no invalid value slipped
+// through; but if they ever drift (a third learning language added to one
+// first), this returned (ctx, nil) with NO language attached, because
+// WithLanguage silently no-ops on a value it rejects. A consumer would then
+// fail at ApplySearchPathRequired, classify that DB error as transient, and
+// NACK a message that can never succeed — the poison-message loop this
+// helper's strictness exists to prevent. Validate with the same function
+// WithLanguage uses, and verify the attachment took.
 func WithLanguageFromAttributesStrict(
 	ctx context.Context, attrs map[string]string,
 ) (context.Context, error) {
-	lang := LanguageFromAttributes(attrs)
-	if lang == "" {
+	raw := ""
+	if attrs != nil {
+		raw = attrs[LanguageAttribute]
+	}
+	if raw == "" {
 		return ctx, fmt.Errorf(
 			"WithLanguageFromAttributesStrict: %w (attrs=%v)",
 			ErrLanguageRequired,
 			attrs,
 		)
 	}
-	return sharedDB.WithLanguage(ctx, lang), nil
+	lang := locale.NormalizeSupportedLearningLanguageCode(raw)
+	if lang == "" {
+		return ctx, fmt.Errorf(
+			"WithLanguageFromAttributesStrict: %w: %q (attrs=%v)",
+			ErrLanguageInvalid,
+			raw,
+			attrs,
+		)
+	}
+	if err := sharedDB.ValidateLearningLanguageIdent(lang); err != nil {
+		return ctx, fmt.Errorf(
+			"WithLanguageFromAttributesStrict: %w: %q normalized to %q: %v (attrs=%v)",
+			ErrLanguageInvalid,
+			raw,
+			lang,
+			err,
+			attrs,
+		)
+	}
+	scoped := sharedDB.WithLanguage(ctx, lang)
+	if _, ok := sharedDB.LanguageFromContext(scoped); !ok {
+		// Unreachable while the validator above is the one WithLanguage
+		// consults; kept so a divergence surfaces as a permanent drop
+		// rather than as a silently language-less ctx.
+		return ctx, fmt.Errorf(
+			"WithLanguageFromAttributesStrict: %w: %q did not attach to ctx (attrs=%v)",
+			ErrLanguageInvalid,
+			lang,
+			attrs,
+		)
+	}
+	return scoped, nil
 }
