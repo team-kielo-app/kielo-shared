@@ -3475,6 +3475,16 @@ class Type(StrEnum):
     saved_collection = "saved_collection"
 
 
+class NotificationDedupeClaimRequest(BaseModel):
+    claim_id: UUID_aliased
+    consumer: str
+    event_id: str
+
+
+class NotificationDedupeClaimResponse(BaseModel):
+    claimed: bool
+
+
 class NotificationEngagementRequest(BaseModel):
     action: str
 
@@ -5160,6 +5170,10 @@ class SingletonNamespace(BaseModel):
 
 class SingletonNamespaceList(BaseModel):
     data: list[Namespace]
+
+
+class SingletonNotificationDedupeClaimResponse(BaseModel):
+    data: NotificationDedupeClaimResponse
 
 
 class SingletonNotificationJob(BaseModel):
