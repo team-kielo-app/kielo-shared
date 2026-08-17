@@ -5656,6 +5656,18 @@ type NextStepRecommendationItemType string
 // NextStepRecommendationType defines model for NextStepRecommendation.Type.
 type NextStepRecommendationType string
 
+// NotificationDedupeClaimRequest defines model for NotificationDedupeClaimRequest.
+type NotificationDedupeClaimRequest struct {
+	ClaimId  uuid.UUID `json:"claim_id"`
+	Consumer string    `json:"consumer"`
+	EventId  string    `json:"event_id"`
+}
+
+// NotificationDedupeClaimResponse defines model for NotificationDedupeClaimResponse.
+type NotificationDedupeClaimResponse struct {
+	Claimed bool `json:"claimed"`
+}
+
 // NotificationEngagementRequest defines model for NotificationEngagementRequest.
 type NotificationEngagementRequest struct {
 	Action string `json:"action"`
@@ -8094,6 +8106,11 @@ type SingletonNamespace struct {
 // SingletonNamespaceList defines model for SingletonNamespaceList.
 type SingletonNamespaceList struct {
 	Data []Namespace `json:"data"`
+}
+
+// SingletonNotificationDedupeClaimResponse defines model for SingletonNotificationDedupeClaimResponse.
+type SingletonNotificationDedupeClaimResponse struct {
+	Data NotificationDedupeClaimResponse `json:"data"`
 }
 
 // SingletonNotificationJob defines model for SingletonNotificationJob.
@@ -11820,6 +11837,15 @@ type GetInternalApiV3FeedbackFeedbackIdMessagesParams struct {
 	MarkRead *string `form:"mark_read,omitempty" json:"mark_read,omitempty"`
 }
 
+// DeleteInternalApiV3NotificationDedupeClaimsClaimIdParams defines parameters for DeleteInternalApiV3NotificationDedupeClaimsClaimId.
+type DeleteInternalApiV3NotificationDedupeClaimsClaimIdParams struct {
+	// EventId Deterministic notification event ID
+	EventId string `form:"event_id" json:"event_id"`
+
+	// Consumer Scanner consumer name
+	Consumer string `form:"consumer" json:"consumer"`
+}
+
 // GetInternalApiV3UsersUserIdConversationsParams defines parameters for GetInternalApiV3UsersUserIdConversations.
 type GetInternalApiV3UsersUserIdConversationsParams struct {
 	// Cursor Opaque pagination cursor (legacy alias for next_page_key).
@@ -13072,6 +13098,9 @@ type PostInternalApiV3LocalizationTranslationsBulkJSONRequestBody = BulkUpsertTr
 
 // PatchInternalApiV3LocalizationTranslationsTranslationIdStatusJSONRequestBody defines body for PatchInternalApiV3LocalizationTranslationsTranslationIdStatus for application/json ContentType.
 type PatchInternalApiV3LocalizationTranslationsTranslationIdStatusJSONRequestBody = SetTranslationStatusRequest
+
+// PostInternalApiV3NotificationDedupeClaimsJSONRequestBody defines body for PostInternalApiV3NotificationDedupeClaims for application/json ContentType.
+type PostInternalApiV3NotificationDedupeClaimsJSONRequestBody = NotificationDedupeClaimRequest
 
 // PostInternalApiV3UsersJSONRequestBody defines body for PostInternalApiV3Users for application/json ContentType.
 type PostInternalApiV3UsersJSONRequestBody = CreateAuthUserRequest

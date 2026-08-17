@@ -45,6 +45,15 @@ const (
 	PushKeyAchievementFirstPayingBody PushKey = "push.achievement.body.first_paying_user"
 	PushKeyAchievementGenericBody     PushKey = "push.achievement.body.generic"
 	PushKeyAchievementNamedFormatBody PushKey = "push.achievement.body.named_format"
+	// Vocabulary-milestone bodies (2026-08-15): the words_* achievements
+	// went from never-awarded to live when the engine's counted-set hook
+	// shipped; the humanized-code fallback would render "You earned
+	// Words 50." — these carry real celebration copy instead.
+	PushKeyAchievementFirstWordBody PushKey = "push.achievement.body.first_word"
+	PushKeyAchievementWords10Body   PushKey = "push.achievement.body.words_10"
+	PushKeyAchievementWords50Body   PushKey = "push.achievement.body.words_50"
+	PushKeyAchievementWords100Body  PushKey = "push.achievement.body.words_100"
+	PushKeyAchievementWords500Body  PushKey = "push.achievement.body.words_500"
 )
 
 // FH.6 design decision: feedback voter notifications use the
@@ -69,6 +78,11 @@ var AllPushKeys = []PushKey{
 	PushKeyAchievementFirstPayingBody,
 	PushKeyAchievementGenericBody,
 	PushKeyAchievementNamedFormatBody,
+	PushKeyAchievementFirstWordBody,
+	PushKeyAchievementWords10Body,
+	PushKeyAchievementWords50Body,
+	PushKeyAchievementWords100Body,
+	PushKeyAchievementWords500Body,
 }
 
 // IsKnownPushKey returns true when the given wire string matches a

@@ -448,3 +448,33 @@ var NotificationJobDispatchPrunedTotal = promauto.NewCounter(
 		Help: "Lifetime count of notification_job_dispatch rows pruned by the periodic TTL sweep. Tracks the C2 dedup table size bound.",
 	},
 )
+
+// NotificationLaneFunnel24h reports each notification lane's rolling
+// 24h delivery funnel, recomputed from communications.notification_deliveries
+// by comms' control-plane tick (LaneFunnelGaugeRefresher, throttled to
+// one refresh per few minutes). Gauges — not counters — because the
+// ledger is the source of truth and recomputation survives restarts
+// without double counting.
+//
+// Purpose: LANE DISPLACEMENT visibility. The 2026-08-15 launches
+// (roadmap_next_step + the four observation lanes) are volume-neutral
+// by construction — they compete inside the shared proactive attention
+// budget — which means they can silently displace sends previously won
+// by higher-value lanes. Displacement shows up here as one lane's
+// `delivered` falling while another lane's `suppressed_*` (especially
+// proactive_attention_budget) rises. Watch per-lane, never aggregate.
+//
+// Labels:
+//   - intent: the delivery ledger intent (review_due, roadmap_next_step, …)
+//   - outcome: delivered | opened | suppressed_<reason> |
+//     permanent_failed | expired | canceled
+//
+// Cardinality: ~15 intents × ~10 outcomes — bounded by closed vocab.
+var NotificationLaneFunnel24h = promauto.NewGaugeVec(
+	prometheus.GaugeOpts{
+		Name: "kielo_notification_lane_funnel_24h",
+		Help: "Rolling-24h per-lane delivery funnel (delivered/opened/suppressed_<reason>/failed) recomputed from the" +
+			" deliveries ledger; displacement = one lane's delivered falling while another's budget suppressions rise.",
+	},
+	[]string{"intent", "outcome"},
+)
