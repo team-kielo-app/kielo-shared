@@ -170,14 +170,14 @@ var profiles = map[string]MediaProfile{
 		// adaptive ladder (processor-owned tiers, capped master for
 		// constrained devices) whose master playlist is served PATH-STYLE
 		// (StreamingVariantURLForRequest) so relative segment URIs resolve.
-		// "mobile" (720x1280@30 progressive mp4) is the simple fallback; the
-		// 1080x1920@60 ~7.2 Mbps original exhausted MediaCodec buffers on
-		// low-RAM Android (prod OOM cluster 2026-07). content-service serves
-		// priority hls,mobile,original,main so unbackfilled rows degrade
-		// gracefully. Legacy rows keep their main variant as last fallback.
+		// The HLS ladder includes a capped <=720p master for constrained
+		// devices. content-service still reads legacy mobile/main renditions as
+		// fallbacks, but new assets do not render a separate mobile.mp4: a
+		// successful HLS job always returns HLS, making that extra encode
+		// unreachable on the serving path. Unbackfilled rows retain their
+		// existing progressive variants.
 		Variants: []VariantSpec{
 			{Name: "preview", MaxWidth: 300, Format: "webp"},
-			{Name: "mobile", MaxShortSide: 720, MaxFps: 30, Quality: 26, Format: "mp4"},
 			{Name: "hls", Format: "hls"},
 		},
 		Access:    AccessSignedCDN,
@@ -219,7 +219,6 @@ var profiles = map[string]MediaProfile{
 		MaxUploadBytes: 4 * gib,
 		Variants: []VariantSpec{
 			{Name: "preview", MaxWidth: 300, Format: "webp"},
-			{Name: "mobile", MaxShortSide: 720, MaxFps: 30, Quality: 26, Format: "mp4"},
 			{Name: "hls", Format: "hls"},
 		},
 		Access:    AccessSignedCDN,
@@ -240,7 +239,6 @@ var profiles = map[string]MediaProfile{
 		MaxUploadBytes: 2 * gib,
 		Variants: []VariantSpec{
 			{Name: "preview", MaxWidth: 300, Format: "webp"},
-			{Name: "mobile", MaxShortSide: 720, MaxFps: 30, Quality: 26, Format: "mp4"},
 			{Name: "hls", Format: "hls"},
 		},
 		Access: AccessSignedCDN,
