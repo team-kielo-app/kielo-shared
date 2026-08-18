@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"time"
 
@@ -155,10 +156,74 @@ func (h *HTTPEmitter) Emit(ctx context.Context, userID uuid.UUID, envelope UserA
 	}
 
 	// Non-2xx → surface the spine's error body to the caller so the
-	// failure log is precise about which validation rule fired.
+	// failure log is precise about which validation rule fired. Typed
+	// (not fmt.Errorf) so callers can tell a transient 5xx from a
+	// permanent 4xx without string-matching; Error() keeps the exact
+	// pre-existing wording so log greps and tests are unaffected.
 	respBody, _ := io.ReadAll(io.LimitReader(resp.Body, 1024))
-	return fmt.Errorf("events.Emit: kielo-events returned %d: %s",
-		resp.StatusCode, string(respBody))
+	return &StatusError{StatusCode: resp.StatusCode, Body: string(respBody)}
+}
+
+// StatusError is returned by [HTTPEmitter.Emit] when kielo-events
+// answers with a non-2xx status. Callers that retry MUST branch on
+// StatusCode rather than blanket-retrying: a 4xx means the emitter
+// built a bad envelope and every retry will fail identically, while a
+// 5xx/429 is transient. Use [IsRetryable] rather than reimplementing
+// the split per emitter.
+type StatusError struct {
+	StatusCode int
+	Body       string
+}
+
+func (e *StatusError) Error() string {
+	return fmt.Sprintf("events.Emit: kielo-events returned %d: %s", e.StatusCode, e.Body)
+}
+
+// IsRetryable reports whether an error from [HTTPEmitter.Emit] is
+// worth re-attempting with the SAME envelope (and therefore the same
+// event_id — the spine's idempotency layer collapses the duplicate).
+//
+// Retryable:
+//   - transport failures (connection refused, reset, DNS) — every
+//     net.Error qualifies;
+//   - a per-attempt deadline that expired. kielo-events is
+//     scale-to-zero (terraform/kielo-events.tf sets no
+//     min_instance_count), so the first POST after an idle window
+//     pays a container cold start and is the dominant timeout cause;
+//   - 5xx (spine-side fault), 429 (shed load), 408.
+//
+// NOT retryable:
+//   - context.Canceled — the caller is going away, so a retry has
+//     nowhere to run;
+//   - 4xx other than 408/429 — a malformed envelope stays malformed;
+//   - envelope-shape guards (missing EventID/EventType, marshal
+//     failure), which are emitter bugs, not transient conditions.
+func IsRetryable(err error) bool {
+	if err == nil {
+		return false
+	}
+	var statusErr *StatusError
+	if errors.As(err, &statusErr) {
+		switch {
+		case statusErr.StatusCode >= 500:
+			return true
+		case statusErr.StatusCode == http.StatusTooManyRequests,
+			statusErr.StatusCode == http.StatusRequestTimeout:
+			return true
+		default:
+			return false
+		}
+	}
+	// Order matters: a *url.Error wrapping context.Canceled also
+	// satisfies net.Error, so the cancellation check must come first.
+	if errors.Is(err, context.Canceled) {
+		return false
+	}
+	if errors.Is(err, context.DeadlineExceeded) {
+		return true
+	}
+	var netErr net.Error
+	return errors.As(err, &netErr)
 }
 
 // NoOpEmitter is the dev/test no-emit implementation. Used by:

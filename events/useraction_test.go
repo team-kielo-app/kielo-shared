@@ -353,3 +353,59 @@ func TestUserActionEnvelope_OmitsDerivedFromForPrimary(t *testing.T) {
 	_, present := parsed["derived_from"]
 	assert.False(t, present, "primary envelope MUST NOT serialize derived_from (omitempty)")
 }
+
+// TestIsRetryable_ClassifiesEmitFailures pins the retry/no-retry split
+// emitters branch on. The cold-start timeout case (2026-08-18: every
+// article.read emit failure in prod was a `context deadline exceeded`
+// against a scale-to-zero kielo-events instance) MUST be retryable;
+// a 4xx validation rejection MUST NOT be, or a malformed envelope
+// would be POSTed N times for the same guaranteed failure.
+func TestIsRetryable_ClassifiesEmitFailures(t *testing.T) {
+	slowSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		time.Sleep(200 * time.Millisecond)
+		w.WriteHeader(http.StatusAccepted)
+	}))
+	defer slowSrv.Close()
+
+	timeoutEmitter := NewHTTPEmitter(slowSrv.URL, "k", "s",
+		&http.Client{Timeout: 20 * time.Millisecond})
+	timeoutErr := timeoutEmitter.Emit(context.Background(), uuid.New(), UserActionEnvelope{
+		EventID:   "01HXY3F4Q5ABCDE0123456789Z",
+		EventType: "article.read",
+	})
+	require.Error(t, timeoutErr)
+	assert.True(t, IsRetryable(timeoutErr),
+		"a cold-start deadline is the dominant prod failure and MUST be retried: %v", timeoutErr)
+
+	refusedEmitter := NewHTTPEmitter("http://127.0.0.1:1", "k", "s",
+		&http.Client{Timeout: time.Second})
+	refusedErr := refusedEmitter.Emit(context.Background(), uuid.New(), UserActionEnvelope{
+		EventID:   "01HXY3F4Q5ABCDE0123456789Z",
+		EventType: "article.read",
+	})
+	require.Error(t, refusedErr)
+	assert.True(t, IsRetryable(refusedErr), "transport failure is retryable: %v", refusedErr)
+
+	assert.False(t, IsRetryable(nil))
+	assert.True(t, IsRetryable(&StatusError{StatusCode: http.StatusServiceUnavailable}))
+	assert.True(t, IsRetryable(&StatusError{StatusCode: http.StatusInternalServerError}))
+	assert.True(t, IsRetryable(&StatusError{StatusCode: http.StatusTooManyRequests}))
+	assert.False(t, IsRetryable(&StatusError{StatusCode: http.StatusUnprocessableEntity}))
+	assert.False(t, IsRetryable(&StatusError{StatusCode: http.StatusBadRequest}))
+
+	// Envelope-shape guards are emitter bugs, never transient.
+	shapeErr := (&HTTPEmitter{EventsServiceURL: "http://x"}).Emit(
+		context.Background(), uuid.New(), UserActionEnvelope{EventType: "article.read"})
+	require.Error(t, shapeErr)
+	assert.False(t, IsRetryable(shapeErr))
+}
+
+// TestStatusError_PreservesLegacyMessage: the pre-existing wording is
+// load-bearing — ops greps and TestHTTPEmitter_Non2xx_Error assert on
+// "returned <status>: <body>".
+func TestStatusError_PreservesLegacyMessage(t *testing.T) {
+	err := &StatusError{StatusCode: 422, Body: `{"code":"VALIDATION_FAILED"}`}
+	assert.Equal(t,
+		`events.Emit: kielo-events returned 422: {"code":"VALIDATION_FAILED"}`,
+		err.Error())
+}
