@@ -25,18 +25,19 @@ from __future__ import annotations
 
 import logging
 import re
+import sys
 import threading
 from typing import Any
 
 
 logger = logging.getLogger(__name__)
 
-# Per-(service, resolver) lock used to gate the WARN-once log emitted by
+# Per-(service, resolver, callsite) lock used to gate the WARN-once log emitted by
 # `per_language_search_path_fallback_emit`. Process-local; survives the
 # lifetime of the worker. Falling-back background workers stay at DEBUG;
 # the WARN is reserved for request-path resolvers (`expected_fallback=False`)
 # where a single fallback occurrence already signals a regression.
-_PER_LANGUAGE_FALLBACK_WARN_SEEN: set[tuple[str, str]] = set()
+_PER_LANGUAGE_FALLBACK_WARN_SEEN: set[tuple[str, str, str]] = set()
 _PER_LANGUAGE_FALLBACK_WARN_LOCK = threading.Lock()
 
 
@@ -700,6 +701,46 @@ def side_effect_failed_emit(
     del exc
 
 
+def _fallback_callsite(max_depth: int = 25) -> str:
+    """Best-effort "module.py:line in func" for the code that opened a
+    transaction without an active language.
+
+    Without this the fallback signal is unattributable: prod showed ~5,580
+    fallbacks/day on kielolearn-engine (2026-08-18) with only
+    resolver="session" to go on, which says something upstream is not
+    propagating the language but not WHERE. Deliberately kept OUT of the
+    Prometheus labels (unbounded cardinality) and put in the log line, which
+    is also the signal that survives if the GMP sidecar is ever removed.
+
+    Walks out of this module, db_utils, and the DB/async plumbing to the first
+    application frame. Uses sys._getframe rather than traceback.extract_stack
+    to avoid building a full FrameSummary list on a hot-ish path.
+    """
+    skip = (
+        "kielo_shared/observability",
+        "kielo_shared/db_utils",
+        "sqlalchemy/",
+        "asyncio/",
+        "contextlib.py",
+        "kielo_shared\\observability",
+        "kielo_shared\\db_utils",
+    )
+    frame: Any = None
+    try:
+        frame = sys._getframe(1)
+    except Exception:  # pragma: no cover - platform without _getframe
+        return "unknown"
+    depth = 0
+    while frame is not None and depth < max_depth:
+        name = frame.f_code.co_filename
+        if not any(part in name for part in skip):
+            short = "/".join(name.rsplit("/", 2)[-2:])
+            return f"{short}:{frame.f_lineno} in {frame.f_code.co_name}"
+        frame = frame.f_back
+        depth += 1
+    return "unknown"
+
+
 def per_language_search_path_fallback_emit(
     *,
     service: str,
@@ -734,25 +775,34 @@ def per_language_search_path_fallback_emit(
             resolver,
         )
     else:
-        key = (service, resolver)
+        callsite = _fallback_callsite()
+        # Keyed on the CALLSITE, not just (service, resolver): keying on the
+        # pair meant the very first leaking path emitted the only WARN ever and
+        # every other one was silent at DEBUG, so a 5,580/day rate had exactly
+        # one log line behind it. Bounded below so a surprise hot path cannot
+        # grow this set without limit.
+        key = (service, resolver, callsite)
         first_occurrence = False
         with _PER_LANGUAGE_FALLBACK_WARN_LOCK:
             if key not in _PER_LANGUAGE_FALLBACK_WARN_SEEN:
-                _PER_LANGUAGE_FALLBACK_WARN_SEEN.add(key)
-                first_occurrence = True
+                if len(_PER_LANGUAGE_FALLBACK_WARN_SEEN) < 200:
+                    _PER_LANGUAGE_FALLBACK_WARN_SEEN.add(key)
+                    first_occurrence = True
         if first_occurrence:
             logger.warning(
-                "per_language_search_path_fallback service=%s resolver=%s "
+                "per_language_search_path_fallback service=%s resolver=%s callsite=%s "
                 "(no active language; using static fallback — request-path "
                 "resolvers should always have a language scoped by middleware)",
                 service,
                 resolver,
+                callsite,
             )
         else:
             logger.debug(
-                "per_language_search_path_fallback service=%s resolver=%s expected=false",
+                "per_language_search_path_fallback service=%s resolver=%s callsite=%s expected=false",
                 service,
                 resolver,
+                callsite,
             )
     if not PROMETHEUS_AVAILABLE:
         return
