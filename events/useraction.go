@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"time"
 
@@ -144,7 +143,7 @@ func (h *HTTPEmitter) Emit(ctx context.Context, userID uuid.UUID, envelope UserA
 
 	resp, err := h.HTTPClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("events.Emit: POST kielo-events: %w", err)
+		return &TransportError{Err: err}
 	}
 	defer resp.Body.Close()
 
@@ -179,13 +178,31 @@ func (e *StatusError) Error() string {
 	return fmt.Sprintf("events.Emit: kielo-events returned %d: %s", e.StatusCode, e.Body)
 }
 
+// TransportError is returned by [HTTPEmitter.Emit] when the POST never got
+// an answer — refused dial, reset, DNS failure, or an expired deadline.
+// Always transient from the emitter's point of view: the envelope was
+// never judged, so the same envelope is still valid to send.
+//
+// Typed rather than a bare fmt.Errorf so [IsRetryable] can classify it
+// without importing `net` — see the note in IsRetryable. Error() keeps the
+// exact pre-existing wording, so log greps are unaffected.
+type TransportError struct {
+	Err error
+}
+
+func (e *TransportError) Error() string {
+	return fmt.Sprintf("events.Emit: POST kielo-events: %v", e.Err)
+}
+
+func (e *TransportError) Unwrap() error { return e.Err }
+
 // IsRetryable reports whether an error from [HTTPEmitter.Emit] is
 // worth re-attempting with the SAME envelope (and therefore the same
 // event_id — the spine's idempotency layer collapses the duplicate).
 //
 // Retryable:
-//   - transport failures (connection refused, reset, DNS) — every
-//     net.Error qualifies;
+//   - transport failures (connection refused, reset, DNS) that report
+//     Timeout() — matched structurally, see the note in the body;
 //   - a per-attempt deadline that expired. kielo-events is
 //     scale-to-zero (terraform/kielo-events.tf sets no
 //     min_instance_count), so the first POST after an idle window
@@ -214,16 +231,26 @@ func IsRetryable(err error) bool {
 			return false
 		}
 	}
-	// Order matters: a *url.Error wrapping context.Canceled also
-	// satisfies net.Error, so the cancellation check must come first.
+	// Order matters: a *url.Error wrapping context.Canceled is still a
+	// TransportError, so the cancellation check comes first.
 	if errors.Is(err, context.Canceled) {
 		return false
 	}
-	if errors.Is(err, context.DeadlineExceeded) {
+	// Classify by the error TYPE this package produced, not by sniffing at
+	// the transport's internals. The first attempt used `net.Error`, which
+	// dragged `net` into a package every non-HTTP consumer of kielo-shared
+	// imports (there are subprocess tests pinning that surface) and broke
+	// the test runner's shared Go build cache outright — every package that
+	// transitively reached this file failed with `could not import net
+	// (open : no such file or directory)`. The second attempt used a
+	// structural `interface{ Timeout() bool }`, which silently dropped
+	// connection-refused: a refused dial is not a timeout, so a
+	// kielo-events instance that is simply down would never be retried.
+	var transportErr *TransportError
+	if errors.As(err, &transportErr) {
 		return true
 	}
-	var netErr net.Error
-	return errors.As(err, &netErr)
+	return errors.Is(err, context.DeadlineExceeded)
 }
 
 // NoOpEmitter is the dev/test no-emit implementation. Used by:
