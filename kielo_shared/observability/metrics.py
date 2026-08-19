@@ -32,12 +32,12 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-# Per-(service, resolver, callsite) lock used to gate the WARN-once log emitted by
+# Per-(service, resolver) lock used to gate the WARN-once log emitted by
 # `per_language_search_path_fallback_emit`. Process-local; survives the
 # lifetime of the worker. Falling-back background workers stay at DEBUG;
 # the WARN is reserved for request-path resolvers (`expected_fallback=False`)
 # where a single fallback occurrence already signals a regression.
-_PER_LANGUAGE_FALLBACK_WARN_SEEN: set[tuple[str, str, str]] = set()
+_PER_LANGUAGE_FALLBACK_WARN_SEEN: set[tuple[str, str]] = set()
 _PER_LANGUAGE_FALLBACK_WARN_LOCK = threading.Lock()
 
 
@@ -776,12 +776,20 @@ def per_language_search_path_fallback_emit(
         )
     else:
         callsite = _fallback_callsite()
-        # Keyed on the CALLSITE, not just (service, resolver): keying on the
-        # pair meant the very first leaking path emitted the only WARN ever and
-        # every other one was silent at DEBUG, so a 5,580/day rate had exactly
-        # one log line behind it. Bounded below so a surprise hot path cannot
-        # grow this set without limit.
-        key = (service, resolver, callsite)
+        # Keyed on (service, resolver) — NOT the callsite.
+        #
+        # Including the callsite was tried and reverted 2026-08-19: it turns
+        # warn-once into warn-once-PER-CALL-LINE, so a resolver reached from a
+        # loop or from several sibling sites emits a WARN for each one. That is
+        # the opposite of what this gate is for — prod runs ~5,580 fallbacks/day
+        # (kielolearn-engine, 2026-08-18) and the whole point is that a leak
+        # storm produces one line, not thousands.
+        #
+        # Attribution is not lost: the callsite is in the MESSAGE of that first
+        # WARN, and every subsequent occurrence logs at DEBUG with its own
+        # callsite, so raising the level surfaces the rest. The counter is
+        # unconditional either way, so the rate stays queryable.
+        key = (service, resolver)
         first_occurrence = False
         with _PER_LANGUAGE_FALLBACK_WARN_LOCK:
             if key not in _PER_LANGUAGE_FALLBACK_WARN_SEEN:
