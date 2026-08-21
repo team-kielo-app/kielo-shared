@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"log"
 	"strings"
 	"sync"
 	"time"
@@ -477,6 +478,9 @@ func (s *Seam) providerBatchCall(
 			out[r.idx] = r.ref.SourceText
 			s.metrics.Record(ctx, r.ref.Namespace, target, "provider_error")
 		}
+		if len(remaining) > 0 {
+			logTranslationFallback("provider_error", remaining[0].ref.Namespace, "batch", target, len(remaining))
+		}
 		return
 	}
 
@@ -493,6 +497,9 @@ func (s *Seam) providerBatchCall(
 		for _, r := range remaining {
 			out[r.idx] = r.ref.SourceText
 			s.metrics.Record(ctx, r.ref.Namespace, target, "provider_error")
+		}
+		if len(remaining) > 0 {
+			logTranslationFallback("provider_error", remaining[0].ref.Namespace, "batch", target, len(remaining))
 		}
 		return
 	}
@@ -513,6 +520,7 @@ func (s *Seam) providerBatchCall(
 			// means users silently see English — alertable on its own.
 			out[r.idx] = r.ref.SourceText
 			s.metrics.Record(ctx, r.ref.Namespace, target, "empty_translation")
+			logTranslationFallback("empty_translation", r.ref.Namespace, r.ref.SourceID, target, 1)
 			continue
 		}
 		// Round 10D: per-item guard. Reject suspicious output BEFORE
@@ -523,6 +531,7 @@ func (s *Seam) providerBatchCall(
 		if s.guard.IsSuspicious(r.ref.SourceText, value, target) {
 			out[r.idx] = r.ref.SourceText
 			s.metrics.Record(ctx, r.ref.Namespace, target, "guard_rejected")
+			logTranslationFallback("guard_rejected", r.ref.Namespace, r.ref.SourceID, target, 1)
 			continue
 		}
 		out[r.idx] = value
@@ -621,6 +630,7 @@ func (s *Seam) callProvider(ctx context.Context, ref SourceRef, target, cacheKey
 	provider, err := s.registry.Resolve(TierASupportLocale, target)
 	if err != nil {
 		s.metrics.Record(ctx, ref.Namespace, target, "provider_error")
+		logTranslationFallback("provider_error", ref.Namespace, ref.SourceID, target, 1)
 		return ref.SourceText
 	}
 	role := ref.Role
@@ -639,6 +649,7 @@ func (s *Seam) callProvider(ctx context.Context, ref SourceRef, target, cacheKey
 	})
 	if err != nil || len(results) == 0 {
 		s.metrics.Record(ctx, ref.Namespace, target, "provider_error")
+		logTranslationFallback("provider_error", ref.Namespace, ref.SourceID, target, 1)
 		return ref.SourceText
 	}
 	value := strings.TrimSpace(results[0].Text)
@@ -646,12 +657,14 @@ func (s *Seam) callProvider(ctx context.Context, ref SourceRef, target, cacheKey
 		// Provider answered but produced nothing — users silently see
 		// English. Distinct tag so the rate is alertable on its own.
 		s.metrics.Record(ctx, ref.Namespace, target, "empty_translation")
+		logTranslationFallback("empty_translation", ref.Namespace, ref.SourceID, target, 1)
 		return ref.SourceText
 	}
 	// Round 10D: quality gate. Reject suspicious output BEFORE cache
 	// write + persistence so junk doesn't poison either store.
 	if s.guard.IsSuspicious(ref.SourceText, value, target) {
 		s.metrics.Record(ctx, ref.Namespace, target, "guard_rejected")
+		logTranslationFallback("guard_rejected", ref.Namespace, ref.SourceID, target, 1)
 		return ref.SourceText
 	}
 	_ = s.cache.Set(ctx, cacheKey, value, s.freshTTL+s.staleTTL)
@@ -666,6 +679,16 @@ func (s *Seam) callProvider(ctx context.Context, ref SourceRef, target, cacheKey
 
 func (s *Seam) cacheKey(ref SourceRef, target string) string {
 	return fmt.Sprintf("kielo:i18n:%s:%s:%s:%s", ref.Namespace, ref.SourceID, ref.SourceVersion, target)
+}
+
+// logTranslationFallback makes every silent-English path visible in
+// service logs. The Prometheus counter (kielo_translation_total) said the
+// same thing to nobody after the 2026-08-18 sidecar retirement — the
+// sanctioned pattern is a log-based metric, and log-based metrics need a
+// line to match. Grep/alert on "[translation-fallback]".
+func logTranslationFallback(source, namespace, sourceID, target string, count int) {
+	log.Printf("[translation-fallback] source=%s namespace=%s source_id=%s target=%s count=%d",
+		source, namespace, sourceID, target, count)
 }
 
 // TierASupportLocale is the canonical English code per ADR-007. Lives
