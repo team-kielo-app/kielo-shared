@@ -4,13 +4,22 @@ on:
   push:
     branches:
       - main
+  # Recovery lane: if a run failed or was skipped, main can be re-released
+  # without pushing a throwaway commit.
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# Two merges landing close together must not race for the same tag.
+concurrency:
+  group: auto-version
+  cancel-in-progress: false
 
 jobs:
   auto-version:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -18,35 +27,122 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Get latest tag
-        id: latest_tag
+      - name: Release
         run: |
-          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
-          echo "latest=$LATEST_TAG" >> $GITHUB_OUTPUT
-          echo "Latest tag: $LATEST_TAG"
+          set -euo pipefail
 
-      - name: Increment patch version
-        id: new_version
-        run: |
-          LATEST="${{ steps.latest_tag.outputs.latest }}"
-          # Remove 'v' prefix, split into major.minor.patch
-          VERSION=${LATEST#v}
-          MAJOR=$(echo $VERSION | cut -d. -f1)
-          MINOR=$(echo $VERSION | cut -d. -f2)
-          PATCH=$(echo $VERSION | cut -d. -f3)
-          
-          # Increment patch
-          NEW_PATCH=$((PATCH + 1))
-          NEW_VERSION="v${MAJOR}.${MINOR}.${NEW_PATCH}"
-          
-          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
-          echo "New version: $NEW_VERSION"
+          # Highest existing release tag, over ALL tags. Deliberately not
+          # `git describe`: that returns the nearest tag by commit distance, so
+          # a tag created on a side branch (e.g. an out-of-band tag on the
+          # experimental tip) sits further from main's head than the previous
+          # release and describe reports the older version -- the increment then
+          # collides with a tag that already exists.
+          highest_tag() {
+            git tag --list 'v*' \
+              | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' \
+              | sort -V \
+              | tail -n1
+          }
 
-      - name: Create and push tag
-        run: |
-          NEW_VERSION="${{ steps.new_version.outputs.new_version }}"
+          git fetch --tags --force --quiet
+
+          if EXISTING=$(git tag --points-at HEAD --list 'v*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n1); [ -n "${EXISTING:-}" ]; then
+            echo "HEAD is already released as ${EXISTING}; nothing to do."
+            echo "already=${EXISTING}" >> "$GITHUB_ENV"
+            exit 0
+          fi
+
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag "$NEW_VERSION"
-          git push origin "$NEW_VERSION"
-          echo "✅ Created and pushed tag: $NEW_VERSION"
+
+          # Resolve-and-push under retry. A tag can appear between resolving the
+          # version and pushing it, so losing the race is expected, not fatal:
+          # re-fetch and take the next free number. Never reuse or move a tag --
+          # proxy.golang.org caches tag -> commit immutably, so a moved tag is a
+          # checksum mismatch for Go consumers and a silent code swap for the
+          # pip/npm consumers that install by ref.
+          for attempt in 1 2 3 4 5; do
+            git fetch --tags --force --quiet
+
+            LATEST=$(highest_tag || true)
+            LATEST=${LATEST:-v0.0.0}
+
+            VERSION=${LATEST#v}
+            MAJOR=${VERSION%%.*}
+            REST=${VERSION#*.}
+            MINOR=${REST%%.*}
+            PATCH=${REST#*.}
+
+            while :; do
+              PATCH=$((PATCH + 1))
+              CANDIDATE="v${MAJOR}.${MINOR}.${PATCH}"
+              if ! git rev-parse -q --verify "refs/tags/${CANDIDATE}" >/dev/null; then
+                break
+              fi
+              echo "::notice::${CANDIDATE} is already taken, stepping over it."
+            done
+
+            echo "Attempt ${attempt}: highest is ${LATEST}, releasing ${CANDIDATE}"
+
+            git tag -a "${CANDIDATE}" -m "${CANDIDATE}"
+            if git push origin "refs/tags/${CANDIDATE}"; then
+              echo "released=${CANDIDATE}" >> "$GITHUB_ENV"
+              echo "✅ Created and pushed tag: ${CANDIDATE}"
+              exit 0
+            fi
+
+            echo "::warning::Pushing ${CANDIDATE} lost a race; retrying."
+            git tag -d "${CANDIDATE}"
+          done
+
+          echo "::error::Could not claim a version tag after 5 attempts."
+          exit 1
+
+      - name: Report
+        if: always()
+        run: |
+          set -euo pipefail
+          git fetch --tags --force --quiet
+          git fetch --quiet origin main
+
+          {
+            if [ -n "${released:-}" ]; then
+              echo "### Released \`${released}\` — \`$(git rev-parse --short HEAD)\`"
+              echo
+              echo "Consumers still pin the previous tag. Fan out from kielo-backend-next:"
+              echo
+              echo '```'
+              echo "make update-kielo-shared KIELO_SHARED_VERSION=${released}"
+              echo '```'
+            elif [ -n "${already:-}" ]; then
+              echo "### No release — HEAD is already \`${already}\`"
+            else
+              echo "### No release — tagging failed"
+            fi
+
+            # Out-of-band tags: a release tag belongs on main's first-parent
+            # line. Anything else was created by hand or by an agent, and is the
+            # shape that used to wedge this workflow.
+            git rev-list --first-parent origin/main > "${RUNNER_TEMP:-/tmp}/mainline"
+            stray=""
+            tags=$(git tag --list 'v*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n15 || true)
+            for tag in $tags; do
+              sha=$(git rev-list -n1 "$tag")
+              if grep -qx "$sha" "${RUNNER_TEMP:-/tmp}/mainline"; then
+                continue
+              fi
+              if git merge-base --is-ancestor "$sha" origin/main; then
+                stray="${stray}\n- \`${tag}\` -> \`$(git rev-parse --short "$sha")\` is off main's first-parent line (side-branch tag)"
+              else
+                stray="${stray}\n- \`${tag}\` -> \`$(git rev-parse --short "$sha")\` is not reachable from main at all"
+              fi
+            done
+            if [ -n "$stray" ]; then
+              echo
+              echo "#### Out-of-band tags (recent 15)"
+              printf '%b\n' "$stray"
+              echo
+              echo "These are harmless to this workflow but they are not releases of main."
+              echo "Leave them in place — tags must never be moved or deleted once published."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
