@@ -193,6 +193,30 @@ def normalize_postgres_url(db_url: str) -> str:
     return urlunsplit(split_url._replace(query=cleaned_query))
 
 
+# Async SQLAlchemy drivers, stripped when a SYNC url is requested. A sync
+# engine built on an async driver does not fail at create_engine() — it fails
+# later, on first use, with SQLAlchemy's "MissingGreenlet: greenlet_spawn has
+# not been called", which reads like an event-loop bug and sends you looking in
+# entirely the wrong place. Cost real debugging time on 2026-08-22.
+_ASYNC_DRIVER_SUFFIXES = ("+asyncpg", "+aiopg", "+psycopg_async")
+
+
+def strip_async_driver(db_url: str) -> str:
+    """Return `db_url` with any async driver suffix removed.
+
+    `postgresql+asyncpg://...` -> `postgresql://...`. A service's configured
+    DATABASE_URL is legitimately an ASYNC url in this stack, and handing that
+    same url to a sync-engine builder is the natural thing to do, so the
+    conversion belongs here rather than at every call site.
+    """
+    normalized = db_url.strip()
+    for suffix in _ASYNC_DRIVER_SUFFIXES:
+        marker = suffix + "://"
+        if marker in normalized:
+            return normalized.replace(marker, "://", 1)
+    return normalized
+
+
 def build_sync_sqlalchemy_url_and_connect_args(
     db_url: str,
     search_path: str | None = None,
@@ -206,8 +230,12 @@ def build_sync_sqlalchemy_url_and_connect_args(
     :func:`register_search_path_listener`. The ``search_path`` parameter is
     kept in the signature for backward compatibility but is intentionally
     unused here.
+
+    An async driver suffix is stripped: this function's contract is a SYNC
+    url, and returning an async one produced an engine that only failed on
+    first use with a misleading MissingGreenlet. See :func:`strip_async_driver`.
     """
-    return normalize_postgres_url(db_url), {}
+    return normalize_postgres_url(strip_async_driver(db_url)), {}
 
 
 def build_asyncpg_url_and_connect_args(

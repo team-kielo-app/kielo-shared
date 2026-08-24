@@ -644,3 +644,63 @@ def test_make_per_language_search_path_no_observability_without_labels(
         if "per_language_search_path_fallback" in r.message
     ]
     assert relevant == []
+
+
+# ---------------------------------------------------------------------------
+# A sync-url builder must not hand back an async driver.
+#
+# Cost real debugging time on 2026-08-22. build_sync_sqlalchemy_url_and_connect_args
+# returned "postgresql+asyncpg://..." unchanged when given one, and
+# create_engine() accepts that without complaint — the failure surfaces much
+# later, on first query, as SQLAlchemy's
+#
+#     MissingGreenlet: greenlet_spawn has not been called
+#
+# which reads like an event-loop bug and sends you hunting in the wrong place.
+# A service's configured DATABASE_URL is legitimately async in this stack, so
+# handing it to a sync-engine builder is the natural thing to do; the
+# conversion belongs in the builder.
+# ---------------------------------------------------------------------------
+
+
+def _sync_url(db_url: str) -> str:
+    return db_utils.build_sync_sqlalchemy_url_and_connect_args(db_url)[0]
+
+
+def test_asyncpg_driver_is_stripped():
+    assert _sync_url("postgresql+asyncpg://u:p@h:5432/d") == "postgresql://u:p@h:5432/d"
+
+
+def test_plain_sync_url_is_unchanged():
+    assert _sync_url("postgresql://u:p@h:5432/d") == "postgresql://u:p@h:5432/d"
+
+
+def test_postgres_scheme_is_still_normalized():
+    assert _sync_url("postgres://u:p@h:5432/d") == "postgresql://u:p@h:5432/d"
+
+
+def test_explicit_sync_driver_is_preserved():
+    """psycopg2 is a SYNC driver — stripping it would override the caller's
+    deliberate choice."""
+    assert (
+        _sync_url("postgresql+psycopg2://u:p@h:5432/d")
+        == "postgresql+psycopg2://u:p@h:5432/d"
+    )
+
+
+def test_query_parameters_survive_the_strip():
+    assert _sync_url("postgresql+asyncpg://u:p@h:5432/d?sslmode=require") == (
+        "postgresql://u:p@h:5432/d?sslmode=require"
+    )
+
+
+def test_other_async_drivers_are_stripped():
+    for driver in ("aiopg", "psycopg_async"):
+        assert db_utils.strip_async_driver(f"postgresql+{driver}://u:p@h/d") == (
+            "postgresql://u:p@h/d"
+        )
+
+
+def test_strip_async_driver_is_idempotent():
+    once = db_utils.strip_async_driver("postgresql+asyncpg://u:p@h/d")
+    assert db_utils.strip_async_driver(once) == once

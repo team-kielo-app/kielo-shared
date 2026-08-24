@@ -988,13 +988,18 @@ class Seam:
         # comes through the seam gets quality-checked before we
         # persist OR cache it.
         if self._guard.is_suspicious(ref.source_text, value, target):
+            # Format inline, do NOT rely on `extra`: the service log
+            # formatter renders only the message, so these fields were
+            # dropped and prod showed 178 bare "seam guard rejected provider
+            # output" lines in 24h with nothing to attribute them to. The Go
+            # seam's logTranslationFallback already formats inline; this
+            # matches it so both sides are greppable the same way.
             logger.warning(
-                "seam guard rejected provider output",
-                extra={
-                    "namespace": ref.namespace,
-                    "source_id": ref.source_id,
-                    "target": target,
-                },
+                "seam guard rejected provider output "
+                "namespace=%s source_id=%s target=%s",
+                ref.namespace,
+                ref.source_id,
+                target,
             )
             return "guard_rejected", ref.source_text
         # Cache write-through. Cache failures swallowed at impl layer
