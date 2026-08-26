@@ -39,8 +39,10 @@ const (
 // It stops cleanly when ctx is canceled — so normal shutdown does not trigger
 // a restart. Unlike Go, which recovers-and-exits (leaving the loop permanently
 // dead in an otherwise-healthy process), this keeps critical processors alive.
-func GoRestart(ctx context.Context, name string, fn func()) {
+func GoRestart(ctx context.Context, name string, fn func()) <-chan struct{} {
+	done := make(chan struct{})
 	go func() {
+		defer close(done)
 		backoff := goRestartInitialBackoff
 		for {
 			if ctx.Err() != nil {
@@ -77,4 +79,5 @@ func GoRestart(ctx context.Context, name string, fn func()) {
 			}
 		}
 	}()
+	return done
 }

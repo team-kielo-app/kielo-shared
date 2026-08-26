@@ -1,10 +1,33 @@
 package safego
 
 import (
+	"context"
 	"sync/atomic"
 	"testing"
 	"time"
 )
+
+func TestGoRestartSignalsWhenCancellationStopsWorker(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	workerStarted := make(chan struct{})
+	done := GoRestart(ctx, "test-restart-stop", func() {
+		close(workerStarted)
+		<-ctx.Done()
+	})
+
+	select {
+	case <-workerStarted:
+	case <-time.After(time.Second):
+		t.Fatal("restarting worker did not start")
+	}
+	cancel()
+
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("restarting worker did not signal completion")
+	}
+}
 
 func TestGoRunsFunction(t *testing.T) {
 	done := make(chan struct{})
