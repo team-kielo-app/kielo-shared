@@ -3,11 +3,13 @@ package translation
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -237,6 +239,55 @@ func TestTranslateBatch_ReturnsNilOnNon200(t *testing.T) {
 	c := NewClient(server.URL, "", "", nil)
 	got := c.TranslateBatch(context.Background(), []string{longSent}, "en", "sv")
 	assert.Nil(t, got)
+}
+
+func TestTranslateBatchWithContextsResult_ReportsHTTPStatus(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusBadGateway)
+	}))
+	defer server.Close()
+
+	c := NewClient(server.URL, "", "", nil)
+	got, err := c.TranslateBatchWithContextsResult(
+		context.Background(), []string{longSent}, nil, "en", "sv",
+	)
+
+	assert.Nil(t, got)
+	require.EqualError(t, err, "translation upstream returned HTTP 502")
+}
+
+func TestTranslateBatchWithContextsResult_ReportsContextDeadline(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		time.Sleep(100 * time.Millisecond)
+		_, _ = w.Write([]byte(`{"translations":["late"]}`))
+	}))
+	defer server.Close()
+
+	c := NewClient(server.URL, "", "", nil)
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
+	defer cancel()
+	got, err := c.TranslateBatchWithContextsResult(ctx, []string{longSent}, nil, "en", "sv")
+
+	assert.Nil(t, got)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, context.DeadlineExceeded)
+}
+
+func TestTranslateBatchWithContextsResult_ReportsMalformedJSON(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"translations":`))
+	}))
+	defer server.Close()
+
+	c := NewClient(server.URL, "", "", nil)
+	got, err := c.TranslateBatchWithContextsResult(
+		context.Background(), []string{longSent}, nil, "en", "sv",
+	)
+
+	assert.Nil(t, got)
+	require.Error(t, err)
+	assert.True(t, errors.Is(err, io.ErrUnexpectedEOF) || strings.Contains(err.Error(), "unexpected end of JSON input"))
+	assert.Contains(t, err.Error(), "decode translation response")
 }
 
 func TestTranslateBatch_ReturnsNilWhenUnavailable(t *testing.T) {

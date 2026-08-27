@@ -5,7 +5,7 @@
 // the same Sweep ZK-B / Bucket-7-PushKey shape.
 //
 // PATTERN: identical to vocab.PushKey (kielo-shared/vocab/pushkey.go).
-// Typed alias `EmailSubjectKey` over `string`; 6 typed constants; iteration
+// Typed alias `EmailSubjectKey` over `string`; typed constants; iteration
 // slice + IsKnownEmailSubjectKey validator + cross-language parity test.
 package vocab
 
@@ -33,6 +33,7 @@ const (
 	EmailSubjectKeyWelcome                    EmailSubjectKey = "ui.email.subject.welcome"
 	EmailSubjectKeyPurchaseConfirmation       EmailSubjectKey = "ui.email.subject.purchase_confirmation"
 	EmailSubjectKeySubscriptionEnded          EmailSubjectKey = "ui.email.subject.subscription_ended"
+	EmailSubjectKeyBillingIssue               EmailSubjectKey = "ui.email.subject.billing_issue"
 	EmailSubjectKeyAccountDeleted             EmailSubjectKey = "ui.email.subject.account_deleted"
 	EmailSubjectKeyAchievementFirstPayingUser EmailSubjectKey = "ui.email.subject.achievement_first_paying_user"
 )
@@ -47,6 +48,7 @@ var AllEmailSubjectKeys = []EmailSubjectKey{
 	EmailSubjectKeyWelcome,
 	EmailSubjectKeyPurchaseConfirmation,
 	EmailSubjectKeySubscriptionEnded,
+	EmailSubjectKeyBillingIssue,
 	EmailSubjectKeyAccountDeleted,
 	EmailSubjectKeyAchievementFirstPayingUser,
 }

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/team-kielo-app/kielo-shared/localization"
@@ -112,6 +113,28 @@ func TestProvider_TranslateBatch_NilClientIsSafe(t *testing.T) {
 	}
 	if results != nil {
 		t.Fatalf("nil client must return nil results, got %v", results)
+	}
+}
+
+func TestProvider_TranslateBatch_ForwardsUpstreamCause(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}))
+	t.Cleanup(server.Close)
+
+	client := sharedtranslation.NewClient(server.URL, server.URL, "", nil)
+	provider := New(client, "test")
+	results, err := provider.TranslateBatch(
+		context.Background(),
+		[]localization.TranslationItem{{Text: "A sentence long enough to use the opus backend today"}},
+		localization.TranslateOptions{SourceLocale: "en", TargetLocale: "fi"},
+	)
+
+	if results != nil {
+		t.Fatalf("results=%v, want nil on upstream failure", results)
+	}
+	if err == nil || !strings.Contains(err.Error(), "translation upstream returned HTTP 503") {
+		t.Fatalf("err=%v, want diagnosable upstream status", err)
 	}
 }
 

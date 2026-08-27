@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -113,62 +114,89 @@ func (c *Client) TranslateBatch(ctx context.Context, texts []string, sourceLang,
 // provider adapter calls this. Hints reach the LLM backend only —
 // see batchRequest.Contexts.
 func (c *Client) TranslateBatchWithContexts(ctx context.Context, texts, contexts []string, sourceLang, targetLang string) []string {
-	if !c.IsAvailable() || len(texts) == 0 {
-		return nil
+	translated, _ := c.TranslateBatchWithContextsResult(ctx, texts, contexts, sourceLang, targetLang)
+	return translated
+}
+
+// TranslateBatchWithContextsResult is the diagnostic form used by the
+// localization provider adapter. Legacy callers intentionally keep the
+// nil-on-failure contract of TranslateBatchWithContexts; the seam needs the
+// cause so its fallback log can distinguish a timeout, an HTTP failure, and an
+// invalid response instead of collapsing all three into a result-count mismatch.
+func (c *Client) TranslateBatchWithContextsResult(
+	ctx context.Context,
+	texts, contexts []string,
+	sourceLang, targetLang string,
+) ([]string, error) {
+	if len(texts) == 0 {
+		return nil, nil
+	}
+	if !c.IsAvailable() {
+		return nil, errors.New("translation client unavailable")
 	}
 
 	backend := SelectTranslatorBatch(sourceLang, targetLang, texts)
 	switch backend {
 	case BackendPassthrough:
-		return slices.Clone(texts)
+		return slices.Clone(texts), nil
 	case BackendOpusMT:
 		// opus-mt cannot use hints — drop them rather than send a field the
 		// NMT service would have to ignore.
-		return c.dispatchOpusMT(ctx, texts, sourceLang, targetLang)
+		return c.dispatchOpusMTResult(ctx, texts, sourceLang, targetLang)
 	case BackendGemini:
-		return c.dispatchGemini(ctx, texts, contexts, sourceLang, targetLang)
+		return c.dispatchGeminiResult(ctx, texts, contexts, sourceLang, targetLang)
 	default:
-		return nil
+		return nil, fmt.Errorf("unsupported translation backend %q", backend)
 	}
 }
 
-// dispatchOpusMT POSTs to kielo-models /api/v3/translations. Returns
-// nil on misconfiguration / network error so the caller can fall
-// back to source text.
-func (c *Client) dispatchOpusMT(ctx context.Context, texts []string, sourceLang, targetLang string) []string {
+// dispatchOpusMTResult POSTs to kielo-models /api/v3/translations and retains
+// the failure cause for callers that can report it.
+func (c *Client) dispatchOpusMTResult(ctx context.Context, texts []string, sourceLang, targetLang string) ([]string, error) {
 	if strings.TrimSpace(c.modelsURL) == "" {
-		// EEE routed here but models URL is missing — degrade by
-		// returning nil so the caller passes through source text.
-		return nil
+		return nil, errors.New("opus-mt backend is not configured")
 	}
-	return c.postBatch(ctx, c.modelsURL+"/api/v3/translations", texts, sourceLang, targetLang)
+	return c.postBatchResult(ctx, c.modelsURL+"/api/v3/translations", texts, sourceLang, targetLang)
 }
 
-// dispatchGemini POSTs to kielolearn-engine /internal/translate-batch.
+// dispatchGeminiResult POSTs to kielolearn-engine /internal/translate-batch.
 // Same payload + response shape as opus-mt so the wire format is
 // uniform across backends.
-func (c *Client) dispatchGemini(ctx context.Context, texts, contexts []string, sourceLang, targetLang string) []string {
+func (c *Client) dispatchGeminiResult(
+	ctx context.Context,
+	texts, contexts []string,
+	sourceLang, targetLang string,
+) ([]string, error) {
 	if strings.TrimSpace(c.engineURL) == "" {
-		// EEE routed here but engine URL is missing — degrade.
-		return nil
+		return nil, errors.New("gemini backend is not configured")
 	}
-	return c.postBatchWithContexts(
+	return c.postBatchWithContextsResult(
 		ctx, c.engineURL+"/internal/translate-batch", texts, contexts, sourceLang, targetLang,
 	)
 }
 
-// postBatch sends the wire-uniform translation batch request and
+// postBatchResult sends the wire-uniform translation batch request and
 // decodes the standard {"translations": [...]} response. Internal
 // helper shared by the two backend dispatch functions so the HTTP
 // plumbing isn't duplicated.
-func (c *Client) postBatch(ctx context.Context, url string, texts []string, sourceLang, targetLang string) []string {
-	return c.postBatchWithContexts(ctx, url, texts, nil, sourceLang, targetLang)
+func (c *Client) postBatchResult(
+	ctx context.Context,
+	url string,
+	texts []string,
+	sourceLang, targetLang string,
+) ([]string, error) {
+	return c.postBatchWithContextsResult(ctx, url, texts, nil, sourceLang, targetLang)
 }
 
-// postBatchWithContexts is postBatch plus the optional hint array. Hints are
+// postBatchWithContextsResult is postBatchResult plus the optional hint array. Hints are
 // dropped when every entry is blank so the serialized body — and therefore the
 // engine's cache key — is unchanged for un-hinted batches.
-func (c *Client) postBatchWithContexts(ctx context.Context, url string, texts, contexts []string, sourceLang, targetLang string) []string {
+func (c *Client) postBatchWithContextsResult(
+	ctx context.Context,
+	url string,
+	texts, contexts []string,
+	sourceLang, targetLang string,
+) ([]string, error) {
 	hasHint := false
 	for _, h := range contexts {
 		if strings.TrimSpace(h) != "" {
@@ -186,11 +214,11 @@ func (c *Client) postBatchWithContexts(ctx context.Context, url string, texts, c
 		TargetLang: targetLang,
 	})
 	if err != nil {
-		return nil
+		return nil, fmt.Errorf("encode translation request: %w", err)
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(payload))
 	if err != nil {
-		return nil
+		return nil, fmt.Errorf("build translation request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 	if strings.TrimSpace(c.apiKey) != "" {
@@ -198,15 +226,15 @@ func (c *Client) postBatchWithContexts(ctx context.Context, url string, texts, c
 	}
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil
+		return nil, fmt.Errorf("translation request failed: %w", err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return nil
+		return nil, fmt.Errorf("translation upstream returned HTTP %d", resp.StatusCode)
 	}
 	raw, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil
+		return nil, fmt.Errorf("read translation response: %w", err)
 	}
 	// Envelope-tolerant decode. kielolearn-engine /internal/translate-batch
 	// now wraps its response in the v3 {"data": …} envelope; kielo-models
@@ -221,14 +249,14 @@ func (c *Client) postBatchWithContexts(ctx context.Context, url string, texts, c
 	// regressions swept elsewhere.
 	var body batchResponse
 	if err := json.Unmarshal(httputil.UnwrapDataEnvelope(raw), &body); err != nil {
-		return nil
+		return nil, fmt.Errorf("decode translation response: %w", err)
 	}
 	if len(body.Translations) < len(texts) {
 		result := make([]string, len(texts))
 		copy(result, body.Translations)
-		return result
+		return result, nil
 	}
-	return slices.Clone(body.Translations)
+	return slices.Clone(body.Translations), nil
 }
 
 // URL returns the kielo-models opus-mt endpoint URL. Retained for

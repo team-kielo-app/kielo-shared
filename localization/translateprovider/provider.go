@@ -57,9 +57,10 @@ func (p *Provider) ProviderID() string {
 // adapter fills the seam's expected TranslationResult with the wrapped
 // provider ID so telemetry can attribute calls correctly.
 //
-// Behavior on partial failure: the underlying client returns nil when
-// the whole batch fails. We surface that as `len(results) != len(items)`
-// which the seam treats as a provider error and falls back to source.
+// Behavior on failure: the adapter uses the client's diagnostic method so the
+// seam receives the transport/status/decode cause while legacy translation
+// callers retain their nil-on-failure contract. The seam logs that bounded
+// cause and falls back to source.
 // Per-item failures aren't expressible in the wrapped client's shape;
 // callers that need per-item granularity should wire a richer provider.
 func (p *Provider) TranslateBatch(
@@ -80,11 +81,12 @@ func (p *Provider) TranslateBatch(
 		texts[i] = item.Text
 		contexts[i] = translationContextHint(item.Context)
 	}
-	translated := p.client.TranslateBatchWithContexts(
+	translated, err := p.client.TranslateBatchWithContextsResult(
 		ctx, texts, contexts, opts.SourceLocale, opts.TargetLocale,
 	)
-	// Underlying client returns nil on full-batch failure — seam treats
-	// that as provider_error.
+	if err != nil {
+		return nil, err
+	}
 	if len(translated) == 0 {
 		return nil, nil
 	}

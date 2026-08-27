@@ -479,7 +479,8 @@ func (s *Seam) providerBatchCall(
 			s.metrics.Record(ctx, r.ref.Namespace, target, "provider_error")
 		}
 		if len(remaining) > 0 {
-			logTranslationFallback("provider_error", remaining[0].ref.Namespace, "batch", target, len(remaining))
+			logTranslationFallback("provider_error", remaining[0].ref.Namespace, "batch", target, len(remaining),
+				fmt.Sprintf("registry_resolve: %v", err))
 		}
 		return
 	}
@@ -499,7 +500,9 @@ func (s *Seam) providerBatchCall(
 			s.metrics.Record(ctx, r.ref.Namespace, target, "provider_error")
 		}
 		if len(remaining) > 0 {
-			logTranslationFallback("provider_error", remaining[0].ref.Namespace, "batch", target, len(remaining))
+			logTranslationFallback("provider_error", remaining[0].ref.Namespace, "batch", target, len(remaining),
+				providerFailureCause(err, fmt.Sprintf("result_count_mismatch: got %d want %d",
+					len(providerResults), len(items))))
 		}
 		return
 	}
@@ -520,7 +523,7 @@ func (s *Seam) providerBatchCall(
 			// means users silently see English — alertable on its own.
 			out[r.idx] = r.ref.SourceText
 			s.metrics.Record(ctx, r.ref.Namespace, target, "empty_translation")
-			logTranslationFallback("empty_translation", r.ref.Namespace, r.ref.SourceID, target, 1)
+			logTranslationFallback("empty_translation", r.ref.Namespace, r.ref.SourceID, target, 1, "")
 			continue
 		}
 		// Round 10D: per-item guard. Reject suspicious output BEFORE
@@ -531,7 +534,7 @@ func (s *Seam) providerBatchCall(
 		if s.guard.IsSuspicious(r.ref.SourceText, value, target) {
 			out[r.idx] = r.ref.SourceText
 			s.metrics.Record(ctx, r.ref.Namespace, target, "guard_rejected")
-			logTranslationFallback("guard_rejected", r.ref.Namespace, r.ref.SourceID, target, 1)
+			logTranslationFallback("guard_rejected", r.ref.Namespace, r.ref.SourceID, target, 1, "")
 			continue
 		}
 		out[r.idx] = value
@@ -630,7 +633,8 @@ func (s *Seam) callProvider(ctx context.Context, ref SourceRef, target, cacheKey
 	provider, err := s.registry.Resolve(TierASupportLocale, target)
 	if err != nil {
 		s.metrics.Record(ctx, ref.Namespace, target, "provider_error")
-		logTranslationFallback("provider_error", ref.Namespace, ref.SourceID, target, 1)
+		logTranslationFallback("provider_error", ref.Namespace, ref.SourceID, target, 1,
+			fmt.Sprintf("registry_resolve: %v", err))
 		return ref.SourceText
 	}
 	role := ref.Role
@@ -649,7 +653,8 @@ func (s *Seam) callProvider(ctx context.Context, ref SourceRef, target, cacheKey
 	})
 	if err != nil || len(results) == 0 {
 		s.metrics.Record(ctx, ref.Namespace, target, "provider_error")
-		logTranslationFallback("provider_error", ref.Namespace, ref.SourceID, target, 1)
+		logTranslationFallback("provider_error", ref.Namespace, ref.SourceID, target, 1,
+			providerFailureCause(err, "empty_result_set: provider returned 0 results"))
 		return ref.SourceText
 	}
 	value := strings.TrimSpace(results[0].Text)
@@ -657,14 +662,14 @@ func (s *Seam) callProvider(ctx context.Context, ref SourceRef, target, cacheKey
 		// Provider answered but produced nothing — users silently see
 		// English. Distinct tag so the rate is alertable on its own.
 		s.metrics.Record(ctx, ref.Namespace, target, "empty_translation")
-		logTranslationFallback("empty_translation", ref.Namespace, ref.SourceID, target, 1)
+		logTranslationFallback("empty_translation", ref.Namespace, ref.SourceID, target, 1, "")
 		return ref.SourceText
 	}
 	// Round 10D: quality gate. Reject suspicious output BEFORE cache
 	// write + persistence so junk doesn't poison either store.
 	if s.guard.IsSuspicious(ref.SourceText, value, target) {
 		s.metrics.Record(ctx, ref.Namespace, target, "guard_rejected")
-		logTranslationFallback("guard_rejected", ref.Namespace, ref.SourceID, target, 1)
+		logTranslationFallback("guard_rejected", ref.Namespace, ref.SourceID, target, 1, "")
 		return ref.SourceText
 	}
 	_ = s.cache.Set(ctx, cacheKey, value, s.freshTTL+s.staleTTL)
@@ -681,14 +686,43 @@ func (s *Seam) cacheKey(ref SourceRef, target string) string {
 	return fmt.Sprintf("kielo:i18n:%s:%s:%s:%s", ref.Namespace, ref.SourceID, ref.SourceVersion, target)
 }
 
+// providerFailureCause separates the two failures that the provider_error
+// fallback used to conflate. Both batch and single-item paths guard with
+// `err != nil || <shape is wrong>`, so a provider that returned the WRONG
+// NUMBER of results with err == nil logged identically to a transport error —
+// a contract violation and an outage looked the same in the logs.
+//
+// Extracted rather than inlined at both sites so providerBatchCall stays under
+// the gocyclo ceiling, and so the two paths cannot drift apart.
+func providerFailureCause(err error, contractViolation string) string {
+	if err != nil {
+		return fmt.Sprintf("provider_call: %v", err)
+	}
+	return contractViolation
+}
+
 // logTranslationFallback makes every silent-English path visible in
 // service logs. The Prometheus counter (kielo_translation_total) said the
 // same thing to nobody after the 2026-08-18 sidecar retirement — the
 // sanctioned pattern is a log-based metric, and log-based metrics need a
 // line to match. Grep/alert on "[translation-fallback]".
-func logTranslationFallback(source, namespace, sourceID, target string, count int) {
-	log.Printf("[translation-fallback] source=%s namespace=%s source_id=%s target=%s count=%d",
-		source, namespace, sourceID, target, count)
+func logTranslationFallback(source, namespace, sourceID, target string, count int, cause string) {
+	// cause is APPENDED, never inserted: log-based metrics and alerts parse the
+	// leading fields, so re-ordering them would silently break every consumer.
+	//
+	// Bounded at 200 runes because the cause is a provider error and an LLM
+	// provider can echo its prompt back in a message — an unbounded %v risks
+	// spilling source content into logs.
+	if cause == "" {
+		log.Printf("[translation-fallback] source=%s namespace=%s source_id=%s target=%s count=%d",
+			source, namespace, sourceID, target, count)
+		return
+	}
+	if r := []rune(cause); len(r) > 200 {
+		cause = string(r[:200]) + "...(truncated)"
+	}
+	log.Printf("[translation-fallback] source=%s namespace=%s source_id=%s target=%s count=%d cause=%q",
+		source, namespace, sourceID, target, count, cause)
 }
 
 // TierASupportLocale is the canonical English code per ADR-007. Lives
