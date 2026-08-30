@@ -71,31 +71,31 @@
       "src": "sv",
       "tgt": "en",
       "n_source_tokens": 6,
-      "backend": "opus_mt"
+      "backend": "gemini"
     },
     {
       "src": "sv",
       "tgt": "en",
       "n_source_tokens": 12,
-      "backend": "opus_mt"
+      "backend": "gemini"
     },
     {
       "src": "fi",
       "tgt": "en",
       "n_source_tokens": 50,
-      "backend": "opus_mt"
+      "backend": "gemini"
     },
     {
       "src": "en",
       "tgt": "fi",
       "n_source_tokens": 50,
-      "backend": "opus_mt"
+      "backend": "gemini"
     },
     {
       "src": "en",
       "tgt": "sv",
       "n_source_tokens": 50,
-      "backend": "opus_mt"
+      "backend": "gemini"
     },
     {
       "src": "en",

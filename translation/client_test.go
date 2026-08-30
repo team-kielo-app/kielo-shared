@@ -21,14 +21,31 @@ import (
 // Sweep EEE (2026-05-30) — the client is now routing-aware
 // (SelectTranslatorBatch picks opus-mt vs Gemini per pair × shape).
 // Test inputs use sentence-length text for the OPUS_MT path so the
-// HTTP mock at modelsURL is exercised; short-input tests dispatch
-// through the Gemini path (engineURL).
+// HTTP mock at modelsURL is exercised only where a test re-enables a
+// pair via withOpusMTPair; since 2026-08-30 the pair set is empty and
+// every real pair dispatches through the Gemini path (engineURL).
 
 // longSent is a sentence-length input that routes to the opus-mt
 // backend on high-quality pairs (en→sv, en→fi, sv→en, fi→en) under
 // Sweep EEE's ≤5-tokens-go-to-Gemini rule. Used by tests that mock
 // only the models endpoint and need predictable opus-mt routing.
 const longSent = "This is a long sentence with more than five tokens for opus-mt routing."
+
+// withOpusMTPair re-enables (src, tgt) in opusMTHighQualityPairs for one
+// test. The set has been EMPTY since the 2026-08-30 benchmark (Gemini won
+// 41–4 on production text), so the opus-mt dispatch path is only reachable
+// from tests that opt a pair back in. Not safe under t.Parallel.
+func withOpusMTPair(t *testing.T, src, tgt string) {
+	t.Helper()
+	key := [2]string{src, tgt}
+	_, had := opusMTHighQualityPairs[key]
+	opusMTHighQualityPairs[key] = struct{}{}
+	t.Cleanup(func() {
+		if !had {
+			delete(opusMTHighQualityPairs, key)
+		}
+	})
+}
 
 func TestNewClient_TrimsTrailingSlashOnURL(t *testing.T) {
 	c := NewClient("https://models.example.com/", "", "", nil)
@@ -66,6 +83,7 @@ func TestTranslate_EmptyInputReturnsEmpty(t *testing.T) {
 }
 
 func TestTranslateBatch_RoutesLongInputToOpusMT(t *testing.T) {
+	withOpusMTPair(t, "en", "sv")
 	var receivedPath string
 	var receivedBody batchRequest
 	var receivedAPIKey string
@@ -88,7 +106,7 @@ func TestTranslateBatch_RoutesLongInputToOpusMT(t *testing.T) {
 		[]string{longSent}, "en", "sv")
 
 	assert.Equal(t, []string{"Hej hej"}, got)
-	// Sweep EEE: long input on high-quality pair (en→sv) → opus-mt.
+	// Long input on a (test-enabled) high-quality pair → opus-mt endpoint.
 	assert.Equal(t, "/api/v3/translations", receivedPath)
 	assert.Equal(t, []string{longSent}, receivedBody.Texts)
 	assert.Equal(t, "en", receivedBody.SourceLang)
@@ -126,6 +144,37 @@ func TestTranslateBatch_RoutesShortInputToGemini(t *testing.T) {
 	assert.Equal(t, []string{"Save"}, receivedBody.Texts)
 	assert.Equal(t, "en", receivedBody.SourceLang)
 	assert.Equal(t, "sv", receivedBody.TargetLang)
+}
+
+// 2026-08-30 — en↔fi / en↔sv left the high-quality set after a blinded
+// production-text benchmark (Gemini 41–4, opus-mt meaning errors 30/60,
+// 8-item batch 5–22 s vs ~1 s). Sentence-length input on those pairs must
+// now reach the engine, and kielo-models must not be contacted at all.
+func TestTranslateBatch_FormerOpusPairsRouteToGemini(t *testing.T) {
+	var opusHit bool
+	opus := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		opusHit = true
+		_, _ = w.Write([]byte(`{"translations": ["opus"]}`))
+	}))
+	defer opus.Close()
+	var enginePaths []string
+	engine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		enginePaths = append(enginePaths, r.URL.Path)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"translations": ["gemini"]}`))
+	}))
+	defer engine.Close()
+
+	c := NewClient(opus.URL, engine.URL, "k", nil)
+	for _, pair := range [][2]string{{"en", "fi"}, {"fi", "en"}, {"en", "sv"}, {"sv", "en"}} {
+		got := c.TranslateBatch(context.Background(), []string{longSent}, pair[0], pair[1])
+		assert.Equal(t, []string{"gemini"}, got, "%s→%s", pair[0], pair[1])
+	}
+	assert.False(t, opusHit, "kielo-models must not be contacted for en↔fi / en↔sv")
+	assert.Len(t, enginePaths, 4)
+	for _, p := range enginePaths {
+		assert.Equal(t, "/internal/translate-batch", p)
+	}
 }
 
 // Sweep EEE — non-high-quality pair (en→vi) always routes to
@@ -213,7 +262,7 @@ func TestTranslateBatch_SkipsAPIKeyHeaderWhenBlank(t *testing.T) {
 	}))
 	defer server.Close()
 
-	c := NewClient(server.URL, "", "  ", nil)
+	c := NewClient("", server.URL, "  ", nil)
 	c.TranslateBatch(context.Background(), []string{longSent}, "en", "sv")
 	assert.False(t, sawHeader, "blank API key must not be sent as a header")
 }
@@ -224,7 +273,7 @@ func TestTranslateBatch_PadsWithEmptyWhenServerReturnsFewer(t *testing.T) {
 	}))
 	defer server.Close()
 
-	c := NewClient(server.URL, "", "", nil)
+	c := NewClient("", server.URL, "", nil)
 	got := c.TranslateBatch(context.Background(),
 		[]string{longSent, longSent + " extra", longSent + " more"}, "en", "sv")
 	assert.Equal(t, []string{"Hej hej", "", ""}, got)
@@ -236,7 +285,7 @@ func TestTranslateBatch_ReturnsNilOnNon200(t *testing.T) {
 	}))
 	defer server.Close()
 
-	c := NewClient(server.URL, "", "", nil)
+	c := NewClient("", server.URL, "", nil)
 	got := c.TranslateBatch(context.Background(), []string{longSent}, "en", "sv")
 	assert.Nil(t, got)
 }
@@ -247,7 +296,7 @@ func TestTranslateBatchWithContextsResult_ReportsHTTPStatus(t *testing.T) {
 	}))
 	defer server.Close()
 
-	c := NewClient(server.URL, "", "", nil)
+	c := NewClient("", server.URL, "", nil)
 	got, err := c.TranslateBatchWithContextsResult(
 		context.Background(), []string{longSent}, nil, "en", "sv",
 	)
@@ -263,7 +312,7 @@ func TestTranslateBatchWithContextsResult_ReportsContextDeadline(t *testing.T) {
 	}))
 	defer server.Close()
 
-	c := NewClient(server.URL, "", "", nil)
+	c := NewClient("", server.URL, "", nil)
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
 	defer cancel()
 	got, err := c.TranslateBatchWithContextsResult(ctx, []string{longSent}, nil, "en", "sv")
@@ -279,7 +328,7 @@ func TestTranslateBatchWithContextsResult_ReportsMalformedJSON(t *testing.T) {
 	}))
 	defer server.Close()
 
-	c := NewClient(server.URL, "", "", nil)
+	c := NewClient("", server.URL, "", nil)
 	got, err := c.TranslateBatchWithContextsResult(
 		context.Background(), []string{longSent}, nil, "en", "sv",
 	)
@@ -315,7 +364,7 @@ func TestTranslateBatch_HonorsContextCancellation(t *testing.T) {
 	}))
 	defer server.Close()
 
-	c := NewClient(server.URL, "", "", nil)
+	c := NewClient("", server.URL, "", nil)
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	got := c.TranslateBatch(ctx, []string{longSent}, "en", "sv")

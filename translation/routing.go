@@ -69,14 +69,14 @@ func (b Backend) String() string {
 
 // opusMTHighQualityPairs — pairs where opus-mt is empirically
 // competitive with Gemini on sentence-context input. MUST equal the
-// Python `OPUS_MT_HIGH_QUALITY_PAIRS` set. The contract test pins
-// this.
-var opusMTHighQualityPairs = map[[2]string]struct{}{
-	{"en", "fi"}: {},
-	{"fi", "en"}: {},
-	{"en", "sv"}: {},
-	{"sv", "en"}: {},
-}
+// Python `OPUS_MT_HIGH_QUALITY_PAIRS` set; the contract test pins this.
+//
+// EMPTY since 2026-08-30: a blinded benchmark on production text
+// (en↔fi, en↔sv; 60 items read blind) preferred Gemini 41–4 with
+// meaning errors in 30/60 opus-mt outputs vs 2/60, and opus-mt was
+// 10–17× slower (8-item batch 5–22 s vs ~1 s). See the Python
+// constant's comment for the failure classes and the re-enable bar.
+var opusMTHighQualityPairs = map[[2]string]struct{}{}
 
 // ShortInputTokenThreshold is the token-count cutoff below which we
 // route through Gemini regardless of pair. Mirrors the Python
