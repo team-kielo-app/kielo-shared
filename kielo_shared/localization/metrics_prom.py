@@ -54,7 +54,7 @@ _COUNTER_HELP = (
     "Labels: namespace (resource type), target_locale (BCP-47 base), "
     "source (english_passthrough|override|cache_hit|cache_swr|"
     "cache_miss_share|provider_call|provider_error|empty_translation|"
-    "guard_rejected)."
+    "guard_rejected|guard_rejection_cache_hit)."
 )
 
 

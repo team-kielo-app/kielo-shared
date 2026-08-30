@@ -31,6 +31,8 @@ Telemetry source labels (stable, dashboarded):
   * "cache_miss_share"    — single-flight share of an in-flight provider call
   * "provider_call"       — provider invoked, value cached
   * "provider_error"      — provider unavailable / errored / returned empty
+  * "guard_rejection_cache_hit" — recent deterministic guard rejection;
+    source fallback served without calling the provider again
 """
 
 from __future__ import annotations
@@ -54,6 +56,9 @@ from kielo_shared.localization.types import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+_GUARD_REJECTION_SENTINEL = "\x00kielo:guard_rejected"
 
 
 # ──────────────────────── SourceRef ──────────────────────────────────────
@@ -481,6 +486,7 @@ class SeamConfig:
 
     fresh_ttl_seconds: float = 24 * 60 * 60
     stale_ttl_seconds: float = 6 * 24 * 60 * 60
+    guard_rejection_ttl_seconds: float = 15 * 60
 
 
 class Seam:
@@ -626,6 +632,10 @@ class Seam:
             entry = cache_hits.get(key)
             if entry is None:
                 remaining_after_cache.append((idx, ref, key))
+                continue
+            if entry.value == _GUARD_REJECTION_SENTINEL:
+                out[idx] = ref.source_text
+                self._metrics.record(ref.namespace, target, "guard_rejection_cache_hit")
                 continue
             if entry.age_seconds <= self._config.fresh_ttl_seconds:
                 out[idx] = entry.value
@@ -785,6 +795,7 @@ class Seam:
         # write_set is keyed, so it dedupes itself; persist_set is a list, so
         # a ref listed twice would issue the same upsert twice.
         write_set: dict[str, str] = {}
+        rejection_set: dict[str, str] = {}
         persist_set: dict[str, tuple[SourceRef, str]] = {}
         for (idx, ref, key), result in zip(remaining, results):
             value = (result.text or "").strip()
@@ -803,6 +814,7 @@ class Seam:
                 )
                 out[idx] = ref.source_text
                 self._metrics.record(ref.namespace, target, "guard_rejected")
+                rejection_set[key] = _GUARD_REJECTION_SENTINEL
                 continue
             out[idx] = value
             write_set[key] = value
@@ -826,6 +838,9 @@ class Seam:
                     )
                 except Exception:
                     logger.exception("seam batch cache write-back fallback failed")
+
+        if rejection_set:
+            await self._cache_rejections(rejection_set)
 
         # Round 10A: dynamic_translations write-through for the batch.
         # Per-item persister.persist gathered concurrently. Each impl
@@ -877,6 +892,8 @@ class Seam:
         _record_budget(_BudgetKind.CACHE_GET, 1)
         cached_value, cached_age = await self._cache.get(cache_key)
         if cached_value is not None and cached_age is not None:
+            if cached_value == _GUARD_REJECTION_SENTINEL:
+                return "guard_rejection_cache_hit", ref.source_text
             if cached_age <= self._config.fresh_ttl_seconds:
                 return "cache_hit", cached_value
             if (
@@ -1001,6 +1018,7 @@ class Seam:
                 ref.source_id,
                 target,
             )
+            await self._cache_rejections({cache_key: _GUARD_REJECTION_SENTINEL})
             return "guard_rejected", ref.source_text
         # Cache write-through. Cache failures swallowed at impl layer
         # (NoopCache no-op; production RedisCache logs + returns).
@@ -1026,6 +1044,25 @@ class Seam:
                 },
             )
         return "provider_call", value
+
+    async def _cache_rejections(self, entries: dict[str, str]) -> None:
+        ttl = self._config.guard_rejection_ttl_seconds
+        if not entries or ttl <= 0:
+            return
+        if isinstance(self._cache, BatchCache):
+            try:
+                await self._cache.batch_set(entries, ttl)
+                return
+            except Exception:
+                logger.exception(
+                    "seam guard-rejection batch cache failed; falling back to per-key"
+                )
+        try:
+            await asyncio.gather(
+                *(self._cache.set(k, v, ttl) for k, v in entries.items())
+            )
+        except Exception:
+            logger.exception("seam guard-rejection cache write failed")
 
     def _kickoff_swr(self, ref: SourceRef, target: str, cache_key: str) -> None:
         if cache_key in self._swr_inflight:

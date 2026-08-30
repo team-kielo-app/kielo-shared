@@ -24,8 +24,8 @@ to pin the behavioural contracts:
 
   T1: persister called on successful provider_call (single-item path)
   T2: persister called per-item on successful translate_batch
-  T3: guard rejection falls back to source + skips persistence + skips
-      cache write (single-item path)
+  T3: guard rejection falls back to source + skips persistence and writes
+      only a short-lived rejection sentinel (single-item path)
   T4: guard rejection on batch path falls back per-item without
       affecting siblings
   T5: backward-compat — no persister, no guard → pre-Round-10A behaviour
@@ -35,6 +35,7 @@ to pin the behavioural contracts:
   T9: persister errors are swallowed (translation still returns;
       degraded but correct)
 """
+
 from __future__ import annotations
 
 
@@ -95,12 +96,32 @@ class RaisingPersister:
     def __init__(self) -> None:
         self.calls = 0
 
-    async def persist(self, ref: SourceRef, target_locale: str, translated_text: str) -> None:
+    async def persist(
+        self, ref: SourceRef, target_locale: str, translated_text: str
+    ) -> None:
         self.calls += 1
         raise RuntimeError("simulated persister failure")
 
 
-def _ref(source_text: str = "Hello", namespace: str = "ui.string", source_id: str = "test.key") -> SourceRef:
+class RecordingCache:
+    def __init__(self) -> None:
+        self.entries: dict[str, str] = {}
+        self.ttls: dict[str, float] = {}
+
+    async def get(self, key: str) -> tuple[str | None, float | None]:
+        value = self.entries.get(key)
+        return (value, 0.0) if value is not None else (None, None)
+
+    async def set(self, key: str, value: str, ttl_seconds: float) -> None:
+        self.entries[key] = value
+        self.ttls[key] = ttl_seconds
+
+
+def _ref(
+    source_text: str = "Hello",
+    namespace: str = "ui.string",
+    source_id: str = "test.key",
+) -> SourceRef:
     return SourceRef(
         namespace=namespace,
         source_id=source_id,
@@ -149,7 +170,12 @@ async def test_t2_persister_called_per_item_on_batch_path():
     )
 
     refs = [
-        SourceRef(namespace="ui.string", source_id=f"key.{i}", source_version=f"v{i}", source_text=f"Hello {i}")
+        SourceRef(
+            namespace="ui.string",
+            source_id=f"key.{i}",
+            source_version=f"v{i}",
+            source_text=f"Hello {i}",
+        )
         for i in range(3)
     ]
     values = await seam.translate_batch(refs, "vi")
@@ -165,22 +191,33 @@ async def test_t2_persister_called_per_item_on_batch_path():
 async def test_t3_guard_rejection_falls_back_to_source_single_item():
     """Single-item path with AlwaysSuspiciousGuard: provider returns
     output → guard rejects → seam returns source text + persister NOT
-    called + cache NOT written.
+    called. A short-lived sentinel prevents another provider call without
+    caching the rejected output as a translation.
 
     Pins the Sweep PP/QQ/KKK fallback semantics at the seam layer."""
     provider = StubProvider(fixed_output="JUNK_LLM_OUTPUT")
     persister = MapPersister()
+    cache = RecordingCache()
+    metrics = CountingMetrics()
     seam = Seam(
         registry=StubRegistry(provider),
         persister=persister,
         guard=AlwaysSuspiciousGuard(),
+        cache=cache,
+        metrics=metrics,
     )
 
-    val = await seam.translate(_ref(source_text="Hello"), "ja")
+    ref = _ref(source_text="Hello")
+    val = await seam.translate(ref, "ja")
+    second = await seam.translate(ref, "ja")
 
     assert val == "Hello", "guard rejection falls back to source"
-    assert provider.calls == 1, "provider was still called"
+    assert second == "Hello", "cached rejection still falls back to source"
+    assert provider.calls == 1, "repeated rejection must not call provider again"
     assert len(persister.calls) == 0, "persister NOT called when guard rejects"
+    assert list(cache.ttls.values()) == [15 * 60]
+    assert metrics.count("ui.string", "ja", "guard_rejected") == 1
+    assert metrics.count("ui.string", "ja", "guard_rejection_cache_hit") == 1
 
 
 @pytest.mark.asyncio
@@ -192,20 +229,33 @@ async def test_t4_guard_rejection_on_batch_does_not_affect_siblings():
     case.)"""
     provider = StubProvider(fixed_output="JUNK")
     persister = MapPersister()
+    cache = RecordingCache()
+    metrics = CountingMetrics()
     seam = Seam(
         registry=StubRegistry(provider),
         persister=persister,
         guard=AlwaysSuspiciousGuard(),
+        cache=cache,
+        metrics=metrics,
     )
 
     refs = [
-        SourceRef(namespace="ui.string", source_id=f"k.{i}", source_version=f"v{i}", source_text=f"Source {i}")
+        SourceRef(
+            namespace="ui.string",
+            source_id=f"k.{i}",
+            source_version=f"v{i}",
+            source_text=f"Source {i}",
+        )
         for i in range(3)
     ]
     values = await seam.translate_batch(refs, "ru")
+    second = await seam.translate_batch(refs, "ru")
 
     assert values == ["Source 0", "Source 1", "Source 2"]
+    assert second == values
+    assert provider.calls == 1
     assert len(persister.calls) == 0
+    assert metrics.count("ui.string", "ru", "guard_rejection_cache_hit") == 3
 
 
 @pytest.mark.asyncio
@@ -252,9 +302,11 @@ async def test_t7_override_hit_short_circuits_before_persister_and_guard():
     redundant."""
     provider = StubProvider(fixed_output="should_not_appear")
     persister = MapPersister()
-    overrides = MapOverrideStore({
-        "ui.string|test.key|abc1234567890def|vi": "Xin chào",
-    })
+    overrides = MapOverrideStore(
+        {
+            "ui.string|test.key|abc1234567890def|vi": "Xin chào",
+        }
+    )
     seam = Seam(
         registry=StubRegistry(provider),
         overrides=overrides,
@@ -312,7 +364,14 @@ async def test_t9_metrics_record_guard_rejected_on_guard_rejection_in_batch():
         guard=AlwaysSuspiciousGuard(),
     )
 
-    refs = [SourceRef(namespace="ui.string", source_id="k", source_version="v", source_text="Source")]
+    refs = [
+        SourceRef(
+            namespace="ui.string",
+            source_id="k",
+            source_version="v",
+            source_text="Source",
+        )
+    ]
     await seam.translate_batch(refs, "ja")
 
     assert metrics.count("ui.string", "ja", "guard_rejected") == 1
