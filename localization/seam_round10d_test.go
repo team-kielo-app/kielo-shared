@@ -131,11 +131,10 @@ func TestSeamRound10D_T2_PersisterCalledNTimesOnBatch(t *testing.T) {
 	}
 }
 
-// T3: guard rejection on single-item → source fallback, NO persist, NO
-// cache write. Cache absence verified by issuing a second translate
-// for the same ref and observing the provider hit AGAIN.
-func TestSeamRound10D_T3_GuardRejectionSingleSkipsPersistAndCache(t *testing.T) {
-	seam, provider, persister, _ := newRound10dHarness(t, AlwaysSuspiciousGuard{})
+// T3: guard rejection on single-item → source fallback, NO persist, and a
+// short-lived rejection sentinel that prevents another provider call.
+func TestSeamRound10D_T3_GuardRejectionSingleCachesSentinel(t *testing.T) {
+	seam, provider, persister, metrics := newRound10dHarness(t, AlwaysSuspiciousGuard{})
 	ref := SourceRef{
 		Namespace:     "ui.string",
 		SourceID:      "ui.engine_string.Save",
@@ -152,14 +151,16 @@ func TestSeamRound10D_T3_GuardRejectionSingleSkipsPersistAndCache(t *testing.T) 
 	if provider.calls.Load() != 1 {
 		t.Fatalf("expected 1 provider call so far, got %d", provider.calls.Load())
 	}
-	// Second translate for the same ref should hit provider AGAIN —
-	// proves cache was NOT written.
+	// Second translate should serve the source fallback from the sentinel.
 	second := seam.Translate(context.Background(), ref, "vi")
 	if second != "Save" {
 		t.Fatalf("second call also rejected → source 'Save', got %q", second)
 	}
-	if provider.calls.Load() != 2 {
-		t.Fatalf("expected 2 provider calls (no cache hit), got %d", provider.calls.Load())
+	if provider.calls.Load() != 1 {
+		t.Fatalf("expected 1 provider call after cached rejection, got %d", provider.calls.Load())
+	}
+	if got := metrics.Count("ui.string", "vi", "guard_rejection_cache_hit"); got != 1 {
+		t.Fatalf("expected 1 guard_rejection_cache_hit, got %d", got)
 	}
 }
 
@@ -168,7 +169,7 @@ func TestSeamRound10D_T3_GuardRejectionSingleSkipsPersistAndCache(t *testing.T) 
 // is the canonical rejection class); siblings translate normally.
 func TestSeamRound10D_T4_GuardRejectionBatchSiblingsUnaffected(t *testing.T) {
 	// Use a guard that rejects the second item only by checking source.
-	seam, _, persister, _ := newRound10dHarness(t, &selectiveGuard{rejectIfSrcContains: "Hello"})
+	seam, provider, persister, metrics := newRound10dHarness(t, &selectiveGuard{rejectIfSrcContains: "Hello"})
 	refs := []SourceRef{
 		{Namespace: "ui.string", SourceID: "k1", SourceVersion: "v1", SourceText: "Save"},
 		{Namespace: "ui.string", SourceID: "k2", SourceVersion: "v2", SourceText: "Hello"},
@@ -186,6 +187,16 @@ func TestSeamRound10D_T4_GuardRejectionBatchSiblingsUnaffected(t *testing.T) {
 	}
 	if persister.Calls[0].SourceID != "k1" {
 		t.Errorf("expected persisted sibling 1, got %s", persister.Calls[0].SourceID)
+	}
+	second := seam.TranslateBatch(context.Background(), refs, "vi")
+	if second[0] != "Lưu" || second[1] != "Hello" {
+		t.Fatalf("second batch returned %v", second)
+	}
+	if provider.calls.Load() != 1 {
+		t.Fatalf("expected one provider batch after cached rejection, got %d", provider.calls.Load())
+	}
+	if got := metrics.Count("ui.string", "vi", "guard_rejection_cache_hit"); got != 1 {
+		t.Fatalf("expected one guard_rejection_cache_hit, got %d", got)
 	}
 }
 

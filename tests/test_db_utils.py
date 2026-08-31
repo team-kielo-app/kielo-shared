@@ -622,6 +622,36 @@ def test_make_per_language_search_path_debug_only_when_expected(
     assert len(debug_records) == 2
 
 
+def test_expected_search_path_fallback_scope_does_not_consume_later_warning(
+    caplog,
+    _reset_per_language_fallback_warn_state,
+):
+    import logging
+
+    resolver = db_utils.make_per_language_search_path(
+        fallback="_shared, public",
+        service="test-svc",
+        resolver_name="mixed_site",
+        expected_fallback=False,
+    )
+    caplog.set_level(
+        logging.DEBUG, logger="kielo_shared.observability.metrics"
+    )
+
+    with db_utils.expected_search_path_fallback():
+        resolver()
+    resolver()
+
+    relevant = [
+        record
+        for record in caplog.records
+        if "per_language_search_path_fallback" in record.message
+        and "mixed_site" in record.message
+    ]
+    assert [record.levelno for record in relevant] == [logging.DEBUG, logging.WARNING]
+    assert "expected=true" in relevant[0].message
+
+
 def test_make_per_language_search_path_no_observability_without_labels(
     caplog,
     _reset_per_language_fallback_warn_state,

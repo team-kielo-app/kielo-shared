@@ -6,7 +6,8 @@ import contextvars
 import os
 import re
 import ssl
-from typing import Any, Callable, Iterable, Union
+from contextlib import contextmanager
+from typing import Any, Callable, Iterable, Iterator, Union
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 # sqlalchemy is imported lazily inside register_search_path_listener and
@@ -93,6 +94,14 @@ SearchPathSpec = Union[str, SearchPathResolver]
 # transaction `begin` event.
 _active_language: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "kielo_active_language", default=None
+)
+
+# Per-operation override for deliberately global reads made through a
+# request-path engine. Mirrors Go's db.WithExpectedFallback: the fallback still
+# counts, but it stays at DEBUG instead of consuming the resolver's WARN-once
+# signal and masking a later real language-context leak.
+_expected_search_path_fallback: contextvars.ContextVar[bool] = contextvars.ContextVar(
+    "kielo_expected_search_path_fallback", default=False
 )
 
 # Sweep SSSS-C: Python sibling of Go's `db.WithSupportLanguage` /
@@ -387,6 +396,16 @@ def get_active_language() -> str | None:
     return _active_language.get()
 
 
+@contextmanager
+def expected_search_path_fallback() -> Iterator[None]:
+    """Classify an intentionally global transaction as an expected fallback."""
+    token = _expected_search_path_fallback.set(True)
+    try:
+        yield
+    finally:
+        _expected_search_path_fallback.reset(token)
+
+
 def require_active_language() -> str:
     """Return the active language or fail instead of silently defaulting."""
     language = get_active_language()
@@ -550,7 +569,9 @@ def make_per_language_search_path(
                     per_language_search_path_fallback_emit(
                         service=service,  # type: ignore[arg-type]
                         resolver=resolver_name,  # type: ignore[arg-type]
-                        expected_fallback=expected_fallback,
+                        expected_fallback=(
+                            expected_fallback or _expected_search_path_fallback.get()
+                        ),
                     )
                 return fallback
             raise RuntimeError(

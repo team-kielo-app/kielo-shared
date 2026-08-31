@@ -41,6 +41,12 @@ type Seam struct {
 	// NoopGuard accepts everything (pre-Round-10D de-facto behavior).
 	guard SuspiciousTranslationGuard
 	group singleflight.Group
+	// batchInFlight is the batch path's single-flight: cache key → the
+	// in-flight batch entry that will resolve it. TranslateBatch claims the
+	// keys it will send to the provider; an overlapping batch waits on the
+	// claimed keys instead of re-sending them. The per-ref singleflight
+	// group above never covered this path — the comment said it did.
+	batchInFlight sync.Map // map[string]*batchInFlightEntry
 
 	// freshTTL is how long cached values are considered fresh.
 	// Lookups within this window are served straight from cache.
@@ -50,6 +56,9 @@ type Seam struct {
 	// (stale-while-revalidate). Total cache lifetime is freshTTL +
 	// staleTTL.
 	staleTTL time.Duration
+	// guardRejectionTTL bounds repeated provider calls for an output the
+	// deterministic quality guard has just rejected.
+	guardRejectionTTL time.Duration
 
 	// swrInFlight tracks background refreshes started for SWR hits so
 	// concurrent stale reads don't each kick off a refresh.
@@ -65,7 +74,12 @@ type SeamConfig struct {
 	// StaleTTL defaults to 6 days. After FreshTTL expires, the cached
 	// value is still served but a background refresh runs.
 	StaleTTL time.Duration
+	// GuardRejectionTTL defaults to 15 minutes. The cache stores only an
+	// internal sentinel, never the rejected provider output.
+	GuardRejectionTTL time.Duration
 }
+
+const guardRejectionSentinel = "\x00kielo:guard_rejected"
 
 // NewSeam constructs a Seam. Pass Noop* implementations for any
 // dependency that isn't wired yet — the seam still functions, just
@@ -110,6 +124,9 @@ func NewSeamWith(
 	if cfg.StaleTTL <= 0 {
 		cfg.StaleTTL = 6 * 24 * time.Hour
 	}
+	if cfg.GuardRejectionTTL <= 0 {
+		cfg.GuardRejectionTTL = 15 * time.Minute
+	}
 	if cache == nil {
 		cache = NoopCache{}
 	}
@@ -126,14 +143,15 @@ func NewSeamWith(
 		guard = NoopGuard{}
 	}
 	return &Seam{
-		registry:  registry,
-		cache:     cache,
-		overrides: overrides,
-		metrics:   metrics,
-		persister: persister,
-		guard:     guard,
-		freshTTL:  cfg.FreshTTL,
-		staleTTL:  cfg.StaleTTL,
+		registry:          registry,
+		cache:             cache,
+		overrides:         overrides,
+		metrics:           metrics,
+		persister:         persister,
+		guard:             guard,
+		freshTTL:          cfg.FreshTTL,
+		staleTTL:          cfg.StaleTTL,
+		guardRejectionTTL: cfg.GuardRejectionTTL,
 	}
 }
 
@@ -236,7 +254,7 @@ func (s *Seam) Translate(ctx context.Context, ref SourceRef, targetLocale string
 // deployments wire RedisCache + pgx OverrideStore which both
 // implement the batch interfaces, so the fast path is the norm.
 //
-//nolint:funlen // Batch seam keeps cache, override, provider, and metrics branches together for one round-trip contract.
+
 func (s *Seam) TranslateBatch(ctx context.Context, refs []SourceRef, targetLocale string) []string {
 	out := make([]string, len(refs))
 	if len(refs) == 0 {
@@ -301,15 +319,7 @@ func (s *Seam) TranslateBatch(ctx context.Context, refs []SourceRef, targetLocal
 			remaining2 = append(remaining2, r)
 			continue
 		}
-		if entry.Age <= s.freshTTL {
-			out[r.idx] = entry.Value
-			s.metrics.Record(ctx, r.ref.Namespace, target, "cache_hit")
-			continue
-		}
-		if entry.Age <= s.freshTTL+s.staleTTL {
-			s.kickoffSWR(ctx, r.ref, target, r.key)
-			out[r.idx] = entry.Value
-			s.metrics.Record(ctx, r.ref.Namespace, target, "cache_swr")
+		if s.resolveBatchCacheHit(ctx, r, target, entry, out) {
 			continue
 		}
 		remaining2 = append(remaining2, r)
@@ -318,14 +328,88 @@ func (s *Seam) TranslateBatch(ctx context.Context, refs []SourceRef, targetLocal
 		return out
 	}
 
-	// Phase 3: provider batch call for cache misses. Single round-trip
-	// to the LLM / opus-mt regardless of len(remaining2). Per-ref
-	// single-flight via singleflight.Group preserves the dedup
-	// behavior — if two concurrent batch requests overlap on the same
-	// cache key, only one provider call fires.
-	RecordBudget(ctx, BudgetKindProviderCall, 1)
-	s.providerBatchCall(ctx, remaining2, target, out)
+	// Phase 3: provider batch call for cache misses, single-flighted per
+	// key. Keys another batch is already translating are NOT re-sent; we
+	// wait for that batch's answer instead. Before this the batch path had
+	// no dedup at all (the singleflight.Group only wraps Translate), so the
+	// app's 4s/12s/30s pending-refetches each re-sent the same cold page to
+	// the bridge while the first call was still running.
+	owned, shared := s.claimBatchKeys(remaining2)
+	if len(owned) > 0 {
+		RecordBudget(ctx, BudgetKindProviderCall, 1)
+		s.providerBatchCall(ctx, owned, target, out)
+		s.releaseBatchKeys(owned, out)
+	}
+	s.awaitSharedBatchKeys(ctx, shared, target, out)
 	return out
+}
+
+// sharedResidue is a residue entry whose key another batch owns, together
+// with THAT batch's in-flight entry. The pointer is captured at claim time and
+// awaited directly: the owner deletes the map slot before it publishes, so a
+// waiter that re-looked the key up could miss the result (and, with NoopCache
+// or a failed cache write, fall back to source text after a successful
+// translation) or observe an unrelated later request's entry.
+type sharedResidue struct {
+	residueEntry
+	entry *batchInFlightEntry
+}
+
+// batchInFlightEntry is one claimed cache key: closed `done` + `value` once
+// the owning batch has written its result for that key.
+type batchInFlightEntry struct {
+	done  chan struct{}
+	value string
+}
+
+// claimBatchKeys splits the residue into keys this call owns (first claimant)
+// and keys another in-flight batch already owns.
+func (s *Seam) claimBatchKeys(remaining []residueEntry) (owned []residueEntry, shared []sharedResidue) {
+	for _, r := range remaining {
+		entry := &batchInFlightEntry{done: make(chan struct{})}
+		if existing, loaded := s.batchInFlight.LoadOrStore(r.key, entry); loaded {
+			shared = append(shared, sharedResidue{residueEntry: r, entry: existing.(*batchInFlightEntry)})
+			continue
+		}
+		owned = append(owned, r)
+	}
+	return owned, shared
+}
+
+// releaseBatchKeys publishes the owner's results and frees the keys. Runs
+// even when the provider failed — out[] then holds the source passthrough,
+// which is exactly what a waiter should get too.
+func (s *Seam) releaseBatchKeys(owned []residueEntry, out []string) {
+	for _, r := range owned {
+		raw, ok := s.batchInFlight.LoadAndDelete(r.key)
+		if !ok {
+			continue
+		}
+		// Publish BEFORE anyone could observe the slot as free: waiters hold
+		// this pointer, so the write-then-close order is what they rely on.
+		entry := raw.(*batchInFlightEntry)
+		entry.value = out[r.idx]
+		close(entry.done)
+	}
+}
+
+// awaitSharedBatchKeys fills out[] for keys owned by another batch, waiting
+// on the exact entry captured at claim time. Bounded by ctx: a waiter never
+// outlives its own request budget, and on timeout it falls back to the source
+// text like any other provider failure. No cache read is involved — the
+// handoff must not depend on the cache implementation or a cache write
+// succeeding.
+func (s *Seam) awaitSharedBatchKeys(ctx context.Context, shared []sharedResidue, target string, out []string) {
+	for _, r := range shared {
+		select {
+		case <-r.entry.done:
+			out[r.idx] = r.entry.value
+			s.metrics.Record(ctx, r.ref.Namespace, target, "cache_miss_share")
+		case <-ctx.Done():
+			out[r.idx] = r.ref.SourceText
+			s.metrics.Record(ctx, r.ref.Namespace, target, "provider_error")
+		}
+	}
 }
 
 // residueEntry is the in-flight bookkeeping shape used by
@@ -335,6 +419,32 @@ type residueEntry struct {
 	idx int
 	ref SourceRef
 	key string // cache key
+}
+
+func (s *Seam) resolveBatchCacheHit(
+	ctx context.Context,
+	r residueEntry,
+	target string,
+	entry CacheEntry,
+	out []string,
+) bool {
+	if entry.Value == guardRejectionSentinel {
+		out[r.idx] = r.ref.SourceText
+		s.metrics.Record(ctx, r.ref.Namespace, target, "guard_rejection_cache_hit")
+		return true
+	}
+	if entry.Age <= s.freshTTL {
+		out[r.idx] = entry.Value
+		s.metrics.Record(ctx, r.ref.Namespace, target, "cache_hit")
+		return true
+	}
+	if entry.Age <= s.freshTTL+s.staleTTL {
+		s.kickoffSWR(ctx, r.ref, target, r.key)
+		out[r.idx] = entry.Value
+		s.metrics.Record(ctx, r.ref.Namespace, target, "cache_swr")
+		return true
+	}
+	return false
 }
 
 // batchOverrideLookup issues either one BatchOverrideStore.BatchLookup
@@ -514,6 +624,7 @@ func (s *Seam) providerBatchCall(
 	// pass the guard so we can write through to dynamic_translations
 	// AFTER cache write. Siblings unaffected when one item rejects.
 	writeSet := make(map[string]string, len(remaining))
+	rejectionSet := make(map[string]string)
 	persistList := make([]persistItem, 0, len(remaining))
 	for i, r := range remaining {
 		value := strings.TrimSpace(results[i].Text)
@@ -535,6 +646,7 @@ func (s *Seam) providerBatchCall(
 			out[r.idx] = r.ref.SourceText
 			s.metrics.Record(ctx, r.ref.Namespace, target, "guard_rejected")
 			logTranslationFallback("guard_rejected", r.ref.Namespace, r.ref.SourceID, target, 1, "")
+			rejectionSet[r.key] = guardRejectionSentinel
 			continue
 		}
 		out[r.idx] = value
@@ -551,6 +663,7 @@ func (s *Seam) providerBatchCall(
 			}
 		}
 	}
+	s.cacheGuardRejections(ctx, rejectionSet)
 	// Round 10D: dynamic_translations write-through, per-item. Persister
 	// failures swallowed at impl layer (translation succeeded; losing
 	// the row only re-runs LLM on next request).
@@ -583,6 +696,9 @@ func (s *Seam) resolve(ctx context.Context, ref SourceRef, targetLocale string) 
 
 	cacheKey := s.cacheKey(ref, target)
 	if entry, ok := s.cache.Get(ctx, cacheKey); ok {
+		if entry.Value == guardRejectionSentinel {
+			return "guard_rejection_cache_hit", ref.SourceText
+		}
 		if entry.Age <= s.freshTTL {
 			return "cache_hit", entry.Value
 		}
@@ -670,6 +786,7 @@ func (s *Seam) callProvider(ctx context.Context, ref SourceRef, target, cacheKey
 	if s.guard.IsSuspicious(ref.SourceText, value, target) {
 		s.metrics.Record(ctx, ref.Namespace, target, "guard_rejected")
 		logTranslationFallback("guard_rejected", ref.Namespace, ref.SourceID, target, 1, "")
+		s.cacheGuardRejections(ctx, map[string]string{cacheKey: guardRejectionSentinel})
 		return ref.SourceText
 	}
 	_ = s.cache.Set(ctx, cacheKey, value, s.freshTTL+s.staleTTL)
@@ -680,6 +797,19 @@ func (s *Seam) callProvider(ctx context.Context, ref SourceRef, target, cacheKey
 	// DynClientPersister logs + returns silently.
 	_ = s.persister.Persist(ctx, ref, target, value)
 	return value
+}
+
+func (s *Seam) cacheGuardRejections(ctx context.Context, entries map[string]string) {
+	if len(entries) == 0 || s.guardRejectionTTL <= 0 {
+		return
+	}
+	if batchCache, ok := s.cache.(BatchCache); ok {
+		_ = batchCache.BatchSet(ctx, entries, s.guardRejectionTTL)
+		return
+	}
+	for key, value := range entries {
+		_ = s.cache.Set(ctx, key, value, s.guardRejectionTTL)
+	}
 }
 
 func (s *Seam) cacheKey(ref SourceRef, target string) string {

@@ -17,6 +17,7 @@ import (
 //   - "cache_miss_share"    — single-flight share of an in-flight provider call
 //   - "provider_call"       — provider invoked successfully, value cached
 //   - "provider_error"      — provider unavailable / errored / returned empty
+//   - "guard_rejection_cache_hit" — source fallback from a recent rejection
 //
 // Concrete implementations wire into Prometheus on the consuming
 // service side; this shared library ships only the interface +

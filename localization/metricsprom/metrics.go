@@ -37,6 +37,7 @@ var LabelNames = []string{"namespace", "target_locale", "source"}
 //   - "cache_miss_share"
 //   - "provider_call"
 //   - "provider_error"
+//   - "guard_rejection_cache_hit"
 //
 // See localization.Metrics interface docs for the meaning of each.
 type Metrics struct {
@@ -56,7 +57,8 @@ func New(registerer prometheus.Registerer) (*Metrics, error) {
 				"Labels: namespace (resource type), target_locale (BCP-47 base), " +
 				"source (english_passthrough|override|cache_hit|cache_swr|" +
 				"cache_miss_share|provider_call|provider_error|" +
-				"empty_translation|guard_rejected). The last two fall back to " +
+				"empty_translation|guard_rejected|guard_rejection_cache_hit). " +
+				"The last three fall back to " +
 				"English source text — a non-zero rate means users silently see English.",
 		},
 		LabelNames,

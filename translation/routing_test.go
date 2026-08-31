@@ -94,7 +94,7 @@ func TestSelectTranslatorBatchEndToEnd(t *testing.T) {
 		label    string
 	}{
 		{"sv", "en", []string{"smyg"}, BackendGemini, "single-token sv→en routes to Gemini (Sweep DDD)"},
-		{"sv", "en", []string{"Hon smyger sig in i rummet utan att någon ser henne."}, BackendOpusMT, "sentence sv→en routes to opus-mt"},
+		{"sv", "en", []string{"Hon smyger sig in i rummet utan att någon ser henne."}, BackendGemini, "sentence sv→en routes to Gemini (opus-mt pair set empty since 2026-08-30)"},
 		{"en", "vi", []string{"Hello world"}, BackendGemini, "non-high-quality pair → Gemini"},
 		{"en", "en", []string{"anything"}, BackendPassthrough, "same locale → passthrough"},
 		{"", "fi", []string{"anything"}, BackendPassthrough, "missing src → passthrough"},
