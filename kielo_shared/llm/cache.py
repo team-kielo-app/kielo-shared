@@ -70,9 +70,17 @@ def _derive_cache_key(request: LLMRequest) -> str:
 _DEGENERATE_TEXTS = frozenset({"[]", "{}", "null", "none", '""', "''"})
 
 
-def _cacheable_text(text: str | None) -> bool:
+def _cacheable_text(text: str | None, *, degenerate_ok: bool = False) -> bool:
+    """`degenerate_ok` is the per-request escape for tasks where a
+    degenerate value IS a valid result (e.g. extraction that legitimately
+    finds nothing): pass metadata={"cache_degenerate_ok": True} on the
+    LLMRequest. Empty/whitespace text is never cacheable."""
     stripped = (text or "").strip()
-    return bool(stripped) and stripped.lower() not in _DEGENERATE_TEXTS
+    if not stripped:
+        return False
+    if degenerate_ok:
+        return True
+    return stripped.lower() not in _DEGENERATE_TEXTS
 
 
 class LLMCacheDecorator:
@@ -138,7 +146,13 @@ class LLMCacheDecorator:
                 )
 
         result = await self._inner.generate(request)
-        if _cacheable_text(result.text) and result.provider != "passthrough":
+        degenerate_ok = bool(
+            (getattr(request, "metadata", None) or {}).get("cache_degenerate_ok")
+        )
+        if (
+            _cacheable_text(result.text, degenerate_ok=degenerate_ok)
+            and result.provider != "passthrough"
+        ):
             await self._safe_set(
                 key,
                 json.dumps(

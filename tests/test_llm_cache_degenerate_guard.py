@@ -92,3 +92,21 @@ def test_cacheable_text_table():
     assert not _cacheable_text("[]")
     assert not _cacheable_text("None")
     assert _cacheable_text('[{"text": "x"}]')
+
+
+@pytest.mark.asyncio
+async def test_degenerate_ok_metadata_opts_into_caching():
+    """Tasks where a degenerate value IS a valid result (extraction that
+    legitimately finds nothing) opt out per-request; empty text stays
+    uncacheable even then."""
+    redis = _FakeRedis()
+    provider = _FakeProvider("[]")
+    cache = LLMCacheDecorator(provider, redis)
+
+    await cache.generate(_request(metadata={"cache_degenerate_ok": True}))
+    assert len(redis.sets) == 1, "opt-in degenerate result must be cached"
+
+    empty_redis = _FakeRedis()
+    empty_cache = LLMCacheDecorator(_FakeProvider(""), empty_redis)
+    await empty_cache.generate(_request(metadata={"cache_degenerate_ok": True}))
+    assert empty_redis.sets == []
