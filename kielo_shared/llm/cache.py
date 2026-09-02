@@ -60,6 +60,21 @@ def _derive_cache_key(request: LLMRequest) -> str:
     return hashlib.sha256("".join(parts).encode("utf-8")).hexdigest()[:32]
 
 
+# A degenerate-but-non-empty response ("[]", "{}", "null") is a failed
+# generation wearing valid JSON. Caching one turns a single bad sample into a
+# poisoned key: every retry inside the TTL is an instant hit on the same
+# garbage, and because failed items stay in their caller's retry pool while
+# successes leave it, the pool self-selects for poisoned keys. Prod
+# kielolearn-engine ran grammar-example enrichment at failed=10/10 nightly for
+# weeks this way (2026-09-02 diagnosis). Misses are cheap; never cache these.
+_DEGENERATE_TEXTS = frozenset({"[]", "{}", "null", "none", '""', "''"})
+
+
+def _cacheable_text(text: str | None) -> bool:
+    stripped = (text or "").strip()
+    return bool(stripped) and stripped.lower() not in _DEGENERATE_TEXTS
+
+
 class LLMCacheDecorator:
     """Read-through cache. Fully bypassed when cache_policy != 'read_write'.
 
@@ -123,7 +138,7 @@ class LLMCacheDecorator:
                 )
 
         result = await self._inner.generate(request)
-        if (result.text or "").strip() and result.provider != "passthrough":
+        if _cacheable_text(result.text) and result.provider != "passthrough":
             await self._safe_set(
                 key,
                 json.dumps(
@@ -131,6 +146,7 @@ class LLMCacheDecorator:
                 ),
             )
         return result
+
 
     # ──────────────────────────── helpers ────────────────────────────────
 
