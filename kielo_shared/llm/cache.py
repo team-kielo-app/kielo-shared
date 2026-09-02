@@ -60,6 +60,29 @@ def _derive_cache_key(request: LLMRequest) -> str:
     return hashlib.sha256("".join(parts).encode("utf-8")).hexdigest()[:32]
 
 
+# A degenerate-but-non-empty response ("[]", "{}", "null") is a failed
+# generation wearing valid JSON. Caching one turns a single bad sample into a
+# poisoned key: every retry inside the TTL is an instant hit on the same
+# garbage, and because failed items stay in their caller's retry pool while
+# successes leave it, the pool self-selects for poisoned keys. Prod
+# kielolearn-engine ran grammar-example enrichment at failed=10/10 nightly for
+# weeks this way (2026-09-02 diagnosis). Misses are cheap; never cache these.
+_DEGENERATE_TEXTS = frozenset({"[]", "{}", "null", "none", '""', "''"})
+
+
+def _cacheable_text(text: str | None, *, degenerate_ok: bool = False) -> bool:
+    """`degenerate_ok` is the per-request escape for tasks where a
+    degenerate value IS a valid result (e.g. extraction that legitimately
+    finds nothing): pass metadata={"cache_degenerate_ok": True} on the
+    LLMRequest. Empty/whitespace text is never cacheable."""
+    stripped = (text or "").strip()
+    if not stripped:
+        return False
+    if degenerate_ok:
+        return True
+    return stripped.lower() not in _DEGENERATE_TEXTS
+
+
 class LLMCacheDecorator:
     """Read-through cache. Fully bypassed when cache_policy != 'read_write'.
 
@@ -123,7 +146,13 @@ class LLMCacheDecorator:
                 )
 
         result = await self._inner.generate(request)
-        if (result.text or "").strip() and result.provider != "passthrough":
+        degenerate_ok = bool(
+            (getattr(request, "metadata", None) or {}).get("cache_degenerate_ok")
+        )
+        if (
+            _cacheable_text(result.text, degenerate_ok=degenerate_ok)
+            and result.provider != "passthrough"
+        ):
             await self._safe_set(
                 key,
                 json.dumps(
@@ -131,6 +160,7 @@ class LLMCacheDecorator:
                 ),
             )
         return result
+
 
     # ──────────────────────────── helpers ────────────────────────────────
 
