@@ -13,6 +13,7 @@ import (
 	"time"
 
 	sharedhttputil "github.com/team-kielo-app/kielo-shared/observe/httputil"
+	sharedmetrics "github.com/team-kielo-app/kielo-shared/observe/metrics"
 )
 
 type DeepgramProvider struct {
@@ -68,7 +69,11 @@ func (p *DeepgramProvider) Transcribe(ctx context.Context, req Request) (*Result
 	started := time.Now()
 	resp, err := p.HTTPClient.Do(httpReq)
 	if err != nil {
-		return nil, &Error{Class: classifyTransportError(ctx, err), Err: err}
+		class := classifyTransportError(ctx, err)
+		sharedmetrics.ExternalAPIFailureEmit(ctx, sharedmetrics.ExternalAPIFailure{
+			Provider: "deepgram", Operation: "stt.prerecorded", ErrorClass: string(class), Err: err,
+		})
+		return nil, &Error{Class: class, Err: err}
 	}
 	defer resp.Body.Close()
 
@@ -78,10 +83,11 @@ func (p *DeepgramProvider) Transcribe(ctx context.Context, req Request) (*Result
 		if resp.StatusCode >= 500 {
 			class = ErrorClassServerError
 		}
-		return nil, &Error{
-			Class: class,
-			Err:   fmt.Errorf("deepgram stt status=%d body=%s", resp.StatusCode, string(body)),
-		}
+		statusErr := fmt.Errorf("deepgram stt status=%d body=%s", resp.StatusCode, string(body))
+		sharedmetrics.ExternalAPIFailureEmit(ctx, sharedmetrics.ExternalAPIFailure{
+			Provider: "deepgram", Operation: "stt.prerecorded", Status: resp.StatusCode, Err: statusErr,
+		})
+		return nil, &Error{Class: class, Err: statusErr}
 	}
 
 	return parseDeepgramResponse(resp.Body, req.Language, model, started)

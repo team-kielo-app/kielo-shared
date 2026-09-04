@@ -421,6 +421,19 @@ def pubsub_publish_emit(
             skipped,
             latency_seconds,
         )
+        try:
+            from kielo_shared.observability.external_api import (
+                external_api_failure_emit,
+            )
+
+            external_api_failure_emit(
+                provider="pubsub",
+                operation=f"publish.{topic}",
+                service=service,
+                detail="publish attempt failed",
+            )
+        except Exception as emit_exc:
+            logger.debug("pubsub external_api_failure emit failed: %s", emit_exc)
     else:
         logger.debug(
             "pubsub_publish service=%s topic=%s error=%s skipped=%s latency_s=%.4f",

@@ -114,6 +114,8 @@ class MetricsDecorator:
         err: BaseException | None,
         elapsed: float,
     ) -> None:
+        if err is not None:
+            _external_failure(provider, f"llm.{task}", err)
         try:
             from kielo_shared.observability.metrics import (
                 LLM_CALLS_TOTAL,
@@ -137,6 +139,22 @@ class MetricsDecorator:
             )
         except Exception as exc:
             logger.debug("llm metrics fanout failed: %s", exc)
+
+
+def _external_failure(provider: str, operation: str, err: BaseException) -> None:
+    """Feed the cross-provider external-API alert signal (log-based; the
+    Prometheus family above has no production reader since 2026-08)."""
+    try:
+        from kielo_shared.observability.external_api import external_api_failure_emit
+
+        external_api_failure_emit(
+            provider=provider,
+            operation=operation,
+            exc=err,
+            error_class=class_of(err),
+        )
+    except Exception:
+        return
 
 
 def with_metrics(inner: Provider) -> MetricsDecorator:
