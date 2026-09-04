@@ -12,6 +12,19 @@ import (
 type CursorPage[T any] struct {
 	Items       []T    `json:"items"`
 	NextPageKey string `json:"next_page_key,omitempty"`
+	// Meta carries page-level hints that are not items. Omitted entirely when
+	// nothing applies, so existing consumers see an unchanged envelope.
+	Meta *CursorPageMeta `json:"meta,omitempty"`
+}
+
+// CursorPageMeta is the optional page-level hint block of a CursorPage.
+type CursorPageMeta struct {
+	// LocalizationPending counts items whose learner-facing text was served
+	// in the canonical language because its translation is still being
+	// produced in the background (serve-source-now / fill-later reads). A
+	// client that shows this page can refetch once shortly after to pick the
+	// translations up; zero or absent means the page is fully localized.
+	LocalizationPending int `json:"localization_pending,omitempty"`
 }
 
 // NewCursorPage builds a CursorPage[T] from a slice and a possibly-nil

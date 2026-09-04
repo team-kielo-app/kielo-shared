@@ -255,10 +255,13 @@ func (s *Seam) Translate(ctx context.Context, ref SourceRef, targetLocale string
 // implement the batch interfaces, so the fast path is the norm.
 //
 
-func (s *Seam) TranslateBatch(ctx context.Context, refs []SourceRef, targetLocale string) []string {
+// batchResolveCached runs the override and cache phases of a batch resolve
+// and returns the values resolved so far plus the residue that still needs
+// the provider (in request order, with idx pointing into out).
+func (s *Seam) batchResolveCached(ctx context.Context, refs []SourceRef, targetLocale string) ([]string, []residueEntry) {
 	out := make([]string, len(refs))
 	if len(refs) == 0 {
-		return out
+		return out, nil
 	}
 
 	// Short-circuit empty / English / source-text-empty cases per-ref
@@ -284,7 +287,7 @@ func (s *Seam) TranslateBatch(ctx context.Context, refs []SourceRef, targetLocal
 		})
 	}
 	if len(residue) == 0 {
-		return out
+		return out, nil
 	}
 
 	// Sweep TTTT-I: count total refs resolved for the budget snapshot.
@@ -305,7 +308,7 @@ func (s *Seam) TranslateBatch(ctx context.Context, refs []SourceRef, targetLocal
 		remaining = append(remaining, r)
 	}
 	if len(remaining) == 0 {
-		return out
+		return out, nil
 	}
 
 	// Phase 2: batch cache lookup. One Redis MGET pipeline when impl
@@ -324,9 +327,15 @@ func (s *Seam) TranslateBatch(ctx context.Context, refs []SourceRef, targetLocal
 		}
 		remaining2 = append(remaining2, r)
 	}
+	return out, remaining2
+}
+
+func (s *Seam) TranslateBatch(ctx context.Context, refs []SourceRef, targetLocale string) []string {
+	out, remaining2 := s.batchResolveCached(ctx, refs, targetLocale)
 	if len(remaining2) == 0 {
 		return out
 	}
+	target := strings.TrimSpace(strings.ToLower(targetLocale))
 
 	// Phase 3: provider batch call for cache misses, single-flighted per
 	// key. Keys another batch is already translating are NOT re-sent; we
