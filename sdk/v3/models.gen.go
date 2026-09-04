@@ -1119,6 +1119,7 @@ type AwardAchievementByPathRequest struct {
 type AwardAchievementRequest struct {
 	AchievementCode string  `json:"achievement_code"`
 	Context         *string `json:"context,omitempty"`
+	EventId         *string `json:"event_id,omitempty"`
 	UserId          string  `json:"user_id"`
 }
 
@@ -1999,21 +2000,22 @@ type CommunicationHistoryListResponse struct {
 
 // CommunicationLog defines model for CommunicationLog.
 type CommunicationLog struct {
-	AllowContentRepush bool                   `json:"AllowContentRepush"`
-	ContentID          string                 `json:"ContentID"`
-	ContentType        string                 `json:"ContentType"`
-	CreatedAt          time.Time              `json:"CreatedAt"`
-	DeliveryID         *uuid.UUID             `json:"DeliveryID,omitempty"`
-	EventType          string                 `json:"EventType"`
-	ID                 uuid.UUID              `json:"ID"`
-	Metadata           map[string]interface{} `json:"Metadata"`
-	Recipient          string                 `json:"Recipient"`
-	RuleID             *uuid.UUID             `json:"RuleID,omitempty"`
-	Source             string                 `json:"Source"`
-	Status             string                 `json:"Status"`
-	TemplateID         string                 `json:"TemplateID"`
-	Type               string                 `json:"Type"`
-	UserID             *uuid.UUID             `json:"UserID,omitempty"`
+	AllowContentRepush   bool                   `json:"AllowContentRepush"`
+	ContentID            string                 `json:"ContentID"`
+	ContentType          string                 `json:"ContentType"`
+	CreatedAt            time.Time              `json:"CreatedAt"`
+	DeliveryID           *uuid.UUID             `json:"DeliveryID,omitempty"`
+	EventType            string                 `json:"EventType"`
+	ID                   uuid.UUID              `json:"ID"`
+	Metadata             map[string]interface{} `json:"Metadata"`
+	Recipient            string                 `json:"Recipient"`
+	RuleID               *uuid.UUID             `json:"RuleID,omitempty"`
+	Source               string                 `json:"Source"`
+	Status               string                 `json:"Status"`
+	SuppressRepeatedCopy bool                   `json:"SuppressRepeatedCopy"`
+	TemplateID           string                 `json:"TemplateID"`
+	Type                 string                 `json:"Type"`
+	UserID               *uuid.UUID             `json:"UserID,omitempty"`
 }
 
 // CompleteRoadmapStepRequest defines model for CompleteRoadmapStepRequest.
@@ -2240,6 +2242,7 @@ type ContextMatchingExercise struct {
 
 	// CorrectAnswer Mapping of target_item_id -> scenario_id
 	CorrectAnswer   map[string]string `json:"correct_answer"`
+	Difficulty      *int              `json:"difficulty"`
 	ErrorPatternTag *string           `json:"error_pattern_tag"`
 
 	// ExerciseId Unique ID for this specific exercise instance.
@@ -3087,66 +3090,82 @@ type CurriculumTreeTrack struct {
 // CursorPageAchievementV3 defines model for CursorPageAchievementV3.
 type CursorPageAchievementV3 struct {
 	Items       []AchievementV3 `json:"items"`
+	Meta        *CursorPageMeta `json:"meta,omitempty"`
 	NextPageKey *string         `json:"next_page_key,omitempty"`
 }
 
 // CursorPageArticleVersion defines model for CursorPageArticleVersion.
 type CursorPageArticleVersion struct {
 	Items       []ArticleVersion `json:"items"`
+	Meta        *CursorPageMeta  `json:"meta,omitempty"`
 	NextPageKey *string          `json:"next_page_key,omitempty"`
 }
 
 // CursorPageArticleVersionSnippet defines model for CursorPageArticleVersionSnippet.
 type CursorPageArticleVersionSnippet struct {
 	Items       []ArticleVersionSnippet `json:"items"`
+	Meta        *CursorPageMeta         `json:"meta,omitempty"`
 	NextPageKey *string                 `json:"next_page_key,omitempty"`
 }
 
 // CursorPageFeedbackMessage defines model for CursorPageFeedbackMessage.
 type CursorPageFeedbackMessage struct {
 	Items       []FeedbackMessage `json:"items"`
+	Meta        *CursorPageMeta   `json:"meta,omitempty"`
 	NextPageKey *string           `json:"next_page_key,omitempty"`
 }
 
 // CursorPageLearningItemV3 defines model for CursorPageLearningItemV3.
 type CursorPageLearningItemV3 struct {
 	Items       []LearningItemV3 `json:"items"`
+	Meta        *CursorPageMeta  `json:"meta,omitempty"`
 	NextPageKey *string          `json:"next_page_key,omitempty"`
+}
+
+// CursorPageMeta defines model for CursorPageMeta.
+type CursorPageMeta struct {
+	LocalizationPending *int `json:"localization_pending,omitempty"`
 }
 
 // CursorPageSavedItem defines model for CursorPageSavedItem.
 type CursorPageSavedItem struct {
-	Items       []SavedItem `json:"items"`
-	NextPageKey *string     `json:"next_page_key,omitempty"`
+	Items       []SavedItem     `json:"items"`
+	Meta        *CursorPageMeta `json:"meta,omitempty"`
+	NextPageKey *string         `json:"next_page_key,omitempty"`
 }
 
 // CursorPageStudyList defines model for CursorPageStudyList.
 type CursorPageStudyList struct {
-	Items       []StudyList `json:"items"`
-	NextPageKey *string     `json:"next_page_key,omitempty"`
+	Items       []StudyList     `json:"items"`
+	Meta        *CursorPageMeta `json:"meta,omitempty"`
+	NextPageKey *string         `json:"next_page_key,omitempty"`
 }
 
 // CursorPageStudyListV3 defines model for CursorPageStudyListV3.
 type CursorPageStudyListV3 struct {
-	Items       []StudyListV3 `json:"items"`
-	NextPageKey *string       `json:"next_page_key,omitempty"`
+	Items       []StudyListV3   `json:"items"`
+	Meta        *CursorPageMeta `json:"meta,omitempty"`
+	NextPageKey *string         `json:"next_page_key,omitempty"`
 }
 
 // CursorPageTag defines model for CursorPageTag.
 type CursorPageTag struct {
-	Items       []Tag   `json:"items"`
-	NextPageKey *string `json:"next_page_key,omitempty"`
+	Items       []Tag           `json:"items"`
+	Meta        *CursorPageMeta `json:"meta,omitempty"`
+	NextPageKey *string         `json:"next_page_key,omitempty"`
 }
 
 // CursorPageUserNotification defines model for CursorPageUserNotification.
 type CursorPageUserNotification struct {
 	Items       []UserNotification `json:"items"`
+	Meta        *CursorPageMeta    `json:"meta,omitempty"`
 	NextPageKey *string            `json:"next_page_key,omitempty"`
 }
 
 // CursorPageUserNotificationV3 defines model for CursorPageUserNotificationV3.
 type CursorPageUserNotificationV3 struct {
 	Items       []UserNotificationV3 `json:"items"`
+	Meta        *CursorPageMeta      `json:"meta,omitempty"`
 	NextPageKey *string              `json:"next_page_key,omitempty"`
 }
 
@@ -3262,7 +3281,11 @@ type DataQualityRunsPage struct {
 
 // DecisionLog defines model for DecisionLog.
 type DecisionLog struct {
+	BreadthMode               *string                 `json:"breadth_mode,omitempty"`
+	BreadthReason             *string                 `json:"breadth_reason,omitempty"`
+	DepthBonus                *int                    `json:"depth_bonus,omitempty"`
 	ExercisesGenerated        *int                    `json:"exercises_generated,omitempty"`
+	ExercisesPlanned          *int                    `json:"exercises_planned,omitempty"`
 	ExercisesRejected         *int                    `json:"exercises_rejected,omitempty"`
 	ExercisesValidated        *int                    `json:"exercises_validated,omitempty"`
 	GenerationTimeMs          *int                    `json:"generation_time_ms,omitempty"`
@@ -3273,10 +3296,14 @@ type DecisionLog struct {
 	ItemsFromSavedItems       *int                    `json:"items_from_saved_items,omitempty"`
 	ItemsFromSpacedRepetition *int                    `json:"items_from_spaced_repetition,omitempty"`
 	ObjectivesConsidered      *int                    `json:"objectives_considered,omitempty"`
+	ObjectivesPlanned         *int                    `json:"objectives_planned,omitempty"`
 	ObjectivesSelected        *int                    `json:"objectives_selected,omitempty"`
+	PinnedItemCount           *int                    `json:"pinned_item_count,omitempty"`
 	ProfileSnapshot           *map[string]interface{} `json:"profile_snapshot,omitempty"`
 	RejectionReasons          *map[string]int         `json:"rejection_reasons,omitempty"`
 	SelectionReasons          *[]DecisionReason       `json:"selection_reasons,omitempty"`
+	SessionShape              *string                 `json:"session_shape,omitempty"`
+	ShapeReason               *string                 `json:"shape_reason,omitempty"`
 	TimingMs                  *map[string]int         `json:"timing_ms,omitempty"`
 }
 
@@ -3847,6 +3874,7 @@ type FillInTheBlankExercise struct {
 	// ContextHint A specific concept or hint for the exercise, e.g., 'inessive case'.
 	ContextHint     *string `json:"context_hint"`
 	CorrectAnswer   string  `json:"correct_answer"`
+	Difficulty      *int    `json:"difficulty"`
 	ErrorPatternTag *string `json:"error_pattern_tag"`
 
 	// ExerciseId Unique ID for this specific exercise instance.
@@ -3895,6 +3923,7 @@ type FlashcardExercise struct {
 
 	// CorrectAnswer Canonical plain-text answer used for grading and fallback rendering.
 	CorrectAnswer   string  `json:"correct_answer"`
+	Difficulty      *int    `json:"difficulty"`
 	ErrorPatternTag *string `json:"error_pattern_tag"`
 
 	// ExerciseId Unique ID for this specific exercise instance.
@@ -4151,6 +4180,7 @@ type IdentifyConceptExercise struct {
 
 	// CorrectAnswer UUID of the correct option from the options list
 	CorrectAnswer   uuid.UUID `json:"correct_answer"`
+	Difficulty      *int      `json:"difficulty"`
 	ErrorPatternTag *string   `json:"error_pattern_tag"`
 
 	// ExerciseId Unique ID for this specific exercise instance.
@@ -5099,6 +5129,7 @@ type LearningItemsCountsResponseV3 struct {
 
 // LearningObjective A planned learning objective for a given item.
 type LearningObjective struct {
+	DaysOverdue          *int                            `json:"days_overdue,omitempty"`
 	DisplayText          *string                         `json:"display_text,omitempty"`
 	ErrorPatternTag      *string                         `json:"error_pattern_tag"`
 	ExerciseSequence     *[]string                       `json:"exercise_sequence,omitempty"`
@@ -5107,6 +5138,7 @@ type LearningObjective struct {
 	ObjectiveType        LearningObjectiveObjectiveType  `json:"objective_type"`
 	Proficiency          *float32                        `json:"proficiency"`
 	Reason               string                          `json:"reason"`
+	RecentErrorCount     *int                            `json:"recent_error_count,omitempty"`
 	SelectionSourceLabel *string                         `json:"selection_source_label"`
 	Source               string                          `json:"source"`
 	SupportLanguageCode  *string                         `json:"support_language_code,omitempty"`
@@ -5288,6 +5320,7 @@ type ListeningComprehensionExercise struct {
 
 	// CorrectAnswer UUID of the correct option from the options list
 	CorrectAnswer   uuid.UUID `json:"correct_answer"`
+	Difficulty      *int      `json:"difficulty"`
 	ErrorPatternTag *string   `json:"error_pattern_tag"`
 
 	// ExerciseId Unique ID for this specific exercise instance.
@@ -5559,6 +5592,7 @@ type MultipleChoiceTranslationExercise struct {
 
 	// CorrectAnswer UUID of the correct option from the options list
 	CorrectAnswer   uuid.UUID `json:"correct_answer"`
+	Difficulty      *int      `json:"difficulty"`
 	ErrorPatternTag *string   `json:"error_pattern_tag"`
 
 	// ExerciseId Unique ID for this specific exercise instance.
@@ -5972,6 +6006,7 @@ type PlaceholderExercise struct {
 
 	// ContextHint A specific concept or hint for the exercise, e.g., 'inessive case'.
 	ContextHint     *string `json:"context_hint"`
+	Difficulty      *int    `json:"difficulty"`
 	ErrorPatternTag *string `json:"error_pattern_tag"`
 
 	// ExerciseId Unique ID for this specific exercise instance.
@@ -6745,6 +6780,17 @@ type RoadmapStepCompleteResponse struct {
 	StepIndex int                           `json:"step_index"`
 }
 
+// RoadmapStepTTSRequest Optional body for POST /lessons/{id}/steps/{i}/tts.
+//
+// “text“ selects ONE phrase of the step's own audio text (an explanation
+// step's tts_text is split into tappable phrases on the client). It must be
+// a substring of the step's tts_text/phrase; anything else is rejected so
+// the lesson-scoped, unmetered TTS path cannot be used as a free-form
+// synthesizer. Omitted = the whole step text, as before.
+type RoadmapStepTTSRequest struct {
+	Text *string `json:"text"`
+}
+
 // RoadmapStepTTSStreamSessionResponse defines model for RoadmapStepTTSStreamSessionResponse.
 type RoadmapStepTTSStreamSessionResponse struct {
 	CacheHit  *bool      `json:"cache_hit,omitempty"`
@@ -6889,6 +6935,7 @@ type ScenarioChoiceExercise struct {
 	// ContextHint A specific concept or hint for the exercise, e.g., 'inessive case'.
 	ContextHint     *string `json:"context_hint"`
 	CorrectAnswer   string  `json:"correct_answer"`
+	Difficulty      *int    `json:"difficulty"`
 	ErrorPatternTag *string `json:"error_pattern_tag"`
 
 	// ExerciseId Unique ID for this specific exercise instance.
@@ -7061,6 +7108,7 @@ type SentenceConstructionExercise struct {
 	// ContextHint A specific concept or hint for the exercise, e.g., 'inessive case'.
 	ContextHint     *string `json:"context_hint"`
 	CorrectAnswer   string  `json:"correct_answer"`
+	Difficulty      *int    `json:"difficulty"`
 	ErrorPatternTag *string `json:"error_pattern_tag"`
 
 	// ExerciseId Unique ID for this specific exercise instance.
@@ -7136,6 +7184,14 @@ type SessionReconcileItemResult struct {
 // SessionReconcileItemResultStatus defines model for SessionReconcileItemResult.Status.
 type SessionReconcileItemResultStatus string
 
+// SessionReconcileItemResultV3 defines model for SessionReconcileItemResultV3.
+type SessionReconcileItemResultV3 struct {
+	ExerciseId   string                  `json:"exercise_id"`
+	Result       *SubmitAnswerResponseV3 `json:"result,omitempty"`
+	Status       string                  `json:"status"`
+	SubmissionId *string                 `json:"submission_id,omitempty"`
+}
+
 // SessionReconcileRequest defines model for SessionReconcileRequest.
 type SessionReconcileRequest struct {
 	Submissions *[]ExerciseSubmission `json:"submissions,omitempty"`
@@ -7145,6 +7201,12 @@ type SessionReconcileRequest struct {
 type SessionReconcileResponse struct {
 	Results *[]SessionReconcileItemResult `json:"results,omitempty"`
 	Session LearningSession               `json:"session"`
+}
+
+// SessionReconcileResponseV3 defines model for SessionReconcileResponseV3.
+type SessionReconcileResponseV3 struct {
+	Results []SessionReconcileItemResultV3 `json:"results"`
+	Session LearningSessionV3              `json:"session"`
 }
 
 // SessionResumeState defines model for SessionResumeState.
@@ -8323,6 +8385,11 @@ type SingletonSendEmailResult struct {
 	Data SendEmailResult `json:"data"`
 }
 
+// SingletonSessionReconcileResponseV3 defines model for SingletonSessionReconcileResponseV3.
+type SingletonSessionReconcileResponseV3 struct {
+	Data SessionReconcileResponseV3 `json:"data"`
+}
+
 // SingletonSessionSummary defines model for SingletonSessionSummary.
 type SingletonSessionSummary struct {
 	Data SessionSummary `json:"data"`
@@ -8702,6 +8769,7 @@ type SpellingChallengeExercise struct {
 	// ContextHint A specific concept or hint for the exercise, e.g., 'inessive case'.
 	ContextHint     *string `json:"context_hint"`
 	CorrectAnswer   string  `json:"correct_answer"`
+	Difficulty      *int    `json:"difficulty"`
 	ErrorPatternTag *string `json:"error_pattern_tag"`
 
 	// ExerciseId Unique ID for this specific exercise instance.
@@ -10834,7 +10902,7 @@ type GetApiV3DlqAuditParams struct {
 
 // PostApiV3EventsEmailBounceParams defines parameters for PostApiV3EventsEmailBounce.
 type PostApiV3EventsEmailBounceParams struct {
-	// Provider Bounce provider (ses|sendgrid). Selects the parser used to decode the request body.
+	// Provider Bounce provider (ses|sendgrid|brevo). Selects the parser used to decode the request body.
 	Provider string `form:"provider" json:"provider"`
 }
 
@@ -12437,6 +12505,9 @@ type EvaluateRoadmapStepSpeechKlearnApiV3RoadmapLessonsLessonIdStepsStepIndexSpe
 	OptimizeForLatency *bool     `form:"optimize_for_latency,omitempty" json:"optimize_for_latency,omitempty"`
 }
 
+// CreateRoadmapStepTtsStreamSessionKlearnApiV3RoadmapLessonsLessonIdStepsStepIndexTtsPostJSONBody defines parameters for CreateRoadmapStepTtsStreamSessionKlearnApiV3RoadmapLessonsLessonIdStepsStepIndexTtsPost.
+type CreateRoadmapStepTtsStreamSessionKlearnApiV3RoadmapLessonsLessonIdStepsStepIndexTtsPostJSONBody = RoadmapStepTTSRequest
+
 // CreateRoadmapStepTtsStreamSessionKlearnApiV3RoadmapLessonsLessonIdStepsStepIndexTtsPostParams defines parameters for CreateRoadmapStepTtsStreamSessionKlearnApiV3RoadmapLessonsLessonIdStepsStepIndexTtsPost.
 type CreateRoadmapStepTtsStreamSessionKlearnApiV3RoadmapLessonsLessonIdStepsStepIndexTtsPostParams struct {
 	// UserId The ID of the user
@@ -12901,6 +12972,9 @@ type PostApiV3MeSavedItemsJSONRequestBody = SaveItemRequest
 // PostApiV3MeSessionsSessionIdAnswersJSONRequestBody defines body for PostApiV3MeSessionsSessionIdAnswers for application/json ContentType.
 type PostApiV3MeSessionsSessionIdAnswersJSONRequestBody = SubmitAnswerRequest
 
+// PostApiV3MeSessionsSessionIdReconcileJSONRequestBody defines body for PostApiV3MeSessionsSessionIdReconcile for application/json ContentType.
+type PostApiV3MeSessionsSessionIdReconcileJSONRequestBody = SessionReconcileRequest
+
 // PostApiV3MeStudyListsJSONRequestBody defines body for PostApiV3MeStudyLists for application/json ContentType.
 type PostApiV3MeStudyListsJSONRequestBody = CreateStudyListRequestV3
 
@@ -12954,6 +13028,9 @@ type PatchApiV3RoadmapLessonsLessonIdJSONRequestBody = RoadmapLessonUpsertReques
 
 // PostApiV3RoadmapLessonsLessonIdStepsStepIndexCompleteJSONRequestBody defines body for PostApiV3RoadmapLessonsLessonIdStepsStepIndexComplete for application/json ContentType.
 type PostApiV3RoadmapLessonsLessonIdStepsStepIndexCompleteJSONRequestBody = CompleteRoadmapStepRequest
+
+// PostApiV3RoadmapLessonsLessonIdStepsStepIndexTtsJSONRequestBody defines body for PostApiV3RoadmapLessonsLessonIdStepsStepIndexTts for application/json ContentType.
+type PostApiV3RoadmapLessonsLessonIdStepsStepIndexTtsJSONRequestBody = RoadmapStepTTSRequest
 
 // PostApiV3ScheduleJSONRequestBody defines body for PostApiV3Schedule for application/json ContentType.
 type PostApiV3ScheduleJSONRequestBody = CreateScheduleRequest
@@ -13237,6 +13314,9 @@ type HandleGrammarExampleEnrichmentInternalWorkerHandleGrammarExampleEnrichmentP
 // HandleLessonGenerationInternalWorkerHandleLessonGenerationPostJSONRequestBody defines body for HandleLessonGenerationInternalWorkerHandleLessonGenerationPost for application/json ContentType.
 type HandleLessonGenerationInternalWorkerHandleLessonGenerationPostJSONRequestBody = PubSubMessage
 
+// HandleMediaReadyInternalWorkerHandleMediaReadyPostJSONRequestBody defines body for HandleMediaReadyInternalWorkerHandleMediaReadyPost for application/json ContentType.
+type HandleMediaReadyInternalWorkerHandleMediaReadyPostJSONRequestBody = PubSubMessage
+
 // HandleNotificationScanInternalWorkerHandleNotificationScanPostJSONRequestBody defines body for HandleNotificationScanInternalWorkerHandleNotificationScanPost for application/json ContentType.
 type HandleNotificationScanInternalWorkerHandleNotificationScanPostJSONRequestBody = PubSubMessage
 
@@ -13251,6 +13331,9 @@ type HandleUserDeletedEventInternalWorkerHandleUserDeletedEventPostJSONRequestBo
 
 // HandleUserProfileEventInternalWorkerHandleUserProfileEventPostJSONRequestBody defines body for HandleUserProfileEventInternalWorkerHandleUserProfileEventPost for application/json ContentType.
 type HandleUserProfileEventInternalWorkerHandleUserProfileEventPostJSONRequestBody = PubSubMessage
+
+// HandleViewedItemDrainInternalWorkerHandleViewedItemDrainPostJSONRequestBody defines body for HandleViewedItemDrainInternalWorkerHandleViewedItemDrainPost for application/json ContentType.
+type HandleViewedItemDrainInternalWorkerHandleViewedItemDrainPostJSONRequestBody = PubSubMessage
 
 // HandleWordEnrichmentInternalWorkerHandleWordEnrichmentPostJSONRequestBody defines body for HandleWordEnrichmentInternalWorkerHandleWordEnrichmentPost for application/json ContentType.
 type HandleWordEnrichmentInternalWorkerHandleWordEnrichmentPostJSONRequestBody = PubSubMessage
@@ -13320,6 +13403,9 @@ type CompleteRoadmapStepKlearnApiV3RoadmapLessonsLessonIdStepsStepIndexCompleteP
 
 // EvaluateRoadmapStepSpeechKlearnApiV3RoadmapLessonsLessonIdStepsStepIndexSpeechEvaluatePostMultipartRequestBody defines body for EvaluateRoadmapStepSpeechKlearnApiV3RoadmapLessonsLessonIdStepsStepIndexSpeechEvaluatePost for multipart/form-data ContentType.
 type EvaluateRoadmapStepSpeechKlearnApiV3RoadmapLessonsLessonIdStepsStepIndexSpeechEvaluatePostMultipartRequestBody = BodyEvaluateRoadmapStepSpeechKlearnApiV3RoadmapLessonsLessonIdStepsStepIndexSpeechEvaluatePost
+
+// CreateRoadmapStepTtsStreamSessionKlearnApiV3RoadmapLessonsLessonIdStepsStepIndexTtsPostJSONRequestBody defines body for CreateRoadmapStepTtsStreamSessionKlearnApiV3RoadmapLessonsLessonIdStepsStepIndexTtsPost for application/json ContentType.
+type CreateRoadmapStepTtsStreamSessionKlearnApiV3RoadmapLessonsLessonIdStepsStepIndexTtsPostJSONRequestBody = CreateRoadmapStepTtsStreamSessionKlearnApiV3RoadmapLessonsLessonIdStepsStepIndexTtsPostJSONBody
 
 // CreateSavedCollectionPracticeKlearnApiV3SavedCollectionPracticePostJSONRequestBody defines body for CreateSavedCollectionPracticeKlearnApiV3SavedCollectionPracticePost for application/json ContentType.
 type CreateSavedCollectionPracticeKlearnApiV3SavedCollectionPracticePostJSONRequestBody = SavedCollectionPracticeRequest

@@ -23,8 +23,6 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from sqlalchemy import event
-
 from kielo_shared.trace import current_trace_context
 
 
@@ -37,6 +35,12 @@ def attach_query_trace(engine: Any) -> None:
     Idempotent — re-attaching is safe (the listener is bound by closure,
     so a second attach simply layers another comment which still parses).
     """
+    # Imported here, not at module level: kielo_shared.observability is imported by
+    # the localization seam, which dependency-light tooling (the localization-
+    # contract lint, PYTHON_BIN without service deps) imports too. Only callers
+    # that actually attach a tracer have SQLAlchemy.
+    from sqlalchemy import event
+
     target = getattr(engine, "sync_engine", engine)
 
     @event.listens_for(target, "before_cursor_execute", retval=True)

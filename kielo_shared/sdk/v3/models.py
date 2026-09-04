@@ -323,6 +323,7 @@ class AwardAchievementByPathRequest(BaseModel):
 class AwardAchievementRequest(BaseModel):
     achievement_code: str
     context: str | None = None
+    event_id: str | None = None
     user_id: str
 
 
@@ -908,6 +909,7 @@ class CommunicationLog(BaseModel):
     RuleID: UUID_aliased | None = None
     Source: str
     Status: str
+    SuppressRepeatedCopy: bool
     TemplateID: str
     Type: str
     UserID: UUID_aliased | None = None
@@ -1670,9 +1672,8 @@ class CurriculumTreeLesson(BaseModel):
     title: str = Field(..., title="Title")
 
 
-class CursorPageAchievementV3(BaseModel):
-    items: list[AchievementV3]
-    next_page_key: str | None = None
+class CursorPageMeta(BaseModel):
+    localization_pending: int | None = None
 
 
 class DLQAuditListItem(CommsDLQAuditListItem):
@@ -2147,6 +2148,7 @@ class FillInTheBlankExercise(BaseModel):
         title="Context Hint",
     )
     correct_answer: str = Field(..., title="Correct Answer")
+    difficulty: int | None = Field(None, title="Difficulty")
     error_pattern_tag: str | None = Field(None, title="Error Pattern Tag")
     exercise_id: UUID_aliased | None = Field(
         None,
@@ -2196,6 +2198,7 @@ class FlashcardExercise(BaseModel):
         description="Canonical plain-text answer used for grading and fallback rendering.",
         title="Correct Answer",
     )
+    difficulty: int | None = Field(None, title="Difficulty")
     error_pattern_tag: str | None = Field(None, title="Error Pattern Tag")
     exercise_id: UUID_aliased | None = Field(
         None,
@@ -2357,6 +2360,7 @@ class IdentifyConceptExercise(BaseModel):
         description="UUID of the correct option from the options list",
         title="Correct Answer",
     )
+    difficulty: int | None = Field(None, title="Difficulty")
     error_pattern_tag: str | None = Field(None, title="Error Pattern Tag")
     exercise_id: UUID_aliased | None = Field(
         None,
@@ -3001,6 +3005,7 @@ class LearningItemsCountsResponseV3(LearningItemsCountsResponse):
 
 
 class LearningObjective(BaseModel):
+    days_overdue: int | None = Field(0, title="Days Overdue")
     display_text: str | None = Field("", title="Display Text")
     error_pattern_tag: str | None = Field(None, title="Error Pattern Tag")
     exercise_sequence: list[str] | None = Field(None, title="Exercise Sequence")
@@ -3009,6 +3014,7 @@ class LearningObjective(BaseModel):
     objective_type: SectionType = Field(..., title="Objective Type")
     proficiency: float | None = Field(None, title="Proficiency")
     reason: str = Field(..., title="Reason")
+    recent_error_count: int | None = Field(0, title="Recent Error Count")
     selection_source_label: str | None = Field(None, title="Selection Source Label")
     source: str = Field(..., title="Source")
     support_language_code: str | None = Field("", title="Support Language Code")
@@ -3145,6 +3151,7 @@ class ListeningComprehensionExercise(BaseModel):
         description="UUID of the correct option from the options list",
         title="Correct Answer",
     )
+    difficulty: int | None = Field(None, title="Difficulty")
     error_pattern_tag: str | None = Field(None, title="Error Pattern Tag")
     exercise_id: UUID_aliased | None = Field(
         None,
@@ -3372,6 +3379,7 @@ class MultipleChoiceTranslationExercise(BaseModel):
         description="UUID of the correct option from the options list",
         title="Correct Answer",
     )
+    difficulty: int | None = Field(None, title="Difficulty")
     error_pattern_tag: str | None = Field(None, title="Error Pattern Tag")
     exercise_id: UUID_aliased | None = Field(
         None,
@@ -3689,6 +3697,7 @@ class PlaceholderExercise(BaseModel):
         description="A specific concept or hint for the exercise, e.g., 'inessive case'.",
         title="Context Hint",
     )
+    difficulty: int | None = Field(None, title="Difficulty")
     error_pattern_tag: str | None = Field(None, title="Error Pattern Tag")
     exercise_id: UUID_aliased | None = Field(
         None,
@@ -4243,6 +4252,10 @@ class RoadmapStepCompleteResponse(BaseModel):
     step_index: int = Field(..., title="Step Index")
 
 
+class RoadmapStepTTSRequest(BaseModel):
+    text: constr(max_length=600) | None = Field(None, title="Text")
+
+
 class RoadmapStepTTSStreamSessionResponse(BaseModel):
     cache_hit: bool | None = Field(False, title="Cache Hit")
     expires_at: AwareDatetime = Field(..., title="Expires At")
@@ -4385,6 +4398,7 @@ class ScenarioChoiceExercise(BaseModel):
         title="Context Hint",
     )
     correct_answer: str = Field(..., title="Correct Answer")
+    difficulty: int | None = Field(None, title="Difficulty")
     error_pattern_tag: str | None = Field(None, title="Error Pattern Tag")
     exercise_id: UUID_aliased | None = Field(
         None,
@@ -5372,6 +5386,7 @@ class SpellingChallengeExercise(BaseModel):
         title="Context Hint",
     )
     correct_answer: str = Field(..., title="Correct Answer")
+    difficulty: int | None = Field(None, title="Difficulty")
     error_pattern_tag: str | None = Field(None, title="Error Pattern Tag")
     exercise_id: UUID_aliased | None = Field(
         None,
@@ -6708,6 +6723,7 @@ class ContextMatchingExercise(BaseModel):
         description="Mapping of target_item_id -> scenario_id",
         title="Correct Answer",
     )
+    difficulty: int | None = Field(None, title="Difficulty")
     error_pattern_tag: str | None = Field(None, title="Error Pattern Tag")
     exercise_id: UUID_aliased | None = Field(
         None,
@@ -6859,43 +6875,57 @@ class CurriculumTreeTrack(BaseModel):
     track_type: str = Field(..., title="Track Type")
 
 
+class CursorPageAchievementV3(BaseModel):
+    items: list[AchievementV3]
+    meta: CursorPageMeta | None = None
+    next_page_key: str | None = None
+
+
 class CursorPageArticleVersionSnippet(BaseModel):
     items: list[ArticleVersionSnippet]
+    meta: CursorPageMeta | None = None
     next_page_key: str | None = None
 
 
 class CursorPageLearningItemV3(BaseModel):
     items: list[LearningItemV3]
+    meta: CursorPageMeta | None = None
     next_page_key: str | None = None
 
 
 class CursorPageSavedItem(BaseModel):
     items: list[SavedItem]
+    meta: CursorPageMeta | None = None
     next_page_key: str | None = None
 
 
 class CursorPageStudyList(BaseModel):
     items: list[StudyList]
+    meta: CursorPageMeta | None = None
     next_page_key: str | None = None
 
 
 class CursorPageStudyListV3(BaseModel):
     items: list[StudyListV3]
+    meta: CursorPageMeta | None = None
     next_page_key: str | None = None
 
 
 class CursorPageTag(BaseModel):
     items: list[Tag]
+    meta: CursorPageMeta | None = None
     next_page_key: str | None = None
 
 
 class CursorPageUserNotification(BaseModel):
     items: list[UserNotification]
+    meta: CursorPageMeta | None = None
     next_page_key: str | None = None
 
 
 class CursorPageUserNotificationV3(BaseModel):
     items: list[UserNotificationV3]
+    meta: CursorPageMeta | None = None
     next_page_key: str | None = None
 
 
@@ -6910,7 +6940,11 @@ class DataQualityRunsPage(BaseModel):
 
 
 class DecisionLog(BaseModel):
+    breadth_mode: str | None = Field("", title="Breadth Mode")
+    breadth_reason: str | None = Field("", title="Breadth Reason")
+    depth_bonus: int | None = Field(0, title="Depth Bonus")
     exercises_generated: int | None = Field(0, title="Exercises Generated")
+    exercises_planned: int | None = Field(0, title="Exercises Planned")
     exercises_rejected: int | None = Field(0, title="Exercises Rejected")
     exercises_validated: int | None = Field(0, title="Exercises Validated")
     generation_time_ms: int | None = Field(0, title="Generation Time Ms")
@@ -6923,12 +6957,16 @@ class DecisionLog(BaseModel):
         0, title="Items From Spaced Repetition"
     )
     objectives_considered: int | None = Field(0, title="Objectives Considered")
+    objectives_planned: int | None = Field(0, title="Objectives Planned")
     objectives_selected: int | None = Field(0, title="Objectives Selected")
+    pinned_item_count: int | None = Field(0, title="Pinned Item Count")
     profile_snapshot: dict[str, Any] | None = Field(None, title="Profile Snapshot")
     rejection_reasons: dict[str, int] | None = Field(None, title="Rejection Reasons")
     selection_reasons: list[DecisionReason] | None = Field(
         None, title="Selection Reasons"
     )
+    session_shape: str | None = Field("", title="Session Shape")
+    shape_reason: str | None = Field("", title="Shape Reason")
     timing_ms: dict[str, int] | None = Field(None, title="Timing Ms")
 
 
@@ -7425,6 +7463,7 @@ class SentenceConstructionExercise(BaseModel):
         title="Context Hint",
     )
     correct_answer: str = Field(..., title="Correct Answer")
+    difficulty: int | None = Field(None, title="Difficulty")
     error_pattern_tag: str | None = Field(None, title="Error Pattern Tag")
     exercise_id: UUID_aliased | None = Field(
         None,
@@ -7457,6 +7496,18 @@ class SessionReconcileItemResult(BaseModel):
     result: SubmissionResult | None = None
     status: Status6 | None = Field("applied", title="Status")
     submission_id: str | None = Field(None, title="Submission Id")
+
+
+class SessionReconcileItemResultV3(BaseModel):
+    exercise_id: str
+    result: SubmitAnswerResponseV3 | None = None
+    status: str
+    submission_id: str | None = None
+
+
+class SessionReconcileResponseV3(BaseModel):
+    results: list[SessionReconcileItemResultV3]
+    session: LearningSessionV3
 
 
 class SingletonAllFeatureLimitsResponse(BaseModel):
@@ -7609,6 +7660,10 @@ class SingletonSearchResponse(BaseModel):
 
 class SingletonSemanticSearchResponse(BaseModel):
     data: SemanticSearchResponse
+
+
+class SingletonSessionReconcileResponseV3(BaseModel):
+    data: SessionReconcileResponseV3
 
 
 class SingletonSpeechTranscriptionResponse(BaseModel):
@@ -8164,6 +8219,7 @@ class CurriculumTreeResponse(BaseModel):
 
 class CursorPageFeedbackMessage(BaseModel):
     items: list[FeedbackMessage]
+    meta: CursorPageMeta | None = None
     next_page_key: str | None = None
 
 
@@ -8436,6 +8492,7 @@ class ConceptHubGenerationJobResponse(BaseModel):
 
 class CursorPageArticleVersion(BaseModel):
     items: list[ArticleVersion]
+    meta: CursorPageMeta | None = None
     next_page_key: str | None = None
 
 

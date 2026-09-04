@@ -8,6 +8,7 @@ import uuid
 from contextvars import ContextVar
 from typing import Callable
 
+from kielo_shared.observability.external_api import external_api_failure_emit
 from kielo_shared.llm.provider import LLMProvider
 from kielo_shared.llm.types import LLMRequest, LLMResult
 
@@ -60,6 +61,11 @@ class LLMMetricsDecorator:
             return result
         except Exception as exc:
             error = type(exc).__name__
+            external_api_failure_emit(
+                provider=self.provider_id,
+                operation=f"llm.{request.task}",
+                exc=exc,
+            )
             raise
         finally:
             self._emit(

@@ -43,6 +43,7 @@ import hashlib
 import logging
 from typing import Iterable, Protocol, runtime_checkable
 
+from kielo_shared.observability.external_api import external_api_failure_emit
 from kielo_shared.localization.budget import (
     BudgetKind as _BudgetKind,
     record_budget as _record_budget,
@@ -763,8 +764,13 @@ class Seam:
                 source_locale=TIER_A_LOCALE,
                 target_locale=target,
             )
-        except Exception:
+        except Exception as exc:
             logger.exception("seam batch provider translate_batch failed")
+            external_api_failure_emit(
+                provider=str(getattr(provider, "provider_id", "") or "localization"),
+                operation="localization.translate_batch",
+                exc=exc,
+            )
             for idx, ref, _ in remaining:
                 out[idx] = ref.source_text
                 self._metrics.record(ref.namespace, target, "provider_error")

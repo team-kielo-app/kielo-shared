@@ -66,6 +66,12 @@ func (d *MetricsDecorator) Synthesize(ctx context.Context, req Request) (*Result
 	errLabel := ""
 	if err != nil {
 		errLabel = string(ClassOf(err))
+		sharedmetrics.ExternalAPIFailureEmit(ctx, sharedmetrics.ExternalAPIFailure{
+			Provider:   provider,
+			Operation:  "tts." + task,
+			ErrorClass: errLabel,
+			Err:        err,
+		})
 	}
 
 	sharedmetrics.TTSCallsTotal.WithLabelValues(provider, task, voice, errLabel).Inc()

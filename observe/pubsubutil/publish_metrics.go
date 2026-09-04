@@ -1,6 +1,7 @@
 package pubsubutil
 
 import (
+	"context"
 	"errors"
 	"time"
 
@@ -62,6 +63,9 @@ func RecordPublish(service, topic string, err error, latency time.Duration) {
 	outcome := PublishOutcomeSuccess
 	if err != nil {
 		outcome = PublishOutcomeError
+		sharedmetrics.ExternalAPIFailureEmit(context.Background(), sharedmetrics.ExternalAPIFailure{
+			Provider: "pubsub", Operation: "publish." + topic, Err: err,
+		})
 	}
 	sharedmetrics.PubSubPublishTotal.
 		WithLabelValues(service, topic, string(outcome)).

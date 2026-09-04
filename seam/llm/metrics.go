@@ -52,6 +52,12 @@ func (d *MetricsDecorator) Generate(ctx context.Context, req Request) (*Result, 
 	errLabel := ""
 	if err != nil {
 		errLabel = string(ClassOf(err))
+		sharedmetrics.ExternalAPIFailureEmit(ctx, sharedmetrics.ExternalAPIFailure{
+			Provider:   provider,
+			Operation:  "llm." + task,
+			ErrorClass: errLabel,
+			Err:        err,
+		})
 	}
 
 	sharedmetrics.LLMCallsTotal.WithLabelValues(provider, task, cachePolicy, cached, errLabel).Inc()
