@@ -147,8 +147,19 @@ func (c *Client) TranslateBatchWithContextsResult(
 	// ordinary case is unaffected.
 	masked := make([]string, len(texts))
 	tokens := make([][]string, len(texts))
+	// An unsupported printf verb (%02d, %.2f) is masked by nothing and
+	// reported by nothing: the text looks like prose all the way to the
+	// translator. Record it here and refuse the entry at restore time, so a
+	// verb we cannot guarantee is never persisted. Blocked entries still ride
+	// the batch — dropping them would misalign every index against the
+	// backend's reply, which is a worse bug than a wasted translation.
+	blocked := make([]error, len(texts))
 	for i, text := range texts {
 		masked[i], tokens[i] = maskPlaceholders(text)
+		if unsupported := unsupportedPlaceholders(masked[i]); len(unsupported) > 0 {
+			blocked[i] = fmt.Errorf("text carries unmaskable printf verbs %s",
+				strings.Join(unsupported, ", "))
+		}
 	}
 
 	var (
@@ -179,6 +190,14 @@ func (c *Client) TranslateBatchWithContextsResult(
 	for i, text := range translated {
 		if i >= len(tokens) {
 			restored[i] = text
+			continue
+		}
+		if blocked[i] != nil {
+			rejected++
+			if firstRejection == nil {
+				firstRejection = blocked[i]
+			}
+			restored[i] = ""
 			continue
 		}
 		value, restoreErr := restorePlaceholders(text, tokens[i])
