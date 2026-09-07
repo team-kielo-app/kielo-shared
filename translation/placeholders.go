@@ -52,6 +52,61 @@ func maskToken(i int) string { return "[[" + strconv.Itoa(i) + "]]" }
 // around the brackets.
 var maskTokenPattern = regexp.MustCompile(`\[\s*\[\s*(\d+)\s*\]\s*\]`)
 
+// unmaskedPrintfPattern finds printf-shaped sequences that masking does NOT
+// cover, and is applied to the MASKED text — where every supported verb and
+// every %% has already been replaced, so whatever printf shape is left is by
+// definition unsupported.
+//
+// Why this matters more than it looks: the supported verb set is bare
+// %s/%d/%v/%q/%t/%f, so a real format like "%02d" or "%.2f" is invisible to
+// both maskPlaceholders AND HasPlaceholders. Such a string looks like ordinary
+// prose, goes to the translator raw, and comes back with the verb reflowed or
+// dropped — rendering "%!d(MISSING)" to a learner, persisted as approved.
+// Widening the mask pattern to the full printf grammar is not the fix: it
+// matches the "% o" inside "50% off" and corrupts prose. Detect and REFUSE
+// instead.
+//
+// The flag class deliberately EXCLUDES the space flag, which is what keeps
+// "50% off" out: after %, a width/flag/precision or the verb letter itself
+// must follow immediately, and " o" is neither.
+var unmaskedPrintfPattern = regexp.MustCompile(`%(?:\[\d+\])?[-+#0]*\d*(?:\.\d+)?[a-zA-Z]`)
+
+// rawTemplateActionPattern catches template delimiters in a translator's
+// OUTPUT. Masking removes every {{...}} from the input, so a "{{" coming back
+// was invented by the model — it has started writing template syntax of its
+// own, and whatever it wrote will be executed by text/template at render time.
+var rawTemplateActionPattern = regexp.MustCompile(`\{\{|\}\}`)
+
+// unsupportedPlaceholders reports printf shapes this masking cannot protect.
+// Pass the MASKED text.
+func unsupportedPlaceholders(masked string) []string {
+	found := unmaskedPrintfPattern.FindAllString(masked, -1)
+	if len(found) == 0 {
+		return nil
+	}
+	seen := make(map[string]struct{}, len(found))
+	out := make([]string, 0, len(found))
+	for _, f := range found {
+		if _, dup := seen[f]; dup {
+			continue
+		}
+		seen[f] = struct{}{}
+		out = append(out, f)
+	}
+	sort.Strings(out)
+	return out
+}
+
+// placeholderMultiset counts placeholders by their literal text, so two
+// occurrences of the same action are distinguishable from one.
+func placeholderMultiset(text string) map[string]int {
+	counts := map[string]int{}
+	for _, m := range placeholderPattern.FindAllString(text, -1) {
+		counts[m]++
+	}
+	return counts
+}
+
 // maskPlaceholders replaces every placeholder with an indexed token and
 // returns the originals in index order. A text with no placeholders comes back
 // unchanged with a nil slice, which callers use to skip restore entirely.
@@ -83,6 +138,14 @@ func maskPlaceholders(text string) (masked string, originals []string) {
 func restorePlaceholders(translated string, tokens []string) (string, error) {
 	if len(tokens) == 0 {
 		return translated, nil
+	}
+
+	// Every {{...}} was masked out of the input, so a delimiter in the output
+	// is the model writing template syntax. Checked BEFORE restoring, because
+	// after restoration the real actions are back and the invented ones are
+	// indistinguishable from them.
+	if loc := rawTemplateActionPattern.FindString(translated); loc != "" {
+		return "", fmt.Errorf("translation invented template delimiter %q", loc)
 	}
 
 	seen := make([]int, len(tokens))
@@ -125,6 +188,31 @@ func restorePlaceholders(translated string, tokens []string) (string, error) {
 		return "", fmt.Errorf("translation duplicated placeholders %s", strings.Join(duplicated, ", "))
 	}
 
+	// Structural equivalence on the OUTPUT, not on the bookkeeping.
+	//
+	// The token accounting above proves each mask token came back exactly
+	// once. It does not prove the restored string carries the same
+	// placeholders as the source: a stray "%" the model added next to a
+	// restored token can form a NEW verb ("...%" + "s..." -> "%s"), and
+	// adjacent restorations can compose into a match that was not in either
+	// original. Comparing multisets is one cheap check that validates the
+	// thing actually persisted.
+	want := make(map[string]int, len(tokens))
+	for _, t := range tokens {
+		want[t]++
+	}
+	got := placeholderMultiset(restored)
+	if len(want) != len(got) {
+		return "", fmt.Errorf("restored text has %d distinct placeholders, source had %d",
+			len(got), len(want))
+	}
+	for placeholder, wantCount := range want {
+		if got[placeholder] != wantCount {
+			return "", fmt.Errorf("restored text has %d x %s, source had %d",
+				got[placeholder], placeholder, wantCount)
+		}
+	}
+
 	return restored, nil
 }
 
@@ -143,4 +231,17 @@ func RestorePlaceholders(translated string, tokens []string) (string, error) {
 }
 
 // HasPlaceholders reports whether masking would do anything for this text.
+//
+// NOTE: false does NOT mean "safe to translate raw" — an unsupported printf
+// verb like %02d is neither masked nor reported here. Use
+// UnsupportedPlaceholders for that question.
 func HasPlaceholders(text string) bool { return placeholderPattern.MatchString(text) }
+
+// UnsupportedPlaceholders reports printf shapes masking cannot protect, e.g.
+// "%02d" or "%.2f". A non-empty result means this text must NOT be sent to a
+// translator: there is no way to guarantee the verb survives, and a mangled
+// verb renders "%!d(MISSING)" to a learner and persists as approved.
+func UnsupportedPlaceholders(text string) []string {
+	masked, _ := maskPlaceholders(text)
+	return unsupportedPlaceholders(masked)
+}
