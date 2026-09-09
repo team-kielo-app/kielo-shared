@@ -28,6 +28,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import logging
+import re
 from typing import Any, Awaitable, Protocol
 
 from kielo_shared.localization.provider import LocalizationProvider
@@ -66,6 +67,63 @@ def _key_for(
     base = (target_locale or "").split("-", 1)[0].lower() or "_"
     src = (source_locale or "").split("-", 1)[0].lower() or "_"
     return f"loc:{provider_id}:{src}:{base}:{item.role}:{digest}"
+
+
+# Echo detection for the cache write path.
+#
+# A provider that fails soft and returns its input poisons the cache
+# permanently, because the next read is a hit. So identical output is
+# suspicious — but only for text long enough that an identical translation is
+# implausible.
+#
+# MEASURED against prod's curated corpus (2026-09-09): of 2,2xx translations per
+# locale, 2.3%-5.0% are LEGITIMATELY identical to their English source — 158
+# distinct strings. Every one of them is a brand name (Discord, YouTube, App
+# Store), a product name (Kielo Plus, KieloTV, JuKa), a placeholder-only string
+# ({{xp}} XP, CEFR {{level}}), a Finnish grammar term (Paikallissijat (-ssa,
+# -sta, -Vn)), or one of the Finnish greetings the app TEACHES — Hei, Moikka,
+# Moro, Terve — correctly identical in all 18 UI languages.
+#
+# A bare "output == input" test therefore refuses to cache the most frequently
+# requested strings in the product, forever, and logs a warning for each. The
+# word threshold is what separates the two populations:
+#
+#   min_words   false positives (of 158)   substantive echoes caught
+#       4                  1                        yes
+#       5                  0                        yes
+#       6                  0                        fewer
+#
+# 5 it is. Echoes shorter than that ("holiday; vacation", "using the
+# partitive") are NOT distinguishable from a legitimate short identical string
+# by length, and are deliberately left to the session-level language validator —
+# a false positive here costs a permanent cache miss on hot strings, which is
+# worse than a miss the next layer already catches.
+_ECHO_PLACEHOLDER_RE = re.compile(r"\{\{[^}]*\}\}|%[sdvqtf]|%%")
+# Three-plus letters, so "-Vn", "XP", "·" and digits do not count as words.
+_ECHO_WORD_RE = re.compile(r"[^\W\d_]{3,}", re.UNICODE)
+_ECHO_MIN_WORDS = 5
+
+
+def _is_source_echo(
+    source_text: str | None,
+    translated_text: str | None,
+    source_locale: str | None,
+    target_locale: str | None,
+) -> bool:
+    """True when the provider almost certainly handed back its own input."""
+    source_base = (source_locale or "").split("-", 1)[0].lower()
+    target_base = (target_locale or "").split("-", 1)[0].lower()
+    if not source_base or not target_base or source_base == target_base:
+        # Same language (or unknown): identical output is the expected result.
+        return False
+
+    source = (source_text or "").strip()
+    translated = (translated_text or "").strip()
+    if not source or translated.casefold() != source.casefold():
+        return False
+
+    words = _ECHO_WORD_RE.findall(_ECHO_PLACEHOLDER_RE.sub(" ", source))
+    return len(words) >= _ECHO_MIN_WORDS
 
 
 class RedisCacheDecorator:
@@ -174,6 +232,17 @@ class RedisCacheDecorator:
                     if r.provider == "passthrough":
                         continue
                     if not (r.text or "").strip():
+                        continue
+                    if _is_source_echo(
+                        items[slot].text, r.text, source_locale, target_locale
+                    ):
+                        logger.warning(
+                            "RedisCacheDecorator: provider echoed source prose for "
+                            "%s->%s; skipping cache write (%d chars).",
+                            (source_locale or "_").split("-", 1)[0].lower(),
+                            (target_locale or "_").split("-", 1)[0].lower(),
+                            len(r.text or ""),
+                        )
                         continue
                     set_tasks.append(self._safe_set(keys[slot], r.text))
                 if set_tasks:
