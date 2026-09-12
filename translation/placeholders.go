@@ -55,21 +55,21 @@ var maskTokenPattern = regexp.MustCompile(`\[\s*\[\s*(\d+)\s*\]\s*\]`)
 // maskPlaceholders replaces every placeholder with an indexed token and
 // returns the originals in index order. A text with no placeholders comes back
 // unchanged with a nil slice, which callers use to skip restore entirely.
-func maskPlaceholders(text string) (string, []string) {
+func maskPlaceholders(text string) (masked string, originals []string) {
 	matches := placeholderPattern.FindAllString(text, -1)
 	if len(matches) == 0 {
 		return text, nil
 	}
 
-	tokens := make([]string, 0, len(matches))
+	originals = make([]string, 0, len(matches))
 	i := 0
-	masked := placeholderPattern.ReplaceAllStringFunc(text, func(match string) string {
-		tokens = append(tokens, match)
+	masked = placeholderPattern.ReplaceAllStringFunc(text, func(match string) string {
+		originals = append(originals, match)
 		token := maskToken(i)
 		i++
 		return token
 	})
-	return masked, tokens
+	return masked, originals
 }
 
 // restorePlaceholders puts the originals back and verifies the translator
@@ -131,7 +131,9 @@ func restorePlaceholders(translated string, tokens []string) (string, error) {
 // MaskPlaceholders and RestorePlaceholders expose the masking pair so a caller
 // that talks to a translator directly — rather than through Client — can get
 // the same protection instead of reimplementing it.
-func MaskPlaceholders(text string) (string, []string) { return maskPlaceholders(text) }
+func MaskPlaceholders(text string) (masked string, originals []string) {
+	return maskPlaceholders(text)
+}
 
 // RestorePlaceholders returns an error when the translated text did not carry
 // every placeholder through exactly once. Treat that as "translation failed"

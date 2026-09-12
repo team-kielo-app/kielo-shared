@@ -64,11 +64,11 @@ func TestReorderedPlaceholdersAreAccepted(t *testing.T) {
 // Translators add spacing around punctuation; that must not break restore.
 func TestWhitespaceInsideTokensIsTolerated(t *testing.T) {
 	_, tokens := maskPlaceholders("Uses %d words")
-	restored, err := restorePlaceholders("Utilise [ [ 0 ] ] mots", tokens)
+	restored, err := restorePlaceholders("Utilize [ [ 0 ] ] mots", tokens)
 	if err != nil {
 		t.Fatalf("spaced token rejected: %v", err)
 	}
-	if restored != "Utilise %d mots" {
+	if restored != "Utilize %d mots" {
 		t.Errorf("got %q", restored)
 	}
 }
