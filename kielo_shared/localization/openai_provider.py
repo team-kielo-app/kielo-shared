@@ -67,12 +67,26 @@ def _language_name(code: str) -> str:
 # can be served to fi and sv learners), so the prompt has to be
 # language-agnostic at this layer.
 
+# Title rule (device pass 2, DF-50): the lesson title "To Be & To Be Called
+# (vara, heta)" came back in Vietnamese as "Thì & …" — the English infinitive
+# read as a tense word. A title that names a verb or grammar concept is a NAME
+# of that concept; the verb keeps its dictionary meaning in the target language.
+_TITLE_RULE = (
+    "When a short text is a title that names a verb or grammar concept "
+    '(e.g. "To Be", "To Have", "The Past Tense"), translate it as the '
+    "NAME of that concept: an English infinitive becomes the target "
+    "language's dictionary form of the verb (never a tense, aspect or "
+    "particle word), and anything in parentheses is learning-language "
+    "material kept exactly as written."
+)
+
 _PLAIN_PROMPT = (
     "Translate English educational content into natural {lang} for "
     "language learners. Preserve any embedded non-English tokens "
     "(learning-language words, inflected forms, quoted examples, "
     "and grammar markers like case suffixes) exactly as written. "
-    "Do not add commentary."
+    + _TITLE_RULE
+    + " Do not add commentary."
 )
 
 _HTML_PROMPT = (
@@ -105,7 +119,8 @@ _BATCH_SYSTEM = (
     "html), and 'text'. Apply the role-specific translation rules:\n"
     "- plain: natural prose; preserve any embedded non-{source_lang} "
     "tokens (learning-language words, inflected forms, quoted examples, "
-    "grammar markers like case suffixes) exactly. No commentary.\n"
+    "grammar markers like case suffixes) exactly. " + _TITLE_RULE + " "
+    "No commentary.\n"
     "- gloss: short glossary; output ONLY {target_lang}. Do not output "
     "{source_lang} or any other language. Preserve slashes, semicolons, "
     "and commas that separate senses.\n"
@@ -181,7 +196,9 @@ class OpenAIProvider:
         self,
         text_generator: TextGenerator,
         *,
-        provider_id: str = "openai:gpt-4o-mini@phase-b",
+        # @phase-c: prompt gained the title rule (DF-50); the provider-chain
+        # cache is keyed by provider_id, so the tag is the cache bust.
+        provider_id: str = "openai:gpt-4o-mini@phase-c",
         max_batch_items: int = 30,
         max_parallel_chunks: int = 4,
         strict_batch: bool = False,
