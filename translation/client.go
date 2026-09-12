@@ -135,19 +135,70 @@ func (c *Client) TranslateBatchWithContextsResult(
 		return nil, errors.New("translation client unavailable")
 	}
 
+	// Routing reads the ORIGINAL texts: length thresholds and script checks
+	// should see what the user wrote, not the masked form.
 	backend := SelectTranslatorBatch(sourceLang, targetLang, texts)
-	switch backend {
-	case BackendPassthrough:
+	if backend == BackendPassthrough {
 		return slices.Clone(texts), nil
+	}
+
+	// Mask placeholders so the translator rewrites prose and not structure.
+	// Placeholder-free texts come back byte-identical with no tokens, so the
+	// ordinary case is unaffected.
+	masked := make([]string, len(texts))
+	tokens := make([][]string, len(texts))
+	for i, text := range texts {
+		masked[i], tokens[i] = maskPlaceholders(text)
+	}
+
+	var (
+		translated []string
+		err        error
+	)
+	switch backend {
 	case BackendOpusMT:
 		// opus-mt cannot use hints — drop them rather than send a field the
 		// NMT service would have to ignore.
-		return c.dispatchOpusMTResult(ctx, texts, sourceLang, targetLang)
+		translated, err = c.dispatchOpusMTResult(ctx, masked, sourceLang, targetLang)
 	case BackendGemini:
-		return c.dispatchGeminiResult(ctx, texts, contexts, sourceLang, targetLang)
+		translated, err = c.dispatchGeminiResult(ctx, masked, contexts, sourceLang, targetLang)
 	default:
 		return nil, fmt.Errorf("unsupported translation backend %q", backend)
 	}
+	if err != nil {
+		return nil, err
+	}
+
+	// Restore, rejecting any string whose placeholders did not survive. A
+	// rejected entry becomes "", which every caller already treats as "fall
+	// back to the source text" — and which surfaces in existing telemetry as
+	// an empty_translation rather than disappearing silently.
+	restored := make([]string, len(translated))
+	rejected := 0
+	var firstRejection error
+	for i, text := range translated {
+		if i >= len(tokens) {
+			restored[i] = text
+			continue
+		}
+		value, restoreErr := restorePlaceholders(text, tokens[i])
+		if restoreErr != nil {
+			rejected++
+			if firstRejection == nil {
+				firstRejection = restoreErr
+			}
+			restored[i] = ""
+			continue
+		}
+		restored[i] = value
+	}
+	// Only a wholesale failure is an error: a partially usable batch is more
+	// useful to the caller than none of it.
+	if rejected > 0 && rejected == len(restored) {
+		return restored, firstRejection
+	}
+
+	return restored, nil
 }
 
 // dispatchOpusMTResult POSTs to kielo-models /api/v3/translations and retains

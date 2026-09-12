@@ -1,0 +1,35 @@
+"""The shared OpenAI provider's role prompts carry the concept-title rule.
+
+Device pass 2 (DF-50): "To Be & To Be Called (vara, heta)" rendered in
+Vietnamese as "Thì & Được gọi là (vara, heta)" — the English infinitive was
+read as a tense word. Both the single-item role prompt and the batch system
+prompt must state the rule, and the provider id must have moved off the
+prompt's previous tag so the provider-chain cache cannot serve the old output.
+"""
+
+from kielo_shared.localization import openai_provider as op
+
+
+def test_plain_role_prompt_states_the_concept_title_rule() -> None:
+    prompt = op._role_prompt("plain", "Vietnamese")
+    assert "names a verb or grammar concept" in prompt
+    assert "dictionary form of the verb" in prompt
+    assert "parentheses" in prompt
+    assert "Vietnamese" in prompt
+
+
+def test_batch_system_prompt_states_the_rule_for_the_plain_role() -> None:
+    system = op._BATCH_SYSTEM.format(source_lang="English", target_lang="Vietnamese")
+    plain_rule = system.split("- plain:")[1].split("- gloss:")[0]
+    assert "dictionary form of the verb" in plain_rule
+    # gloss / html roles are unchanged by the rule.
+    assert "dictionary form" not in system.split("- gloss:")[1]
+
+
+def test_provider_id_left_the_pre_rule_tag() -> None:
+    async def _gen(*_args, **_kwargs):  # pragma: no cover - never awaited here
+        return ""
+
+    provider = op.OpenAIProvider(text_generator=_gen)
+    assert "@phase-b" not in provider.provider_id
+    assert provider.provider_id.endswith("@phase-c")

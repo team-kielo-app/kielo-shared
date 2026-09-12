@@ -603,7 +603,11 @@ _CAPABILITIES: dict[str, Capability] = {
         ),
         grammar=GrammarCapability(
             case_examples={
-                "case": '"definite", "indefinite", "genitive"',
+                # Swedish nouns inflect for exactly one case (genitive -s).
+                # Definiteness (bil/bilen) is a noun SUFFIX, not a case — the
+                # old example taught the LLM to emit "Definite" as a case
+                # (device defect DF-17). It has its own prompt field now.
+                "case": '"genitive"',
             },
             # Phase 13 slice 13C+13F: Swedish quality-gate. See
             # capability.go for the SAG (Svenska Akademiens grammatik)
