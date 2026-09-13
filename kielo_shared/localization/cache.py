@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import json
 import logging
 from typing import Any, Awaitable, Protocol
 
@@ -62,6 +63,19 @@ def _key_for(
         digest_input = item.cache_key
     else:
         digest_input = item.text or ""
+    # `getattr`, not `item.context`: this layer has always accepted any
+    # duck-typed item with `text`/`cache_key`, and the two-layer invariant tests
+    # pass exactly such a stub. Reading the attribute directly turned a missing
+    # field into an AttributeError raised from inside the cache — i.e. a hard
+    # failure of the whole translation path, for a field that is optional.
+    context = getattr(item, "context", None)
+    if context:
+        digest_input = json.dumps(
+            {"version": "context-v1", "source": digest_input, "context": context},
+            sort_keys=True,
+            ensure_ascii=False,
+            separators=(",", ":"),
+        )
     digest = hashlib.sha256(digest_input.encode("utf-8")).hexdigest()[:32]
     base = (target_locale or "").split("-", 1)[0].lower() or "_"
     src = (source_locale or "").split("-", 1)[0].lower() or "_"
