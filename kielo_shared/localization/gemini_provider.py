@@ -23,6 +23,7 @@ from typing import Awaitable, Callable
 from kielo_shared.localization.openai_provider import (
     _BATCH_SYSTEM,
     _BATCH_USER,
+    _CONTEXT_RULE,
     _language_name,
     _parse_batch_payload,
     _role_prompt,
@@ -137,7 +138,12 @@ class GeminiProvider:
 
         payload = json.dumps(
             [
-                {"id": local, "role": items[i].role, "text": items[i].text}
+                {
+                    "id": local,
+                    "role": items[i].role,
+                    "text": items[i].text,
+                    **({"context": items[i].context} if items[i].context else {}),
+                }
                 for local, i in enumerate(sendable_idx)
             ],
             ensure_ascii=False,
@@ -145,6 +151,13 @@ class GeminiProvider:
         system_prompt = _BATCH_SYSTEM.format(
             source_lang=source_lang, target_lang=target_lang
         )
+        # Same contract as OpenAIProvider: an item that carries sense evidence
+        # ("bank" under the Finnish term `pankki`) must reach the model with it,
+        # or this provider silently answers a different question than the
+        # primary does — and the cache key, which DOES include the context,
+        # would then store a sense-blind translation under a sense-specific key.
+        if any(item.context for item in items):
+            system_prompt += "\n" + _CONTEXT_RULE
         started = time.perf_counter()
         raw = await self._generate(system_prompt, _BATCH_USER, {"payload": payload})
         elapsed_ms = int((time.perf_counter() - started) * 1000)
@@ -209,8 +222,14 @@ class GeminiProvider:
                 results.append(_passthrough(item))
                 continue
             prompt = _role_prompt(item.role, target_lang)
+            user_prompt = "{text}"
+            variables: dict[str, str] = {"text": value}
+            if item.context:
+                prompt += "\n" + _CONTEXT_RULE
+                user_prompt = "Text: {text}\nContext evidence: {context}"
+                variables["context"] = json.dumps(item.context, ensure_ascii=False)
             started = time.perf_counter()
-            raw = await self._generate(prompt, "{text}", {"text": value})
+            raw = await self._generate(prompt, user_prompt, variables)
             elapsed_ms = int((time.perf_counter() - started) * 1000)
             cleaned = _strip_code_fences(raw or "")
             if not cleaned:

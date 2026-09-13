@@ -434,6 +434,10 @@ def normalize_transcription_payload(
                     "text_primary": text_primary,
                     "words": item.get("words") or [],
                     "words_array": words_array,
+                    # What was HEARD in this segment. Dropped until 2026-09-12,
+                    # so a mostly-English video's captions carried no trace of
+                    # the language they were actually rendered in (#265).
+                    "language_code": str(item.get("language_code") or ""),
                 }
             )
 
@@ -453,4 +457,5 @@ def normalize_transcription_payload(
         "segments": normalized_segments,
         "language_probability": language_probability,
         "audio_duration": audio_duration,
+        "detected_language": str(payload.get("detected_language") or ""),
     }
