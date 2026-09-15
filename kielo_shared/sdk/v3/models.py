@@ -1034,6 +1034,22 @@ class ContentEntrySummary(BaseModel):
     updated_by: UUID_aliased | None = None
 
 
+class Kind(StrEnum):
+    roadmap_lesson = "roadmap_lesson"
+    ktv_video = "ktv_video"
+    article = "article"
+    conversation = "conversation"
+    concept_hub = "concept_hub"
+    word_cluster = "word_cluster"
+
+
+class ContentRef(BaseModel):
+    content_id: str = Field(..., title="Content Id")
+    kind: Kind = Field(..., title="Kind")
+    locator: str | None = Field(None, title="Locator")
+    version_id: str | None = Field(None, title="Version Id")
+
+
 class ContentVersionStatusResponse(AppFeedbackUpdateStatusRequest):
     pass
 
@@ -1803,6 +1819,7 @@ class DictionaryExample(ConceptHubExample):
 class DictionaryInflection(BaseModel):
     case: str | None = None
     comparison: str | None = None
+    definiteness: str | None = None
     form: str
     label_short: str | None = None
     mood: str | None = None
@@ -2142,6 +2159,7 @@ class FetchDynamicTranslationsResponse(BaseModel):
 
 class FillInTheBlankExercise(BaseModel):
     cache_entry_id: str | None = Field(None, title="Cache Entry Id")
+    content_ref: ContentRef | None = None
     context_hint: str | None = Field(
         None,
         description="A specific concept or hint for the exercise, e.g., 'inessive case'.",
@@ -2158,6 +2176,7 @@ class FillInTheBlankExercise(BaseModel):
     exercise_type: Literal["fill_in_the_blank"] = Field(
         "fill_in_the_blank", title="Exercise Type"
     )
+    explanation: str | None = Field(None, title="Explanation")
     generation_job_id: UUID_aliased | None = Field(None, title="Generation Job Id")
     generation_model: str | None = Field(None, title="Generation Model")
     is_placeholder: bool | None = Field(False, title="Is Placeholder")
@@ -2188,6 +2207,7 @@ class FlashcardExercise(BaseModel):
         title="Answer Is Support Text",
     )
     cache_entry_id: str | None = Field(None, title="Cache Entry Id")
+    content_ref: ContentRef | None = None
     context_hint: str | None = Field(
         None,
         description="A specific concept or hint for the exercise, e.g., 'inessive case'.",
@@ -2206,6 +2226,7 @@ class FlashcardExercise(BaseModel):
         title="Exercise Id",
     )
     exercise_type: Literal["flashcard"] = Field("flashcard", title="Exercise Type")
+    explanation: str | None = Field(None, title="Explanation")
     explanation_html: str | None = Field(
         None,
         description="Optional secondary teaching content rendered below the answer block when present.",
@@ -2350,6 +2371,7 @@ class Status3(StrEnum):
 
 class IdentifyConceptExercise(BaseModel):
     cache_entry_id: str | None = Field(None, title="Cache Entry Id")
+    content_ref: ContentRef | None = None
     context_hint: str | None = Field(
         None,
         description="A specific concept or hint for the exercise, e.g., 'inessive case'.",
@@ -2370,6 +2392,7 @@ class IdentifyConceptExercise(BaseModel):
     exercise_type: Literal["identify_the_concept"] = Field(
         "identify_the_concept", title="Exercise Type"
     )
+    explanation: str | None = Field(None, title="Explanation")
     generation_job_id: UUID_aliased | None = Field(None, title="Generation Job Id")
     generation_model: str | None = Field(None, title="Generation Model")
     is_placeholder: bool | None = Field(False, title="Is Placeholder")
@@ -2413,8 +2436,16 @@ class InAppNudgeStateTransition(BaseModel):
     )
 
 
-class Inflection(DictionaryInflection):
-    pass
+class Inflection(BaseModel):
+    case: str | None = None
+    comparison: str | None = None
+    form: str
+    label_short: str | None = None
+    mood: str | None = None
+    number: str | None = None
+    person: str | None = None
+    tense: str | None = None
+    voice: str | None = None
 
 
 class IngestResponse(BaseModel):
@@ -3112,6 +3143,7 @@ class ListVideoItem(BaseModel):
     audio_url: str | None = None
     brand_id: UUID_aliased
     carousel_images: list[str] | None = None
+    cefr_level: str | None = None
     created_at: AwareDatetime
     description: str
     description_translation_fallback: bool | None = None
@@ -3141,6 +3173,7 @@ class ListeningComprehensionExercise(BaseModel):
     audio_text: str | None = Field("", title="Audio Text")
     audio_url: str | None = Field(None, title="Audio Url")
     cache_entry_id: str | None = Field(None, title="Cache Entry Id")
+    content_ref: ContentRef | None = None
     context_hint: str | None = Field(
         None,
         description="A specific concept or hint for the exercise, e.g., 'inessive case'.",
@@ -3161,6 +3194,7 @@ class ListeningComprehensionExercise(BaseModel):
     exercise_type: Literal["listening_comprehension"] = Field(
         "listening_comprehension", title="Exercise Type"
     )
+    explanation: str | None = Field(None, title="Explanation")
     generation_job_id: UUID_aliased | None = Field(None, title="Generation Job Id")
     generation_model: str | None = Field(None, title="Generation Model")
     is_placeholder: bool | None = Field(False, title="Is Placeholder")
@@ -3369,6 +3403,7 @@ class Morphology(BaseModel):
 
 class MultipleChoiceTranslationExercise(BaseModel):
     cache_entry_id: str | None = Field(None, title="Cache Entry Id")
+    content_ref: ContentRef | None = None
     context_hint: str | None = Field(
         None,
         description="A specific concept or hint for the exercise, e.g., 'inessive case'.",
@@ -3389,6 +3424,7 @@ class MultipleChoiceTranslationExercise(BaseModel):
     exercise_type: Literal["multiple_choice_translation"] = Field(
         "multiple_choice_translation", title="Exercise Type"
     )
+    explanation: str | None = Field(None, title="Explanation")
     generation_job_id: UUID_aliased | None = Field(None, title="Generation Job Id")
     generation_model: str | None = Field(None, title="Generation Model")
     is_placeholder: bool | None = Field(False, title="Is Placeholder")
@@ -3598,6 +3634,7 @@ class OmorfiForm(BaseModel):
 class OmorfiInflection(BaseModel):
     case: str | None = Field(None, title="Case")
     comparison: str | None = Field(None, title="Comparison")
+    definiteness: str | None = Field(None, title="Definiteness")
     form: str = Field(..., title="Form")
     mood: str | None = Field(None, title="Mood")
     number: str | None = Field(None, title="Number")
@@ -3692,6 +3729,7 @@ class PhraseFrame(BaseModel):
 
 class PlaceholderExercise(BaseModel):
     cache_entry_id: str | None = Field(None, title="Cache Entry Id")
+    content_ref: ContentRef | None = None
     context_hint: str | None = Field(
         None,
         description="A specific concept or hint for the exercise, e.g., 'inessive case'.",
@@ -3705,6 +3743,7 @@ class PlaceholderExercise(BaseModel):
         title="Exercise Id",
     )
     exercise_type: Literal["pending"] = Field("pending", title="Exercise Type")
+    explanation: str | None = Field(None, title="Explanation")
     generation_job_id: UUID_aliased | None = Field(None, title="Generation Job Id")
     generation_model: str | None = Field(None, title="Generation Model")
     is_placeholder: bool | None = Field(True, title="Is Placeholder")
@@ -3749,6 +3788,19 @@ class PlacementTestItem(BaseModel):
 class PlacementTestItemsResponse(BaseModel):
     grammar_items: list[ItemSummary] = Field(..., title="Grammar Items")
     vocabulary_items: list[ItemSummary] = Field(..., title="Vocabulary Items")
+
+
+class PracticeContext(BaseModel):
+    entry_id: UUID_aliased
+    excerpt: str
+    item_id: UUID_aliased
+    kind: str
+    learning_language_code: str
+    locator: str
+    occurrence_id: UUID_aliased
+    target_form: str
+    title: str
+    version_id: UUID_aliased
 
 
 class UserSetCefrLevel(StrEnum):
@@ -4360,6 +4412,7 @@ class SavedItemsDashboardResponseV3(SavedItemsDashboardResponse):
 class Scenario(BaseModel):
     ambient_audio_url: str | None = None
     category: str | None = None
+    category_label: str | None = None
     cefr_level: str | None = None
     created_at: AwareDatetime
     created_by: UUID_aliased | None = None
@@ -4392,6 +4445,7 @@ class Scenario(BaseModel):
 
 class ScenarioChoiceExercise(BaseModel):
     cache_entry_id: str | None = Field(None, title="Cache Entry Id")
+    content_ref: ContentRef | None = None
     context_hint: str | None = Field(
         None,
         description="A specific concept or hint for the exercise, e.g., 'inessive case'.",
@@ -4408,6 +4462,7 @@ class ScenarioChoiceExercise(BaseModel):
     exercise_type: Literal["scenario_choice"] = Field(
         "scenario_choice", title="Exercise Type"
     )
+    explanation: str | None = Field(None, title="Explanation")
     generation_job_id: UUID_aliased | None = Field(None, title="Generation Job Id")
     generation_model: str | None = Field(None, title="Generation Model")
     is_placeholder: bool | None = Field(False, title="Is Placeholder")
@@ -4429,6 +4484,7 @@ class ScenarioChoiceExercise(BaseModel):
 class ScenarioListItem(BaseModel):
     agent_avatar_url: str | None = None
     category: str | None = None
+    category_label: str | None = None
     cefr_level: str | None = None
     description: str | None = None
     difficulty: str | None = None
@@ -5380,6 +5436,7 @@ class SpellingChallengeExercise(BaseModel):
     audio_text: str | None = Field("", title="Audio Text")
     audio_url: str | None = Field(None, title="Audio Url")
     cache_entry_id: str | None = Field(None, title="Cache Entry Id")
+    content_ref: ContentRef | None = None
     context_hint: str | None = Field(
         None,
         description="A specific concept or hint for the exercise, e.g., 'inessive case'.",
@@ -5396,6 +5453,7 @@ class SpellingChallengeExercise(BaseModel):
     exercise_type: Literal["spelling_challenge"] = Field(
         "spelling_challenge", title="Exercise Type"
     )
+    explanation: str | None = Field(None, title="Explanation")
     generation_job_id: UUID_aliased | None = Field(None, title="Generation Job Id")
     generation_model: str | None = Field(None, title="Generation Model")
     hint: str | None = Field("", title="Hint")
@@ -6713,6 +6771,7 @@ class ContentDiscoveryResponse(BaseModel):
 
 class ContextMatchingExercise(BaseModel):
     cache_entry_id: str | None = Field(None, title="Cache Entry Id")
+    content_ref: ContentRef | None = None
     context_hint: str | None = Field(
         None,
         description="A specific concept or hint for the exercise, e.g., 'inessive case'.",
@@ -6733,6 +6792,7 @@ class ContextMatchingExercise(BaseModel):
     exercise_type: Literal["context_matching"] = Field(
         "context_matching", title="Exercise Type"
     )
+    explanation: str | None = Field(None, title="Explanation")
     generation_job_id: UUID_aliased | None = Field(None, title="Generation Job Id")
     generation_model: str | None = Field(None, title="Generation Model")
     is_placeholder: bool | None = Field(False, title="Is Placeholder")
@@ -7279,14 +7339,17 @@ class NotificationPreferences(BaseModel):
 class OmorfiAnalysisCandidate(BaseModel):
     base_form: str = Field(..., title="Base Form")
     inflection: OmorfiInflection | None = None
+    source: str | None = Field(None, title="Source")
     upos: str | None = Field(None, title="Upos")
     weight: float | None = Field(None, title="Weight")
     word_class: str = Field(..., title="Word Class")
 
 
 class OmorfiAnalysisResponse(BaseModel):
+    analysis_source: str | None = Field(None, title="Analysis Source")
     base_form: str = Field(..., title="Base Form")
     candidates: list[OmorfiAnalysisCandidate] | None = Field(None, title="Candidates")
+    confidence: float | None = Field(None, title="Confidence")
     inflections: list[OmorfiInflection] | None = Field(None, title="Inflections")
     is_valid_word: bool = Field(..., title="Is Valid Word")
     suggestions: list[str] | None = Field(None, title="Suggestions")
@@ -7456,7 +7519,9 @@ class SemanticSearchResponse(BaseModel):
 
 
 class SentenceConstructionExercise(BaseModel):
+    accepted_answers: list[str] | None = Field(None, title="Accepted Answers")
     cache_entry_id: str | None = Field(None, title="Cache Entry Id")
+    content_ref: ContentRef | None = None
     context_hint: str | None = Field(
         None,
         description="A specific concept or hint for the exercise, e.g., 'inessive case'.",
@@ -7473,6 +7538,7 @@ class SentenceConstructionExercise(BaseModel):
     exercise_type: Literal["sentence_construction"] = Field(
         "sentence_construction", title="Exercise Type"
     )
+    explanation: str | None = Field(None, title="Explanation")
     generation_job_id: UUID_aliased | None = Field(None, title="Generation Job Id")
     generation_model: str | None = Field(None, title="Generation Model")
     is_placeholder: bool | None = Field(False, title="Is Placeholder")
@@ -8452,6 +8518,7 @@ class ArticleParagraph(Paragraph):
 class ArticleVersion(BaseModel):
     article_type: str | None = None
     brand: Brand
+    content_entry_id: UUID_aliased
     content_locale: str | None = None
     contextual_learning_opportunities: (
         list[KLearnContextualLearningOpportunity] | None
