@@ -62,6 +62,16 @@ const (
 	ConceptHubSummaryResponseEnrichmentStatusNone      ConceptHubSummaryResponseEnrichmentStatus = "none"
 )
 
+// Defines values for ContentRefKind.
+const (
+	ContentRefKindArticle       ContentRefKind = "article"
+	ContentRefKindConceptHub    ContentRefKind = "concept_hub"
+	ContentRefKindConversation  ContentRefKind = "conversation"
+	ContentRefKindKtvVideo      ContentRefKind = "ktv_video"
+	ContentRefKindRoadmapLesson ContentRefKind = "roadmap_lesson"
+	ContentRefKindWordCluster   ContentRefKind = "word_cluster"
+)
+
 // Defines values for ContextMatchingExerciseItemTypeFk.
 const (
 	ContextMatchingExerciseItemTypeFkBaseWord       ContextMatchingExerciseItemTypeFk = "BaseWord"
@@ -964,6 +974,7 @@ type ArticleParagraphTranslationsResponse struct {
 type ArticleVersion struct {
 	ArticleType                     *string                                `json:"article_type,omitempty"`
 	Brand                           Brand                                  `json:"brand"`
+	ContentEntryId                  uuid.UUID                              `json:"content_entry_id"`
 	ContentLocale                   *string                                `json:"content_locale,omitempty"`
 	ContextualLearningOpportunities *[]KLearnContextualLearningOpportunity `json:"contextual_learning_opportunities,omitempty"`
 	DifficultyScore                 *float32                               `json:"difficulty_score,omitempty"`
@@ -2228,6 +2239,21 @@ type ContentEntrySummary struct {
 	UpdatedBy            *uuid.UUID              `json:"updated_by,omitempty"`
 }
 
+// ContentRef A stable pointer at the piece of content the learner met an item in.
+//
+// The canonical string form is “kind:content_id[@version_id][#locator]“. It exists so a
+// ref can be logged, grouped and compared without unpacking the object, and
+// so a dedupe key is one string rather than a tuple spread across call sites.
+type ContentRef struct {
+	ContentId string         `json:"content_id"`
+	Kind      ContentRefKind `json:"kind"`
+	Locator   *string        `json:"locator"`
+	VersionId *string        `json:"version_id"`
+}
+
+// ContentRefKind defines model for ContentRef.Kind.
+type ContentRefKind string
+
 // ContentVersionStatusResponse defines model for ContentVersionStatusResponse.
 type ContentVersionStatusResponse struct {
 	Status string `json:"status"`
@@ -2235,7 +2261,8 @@ type ContentVersionStatusResponse struct {
 
 // ContextMatchingExercise defines model for ContextMatchingExercise.
 type ContextMatchingExercise struct {
-	CacheEntryId *string `json:"cache_entry_id"`
+	CacheEntryId *string     `json:"cache_entry_id"`
+	ContentRef   *ContentRef `json:"content_ref"`
 
 	// ContextHint A specific concept or hint for the exercise, e.g., 'inessive case'.
 	ContextHint *string `json:"context_hint"`
@@ -2248,6 +2275,7 @@ type ContextMatchingExercise struct {
 	// ExerciseId Unique ID for this specific exercise instance.
 	ExerciseId      *uuid.UUID                        `json:"exercise_id,omitempty"`
 	ExerciseType    string                            `json:"exercise_type"`
+	Explanation     *string                           `json:"explanation"`
 	GenerationJobId *uuid.UUID                        `json:"generation_job_id"`
 	GenerationModel *string                           `json:"generation_model"`
 	IsPlaceholder   *bool                             `json:"is_placeholder,omitempty"`
@@ -3412,15 +3440,16 @@ type DictionaryExample struct {
 
 // DictionaryInflection defines model for DictionaryInflection.
 type DictionaryInflection struct {
-	Case       *string `json:"case,omitempty"`
-	Comparison *string `json:"comparison,omitempty"`
-	Form       string  `json:"form"`
-	LabelShort *string `json:"label_short,omitempty"`
-	Mood       *string `json:"mood,omitempty"`
-	Number     *string `json:"number,omitempty"`
-	Person     *string `json:"person,omitempty"`
-	Tense      *string `json:"tense,omitempty"`
-	Voice      *string `json:"voice,omitempty"`
+	Case         *string `json:"case,omitempty"`
+	Comparison   *string `json:"comparison,omitempty"`
+	Definiteness *string `json:"definiteness,omitempty"`
+	Form         string  `json:"form"`
+	LabelShort   *string `json:"label_short,omitempty"`
+	Mood         *string `json:"mood,omitempty"`
+	Number       *string `json:"number,omitempty"`
+	Person       *string `json:"person,omitempty"`
+	Tense        *string `json:"tense,omitempty"`
+	Voice        *string `json:"voice,omitempty"`
 }
 
 // DictionaryLookupResponse defines model for DictionaryLookupResponse.
@@ -3869,7 +3898,8 @@ type FetchDynamicTranslationsResponse struct {
 
 // FillInTheBlankExercise defines model for FillInTheBlankExercise.
 type FillInTheBlankExercise struct {
-	CacheEntryId *string `json:"cache_entry_id"`
+	CacheEntryId *string     `json:"cache_entry_id"`
+	ContentRef   *ContentRef `json:"content_ref"`
 
 	// ContextHint A specific concept or hint for the exercise, e.g., 'inessive case'.
 	ContextHint     *string `json:"context_hint"`
@@ -3880,6 +3910,7 @@ type FillInTheBlankExercise struct {
 	// ExerciseId Unique ID for this specific exercise instance.
 	ExerciseId          *uuid.UUID                        `json:"exercise_id,omitempty"`
 	ExerciseType        string                            `json:"exercise_type"`
+	Explanation         *string                           `json:"explanation"`
 	GenerationJobId     *uuid.UUID                        `json:"generation_job_id"`
 	GenerationModel     *string                           `json:"generation_model"`
 	IsPlaceholder       *bool                             `json:"is_placeholder,omitempty"`
@@ -3915,8 +3946,9 @@ type FlashcardExercise struct {
 	AnswerHtml *string `json:"answer_html"`
 
 	// AnswerIsSupportText True when correct_answer is the item's SUPPORT-language meaning (a 'what does X mean?' card), so the read-time localizer translates it. False for learning-language answer keys (conversation-drill corrections, 'recall the Finnish word' cards, daily 'English meaning' cards) which must never be machine-translated.
-	AnswerIsSupportText *bool   `json:"answer_is_support_text,omitempty"`
-	CacheEntryId        *string `json:"cache_entry_id"`
+	AnswerIsSupportText *bool       `json:"answer_is_support_text,omitempty"`
+	CacheEntryId        *string     `json:"cache_entry_id"`
+	ContentRef          *ContentRef `json:"content_ref"`
 
 	// ContextHint A specific concept or hint for the exercise, e.g., 'inessive case'.
 	ContextHint *string `json:"context_hint"`
@@ -3929,6 +3961,7 @@ type FlashcardExercise struct {
 	// ExerciseId Unique ID for this specific exercise instance.
 	ExerciseId   *uuid.UUID `json:"exercise_id,omitempty"`
 	ExerciseType string     `json:"exercise_type"`
+	Explanation  *string    `json:"explanation"`
 
 	// ExplanationHtml Optional secondary teaching content rendered below the answer block when present.
 	ExplanationHtml     *string                      `json:"explanation_html"`
@@ -4173,7 +4206,8 @@ type HubStatusResponseStatus string
 
 // IdentifyConceptExercise defines model for IdentifyConceptExercise.
 type IdentifyConceptExercise struct {
-	CacheEntryId *string `json:"cache_entry_id"`
+	CacheEntryId *string     `json:"cache_entry_id"`
+	ContentRef   *ContentRef `json:"content_ref"`
 
 	// ContextHint A specific concept or hint for the exercise, e.g., 'inessive case'.
 	ContextHint *string `json:"context_hint"`
@@ -4186,6 +4220,7 @@ type IdentifyConceptExercise struct {
 	// ExerciseId Unique ID for this specific exercise instance.
 	ExerciseId      *uuid.UUID                        `json:"exercise_id,omitempty"`
 	ExerciseType    string                            `json:"exercise_type"`
+	Explanation     *string                           `json:"explanation"`
 	GenerationJobId *uuid.UUID                        `json:"generation_job_id"`
 	GenerationModel *string                           `json:"generation_model"`
 	IsPlaceholder   *bool                             `json:"is_placeholder,omitempty"`
@@ -5284,6 +5319,7 @@ type ListVideoItem struct {
 	AudioUrl                           *string    `json:"audio_url,omitempty"`
 	BrandId                            uuid.UUID  `json:"brand_id"`
 	CarouselImages                     *[]string  `json:"carousel_images,omitempty"`
+	CefrLevel                          *string    `json:"cefr_level,omitempty"`
 	CreatedAt                          time.Time  `json:"created_at"`
 	Description                        string     `json:"description"`
 	DescriptionTranslationFallback     *bool      `json:"description_translation_fallback,omitempty"`
@@ -5311,9 +5347,10 @@ type ListVideoItem struct {
 
 // ListeningComprehensionExercise defines model for ListeningComprehensionExercise.
 type ListeningComprehensionExercise struct {
-	AudioText    *string `json:"audio_text,omitempty"`
-	AudioUrl     *string `json:"audio_url"`
-	CacheEntryId *string `json:"cache_entry_id"`
+	AudioText    *string     `json:"audio_text,omitempty"`
+	AudioUrl     *string     `json:"audio_url"`
+	CacheEntryId *string     `json:"cache_entry_id"`
+	ContentRef   *ContentRef `json:"content_ref"`
 
 	// ContextHint A specific concept or hint for the exercise, e.g., 'inessive case'.
 	ContextHint *string `json:"context_hint"`
@@ -5326,6 +5363,7 @@ type ListeningComprehensionExercise struct {
 	// ExerciseId Unique ID for this specific exercise instance.
 	ExerciseId      *uuid.UUID                               `json:"exercise_id,omitempty"`
 	ExerciseType    string                                   `json:"exercise_type"`
+	Explanation     *string                                  `json:"explanation"`
 	GenerationJobId *uuid.UUID                               `json:"generation_job_id"`
 	GenerationModel *string                                  `json:"generation_model"`
 	IsPlaceholder   *bool                                    `json:"is_placeholder,omitempty"`
@@ -5585,7 +5623,8 @@ type Morphology struct {
 
 // MultipleChoiceTranslationExercise defines model for MultipleChoiceTranslationExercise.
 type MultipleChoiceTranslationExercise struct {
-	CacheEntryId *string `json:"cache_entry_id"`
+	CacheEntryId *string     `json:"cache_entry_id"`
+	ContentRef   *ContentRef `json:"content_ref"`
 
 	// ContextHint A specific concept or hint for the exercise, e.g., 'inessive case'.
 	ContextHint *string `json:"context_hint"`
@@ -5598,6 +5637,7 @@ type MultipleChoiceTranslationExercise struct {
 	// ExerciseId Unique ID for this specific exercise instance.
 	ExerciseId      *uuid.UUID                                  `json:"exercise_id,omitempty"`
 	ExerciseType    string                                      `json:"exercise_type"`
+	Explanation     *string                                     `json:"explanation"`
 	GenerationJobId *uuid.UUID                                  `json:"generation_job_id"`
 	GenerationModel *string                                     `json:"generation_model"`
 	IsPlaceholder   *bool                                       `json:"is_placeholder,omitempty"`
@@ -5830,6 +5870,7 @@ type OffsetMeta struct {
 type OmorfiAnalysisCandidate struct {
 	BaseForm   string            `json:"base_form"`
 	Inflection *OmorfiInflection `json:"inflection"`
+	Source     *string           `json:"source"`
 	Upos       *string           `json:"upos"`
 	Weight     *float32          `json:"weight"`
 	WordClass  string            `json:"word_class"`
@@ -5837,13 +5878,15 @@ type OmorfiAnalysisCandidate struct {
 
 // OmorfiAnalysisResponse defines model for OmorfiAnalysisResponse.
 type OmorfiAnalysisResponse struct {
-	BaseForm    string                     `json:"base_form"`
-	Candidates  *[]OmorfiAnalysisCandidate `json:"candidates,omitempty"`
-	Inflections *[]OmorfiInflection        `json:"inflections,omitempty"`
-	IsValidWord bool                       `json:"is_valid_word"`
-	Suggestions *[]string                  `json:"suggestions,omitempty"`
-	Word        string                     `json:"word"`
-	WordClass   string                     `json:"word_class"`
+	AnalysisSource *string                    `json:"analysis_source"`
+	BaseForm       string                     `json:"base_form"`
+	Candidates     *[]OmorfiAnalysisCandidate `json:"candidates,omitempty"`
+	Confidence     *float32                   `json:"confidence"`
+	Inflections    *[]OmorfiInflection        `json:"inflections,omitempty"`
+	IsValidWord    bool                       `json:"is_valid_word"`
+	Suggestions    *[]string                  `json:"suggestions,omitempty"`
+	Word           string                     `json:"word"`
+	WordClass      string                     `json:"word_class"`
 }
 
 // OmorfiForm defines model for OmorfiForm.
@@ -5856,14 +5899,15 @@ type OmorfiForm struct {
 
 // OmorfiInflection defines model for OmorfiInflection.
 type OmorfiInflection struct {
-	Case       *string `json:"case"`
-	Comparison *string `json:"comparison"`
-	Form       string  `json:"form"`
-	Mood       *string `json:"mood"`
-	Number     *string `json:"number"`
-	Person     *string `json:"person"`
-	Tense      *string `json:"tense"`
-	Voice      *string `json:"voice"`
+	Case         *string `json:"case"`
+	Comparison   *string `json:"comparison"`
+	Definiteness *string `json:"definiteness"`
+	Form         string  `json:"form"`
+	Mood         *string `json:"mood"`
+	Number       *string `json:"number"`
+	Person       *string `json:"person"`
+	Tense        *string `json:"tense"`
+	Voice        *string `json:"voice"`
 }
 
 // OmorfiParadigm defines model for OmorfiParadigm.
@@ -6002,7 +6046,8 @@ type PhraseFrame struct {
 
 // PlaceholderExercise defines model for PlaceholderExercise.
 type PlaceholderExercise struct {
-	CacheEntryId *string `json:"cache_entry_id"`
+	CacheEntryId *string     `json:"cache_entry_id"`
+	ContentRef   *ContentRef `json:"content_ref"`
 
 	// ContextHint A specific concept or hint for the exercise, e.g., 'inessive case'.
 	ContextHint     *string `json:"context_hint"`
@@ -6012,6 +6057,7 @@ type PlaceholderExercise struct {
 	// ExerciseId Unique ID for this specific exercise instance.
 	ExerciseId          *uuid.UUID                     `json:"exercise_id,omitempty"`
 	ExerciseType        string                         `json:"exercise_type"`
+	Explanation         *string                        `json:"explanation"`
 	GenerationJobId     *uuid.UUID                     `json:"generation_job_id"`
 	GenerationModel     *string                        `json:"generation_model"`
 	IsPlaceholder       *bool                          `json:"is_placeholder,omitempty"`
@@ -6066,6 +6112,20 @@ type PlacementTestItem struct {
 type PlacementTestItemsResponse struct {
 	GrammarItems    []ItemSummary `json:"grammar_items"`
 	VocabularyItems []ItemSummary `json:"vocabulary_items"`
+}
+
+// PracticeContext defines model for PracticeContext.
+type PracticeContext struct {
+	EntryId              uuid.UUID `json:"entry_id"`
+	Excerpt              string    `json:"excerpt"`
+	ItemId               uuid.UUID `json:"item_id"`
+	Kind                 string    `json:"kind"`
+	LearningLanguageCode string    `json:"learning_language_code"`
+	Locator              string    `json:"locator"`
+	OccurrenceId         uuid.UUID `json:"occurrence_id"`
+	TargetForm           string    `json:"target_form"`
+	Title                string    `json:"title"`
+	VersionId            uuid.UUID `json:"version_id"`
 }
 
 // PreferredDifficultyProfile defines model for PreferredDifficultyProfile.
@@ -6898,6 +6958,7 @@ type SavedItemsDashboardResponseV3 struct {
 type Scenario struct {
 	AmbientAudioUrl          *string                 `json:"ambient_audio_url,omitempty"`
 	Category                 *string                 `json:"category,omitempty"`
+	CategoryLabel            *string                 `json:"category_label,omitempty"`
 	CefrLevel                *string                 `json:"cefr_level,omitempty"`
 	CreatedAt                time.Time               `json:"created_at"`
 	CreatedBy                *uuid.UUID              `json:"created_by,omitempty"`
@@ -6930,7 +6991,8 @@ type Scenario struct {
 
 // ScenarioChoiceExercise defines model for ScenarioChoiceExercise.
 type ScenarioChoiceExercise struct {
-	CacheEntryId *string `json:"cache_entry_id"`
+	CacheEntryId *string     `json:"cache_entry_id"`
+	ContentRef   *ContentRef `json:"content_ref"`
 
 	// ContextHint A specific concept or hint for the exercise, e.g., 'inessive case'.
 	ContextHint     *string `json:"context_hint"`
@@ -6941,6 +7003,7 @@ type ScenarioChoiceExercise struct {
 	// ExerciseId Unique ID for this specific exercise instance.
 	ExerciseId          *uuid.UUID                        `json:"exercise_id,omitempty"`
 	ExerciseType        string                            `json:"exercise_type"`
+	Explanation         *string                           `json:"explanation"`
 	GenerationJobId     *uuid.UUID                        `json:"generation_job_id"`
 	GenerationModel     *string                           `json:"generation_model"`
 	IsPlaceholder       *bool                             `json:"is_placeholder,omitempty"`
@@ -6969,6 +7032,7 @@ type ScenarioChoiceExerciseSourceType string
 type ScenarioListItem struct {
 	AgentAvatarUrl           *string                 `json:"agent_avatar_url,omitempty"`
 	Category                 *string                 `json:"category,omitempty"`
+	CategoryLabel            *string                 `json:"category_label,omitempty"`
 	CefrLevel                *string                 `json:"cefr_level,omitempty"`
 	Description              *string                 `json:"description,omitempty"`
 	Difficulty               *string                 `json:"difficulty,omitempty"`
@@ -7103,7 +7167,9 @@ type Sense struct {
 
 // SentenceConstructionExercise defines model for SentenceConstructionExercise.
 type SentenceConstructionExercise struct {
-	CacheEntryId *string `json:"cache_entry_id"`
+	AcceptedAnswers *[]string   `json:"accepted_answers,omitempty"`
+	CacheEntryId    *string     `json:"cache_entry_id"`
+	ContentRef      *ContentRef `json:"content_ref"`
 
 	// ContextHint A specific concept or hint for the exercise, e.g., 'inessive case'.
 	ContextHint     *string `json:"context_hint"`
@@ -7114,6 +7180,7 @@ type SentenceConstructionExercise struct {
 	// ExerciseId Unique ID for this specific exercise instance.
 	ExerciseId          *uuid.UUID                              `json:"exercise_id,omitempty"`
 	ExerciseType        string                                  `json:"exercise_type"`
+	Explanation         *string                                 `json:"explanation"`
 	GenerationJobId     *uuid.UUID                              `json:"generation_job_id"`
 	GenerationModel     *string                                 `json:"generation_model"`
 	IsPlaceholder       *bool                                   `json:"is_placeholder,omitempty"`
@@ -8761,10 +8828,11 @@ type SpeechTranscriptionResponse struct {
 
 // SpellingChallengeExercise defines model for SpellingChallengeExercise.
 type SpellingChallengeExercise struct {
-	AcceptTypos  *bool   `json:"accept_typos,omitempty"`
-	AudioText    *string `json:"audio_text,omitempty"`
-	AudioUrl     *string `json:"audio_url"`
-	CacheEntryId *string `json:"cache_entry_id"`
+	AcceptTypos  *bool       `json:"accept_typos,omitempty"`
+	AudioText    *string     `json:"audio_text,omitempty"`
+	AudioUrl     *string     `json:"audio_url"`
+	CacheEntryId *string     `json:"cache_entry_id"`
+	ContentRef   *ContentRef `json:"content_ref"`
 
 	// ContextHint A specific concept or hint for the exercise, e.g., 'inessive case'.
 	ContextHint     *string `json:"context_hint"`
@@ -8775,6 +8843,7 @@ type SpellingChallengeExercise struct {
 	// ExerciseId Unique ID for this specific exercise instance.
 	ExerciseId          *uuid.UUID                           `json:"exercise_id,omitempty"`
 	ExerciseType        string                               `json:"exercise_type"`
+	Explanation         *string                              `json:"explanation"`
 	GenerationJobId     *uuid.UUID                           `json:"generation_job_id"`
 	GenerationModel     *string                              `json:"generation_model"`
 	Hint                *string                              `json:"hint,omitempty"`
@@ -10002,6 +10071,7 @@ type Video struct {
 	AudioUrl                           *string    `json:"audio_url,omitempty"`
 	BrandId                            uuid.UUID  `json:"brand_id"`
 	CarouselImages                     *[]string  `json:"carousel_images,omitempty"`
+	CefrLevel                          *string    `json:"cefr_level,omitempty"`
 	CreatedAt                          time.Time  `json:"created_at"`
 	Description                        string     `json:"description"`
 	DescriptionTranslationFallback     *bool      `json:"description_translation_fallback,omitempty"`
@@ -11344,6 +11414,12 @@ type GetApiV3MeInAppNudgesParams struct {
 	Context string `form:"context" json:"context"`
 }
 
+// GetApiV3MeItemsItemTypeItemIdMicroDrillParams defines parameters for GetApiV3MeItemsItemTypeItemIdMicroDrill.
+type GetApiV3MeItemsItemTypeItemIdMicroDrillParams struct {
+	// ContentRef Where the learner met this item, as kind:content_id[#locator] — e.g. article:UUID#p3 or roadmap_lesson:UUID#4. Identity only; the engine resolves the wording and drops a malformed ref rather than failing the drill.
+	ContentRef *string `form:"content_ref,omitempty" json:"content_ref,omitempty"`
+}
+
 // GetApiV3MeLearningItemsParams defines parameters for GetApiV3MeLearningItems.
 type GetApiV3MeLearningItemsParams struct {
 	// Cursor Opaque pagination cursor (legacy alias for next_page_key).
@@ -11983,6 +12059,21 @@ type PostInternalContentBridgeItemsLookupParams struct {
 	Caller *string `form:"caller,omitempty" json:"caller,omitempty"`
 }
 
+// GetInternalContentBridgeItemsItemIdPracticeContextParams defines parameters for GetInternalContentBridgeItemsItemIdPracticeContext.
+type GetInternalContentBridgeItemsItemIdPracticeContextParams struct {
+	EntryId string `form:"entry_id" json:"entry_id"`
+
+	// Kind article or ktv_video
+	Kind                 string `form:"kind" json:"kind"`
+	LearningLanguageCode string `form:"learning_language_code" json:"learning_language_code"`
+
+	// VersionId Published version UUID; defaults to latest
+	VersionId *string `form:"version_id,omitempty" json:"version_id,omitempty"`
+
+	// Locator Exact paragraph UUID or caption index; absent selects the first matching occurrence
+	Locator *string `form:"locator,omitempty" json:"locator,omitempty"`
+}
+
 // GetInternalContentBridgeItemsItemIdSurfacesParams defines parameters for GetInternalContentBridgeItemsItemIdSurfaces.
 type GetInternalContentBridgeItemsItemIdSurfacesParams struct {
 	// LearningLanguageCode Learning language scope. Must be in sharedlocale.SupportedLearningLanguages (fi, sv today). Region tags accepted but stripped.
@@ -12546,6 +12637,9 @@ type GetContextualMicroDrillKlearnApiV3SuggestionsContextualMicroDrillGetParams 
 	// PreferredExerciseTypes Comma-separated list of preferred exercise types
 	PreferredExerciseTypes *string `form:"preferred_exercise_types,omitempty" json:"preferred_exercise_types,omitempty"`
 	MaxExercises           *int    `form:"max_exercises,omitempty" json:"max_exercises,omitempty"`
+
+	// ContentRef Where the learner met this item, as kind:content_id[#locator] — e.g. article:UUID#p3 or roadmap_lesson:UUID#4. Identity only; the engine resolves the wording itself.
+	ContentRef *string `form:"content_ref,omitempty" json:"content_ref,omitempty"`
 }
 
 // GetTargetedLessonsKlearnApiV3SuggestionsTargetedGetParams defines parameters for GetTargetedLessonsKlearnApiV3SuggestionsTargetedGet.
