@@ -1953,6 +1953,18 @@ class ExerciseDeckTeaser(BaseModel):
     title: str = Field(..., title="Title")
 
 
+class RepairScope(StrEnum):
+    none = "none"
+    explanation = "explanation"
+    full = "full"
+
+
+class ExerciseGenerationProvenance(BaseModel):
+    initial_model: str = Field(..., title="Initial Model")
+    repair_model: str | None = Field(None, title="Repair Model")
+    repair_scope: RepairScope | None = Field("none", title="Repair Scope")
+
+
 class Status2(StrEnum):
     not_answered = "not_answered"
     answered = "answered"
@@ -2179,9 +2191,10 @@ class FillInTheBlankExercise(BaseModel):
     explanation: str | None = Field(None, title="Explanation")
     generation_job_id: UUID_aliased | None = Field(None, title="Generation Job Id")
     generation_model: str | None = Field(None, title="Generation Model")
+    generation_provenance: ExerciseGenerationProvenance | None = None
     is_placeholder: bool | None = Field(False, title="Is Placeholder")
-    item_id_fk: UUID_aliased = Field(..., title="Item Id Fk")
-    item_type_fk: ItemTypeFk = Field(..., title="Item Type Fk")
+    item_id_fk: UUID_aliased | None = Field(..., title="Item Id Fk")
+    item_type_fk: ItemTypeFk | None = Field(..., title="Item Type Fk")
     objective_id: UUID_aliased | None = Field(None, title="Objective Id")
     options: list[str] | None = Field(None, title="Options")
     prompt: str = Field(..., title="Prompt")
@@ -2234,9 +2247,10 @@ class FlashcardExercise(BaseModel):
     )
     generation_job_id: UUID_aliased | None = Field(None, title="Generation Job Id")
     generation_model: str | None = Field(None, title="Generation Model")
+    generation_provenance: ExerciseGenerationProvenance | None = None
     is_placeholder: bool | None = Field(False, title="Is Placeholder")
-    item_id_fk: UUID_aliased = Field(..., title="Item Id Fk")
-    item_type_fk: ItemTypeFk = Field(..., title="Item Type Fk")
+    item_id_fk: UUID_aliased | None = Field(..., title="Item Id Fk")
+    item_type_fk: ItemTypeFk | None = Field(..., title="Item Type Fk")
     objective_id: UUID_aliased | None = Field(None, title="Objective Id")
     prompt: str = Field(..., title="Prompt")
     prompt_version: str | None = Field(None, title="Prompt Version")
@@ -2395,9 +2409,10 @@ class IdentifyConceptExercise(BaseModel):
     explanation: str | None = Field(None, title="Explanation")
     generation_job_id: UUID_aliased | None = Field(None, title="Generation Job Id")
     generation_model: str | None = Field(None, title="Generation Model")
+    generation_provenance: ExerciseGenerationProvenance | None = None
     is_placeholder: bool | None = Field(False, title="Is Placeholder")
-    item_id_fk: UUID_aliased = Field(..., title="Item Id Fk")
-    item_type_fk: ItemTypeFk = Field(..., title="Item Type Fk")
+    item_id_fk: UUID_aliased | None = Field(..., title="Item Id Fk")
+    item_type_fk: ItemTypeFk | None = Field(..., title="Item Type Fk")
     objective_id: UUID_aliased | None = Field(None, title="Objective Id")
     options: list[dict[str, str]] = Field(
         ...,
@@ -3197,9 +3212,10 @@ class ListeningComprehensionExercise(BaseModel):
     explanation: str | None = Field(None, title="Explanation")
     generation_job_id: UUID_aliased | None = Field(None, title="Generation Job Id")
     generation_model: str | None = Field(None, title="Generation Model")
+    generation_provenance: ExerciseGenerationProvenance | None = None
     is_placeholder: bool | None = Field(False, title="Is Placeholder")
-    item_id_fk: UUID_aliased = Field(..., title="Item Id Fk")
-    item_type_fk: ItemTypeFk = Field(..., title="Item Type Fk")
+    item_id_fk: UUID_aliased | None = Field(..., title="Item Id Fk")
+    item_type_fk: ItemTypeFk | None = Field(..., title="Item Type Fk")
     objective_id: UUID_aliased | None = Field(None, title="Objective Id")
     options: list[dict[str, str]] = Field(
         ...,
@@ -3377,6 +3393,7 @@ class MicroDrill(BaseModel):
 
 
 class Mindmap(BaseModel):
+    content_entry_id: UUID_aliased | None = None
     content_version_id: UUID_aliased | None = None
     created_at: AwareDatetime
     graph: Any
@@ -3427,9 +3444,10 @@ class MultipleChoiceTranslationExercise(BaseModel):
     explanation: str | None = Field(None, title="Explanation")
     generation_job_id: UUID_aliased | None = Field(None, title="Generation Job Id")
     generation_model: str | None = Field(None, title="Generation Model")
+    generation_provenance: ExerciseGenerationProvenance | None = None
     is_placeholder: bool | None = Field(False, title="Is Placeholder")
-    item_id_fk: UUID_aliased = Field(..., title="Item Id Fk")
-    item_type_fk: ItemTypeFk = Field(..., title="Item Type Fk")
+    item_id_fk: UUID_aliased | None = Field(..., title="Item Id Fk")
+    item_type_fk: ItemTypeFk | None = Field(..., title="Item Type Fk")
     objective_id: UUID_aliased | None = Field(None, title="Objective Id")
     options: list[dict[str, str]] = Field(
         ...,
@@ -3746,10 +3764,16 @@ class PlaceholderExercise(BaseModel):
     explanation: str | None = Field(None, title="Explanation")
     generation_job_id: UUID_aliased | None = Field(None, title="Generation Job Id")
     generation_model: str | None = Field(None, title="Generation Model")
+    generation_provenance: ExerciseGenerationProvenance | None = None
     is_placeholder: bool | None = Field(True, title="Is Placeholder")
-    item_id_fk: UUID_aliased = Field(..., title="Item Id Fk")
-    item_type_fk: ItemTypeFk = Field(..., title="Item Type Fk")
+    item_id_fk: UUID_aliased | None = Field(..., title="Item Id Fk")
+    item_type_fk: ItemTypeFk | None = Field(..., title="Item Type Fk")
     objective_id: UUID_aliased | None = Field(None, title="Objective Id")
+    planned_exercise_type: str | None = Field(
+        None,
+        description="Planned task type for progress display; this placeholder remains ungradable.",
+        title="Planned Exercise Type",
+    )
     prompt: str | None = Field("", title="Prompt")
     prompt_version: str | None = Field(None, title="Prompt Version")
     quality_score: float | None = Field(None, title="Quality Score")
@@ -3797,7 +3821,8 @@ class PracticeContext(BaseModel):
     kind: str
     learning_language_code: str
     locator: str
-    occurrence_id: UUID_aliased
+    occurrence_id: UUID_aliased | None = None
+    proof: str
     target_form: str
     title: str
     version_id: UUID_aliased
@@ -4465,9 +4490,10 @@ class ScenarioChoiceExercise(BaseModel):
     explanation: str | None = Field(None, title="Explanation")
     generation_job_id: UUID_aliased | None = Field(None, title="Generation Job Id")
     generation_model: str | None = Field(None, title="Generation Model")
+    generation_provenance: ExerciseGenerationProvenance | None = None
     is_placeholder: bool | None = Field(False, title="Is Placeholder")
-    item_id_fk: UUID_aliased = Field(..., title="Item Id Fk")
-    item_type_fk: ItemTypeFk = Field(..., title="Item Type Fk")
+    item_id_fk: UUID_aliased | None = Field(..., title="Item Id Fk")
+    item_type_fk: ItemTypeFk | None = Field(..., title="Item Type Fk")
     objective_id: UUID_aliased | None = Field(None, title="Objective Id")
     phrase_options: list[str] = Field(..., title="Phrase Options")
     prompt: str = Field(..., title="Prompt")
@@ -5456,10 +5482,11 @@ class SpellingChallengeExercise(BaseModel):
     explanation: str | None = Field(None, title="Explanation")
     generation_job_id: UUID_aliased | None = Field(None, title="Generation Job Id")
     generation_model: str | None = Field(None, title="Generation Model")
+    generation_provenance: ExerciseGenerationProvenance | None = None
     hint: str | None = Field("", title="Hint")
     is_placeholder: bool | None = Field(False, title="Is Placeholder")
-    item_id_fk: UUID_aliased = Field(..., title="Item Id Fk")
-    item_type_fk: ItemTypeFk = Field(..., title="Item Type Fk")
+    item_id_fk: UUID_aliased | None = Field(..., title="Item Id Fk")
+    item_type_fk: ItemTypeFk | None = Field(..., title="Item Type Fk")
     objective_id: UUID_aliased | None = Field(None, title="Objective Id")
     prompt: str = Field(..., title="Prompt")
     prompt_version: str | None = Field(None, title="Prompt Version")
@@ -6795,9 +6822,10 @@ class ContextMatchingExercise(BaseModel):
     explanation: str | None = Field(None, title="Explanation")
     generation_job_id: UUID_aliased | None = Field(None, title="Generation Job Id")
     generation_model: str | None = Field(None, title="Generation Model")
+    generation_provenance: ExerciseGenerationProvenance | None = None
     is_placeholder: bool | None = Field(False, title="Is Placeholder")
-    item_id_fk: UUID_aliased = Field(..., title="Item Id Fk")
-    item_type_fk: ItemTypeFk = Field(..., title="Item Type Fk")
+    item_id_fk: UUID_aliased | None = Field(..., title="Item Id Fk")
+    item_type_fk: ItemTypeFk | None = Field(..., title="Item Type Fk")
     objective_id: UUID_aliased | None = Field(None, title="Objective Id")
     options: list[dict[str, str]] = Field(
         ...,
@@ -7541,9 +7569,10 @@ class SentenceConstructionExercise(BaseModel):
     explanation: str | None = Field(None, title="Explanation")
     generation_job_id: UUID_aliased | None = Field(None, title="Generation Job Id")
     generation_model: str | None = Field(None, title="Generation Model")
+    generation_provenance: ExerciseGenerationProvenance | None = None
     is_placeholder: bool | None = Field(False, title="Is Placeholder")
-    item_id_fk: UUID_aliased = Field(..., title="Item Id Fk")
-    item_type_fk: ItemTypeFk = Field(..., title="Item Type Fk")
+    item_id_fk: UUID_aliased | None = Field(..., title="Item Id Fk")
+    item_type_fk: ItemTypeFk | None = Field(..., title="Item Type Fk")
     objective_id: UUID_aliased | None = Field(None, title="Objective Id")
     prompt: str = Field(..., title="Prompt")
     prompt_version: str | None = Field(None, title="Prompt Version")
