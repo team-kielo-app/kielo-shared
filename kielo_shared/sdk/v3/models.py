@@ -3513,6 +3513,7 @@ class CtaId(StrEnum):
     open_topic = "open_topic"
     start_conversation = "start_conversation"
     study_collection = "study_collection"
+    watch_video = "watch_video"
 
 
 class Intent1(StrEnum):
@@ -3535,6 +3536,7 @@ class Type(StrEnum):
     topic = "topic"
     conversation = "conversation"
     saved_collection = "saved_collection"
+    ktv_video = "ktv_video"
 
 
 class NotificationDedupeClaimRequest(BaseModel):
@@ -3961,9 +3963,27 @@ class RecommendationLaunchParams(BaseModel):
     item_ids: list[UUID_aliased] | None = Field(None, title="Item Ids")
     item_type: ItemTypeFk | None = Field(None, title="Item Type")
     lesson_id: UUID_aliased | None = Field(None, title="Lesson Id")
+    scenario_id: str | None = Field(None, title="Scenario Id")
     source_session_id: UUID_aliased | None = Field(None, title="Source Session Id")
     source_session_mode: str | None = Field(None, title="Source Session Mode")
     topic_list_id: UUID_aliased | None = Field(None, title="Topic List Id")
+    video_id: UUID_aliased | None = Field(None, title="Video Id")
+
+
+class RecommendationLaunchParamsV3(BaseModel):
+    article_id: str | None = None
+    context_sentence: str | None = None
+    deck_id: str | None = None
+    exercise_types: list[str] | None = None
+    item_id: str | None = None
+    item_ids: list[str] | None = None
+    item_type: str | None = None
+    lesson_id: str | None = None
+    scenario_id: str | None = None
+    source_session_id: str | None = None
+    source_session_mode: str | None = None
+    topic_list_id: str | None = None
+    video_id: str | None = None
 
 
 class RefreshTokenRequest(BaseModel):
@@ -5578,27 +5598,12 @@ class StudyListWithItems(BaseModel):
     items: list[StudyListItem]
 
 
-class SubmissionResult(BaseModel):
-    correct_answer: Any = Field(..., title="Correct Answer")
-    explanation: str | None = Field(None, title="Explanation")
-    is_correct: bool = Field(..., title="Is Correct")
-
-
 class SubmitAnswerRequest(BaseModel):
     exercise_id: str
     response_time_ms: int | None = None
     submission_id: str | None = None
     submitted_at_client: str | None = None
     user_answer: Any
-
-
-class SubmitAnswerResponseV3(BaseModel):
-    correct_answer: Any | None = None
-    explanation: str | None = None
-    is_correct: bool
-    next_item_index: int | None = None
-    score: int | None = None
-    xp_awarded: int | None = None
 
 
 class SubmitFeedbackRequest(BaseModel):
@@ -7354,6 +7359,24 @@ class NextStepRecommendation(BaseModel):
     type: Type = Field(..., title="Type")
 
 
+class NextStepRecommendationV3(BaseModel):
+    article_id: str | None = None
+    cta_id: str | None = None
+    cta_label: str | None = None
+    destination_mode: str | None = None
+    exercise_types: list[str] | None = None
+    intent: str | None = None
+    item_id: str | None = None
+    item_ids: list[str] | None = None
+    item_type: str | None = None
+    launch_params: RecommendationLaunchParamsV3 | None = None
+    rationale: str | None = None
+    session_mode: str | None = None
+    subtitle: str | None = None
+    title: str
+    type: str
+
+
 class NotificationJobListResponse(BaseModel):
     data: list[NotificationJob]
     meta: OffsetMeta
@@ -7586,25 +7609,6 @@ class SentenceConstructionExercise(BaseModel):
     validation_signature: str | None = Field(None, title="Validation Signature")
 
 
-class SessionReconcileItemResult(BaseModel):
-    exercise_id: UUID_aliased = Field(..., title="Exercise Id")
-    result: SubmissionResult | None = None
-    status: Status6 | None = Field("applied", title="Status")
-    submission_id: str | None = Field(None, title="Submission Id")
-
-
-class SessionReconcileItemResultV3(BaseModel):
-    exercise_id: str
-    result: SubmitAnswerResponseV3 | None = None
-    status: str
-    submission_id: str | None = None
-
-
-class SessionReconcileResponseV3(BaseModel):
-    results: list[SessionReconcileItemResultV3]
-    session: LearningSessionV3
-
-
 class SingletonAllFeatureLimitsResponse(BaseModel):
     data: AllFeatureLimitsResponse
 
@@ -7757,10 +7761,6 @@ class SingletonSemanticSearchResponse(BaseModel):
     data: SemanticSearchResponse
 
 
-class SingletonSessionReconcileResponseV3(BaseModel):
-    data: SessionReconcileResponseV3
-
-
 class SingletonSpeechTranscriptionResponse(BaseModel):
     data: SpeechTranscriptionResponse
 
@@ -7791,10 +7791,6 @@ class SingletonStudyListV3(BaseModel):
 
 class SingletonStudyListWithItems(BaseModel):
     data: StudyListWithItems
-
-
-class SingletonSubmitAnswerResponseV3(BaseModel):
-    data: SubmitAnswerResponseV3
 
 
 class SingletonSubscriptionInfo(BaseModel):
@@ -7976,6 +7972,25 @@ class SingletonWebIngestTargetList(BaseModel):
 class StatsChartResponse(BaseModel):
     data: list[TimeSeriesPoint]
     days: int
+
+
+class SubmissionResult(BaseModel):
+    correct_answer: Any = Field(..., title="Correct Answer")
+    explanation: str | None = Field(None, title="Explanation")
+    is_correct: bool = Field(..., title="Is Correct")
+    next_steps: list[NextStepRecommendation] | None = Field(None, title="Next Steps")
+    session_completed: bool | None = Field(False, title="Session Completed")
+
+
+class SubmitAnswerResponseV3(BaseModel):
+    correct_answer: Any | None = None
+    explanation: str | None = None
+    is_correct: bool
+    next_item_index: int | None = None
+    next_steps: list[NextStepRecommendationV3] | None = None
+    score: int | None = None
+    session_completed: bool
+    xp_awarded: int | None = None
 
 
 class TTSParagraphJobStatus(BaseModel):
@@ -8459,9 +8474,28 @@ class Paragraph(BaseModel):
     words: list[str] | None = None
 
 
+class SessionReconcileItemResult(BaseModel):
+    exercise_id: UUID_aliased = Field(..., title="Exercise Id")
+    result: SubmissionResult | None = None
+    status: Status6 | None = Field("applied", title="Status")
+    submission_id: str | None = Field(None, title="Submission Id")
+
+
+class SessionReconcileItemResultV3(BaseModel):
+    exercise_id: str
+    result: SubmitAnswerResponseV3 | None = None
+    status: str
+    submission_id: str | None = None
+
+
 class SessionReconcileResponse(BaseModel):
     results: list[SessionReconcileItemResult] | None = Field(None, title="Results")
     session: LearningSession
+
+
+class SessionReconcileResponseV3(BaseModel):
+    results: list[SessionReconcileItemResultV3]
+    session: LearningSessionV3
 
 
 class SingletonConceptHub(BaseModel):
@@ -8494,6 +8528,14 @@ class SingletonDictionaryLookupResponse(BaseModel):
 
 class SingletonLearningSession(BaseModel):
     data: LearningSession
+
+
+class SingletonSessionReconcileResponseV3(BaseModel):
+    data: SessionReconcileResponseV3
+
+
+class SingletonSubmitAnswerResponseV3(BaseModel):
+    data: SubmitAnswerResponseV3
 
 
 class SingletonTTSParagraphJobStatus(BaseModel):

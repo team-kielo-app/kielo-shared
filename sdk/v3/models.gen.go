@@ -321,6 +321,7 @@ const (
 	StartQuickCheck      NextStepRecommendationCtaId = "start_quick_check"
 	StartWordCluster     NextStepRecommendationCtaId = "start_word_cluster"
 	StudyCollection      NextStepRecommendationCtaId = "study_collection"
+	WatchVideo           NextStepRecommendationCtaId = "watch_video"
 )
 
 // Defines values for NextStepRecommendationIntent.
@@ -346,6 +347,7 @@ const (
 	NextStepRecommendationTypeConceptHub      NextStepRecommendationType = "concept_hub"
 	NextStepRecommendationTypeConversation    NextStepRecommendationType = "conversation"
 	NextStepRecommendationTypeCustomDeck      NextStepRecommendationType = "custom_deck"
+	NextStepRecommendationTypeKtvVideo        NextStepRecommendationType = "ktv_video"
 	NextStepRecommendationTypeMicroDrill      NextStepRecommendationType = "micro_drill"
 	NextStepRecommendationTypeRoadmapLesson   NextStepRecommendationType = "roadmap_lesson"
 	NextStepRecommendationTypeSavedCollection NextStepRecommendationType = "saved_collection"
@@ -5754,6 +5756,25 @@ type NextStepRecommendationItemType string
 // NextStepRecommendationType defines model for NextStepRecommendation.Type.
 type NextStepRecommendationType string
 
+// NextStepRecommendationV3 defines model for NextStepRecommendationV3.
+type NextStepRecommendationV3 struct {
+	ArticleId       *string                       `json:"article_id,omitempty"`
+	CtaId           *string                       `json:"cta_id,omitempty"`
+	CtaLabel        *string                       `json:"cta_label,omitempty"`
+	DestinationMode *string                       `json:"destination_mode,omitempty"`
+	ExerciseTypes   *[]string                     `json:"exercise_types,omitempty"`
+	Intent          *string                       `json:"intent,omitempty"`
+	ItemId          *string                       `json:"item_id,omitempty"`
+	ItemIds         *[]string                     `json:"item_ids,omitempty"`
+	ItemType        *string                       `json:"item_type,omitempty"`
+	LaunchParams    *RecommendationLaunchParamsV3 `json:"launch_params,omitempty"`
+	Rationale       *string                       `json:"rationale,omitempty"`
+	SessionMode     *string                       `json:"session_mode,omitempty"`
+	Subtitle        *string                       `json:"subtitle,omitempty"`
+	Title           string                        `json:"title"`
+	Type            string                        `json:"type"`
+}
+
 // NotificationDedupeClaimRequest defines model for NotificationDedupeClaimRequest.
 type NotificationDedupeClaimRequest struct {
 	ClaimId  uuid.UUID `json:"claim_id"`
@@ -6333,13 +6354,32 @@ type RecommendationLaunchParams struct {
 	ItemIds           *[]uuid.UUID                        `json:"item_ids,omitempty"`
 	ItemType          *RecommendationLaunchParamsItemType `json:"item_type"`
 	LessonId          *uuid.UUID                          `json:"lesson_id"`
+	ScenarioId        *string                             `json:"scenario_id"`
 	SourceSessionId   *uuid.UUID                          `json:"source_session_id"`
 	SourceSessionMode *string                             `json:"source_session_mode"`
 	TopicListId       *uuid.UUID                          `json:"topic_list_id"`
+	VideoId           *uuid.UUID                          `json:"video_id"`
 }
 
 // RecommendationLaunchParamsItemType defines model for RecommendationLaunchParams.ItemType.
 type RecommendationLaunchParamsItemType string
+
+// RecommendationLaunchParamsV3 defines model for RecommendationLaunchParamsV3.
+type RecommendationLaunchParamsV3 struct {
+	ArticleId         *string   `json:"article_id,omitempty"`
+	ContextSentence   *string   `json:"context_sentence,omitempty"`
+	DeckId            *string   `json:"deck_id,omitempty"`
+	ExerciseTypes     *[]string `json:"exercise_types,omitempty"`
+	ItemId            *string   `json:"item_id,omitempty"`
+	ItemIds           *[]string `json:"item_ids,omitempty"`
+	ItemType          *string   `json:"item_type,omitempty"`
+	LessonId          *string   `json:"lesson_id,omitempty"`
+	ScenarioId        *string   `json:"scenario_id,omitempty"`
+	SourceSessionId   *string   `json:"source_session_id,omitempty"`
+	SourceSessionMode *string   `json:"source_session_mode,omitempty"`
+	TopicListId       *string   `json:"topic_list_id,omitempty"`
+	VideoId           *string   `json:"video_id,omitempty"`
+}
 
 // RefreshTokenRequest defines model for RefreshTokenRequest.
 type RefreshTokenRequest struct {
@@ -9008,9 +9048,11 @@ type StudyListWithItems struct {
 
 // SubmissionResult defines model for SubmissionResult.
 type SubmissionResult struct {
-	CorrectAnswer interface{} `json:"correct_answer"`
-	Explanation   *string     `json:"explanation"`
-	IsCorrect     bool        `json:"is_correct"`
+	CorrectAnswer    interface{}               `json:"correct_answer"`
+	Explanation      *string                   `json:"explanation"`
+	IsCorrect        bool                      `json:"is_correct"`
+	NextSteps        *[]NextStepRecommendation `json:"next_steps,omitempty"`
+	SessionCompleted *bool                     `json:"session_completed,omitempty"`
 }
 
 // SubmitAnswerRequest defines model for SubmitAnswerRequest.
@@ -9024,12 +9066,14 @@ type SubmitAnswerRequest struct {
 
 // SubmitAnswerResponseV3 defines model for SubmitAnswerResponseV3.
 type SubmitAnswerResponseV3 struct {
-	CorrectAnswer *interface{} `json:"correct_answer,omitempty"`
-	Explanation   *string      `json:"explanation,omitempty"`
-	IsCorrect     bool         `json:"is_correct"`
-	NextItemIndex *int         `json:"next_item_index,omitempty"`
-	Score         *int         `json:"score,omitempty"`
-	XpAwarded     *int         `json:"xp_awarded,omitempty"`
+	CorrectAnswer    *interface{}                `json:"correct_answer,omitempty"`
+	Explanation      *string                     `json:"explanation,omitempty"`
+	IsCorrect        bool                        `json:"is_correct"`
+	NextItemIndex    *int                        `json:"next_item_index,omitempty"`
+	NextSteps        *[]NextStepRecommendationV3 `json:"next_steps,omitempty"`
+	Score            *int                        `json:"score,omitempty"`
+	SessionCompleted bool                        `json:"session_completed"`
+	XpAwarded        *int                        `json:"xp_awarded,omitempty"`
 }
 
 // SubmitFeedbackRequest defines model for SubmitFeedbackRequest.
