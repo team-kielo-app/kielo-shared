@@ -2497,6 +2497,24 @@ class IssueRow(BaseModel):
     suggested_action: str
 
 
+class ItemStanding(BaseModel):
+    confidence_score: confloat(ge=0.0, le=1.0) = Field(..., title="Confidence Score")
+    item_id: UUID_aliased = Field(..., title="Item Id")
+    item_type: ItemTypeFk = Field(..., title="Item Type")
+    mastery_score: confloat(ge=0.0, le=1.0) = Field(..., title="Mastery Score")
+    proficiency: confloat(ge=0.0, le=1.0) = Field(..., title="Proficiency")
+    transfer_ready: bool | None = Field(False, title="Transfer Ready")
+
+
+class ItemStandingV3(BaseModel):
+    confidence_score: float
+    item_id: str
+    item_type: str
+    mastery_score: float
+    proficiency: float
+    transfer_ready: bool
+
+
 class ItemSummary(BaseModel):
     base_word_id: UUID_aliased | None = Field(None, title="Base Word Id")
     cefr_level: str = Field(..., title="Cefr Level")
@@ -8025,6 +8043,7 @@ class SubmissionResult(BaseModel):
     correct_answer: Any = Field(..., title="Correct Answer")
     explanation: str | None = Field(None, title="Explanation")
     is_correct: bool = Field(..., title="Is Correct")
+    item_standings: list[ItemStanding] | None = Field(None, title="Item Standings")
     next_steps: list[NextStepRecommendation] | None = Field(None, title="Next Steps")
     session_completed: bool | None = Field(False, title="Session Completed")
 
@@ -8033,6 +8052,7 @@ class SubmitAnswerResponseV3(BaseModel):
     correct_answer: Any | None = None
     explanation: str | None = None
     is_correct: bool
+    item_standings: list[ItemStandingV3] | None = None
     next_item_index: int | None = None
     next_steps: list[NextStepRecommendationV3] | None = None
     score: int | None = None

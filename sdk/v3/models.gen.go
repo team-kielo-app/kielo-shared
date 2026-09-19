@@ -234,6 +234,12 @@ const (
 	IdentifyConceptExerciseSourceTypeRuleBased  IdentifyConceptExerciseSourceType = "rule_based"
 )
 
+// Defines values for ItemStandingItemType.
+const (
+	ItemStandingItemTypeBaseWord       ItemStandingItemType = "BaseWord"
+	ItemStandingItemTypeGrammarConcept ItemStandingItemType = "GrammarConcept"
+)
+
 // Defines values for ItemSummaryItemType.
 const (
 	ItemSummaryItemTypeBaseWord       ItemSummaryItemType = "BaseWord"
@@ -4410,6 +4416,33 @@ type IssueRow struct {
 	ResourceId      string      `json:"resource_id"`
 	Severity        string      `json:"severity"`
 	SuggestedAction string      `json:"suggested_action"`
+}
+
+// ItemStanding Where an item stands AFTER the round's answers were recorded. The
+// completion screen used to show only the standing the session was built
+// with, so a word read "Weak · 3/3 got it" — a contradiction the learner
+// could not resolve. Paired with the pre-round proficiency the client
+// already holds, this is the movement the round earned.
+type ItemStanding struct {
+	ConfidenceScore float32              `json:"confidence_score"`
+	ItemId          uuid.UUID            `json:"item_id"`
+	ItemType        ItemStandingItemType `json:"item_type"`
+	MasteryScore    float32              `json:"mastery_score"`
+	Proficiency     float32              `json:"proficiency"`
+	TransferReady   *bool                `json:"transfer_ready,omitempty"`
+}
+
+// ItemStandingItemType defines model for ItemStanding.ItemType.
+type ItemStandingItemType string
+
+// ItemStandingV3 defines model for ItemStandingV3.
+type ItemStandingV3 struct {
+	ConfidenceScore float32 `json:"confidence_score"`
+	ItemId          string  `json:"item_id"`
+	ItemType        string  `json:"item_type"`
+	MasteryScore    float32 `json:"mastery_score"`
+	Proficiency     float32 `json:"proficiency"`
+	TransferReady   bool    `json:"transfer_ready"`
 }
 
 // ItemSummary defines model for ItemSummary.
@@ -9097,6 +9130,7 @@ type SubmissionResult struct {
 	CorrectAnswer    interface{}               `json:"correct_answer"`
 	Explanation      *string                   `json:"explanation"`
 	IsCorrect        bool                      `json:"is_correct"`
+	ItemStandings    *[]ItemStanding           `json:"item_standings,omitempty"`
 	NextSteps        *[]NextStepRecommendation `json:"next_steps,omitempty"`
 	SessionCompleted *bool                     `json:"session_completed,omitempty"`
 }
@@ -9115,6 +9149,7 @@ type SubmitAnswerResponseV3 struct {
 	CorrectAnswer    *interface{}                `json:"correct_answer,omitempty"`
 	Explanation      *string                     `json:"explanation,omitempty"`
 	IsCorrect        bool                        `json:"is_correct"`
+	ItemStandings    *[]ItemStandingV3           `json:"item_standings,omitempty"`
 	NextItemIndex    *int                        `json:"next_item_index,omitempty"`
 	NextSteps        *[]NextStepRecommendationV3 `json:"next_steps,omitempty"`
 	Score            *int                        `json:"score,omitempty"`
