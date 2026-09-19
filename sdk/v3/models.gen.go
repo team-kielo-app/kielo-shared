@@ -355,6 +355,13 @@ const (
 	NextStepRecommendationTypeWordCluster     NextStepRecommendationType = "word_cluster"
 )
 
+// Defines values for NextStepsResponseSourceKind.
+const (
+	NextStepsResponseSourceKindArticle      NextStepsResponseSourceKind = "article"
+	NextStepsResponseSourceKindConversation NextStepsResponseSourceKind = "conversation"
+	NextStepsResponseSourceKindKtvVideo     NextStepsResponseSourceKind = "ktv_video"
+)
+
 // Defines values for PlaceholderExerciseItemTypeFk.
 const (
 	PlaceholderExerciseItemTypeFkBaseWord       PlaceholderExerciseItemTypeFk = "BaseWord"
@@ -648,6 +655,13 @@ const (
 const (
 	WordDeckItemCreateItemTypeBaseWord       WordDeckItemCreateItemType = "BaseWord"
 	WordDeckItemCreateItemTypeGrammarConcept WordDeckItemCreateItemType = "GrammarConcept"
+)
+
+// Defines values for GetSurfaceNextStepsKlearnApiV3NextStepsGetParamsSourceKind.
+const (
+	GetSurfaceNextStepsKlearnApiV3NextStepsGetParamsSourceKindArticle      GetSurfaceNextStepsKlearnApiV3NextStepsGetParamsSourceKind = "article"
+	GetSurfaceNextStepsKlearnApiV3NextStepsGetParamsSourceKindConversation GetSurfaceNextStepsKlearnApiV3NextStepsGetParamsSourceKind = "conversation"
+	GetSurfaceNextStepsKlearnApiV3NextStepsGetParamsSourceKindKtvVideo     GetSurfaceNextStepsKlearnApiV3NextStepsGetParamsSourceKind = "ktv_video"
 )
 
 // AIConversation defines model for AIConversation.
@@ -5775,6 +5789,24 @@ type NextStepRecommendationV3 struct {
 	Type            string                        `json:"type"`
 }
 
+// NextStepsResponse What next, after a surface: the plan for a learner who has just
+// finished a KieloTV video, an article or a conversation scenario.
+type NextStepsResponse struct {
+	NextSteps  *[]NextStepRecommendation   `json:"next_steps,omitempty"`
+	SourceId   string                      `json:"source_id"`
+	SourceKind NextStepsResponseSourceKind `json:"source_kind"`
+}
+
+// NextStepsResponseSourceKind defines model for NextStepsResponse.SourceKind.
+type NextStepsResponseSourceKind string
+
+// NextStepsResponseV3 defines model for NextStepsResponseV3.
+type NextStepsResponseV3 struct {
+	NextSteps  []NextStepRecommendationV3 `json:"next_steps"`
+	SourceId   string                     `json:"source_id"`
+	SourceKind string                     `json:"source_kind"`
+}
+
 // NotificationDedupeClaimRequest defines model for NotificationDedupeClaimRequest.
 type NotificationDedupeClaimRequest struct {
 	ClaimId  uuid.UUID `json:"claim_id"`
@@ -8308,6 +8340,11 @@ type SingletonNamespaceList struct {
 	Data []Namespace `json:"data"`
 }
 
+// SingletonNextStepsResponseV3 defines model for SingletonNextStepsResponseV3.
+type SingletonNextStepsResponseV3 struct {
+	Data NextStepsResponseV3 `json:"data"`
+}
+
 // SingletonNotificationDedupeClaimResponse defines model for SingletonNotificationDedupeClaimResponse.
 type SingletonNotificationDedupeClaimResponse struct {
 	Data NotificationDedupeClaimResponse `json:"data"`
@@ -8591,6 +8628,11 @@ type SingletonSubmitAnswerResponseV3 struct {
 // SingletonSubscriptionInfo defines model for SingletonSubscriptionInfo.
 type SingletonSubscriptionInfo struct {
 	Data SubscriptionInfo `json:"data"`
+}
+
+// SingletonSurfaceItemsResponse defines model for SingletonSurfaceItemsResponse.
+type SingletonSurfaceItemsResponse struct {
+	Data SurfaceItemsResponse `json:"data"`
 }
 
 // SingletonSurfacesResponse defines model for SingletonSurfacesResponse.
@@ -9124,6 +9166,23 @@ type SuggestedConceptHub struct {
 	Localization     *LocalizationStatus `json:"localization,omitempty"`
 	Reason           string              `json:"reason"`
 	Title            string              `json:"title"`
+}
+
+// SurfaceItem defines model for SurfaceItem.
+type SurfaceItem struct {
+	ItemId          uuid.UUID `json:"item_id"`
+	ItemType        string    `json:"item_type"`
+	OccurrenceCount int       `json:"occurrence_count"`
+	SnippetText     *string   `json:"snippet_text,omitempty"`
+	TokenPhrase     *string   `json:"token_phrase,omitempty"`
+}
+
+// SurfaceItemsResponse defines model for SurfaceItemsResponse.
+type SurfaceItemsResponse struct {
+	Items        []SurfaceItem `json:"items"`
+	LanguageCode string        `json:"language_code"`
+	SurfaceId    uuid.UUID     `json:"surface_id"`
+	SurfaceType  string        `json:"surface_type"`
 }
 
 // SurfaceReference defines model for SurfaceReference.
@@ -11529,6 +11588,18 @@ type GetApiV3MeLearningItemsParams struct {
 	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
 }
 
+// GetApiV3MeNextStepsParams defines parameters for GetApiV3MeNextSteps.
+type GetApiV3MeNextStepsParams struct {
+	// SourceKind article, ktv_video or conversation
+	SourceKind string `form:"source_kind" json:"source_kind"`
+
+	// SourceId Content entry id (article, video) or scenario id
+	SourceId string `form:"source_id" json:"source_id"`
+
+	// SupportLanguageCode Two-letter ISO 639-1 code for translated UI strings (per ADR-006 §3.83).
+	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
+}
+
 // GetApiV3MeNotificationsParams defines parameters for GetApiV3MeNotifications.
 type GetApiV3MeNotificationsParams struct {
 	// Cursor Opaque pagination cursor (legacy alias for next_page_key).
@@ -12183,6 +12254,15 @@ type GetInternalContentBridgeItemsItemIdSurfacesCountParams struct {
 	Caller *string `form:"caller,omitempty" json:"caller,omitempty"`
 }
 
+// GetInternalContentBridgeSurfacesSurfaceTypeSurfaceIdItemsParams defines parameters for GetInternalContentBridgeSurfacesSurfaceTypeSurfaceIdItems.
+type GetInternalContentBridgeSurfacesSurfaceTypeSurfaceIdItemsParams struct {
+	// LearningLanguageCode Learning language scope.
+	LearningLanguageCode string `form:"learning_language_code" json:"learning_language_code"`
+
+	// Limit Max items (default 12, max 60).
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
 // GetDataQualityIssuesInternalDataQualityIssuesGetParams defines parameters for GetDataQualityIssuesInternalDataQualityIssuesGet.
 type GetDataQualityIssuesInternalDataQualityIssuesGetParams struct {
 	// Domain Filter by domain. Trailing '.*' enables prefix match (e.g. 'dictionary.*').
@@ -12596,6 +12676,20 @@ type GetStudyContentKlearnApiV3DiscoveryStudyContentGetParams struct {
 type IngestBehavioralEventKlearnApiV3EventsBehavioralPostParams struct {
 	XUserID uuid.UUID `json:"X-User-ID"`
 }
+
+// GetSurfaceNextStepsKlearnApiV3NextStepsGetParams defines parameters for GetSurfaceNextStepsKlearnApiV3NextStepsGet.
+type GetSurfaceNextStepsKlearnApiV3NextStepsGetParams struct {
+	UserId uuid.UUID `form:"user_id" json:"user_id"`
+
+	// SourceKind The surface the learner just finished
+	SourceKind GetSurfaceNextStepsKlearnApiV3NextStepsGetParamsSourceKind `form:"source_kind" json:"source_kind"`
+
+	// SourceId Content entry id (article, video) or scenario id
+	SourceId string `form:"source_id" json:"source_id"`
+}
+
+// GetSurfaceNextStepsKlearnApiV3NextStepsGetParamsSourceKind defines parameters for GetSurfaceNextStepsKlearnApiV3NextStepsGet.
+type GetSurfaceNextStepsKlearnApiV3NextStepsGetParamsSourceKind string
 
 // GetPlacementItemsKlearnApiV3PlacementItemsGetParams defines parameters for GetPlacementItemsKlearnApiV3PlacementItemsGet.
 type GetPlacementItemsKlearnApiV3PlacementItemsGetParams struct {

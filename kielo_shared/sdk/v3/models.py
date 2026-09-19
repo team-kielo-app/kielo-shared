@@ -3539,6 +3539,12 @@ class Type(StrEnum):
     ktv_video = "ktv_video"
 
 
+class SourceKind(StrEnum):
+    article = "article"
+    ktv_video = "ktv_video"
+    conversation = "conversation"
+
+
 class NotificationDedupeClaimRequest(BaseModel):
     claim_id: UUID_aliased
     consumer: str
@@ -5663,6 +5669,21 @@ class SuggestedConceptHub(BaseModel):
     title: str
 
 
+class SurfaceItem(BaseModel):
+    item_id: UUID_aliased
+    item_type: str
+    occurrence_count: int
+    snippet_text: str | None = None
+    token_phrase: str | None = None
+
+
+class SurfaceItemsResponse(BaseModel):
+    items: list[SurfaceItem]
+    language_code: str
+    surface_id: UUID_aliased
+    surface_type: str
+
+
 class SurfaceReference(BaseModel):
     caption_index: int | None = None
     inflected_form_details_raw: str | None = None
@@ -7377,6 +7398,18 @@ class NextStepRecommendationV3(BaseModel):
     type: str
 
 
+class NextStepsResponse(BaseModel):
+    next_steps: list[NextStepRecommendation] | None = Field(None, title="Next Steps")
+    source_id: str = Field(..., title="Source Id")
+    source_kind: SourceKind = Field(..., title="Source Kind")
+
+
+class NextStepsResponseV3(BaseModel):
+    next_steps: list[NextStepRecommendationV3]
+    source_id: str
+    source_kind: str
+
+
 class NotificationJobListResponse(BaseModel):
     data: list[NotificationJob]
     meta: OffsetMeta
@@ -7737,6 +7770,10 @@ class SingletonMediaMetadata(BaseModel):
     data: MediaMetadata
 
 
+class SingletonNextStepsResponseV3(BaseModel):
+    data: NextStepsResponseV3
+
+
 class SingletonNotificationPreferences(BaseModel):
     data: NotificationPreferences
 
@@ -7795,6 +7832,10 @@ class SingletonStudyListWithItems(BaseModel):
 
 class SingletonSubscriptionInfo(BaseModel):
     data: SubscriptionInfo
+
+
+class SingletonSurfaceItemsResponse(BaseModel):
+    data: SurfaceItemsResponse
 
 
 class SingletonSurfacesResponse(BaseModel):
