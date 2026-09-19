@@ -1434,6 +1434,7 @@ class CreateExerciseDeckRequest(BaseModel):
     exercise_types: list[str] | None = None
     intent: str | None = None
     item_ids: list[str]
+    source_ref: str | None = None
 
 
 class CreateFeatureCommentRequest(BaseModel):

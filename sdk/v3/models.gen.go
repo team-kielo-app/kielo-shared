@@ -2796,6 +2796,7 @@ type CreateExerciseDeckRequest struct {
 	ExerciseTypes *[]string `json:"exercise_types,omitempty"`
 	Intent        *string   `json:"intent,omitempty"`
 	ItemIds       []string  `json:"item_ids"`
+	SourceRef     *string   `json:"source_ref,omitempty"`
 }
 
 // CreateFeatureCommentRequest defines model for CreateFeatureCommentRequest.
