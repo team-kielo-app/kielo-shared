@@ -2768,6 +2768,9 @@ type CreateCustomDeckRequest struct {
 
 	// ItemIds List of item IDs (BaseWord or GrammarConcept) to include in deck
 	ItemIds []uuid.UUID `json:"item_ids"`
+
+	// SourceRef Where the learner met these items, as kind:content_id[@version] (article, ktv_video, conversation). The completion plan will not send them straight back there. Malformed refs are ignored.
+	SourceRef *string `json:"source_ref"`
 }
 
 // CreateCustomDeckRequestExerciseTypes defines model for CreateCustomDeckRequest.ExerciseTypes.

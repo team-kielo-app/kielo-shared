@@ -1412,6 +1412,11 @@ class CreateCustomDeckRequest(BaseModel):
         min_length=1,
         title="Item Ids",
     )
+    source_ref: constr(max_length=256) | None = Field(
+        None,
+        description="Where the learner met these items, as kind:content_id[@version] (article, ktv_video, conversation). The completion plan will not send them straight back there. Malformed refs are ignored.",
+        title="Source Ref",
+    )
 
 
 class CreateDynamicTranslationRequest(BaseModel):
