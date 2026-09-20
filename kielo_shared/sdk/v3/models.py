@@ -1435,6 +1435,7 @@ class CreateExerciseDeckRequest(BaseModel):
     intent: str | None = None
     item_ids: list[str]
     source_ref: str | None = None
+    item_source_refs: dict[str, str] | None = None
 
 
 class CreateFeatureCommentRequest(BaseModel):

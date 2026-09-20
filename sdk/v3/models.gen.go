@@ -2799,10 +2799,11 @@ type CreateDynamicTranslationRequest struct {
 
 // CreateExerciseDeckRequest defines model for CreateExerciseDeckRequest.
 type CreateExerciseDeckRequest struct {
-	ExerciseTypes *[]string `json:"exercise_types,omitempty"`
-	Intent        *string   `json:"intent,omitempty"`
-	ItemIds       []string  `json:"item_ids"`
-	SourceRef     *string   `json:"source_ref,omitempty"`
+	ExerciseTypes  *[]string          `json:"exercise_types,omitempty"`
+	Intent         *string            `json:"intent,omitempty"`
+	ItemIds        []string           `json:"item_ids"`
+	ItemSourceRefs *map[string]string `json:"item_source_refs,omitempty"`
+	SourceRef      *string            `json:"source_ref,omitempty"`
 }
 
 // CreateFeatureCommentRequest defines model for CreateFeatureCommentRequest.
