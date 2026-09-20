@@ -3343,30 +3343,31 @@ type DataQualityRunsPage struct {
 
 // DecisionLog defines model for DecisionLog.
 type DecisionLog struct {
-	BreadthMode               *string                 `json:"breadth_mode,omitempty"`
-	BreadthReason             *string                 `json:"breadth_reason,omitempty"`
-	DepthBonus                *int                    `json:"depth_bonus,omitempty"`
-	ExercisesGenerated        *int                    `json:"exercises_generated,omitempty"`
-	ExercisesPlanned          *int                    `json:"exercises_planned,omitempty"`
-	ExercisesRejected         *int                    `json:"exercises_rejected,omitempty"`
-	ExercisesValidated        *int                    `json:"exercises_validated,omitempty"`
-	GenerationTimeMs          *int                    `json:"generation_time_ms,omitempty"`
-	ItemsDeduplicated         *int                    `json:"items_deduplicated,omitempty"`
-	ItemsFromContextual       *int                    `json:"items_from_contextual,omitempty"`
-	ItemsFromConversation     *int                    `json:"items_from_conversation,omitempty"`
-	ItemsFromErrorPatterns    *int                    `json:"items_from_error_patterns,omitempty"`
-	ItemsFromSavedItems       *int                    `json:"items_from_saved_items,omitempty"`
-	ItemsFromSpacedRepetition *int                    `json:"items_from_spaced_repetition,omitempty"`
-	ObjectivesConsidered      *int                    `json:"objectives_considered,omitempty"`
-	ObjectivesPlanned         *int                    `json:"objectives_planned,omitempty"`
-	ObjectivesSelected        *int                    `json:"objectives_selected,omitempty"`
-	PinnedItemCount           *int                    `json:"pinned_item_count,omitempty"`
-	ProfileSnapshot           *map[string]interface{} `json:"profile_snapshot,omitempty"`
-	RejectionReasons          *map[string]int         `json:"rejection_reasons,omitempty"`
-	SelectionReasons          *[]DecisionReason       `json:"selection_reasons,omitempty"`
-	SessionShape              *string                 `json:"session_shape,omitempty"`
-	ShapeReason               *string                 `json:"shape_reason,omitempty"`
-	TimingMs                  *map[string]int         `json:"timing_ms,omitempty"`
+	BreadthMode                      *string                 `json:"breadth_mode,omitempty"`
+	BreadthReason                    *string                 `json:"breadth_reason,omitempty"`
+	DepthBonus                       *int                    `json:"depth_bonus,omitempty"`
+	ExercisesGenerated               *int                    `json:"exercises_generated,omitempty"`
+	ExercisesPlanned                 *int                    `json:"exercises_planned,omitempty"`
+	ExercisesRejected                *int                    `json:"exercises_rejected,omitempty"`
+	ExercisesValidated               *int                    `json:"exercises_validated,omitempty"`
+	GenerationTimeMs                 *int                    `json:"generation_time_ms,omitempty"`
+	ItemsDeduplicated                *int                    `json:"items_deduplicated,omitempty"`
+	ItemsFromContextual              *int                    `json:"items_from_contextual,omitempty"`
+	ItemsFromConversation            *int                    `json:"items_from_conversation,omitempty"`
+	ItemsFromErrorPatterns           *int                    `json:"items_from_error_patterns,omitempty"`
+	ItemsFromSavedItems              *int                    `json:"items_from_saved_items,omitempty"`
+	ItemsFromSpacedRepetition        *int                    `json:"items_from_spaced_repetition,omitempty"`
+	ObjectivesConsidered             *int                    `json:"objectives_considered,omitempty"`
+	ObjectivesPlanned                *int                    `json:"objectives_planned,omitempty"`
+	ObjectivesSelected               *int                    `json:"objectives_selected,omitempty"`
+	ObjectivesSkippedUnresolvedSaved *int                    `json:"objectives_skipped_unresolved_saved,omitempty"`
+	PinnedItemCount                  *int                    `json:"pinned_item_count,omitempty"`
+	ProfileSnapshot                  *map[string]interface{} `json:"profile_snapshot,omitempty"`
+	RejectionReasons                 *map[string]int         `json:"rejection_reasons,omitempty"`
+	SelectionReasons                 *[]DecisionReason       `json:"selection_reasons,omitempty"`
+	SessionShape                     *string                 `json:"session_shape,omitempty"`
+	ShapeReason                      *string                 `json:"shape_reason,omitempty"`
+	TimingMs                         *map[string]int         `json:"timing_ms,omitempty"`
 }
 
 // DecisionReason defines model for DecisionReason.

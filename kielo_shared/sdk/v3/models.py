@@ -7097,6 +7097,9 @@ class DecisionLog(BaseModel):
     objectives_considered: int | None = Field(0, title="Objectives Considered")
     objectives_planned: int | None = Field(0, title="Objectives Planned")
     objectives_selected: int | None = Field(0, title="Objectives Selected")
+    objectives_skipped_unresolved_saved: int | None = Field(
+        0, title="Objectives Skipped Unresolved Saved"
+    )
     pinned_item_count: int | None = Field(0, title="Pinned Item Count")
     profile_snapshot: dict[str, Any] | None = Field(None, title="Profile Snapshot")
     rejection_reasons: dict[str, int] | None = Field(None, title="Rejection Reasons")
