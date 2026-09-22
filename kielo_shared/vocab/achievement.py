@@ -97,8 +97,11 @@ ACHIEVEMENT_CODE_CONCEPT_HUB_CREATOR: Final[AchievementCode] = "concept_hub_crea
 ACHIEVEMENT_CODE_FIRST_PAYING_USER: Final[AchievementCode] = "first_paying_user"
 
 # ----------------------------------------------------------------------
-# Percentile-rank achievements (3).
-# Awarded by batch leaderboard job — NOT emitted from engine's runtime path.
+# Percentile-rank achievements (3). RETIRED in V269 (is_active = FALSE).
+# The "batch leaderboard job" this comment used to promise was never
+# written — no ranking table, no API, no percentile evaluator — so these
+# were unearnable for their whole life. Codes kept so historical rows and
+# admin input still validate; nothing awards them.
 # ----------------------------------------------------------------------
 
 ACHIEVEMENT_CODE_TOP_10_PERCENT: Final[AchievementCode] = "top_10_percent"
@@ -106,10 +109,11 @@ ACHIEVEMENT_CODE_TOP_5_PERCENT: Final[AchievementCode] = "top_5_percent"
 ACHIEVEMENT_CODE_TOP_1_PERCENT: Final[AchievementCode] = "top_1_percent"
 
 # ----------------------------------------------------------------------
-# Leaderboard winner achievements (2).
-# Awarded by kielolearn-engine `achievement_service.py:process_leaderboard_winner`
-# pre-ZK-B at line 430 via `code = f"top_learner_{period}"`; post-ZK-B
-# via `code_for_leaderboard_period(period)` helper below.
+# Leaderboard winner achievements (2). RETIRED in V269 (is_active = FALSE).
+# This comment named `process_leaderboard_winner` as the awarder for months;
+# that method had zero callers and has now been deleted. A comment asserting
+# a guarantee is not a guarantee. Codes kept so historical rows and admin
+# input still validate; nothing awards them.
 # ----------------------------------------------------------------------
 
 ACHIEVEMENT_CODE_TOP_LEARNER_WEEKLY: Final[AchievementCode] = "top_learner_weekly"
