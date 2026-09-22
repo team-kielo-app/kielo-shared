@@ -39,6 +39,16 @@ class APIKeyCreateResult(BaseModel):
     raw_key: str
 
 
+class AchievementCatalogItemV3(BaseModel):
+    achievement_id: str
+    category: str | None = None
+    description: str | None = None
+    display_order: int
+    icon_name: str | None = None
+    name: str
+    points: int
+
+
 class AchievementDefinition(BaseModel):
     achievement_id: UUID_aliased
     category: str | None = None
@@ -1412,6 +1422,9 @@ class CreateCustomDeckRequest(BaseModel):
         min_length=1,
         title="Item Ids",
     )
+    item_source_refs: dict[str, str] | None = Field(
+        None, max_length=32, title="Item Source Refs"
+    )
     source_ref: constr(max_length=256) | None = Field(
         None,
         description="Where the learner met these items, as kind:content_id[@version] (article, ktv_video, conversation). The completion plan will not send them straight back there. Malformed refs are ignored.",
@@ -1434,8 +1447,8 @@ class CreateExerciseDeckRequest(BaseModel):
     exercise_types: list[str] | None = None
     intent: str | None = None
     item_ids: list[str]
-    source_ref: str | None = None
     item_source_refs: dict[str, str] | None = None
+    source_ref: str | None = None
 
 
 class CreateFeatureCommentRequest(BaseModel):
@@ -3068,6 +3081,7 @@ class LearningItemsCountsResponse(BaseModel):
     known_items: int
     learning_items: int
     oldest_due_at: str | None = None
+    review_preview_terms: list[str] | None = None
     saved_items: int
 
 
@@ -3080,6 +3094,7 @@ class LearningObjective(BaseModel):
     display_text: str | None = Field("", title="Display Text")
     error_pattern_tag: str | None = Field(None, title="Error Pattern Tag")
     exercise_sequence: list[str] | None = Field(None, title="Exercise Sequence")
+    focus_label: str | None = Field("", title="Focus Label")
     learning_language_code: str | None = Field("", title="Learning Language Code")
     objective_id: UUID_aliased | None = Field(None, title="Objective Id")
     objective_type: SectionType = Field(..., title="Objective Type")
@@ -3987,6 +4002,7 @@ class RecommendationCampaignRunNowResult(BaseModel):
 
 class RecommendationLaunchParams(BaseModel):
     article_id: UUID_aliased | None = Field(None, title="Article Id")
+    content_ref: str | None = Field(None, title="Content Ref")
     context_sentence: str | None = Field(None, title="Context Sentence")
     deck_id: str | None = Field(None, title="Deck Id")
     exercise_types: list[str] | None = Field(None, title="Exercise Types")
@@ -4003,6 +4019,7 @@ class RecommendationLaunchParams(BaseModel):
 
 class RecommendationLaunchParamsV3(BaseModel):
     article_id: str | None = None
+    content_ref: str | None = None
     context_sentence: str | None = None
     deck_id: str | None = None
     exercise_types: list[str] | None = None
@@ -7012,6 +7029,12 @@ class CurriculumTreeTrack(BaseModel):
     thumbnail_url: str | None = Field(None, title="Thumbnail Url")
     title: str = Field(..., title="Title")
     track_type: str = Field(..., title="Track Type")
+
+
+class CursorPageAchievementCatalogItemV3(BaseModel):
+    items: list[AchievementCatalogItemV3]
+    meta: CursorPageMeta | None = None
+    next_page_key: str | None = None
 
 
 class CursorPageAchievementV3(BaseModel):

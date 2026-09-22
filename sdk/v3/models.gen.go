@@ -701,6 +701,17 @@ type APIKeyCreateResult struct {
 	RawKey string `json:"raw_key"`
 }
 
+// AchievementCatalogItemV3 defines model for AchievementCatalogItemV3.
+type AchievementCatalogItemV3 struct {
+	AchievementId string  `json:"achievement_id"`
+	Category      *string `json:"category,omitempty"`
+	Description   *string `json:"description,omitempty"`
+	DisplayOrder  int     `json:"display_order"`
+	IconName      *string `json:"icon_name,omitempty"`
+	Name          string  `json:"name"`
+	Points        int     `json:"points"`
+}
+
 // AchievementDefinition defines model for AchievementDefinition.
 type AchievementDefinition struct {
 	AchievementId  uuid.UUID `json:"achievement_id"`
@@ -2773,7 +2784,8 @@ type CreateCustomDeckRequest struct {
 	Intent *CreateCustomDeckRequestIntent `json:"intent,omitempty"`
 
 	// ItemIds List of item IDs (BaseWord or GrammarConcept) to include in deck
-	ItemIds []uuid.UUID `json:"item_ids"`
+	ItemIds        []uuid.UUID        `json:"item_ids"`
+	ItemSourceRefs *map[string]string `json:"item_source_refs,omitempty"`
 
 	// SourceRef Where the learner met these items, as kind:content_id[@version] (article, ktv_video, conversation). The completion plan will not send them straight back there. Malformed refs are ignored.
 	SourceRef *string `json:"source_ref"`
@@ -3148,6 +3160,13 @@ type CurriculumTreeTrack struct {
 	ThumbnailUrl     *string                `json:"thumbnail_url"`
 	Title            string                 `json:"title"`
 	TrackType        string                 `json:"track_type"`
+}
+
+// CursorPageAchievementCatalogItemV3 defines model for CursorPageAchievementCatalogItemV3.
+type CursorPageAchievementCatalogItemV3 struct {
+	Items       []AchievementCatalogItemV3 `json:"items"`
+	Meta        *CursorPageMeta            `json:"meta,omitempty"`
+	NextPageKey *string                    `json:"next_page_key,omitempty"`
 }
 
 // CursorPageAchievementV3 defines model for CursorPageAchievementV3.
@@ -5212,30 +5231,32 @@ type LearningItemV3 struct {
 
 // LearningItemsCountsResponse defines model for LearningItemsCountsResponse.
 type LearningItemsCountsResponse struct {
-	AverageGrammarCefr    float32 `json:"average_grammar_cefr"`
-	AverageSavedCefr      float32 `json:"average_saved_cefr"`
-	AverageVocabularyCefr float32 `json:"average_vocabulary_cefr"`
-	BaseWords             int     `json:"base_words"`
-	DueItems              int     `json:"due_items"`
-	GrammarConcepts       int     `json:"grammar_concepts"`
-	KnownItems            int     `json:"known_items"`
-	LearningItems         int     `json:"learning_items"`
-	OldestDueAt           *string `json:"oldest_due_at,omitempty"`
-	SavedItems            int     `json:"saved_items"`
+	AverageGrammarCefr    float32   `json:"average_grammar_cefr"`
+	AverageSavedCefr      float32   `json:"average_saved_cefr"`
+	AverageVocabularyCefr float32   `json:"average_vocabulary_cefr"`
+	BaseWords             int       `json:"base_words"`
+	DueItems              int       `json:"due_items"`
+	GrammarConcepts       int       `json:"grammar_concepts"`
+	KnownItems            int       `json:"known_items"`
+	LearningItems         int       `json:"learning_items"`
+	OldestDueAt           *string   `json:"oldest_due_at,omitempty"`
+	ReviewPreviewTerms    *[]string `json:"review_preview_terms,omitempty"`
+	SavedItems            int       `json:"saved_items"`
 }
 
 // LearningItemsCountsResponseV3 defines model for LearningItemsCountsResponseV3.
 type LearningItemsCountsResponseV3 struct {
-	AverageGrammarCefr    float32 `json:"average_grammar_cefr"`
-	AverageSavedCefr      float32 `json:"average_saved_cefr"`
-	AverageVocabularyCefr float32 `json:"average_vocabulary_cefr"`
-	BaseWords             int     `json:"base_words"`
-	DueItems              int     `json:"due_items"`
-	GrammarConcepts       int     `json:"grammar_concepts"`
-	KnownItems            int     `json:"known_items"`
-	LearningItems         int     `json:"learning_items"`
-	OldestDueAt           *string `json:"oldest_due_at,omitempty"`
-	SavedItems            int     `json:"saved_items"`
+	AverageGrammarCefr    float32   `json:"average_grammar_cefr"`
+	AverageSavedCefr      float32   `json:"average_saved_cefr"`
+	AverageVocabularyCefr float32   `json:"average_vocabulary_cefr"`
+	BaseWords             int       `json:"base_words"`
+	DueItems              int       `json:"due_items"`
+	GrammarConcepts       int       `json:"grammar_concepts"`
+	KnownItems            int       `json:"known_items"`
+	LearningItems         int       `json:"learning_items"`
+	OldestDueAt           *string   `json:"oldest_due_at,omitempty"`
+	ReviewPreviewTerms    *[]string `json:"review_preview_terms,omitempty"`
+	SavedItems            int       `json:"saved_items"`
 }
 
 // LearningObjective A planned learning objective for a given item.
@@ -5244,6 +5265,7 @@ type LearningObjective struct {
 	DisplayText          *string                         `json:"display_text,omitempty"`
 	ErrorPatternTag      *string                         `json:"error_pattern_tag"`
 	ExerciseSequence     *[]string                       `json:"exercise_sequence,omitempty"`
+	FocusLabel           *string                         `json:"focus_label,omitempty"`
 	LearningLanguageCode *string                         `json:"learning_language_code,omitempty"`
 	ObjectiveId          *uuid.UUID                      `json:"objective_id,omitempty"`
 	ObjectiveType        LearningObjectiveObjectiveType  `json:"objective_type"`
@@ -6418,6 +6440,7 @@ type RecommendationCampaignRunNowResult struct {
 // RecommendationLaunchParams defines model for RecommendationLaunchParams.
 type RecommendationLaunchParams struct {
 	ArticleId         *uuid.UUID                          `json:"article_id"`
+	ContentRef        *string                             `json:"content_ref"`
 	ContextSentence   *string                             `json:"context_sentence"`
 	DeckId            *string                             `json:"deck_id"`
 	ExerciseTypes     *[]string                           `json:"exercise_types,omitempty"`
@@ -6438,6 +6461,7 @@ type RecommendationLaunchParamsItemType string
 // RecommendationLaunchParamsV3 defines model for RecommendationLaunchParamsV3.
 type RecommendationLaunchParamsV3 struct {
 	ArticleId         *string   `json:"article_id,omitempty"`
+	ContentRef        *string   `json:"content_ref,omitempty"`
 	ContextSentence   *string   `json:"context_sentence,omitempty"`
 	DeckId            *string   `json:"deck_id,omitempty"`
 	ExerciseTypes     *[]string `json:"exercise_types,omitempty"`
