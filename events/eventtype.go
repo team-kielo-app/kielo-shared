@@ -74,6 +74,7 @@ const (
 	EventStreakLost              EventType = "streak.lost"           // server-emitted
 	EventGoalDailyCompleted      EventType = "goal.daily_completed"  // server-emitted
 	EventFeatureLimitReached     EventType = "feature_limit.reached" // server-emitted
+	EventLevelChanged            EventType = "level.changed"         // server-emitted
 	EventRecommendationShown     EventType = "recommendation.shown"
 	EventRecommendationTapped    EventType = "recommendation.tapped"
 	EventRecommendationDismissed EventType = "recommendation.dismissed"
@@ -112,6 +113,7 @@ var AllEventTypes = []EventType{
 	EventStreakLost,
 	EventGoalDailyCompleted,
 	EventFeatureLimitReached,
+	EventLevelChanged,
 	EventRecommendationShown,
 	EventRecommendationTapped,
 	EventRecommendationDismissed,
