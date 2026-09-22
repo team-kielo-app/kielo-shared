@@ -106,6 +106,20 @@ type fallbackKey struct {
 
 const unknownCallsite = "unknown"
 
+// isSharedPlumbing reports whether a frame belongs to the search-path
+// machinery itself rather than to whoever called it.
+func isSharedPlumbing(fn string) bool {
+	for _, pkg := range []string{
+		"kielo-shared/observe/metrics",
+		"kielo-shared/db",
+	} {
+		if strings.Contains(fn, pkg+".") || strings.Contains(fn, pkg+"/") {
+			return true
+		}
+	}
+	return false
+}
+
 // callerOutsideThisPackage names the first frame above this package, so an
 // untagged fallback still says WHERE it came from. Returns "" rather than a
 // misleading guess if the stack cannot be walked.
@@ -118,12 +132,17 @@ func callerOutsideThisPackage() string {
 	frames := runtime.CallersFrames(pcs[:n])
 	for {
 		frame, more := frames.Next()
-		// Match on the package path with its trailing dot — a Go frame reads
-		// "<pkg path>.<Func>", so a bare prefix would also swallow sibling
-		// packages such as observe/metrics_test and db_test.
-		if frame.Function != "" &&
-			!strings.Contains(frame.Function, "kielo-shared/observe/metrics.") &&
-			!strings.Contains(frame.Function, "kielo-shared/db.") {
+		// Skip the plumbing, name the caller. Two shapes have to be excluded
+		// and they need different tests:
+		//
+		//   "<pkg path>.<Func>"      — the package itself, hence the dot.
+		//     A bare prefix would also swallow siblings like
+		//     observe/metrics_test and db_test.
+		//   "<pkg path>/<sub>.<Func>" — subpackages, hence the slash.
+		//     Missing this is how the first deploy of this reported
+		//     "kielo-shared/db/pgxsearchpath.Apply": true, and useless,
+		//     because that IS the layer doing the fallback.
+		if frame.Function != "" && !isSharedPlumbing(frame.Function) {
 			return fmt.Sprintf("%s (%s:%d)", frame.Function, path.Base(frame.File), frame.Line)
 		}
 		if !more {
@@ -209,3 +228,8 @@ func ResetPerLanguageSearchPathFallbackState() {
 	fallbackWarnMu.Unlock()
 	PerLanguageSearchPathFallbackTotal.Reset()
 }
+
+// IsSharedPlumbingForTest exposes the frame filter to the external test
+// package. TEST-ONLY: the walk itself cannot be driven from outside, because
+// every caller there is already above the packages being excluded.
+func IsSharedPlumbingForTest(fn string) bool { return isSharedPlumbing(fn) }

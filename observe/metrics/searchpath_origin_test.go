@@ -66,3 +66,29 @@ func TestTaggedFallbackOmitsOrigin(t *testing.T) {
 		t.Fatalf("a tagged callsite needs no origin, got %v", rec["origin"])
 	}
 }
+
+// The first deploy of the origin walk reported
+// "kielo-shared/db/pgxsearchpath.Apply" — technically the frame above this
+// package, and useless, because that IS the layer performing the fallback.
+// The exclusion has to cover SUBpackages (pkg + "/"), not just the package
+// itself (pkg + "."), while still letting sibling *_test packages through.
+func TestSharedPlumbingExclusionCoversSubpackages(t *testing.T) {
+	for _, tc := range []struct {
+		fn       string
+		plumbing bool
+	}{
+		{"github.com/team-kielo-app/kielo-shared/db/pgxsearchpath.Apply", true},
+		{"github.com/team-kielo-app/kielo-shared/db.AcquireForLanguage", true},
+		{"github.com/team-kielo-app/kielo-shared/observe/metrics.Emit", true},
+		// Callers we must NOT hide: the services themselves, and the
+		// external test packages that verify this behaviour.
+		{"kielo.app/user-service/internal/repository.IncrementFeatureUsage", false},
+		{"github.com/team-kielo-app/kielo-shared/observe/metrics_test.TestX", false},
+		{"github.com/team-kielo-app/kielo-shared/db_test.TestY", false},
+		{"github.com/team-kielo-app/kielo-shared/events.Emit", false},
+	} {
+		if got := IsSharedPlumbingForTest(tc.fn); got != tc.plumbing {
+			t.Errorf("isSharedPlumbing(%q) = %v, want %v", tc.fn, got, tc.plumbing)
+		}
+	}
+}
