@@ -79,8 +79,10 @@ const (
 	EventRecommendationTapped    EventType = "recommendation.tapped"
 	EventRecommendationDismissed EventType = "recommendation.dismissed"
 
-	// Diagnostics (ADR-011 D1.7). Client-emitted: a render crash or an
-	// unhandled rejection has no server-side moment to hook.
+	// Diagnostics (ADR-011 D1.7). NOT a member of AllEventTypes: client
+	// errors live on the telemetry plane (events.client_errors, V270), not
+	// on the user-action spine. The constant is kept because both the
+	// spine's value validator and kielo-events' telemetry handler name it.
 	EventClientError EventType = "client.error"
 )
 
@@ -122,6 +124,6 @@ var AllEventTypes = []EventType{
 	EventRecommendationTapped,
 	EventRecommendationDismissed,
 
-	// D1.7 diagnostics
-	EventClientError,
+	// client.error is deliberately absent — see the constant above. It is
+	// not publishable to the spine, and a producer that tries gets a 422.
 }
