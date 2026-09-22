@@ -1,7 +1,11 @@
 package metrics
 
 import (
+	"fmt"
 	"log/slog"
+	"path"
+	"runtime"
+	"strings"
 	"sync"
 	"sync/atomic"
 
@@ -100,6 +104,34 @@ type fallbackKey struct {
 	callsite string
 }
 
+const unknownCallsite = "unknown"
+
+// callerOutsideThisPackage names the first frame above this package, so an
+// untagged fallback still says WHERE it came from. Returns "" rather than a
+// misleading guess if the stack cannot be walked.
+func callerOutsideThisPackage() string {
+	pcs := make([]uintptr, 12)
+	n := runtime.Callers(2, pcs)
+	if n == 0 {
+		return ""
+	}
+	frames := runtime.CallersFrames(pcs[:n])
+	for {
+		frame, more := frames.Next()
+		// Match on the package path with its trailing dot — a Go frame reads
+		// "<pkg path>.<Func>", so a bare prefix would also swallow sibling
+		// packages such as observe/metrics_test and db_test.
+		if frame.Function != "" &&
+			!strings.Contains(frame.Function, "kielo-shared/observe/metrics.") &&
+			!strings.Contains(frame.Function, "kielo-shared/db.") {
+			return fmt.Sprintf("%s (%s:%d)", frame.Function, path.Base(frame.File), frame.Line)
+		}
+		if !more {
+			return ""
+		}
+	}
+}
+
 // PerLanguageSearchPathFallbackEmit records one search_path fallback
 // event. Mirrors the Python-side `per_language_search_path_fallback_emit`:
 //
@@ -119,7 +151,7 @@ type fallbackKey struct {
 func PerLanguageSearchPathFallbackEmit(callsite string, expectedFallback bool) {
 	service := ServiceName()
 	if callsite == "" {
-		callsite = "unknown"
+		callsite = unknownCallsite
 	}
 	if expectedFallback {
 		slog.Debug(
@@ -137,12 +169,23 @@ func PerLanguageSearchPathFallbackEmit(callsite string, expectedFallback bool) {
 		}
 		fallbackWarnMu.Unlock()
 		if !seen {
+			// A caller that never tagged itself arrives as "unknown", which is
+			// exactly the case where the warning is least actionable: prod
+			// 2026-09-22 fired twice on kielo-user-service with callsite
+			// "unknown" and nothing to chase. The WARN is once per
+			// (service, callsite) per process, so resolving a few frames here
+			// is paid at most once and turns the alert into a location.
+			attrs := []any{"service", service, "callsite", callsite}
+			if callsite == unknownCallsite {
+				if origin := callerOutsideThisPackage(); origin != "" {
+					attrs = append(attrs, "origin", origin)
+				}
+			}
 			slog.Warn(
 				"per_language_search_path_fallback: no active language on context; "+
 					"using connection-level search_path. Request-path callers should "+
 					"always have a language scoped by middleware.",
-				"service", service,
-				"callsite", callsite,
+				attrs...,
 			)
 		} else {
 			slog.Debug(
