@@ -156,6 +156,7 @@ async def prefetch_overrides_for_locale(
             )
             rows = result.fetchall()
     except Exception:
+        # silent-degrade-allow: an empty override map means 'no admin overrides', which is the documented default — the static seed still applies.
         logger.exception(
             "Override prefetch failed for locale=%s; falling through to seeds",
             locale,

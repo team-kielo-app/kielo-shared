@@ -74,9 +74,16 @@ const (
 	EventStreakLost              EventType = "streak.lost"           // server-emitted
 	EventGoalDailyCompleted      EventType = "goal.daily_completed"  // server-emitted
 	EventFeatureLimitReached     EventType = "feature_limit.reached" // server-emitted
+	EventLevelChanged            EventType = "level.changed"         // server-emitted
 	EventRecommendationShown     EventType = "recommendation.shown"
 	EventRecommendationTapped    EventType = "recommendation.tapped"
 	EventRecommendationDismissed EventType = "recommendation.dismissed"
+
+	// Diagnostics (ADR-011 D1.7). NOT a member of AllEventTypes: client
+	// errors live on the telemetry plane (events.client_errors, V270), not
+	// on the user-action spine. The constant is kept because both the
+	// spine's value validator and kielo-events' telemetry handler name it.
+	EventClientError EventType = "client.error"
 )
 
 // AllEventTypes is the closed set producers can publish. Used by the
@@ -112,7 +119,11 @@ var AllEventTypes = []EventType{
 	EventStreakLost,
 	EventGoalDailyCompleted,
 	EventFeatureLimitReached,
+	EventLevelChanged,
 	EventRecommendationShown,
 	EventRecommendationTapped,
 	EventRecommendationDismissed,
+
+	// client.error is deliberately absent — see the constant above. It is
+	// not publishable to the spine, and a producer that tries gets a 422.
 }

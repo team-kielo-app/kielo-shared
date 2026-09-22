@@ -89,9 +89,13 @@ _CONTEXT_RULE = (
 
 _PLAIN_PROMPT = (
     "Translate English educational content into natural {lang} for "
-    "language learners. Preserve any embedded non-English tokens "
-    "(learning-language words, inflected forms, quoted examples, "
-    "and grammar markers like case suffixes) exactly as written. "
+    "language learners. "
+    "Preserve embedded learning-language material exactly as written: "
+    "learning-language words, inflected forms, quoted learning-language "
+    "examples, and grammar markers like case suffixes. Quoted or "
+    "parenthesised English — glosses and translations such as "
+    "'I have a holiday' or (to have) — is English content: translate it "
+    "into {lang} like the rest and keep the quotes. "
     + _TITLE_RULE
     + " Do not add commentary."
 )
@@ -124,9 +128,12 @@ _BATCH_SYSTEM = (
     "You will receive a JSON array of items to translate from {source_lang} "
     "to {target_lang}. Each item has an 'id', a 'role' (plain | gloss | "
     "html), and 'text'. Apply the role-specific translation rules:\n"
-    "- plain: natural prose; preserve any embedded non-{source_lang} "
-    "tokens (learning-language words, inflected forms, quoted examples, "
-    "grammar markers like case suffixes) exactly. " + _TITLE_RULE + " "
+    "- plain: natural prose; preserve embedded learning-language material "
+    "exactly (learning-language words, inflected forms, quoted "
+    "learning-language examples, grammar markers like case suffixes). "
+    "Quoted or parenthesised {source_lang} — glosses and translations — is "
+    "{source_lang} content: translate it into {target_lang} and keep the "
+    "quotes. " + _TITLE_RULE + " "
     "No commentary.\n"
     "- gloss: short glossary; output ONLY {target_lang}. Do not output "
     "{source_lang} or any other language. Preserve slashes, semicolons, "

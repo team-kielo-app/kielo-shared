@@ -39,6 +39,16 @@ class APIKeyCreateResult(BaseModel):
     raw_key: str
 
 
+class AchievementCatalogItemV3(BaseModel):
+    achievement_id: str
+    category: str | None = None
+    description: str | None = None
+    display_order: int
+    icon_name: str | None = None
+    name: str
+    points: int
+
+
 class AchievementDefinition(BaseModel):
     achievement_id: UUID_aliased
     category: str | None = None
@@ -1034,6 +1044,22 @@ class ContentEntrySummary(BaseModel):
     updated_by: UUID_aliased | None = None
 
 
+class Kind(StrEnum):
+    roadmap_lesson = "roadmap_lesson"
+    ktv_video = "ktv_video"
+    article = "article"
+    conversation = "conversation"
+    concept_hub = "concept_hub"
+    word_cluster = "word_cluster"
+
+
+class ContentRef(BaseModel):
+    content_id: str = Field(..., title="Content Id")
+    kind: Kind = Field(..., title="Kind")
+    locator: str | None = Field(None, title="Locator")
+    version_id: str | None = Field(None, title="Version Id")
+
+
 class ContentVersionStatusResponse(AppFeedbackUpdateStatusRequest):
     pass
 
@@ -1396,6 +1422,14 @@ class CreateCustomDeckRequest(BaseModel):
         min_length=1,
         title="Item Ids",
     )
+    item_source_refs: dict[str, str] | None = Field(
+        None, max_length=32, title="Item Source Refs"
+    )
+    source_ref: constr(max_length=256) | None = Field(
+        None,
+        description="Where the learner met these items, as kind:content_id[@version] (article, ktv_video, conversation). The completion plan will not send them straight back there. Malformed refs are ignored.",
+        title="Source Ref",
+    )
 
 
 class CreateDynamicTranslationRequest(BaseModel):
@@ -1413,6 +1447,8 @@ class CreateExerciseDeckRequest(BaseModel):
     exercise_types: list[str] | None = None
     intent: str | None = None
     item_ids: list[str]
+    item_source_refs: dict[str, str] | None = None
+    source_ref: str | None = None
 
 
 class CreateFeatureCommentRequest(BaseModel):
@@ -1803,6 +1839,7 @@ class DictionaryExample(ConceptHubExample):
 class DictionaryInflection(BaseModel):
     case: str | None = None
     comparison: str | None = None
+    definiteness: str | None = None
     form: str
     label_short: str | None = None
     mood: str | None = None
@@ -1934,6 +1971,18 @@ class ExerciseDeckTeaser(BaseModel):
     exercise_count: int = Field(..., title="Exercise Count")
     theme_thumbnail: str | None = Field(None, title="Theme Thumbnail")
     title: str = Field(..., title="Title")
+
+
+class RepairScope(StrEnum):
+    none = "none"
+    explanation = "explanation"
+    full = "full"
+
+
+class ExerciseGenerationProvenance(BaseModel):
+    initial_model: str = Field(..., title="Initial Model")
+    repair_model: str | None = Field(None, title="Repair Model")
+    repair_scope: RepairScope | None = Field("none", title="Repair Scope")
 
 
 class Status2(StrEnum):
@@ -2142,6 +2191,7 @@ class FetchDynamicTranslationsResponse(BaseModel):
 
 class FillInTheBlankExercise(BaseModel):
     cache_entry_id: str | None = Field(None, title="Cache Entry Id")
+    content_ref: ContentRef | None = None
     context_hint: str | None = Field(
         None,
         description="A specific concept or hint for the exercise, e.g., 'inessive case'.",
@@ -2158,11 +2208,13 @@ class FillInTheBlankExercise(BaseModel):
     exercise_type: Literal["fill_in_the_blank"] = Field(
         "fill_in_the_blank", title="Exercise Type"
     )
+    explanation: str | None = Field(None, title="Explanation")
     generation_job_id: UUID_aliased | None = Field(None, title="Generation Job Id")
     generation_model: str | None = Field(None, title="Generation Model")
+    generation_provenance: ExerciseGenerationProvenance | None = None
     is_placeholder: bool | None = Field(False, title="Is Placeholder")
-    item_id_fk: UUID_aliased = Field(..., title="Item Id Fk")
-    item_type_fk: ItemTypeFk = Field(..., title="Item Type Fk")
+    item_id_fk: UUID_aliased | None = Field(..., title="Item Id Fk")
+    item_type_fk: ItemTypeFk | None = Field(..., title="Item Type Fk")
     objective_id: UUID_aliased | None = Field(None, title="Objective Id")
     options: list[str] | None = Field(None, title="Options")
     prompt: str = Field(..., title="Prompt")
@@ -2188,6 +2240,7 @@ class FlashcardExercise(BaseModel):
         title="Answer Is Support Text",
     )
     cache_entry_id: str | None = Field(None, title="Cache Entry Id")
+    content_ref: ContentRef | None = None
     context_hint: str | None = Field(
         None,
         description="A specific concept or hint for the exercise, e.g., 'inessive case'.",
@@ -2206,6 +2259,7 @@ class FlashcardExercise(BaseModel):
         title="Exercise Id",
     )
     exercise_type: Literal["flashcard"] = Field("flashcard", title="Exercise Type")
+    explanation: str | None = Field(None, title="Explanation")
     explanation_html: str | None = Field(
         None,
         description="Optional secondary teaching content rendered below the answer block when present.",
@@ -2213,9 +2267,10 @@ class FlashcardExercise(BaseModel):
     )
     generation_job_id: UUID_aliased | None = Field(None, title="Generation Job Id")
     generation_model: str | None = Field(None, title="Generation Model")
+    generation_provenance: ExerciseGenerationProvenance | None = None
     is_placeholder: bool | None = Field(False, title="Is Placeholder")
-    item_id_fk: UUID_aliased = Field(..., title="Item Id Fk")
-    item_type_fk: ItemTypeFk = Field(..., title="Item Type Fk")
+    item_id_fk: UUID_aliased | None = Field(..., title="Item Id Fk")
+    item_type_fk: ItemTypeFk | None = Field(..., title="Item Type Fk")
     objective_id: UUID_aliased | None = Field(None, title="Objective Id")
     prompt: str = Field(..., title="Prompt")
     prompt_version: str | None = Field(None, title="Prompt Version")
@@ -2350,6 +2405,7 @@ class Status3(StrEnum):
 
 class IdentifyConceptExercise(BaseModel):
     cache_entry_id: str | None = Field(None, title="Cache Entry Id")
+    content_ref: ContentRef | None = None
     context_hint: str | None = Field(
         None,
         description="A specific concept or hint for the exercise, e.g., 'inessive case'.",
@@ -2370,11 +2426,13 @@ class IdentifyConceptExercise(BaseModel):
     exercise_type: Literal["identify_the_concept"] = Field(
         "identify_the_concept", title="Exercise Type"
     )
+    explanation: str | None = Field(None, title="Explanation")
     generation_job_id: UUID_aliased | None = Field(None, title="Generation Job Id")
     generation_model: str | None = Field(None, title="Generation Model")
+    generation_provenance: ExerciseGenerationProvenance | None = None
     is_placeholder: bool | None = Field(False, title="Is Placeholder")
-    item_id_fk: UUID_aliased = Field(..., title="Item Id Fk")
-    item_type_fk: ItemTypeFk = Field(..., title="Item Type Fk")
+    item_id_fk: UUID_aliased | None = Field(..., title="Item Id Fk")
+    item_type_fk: ItemTypeFk | None = Field(..., title="Item Type Fk")
     objective_id: UUID_aliased | None = Field(None, title="Objective Id")
     options: list[dict[str, str]] = Field(
         ...,
@@ -2413,8 +2471,16 @@ class InAppNudgeStateTransition(BaseModel):
     )
 
 
-class Inflection(DictionaryInflection):
-    pass
+class Inflection(BaseModel):
+    case: str | None = None
+    comparison: str | None = None
+    form: str
+    label_short: str | None = None
+    mood: str | None = None
+    number: str | None = None
+    person: str | None = None
+    tense: str | None = None
+    voice: str | None = None
 
 
 class IngestResponse(BaseModel):
@@ -2443,6 +2509,24 @@ class IssueRow(BaseModel):
     resource_id: str
     severity: str
     suggested_action: str
+
+
+class ItemStanding(BaseModel):
+    confidence_score: confloat(ge=0.0, le=1.0) = Field(..., title="Confidence Score")
+    item_id: UUID_aliased = Field(..., title="Item Id")
+    item_type: ItemTypeFk = Field(..., title="Item Type")
+    mastery_score: confloat(ge=0.0, le=1.0) = Field(..., title="Mastery Score")
+    proficiency: confloat(ge=0.0, le=1.0) = Field(..., title="Proficiency")
+    transfer_ready: bool | None = Field(False, title="Transfer Ready")
+
+
+class ItemStandingV3(BaseModel):
+    confidence_score: float
+    item_id: str
+    item_type: str
+    mastery_score: float
+    proficiency: float
+    transfer_ready: bool
 
 
 class ItemSummary(BaseModel):
@@ -2997,6 +3081,7 @@ class LearningItemsCountsResponse(BaseModel):
     known_items: int
     learning_items: int
     oldest_due_at: str | None = None
+    review_preview_terms: list[str] | None = None
     saved_items: int
 
 
@@ -3009,6 +3094,7 @@ class LearningObjective(BaseModel):
     display_text: str | None = Field("", title="Display Text")
     error_pattern_tag: str | None = Field(None, title="Error Pattern Tag")
     exercise_sequence: list[str] | None = Field(None, title="Exercise Sequence")
+    focus_label: str | None = Field("", title="Focus Label")
     learning_language_code: str | None = Field("", title="Learning Language Code")
     objective_id: UUID_aliased | None = Field(None, title="Objective Id")
     objective_type: SectionType = Field(..., title="Objective Type")
@@ -3112,6 +3198,7 @@ class ListVideoItem(BaseModel):
     audio_url: str | None = None
     brand_id: UUID_aliased
     carousel_images: list[str] | None = None
+    cefr_level: str | None = None
     created_at: AwareDatetime
     description: str
     description_translation_fallback: bool | None = None
@@ -3141,6 +3228,7 @@ class ListeningComprehensionExercise(BaseModel):
     audio_text: str | None = Field("", title="Audio Text")
     audio_url: str | None = Field(None, title="Audio Url")
     cache_entry_id: str | None = Field(None, title="Cache Entry Id")
+    content_ref: ContentRef | None = None
     context_hint: str | None = Field(
         None,
         description="A specific concept or hint for the exercise, e.g., 'inessive case'.",
@@ -3161,11 +3249,13 @@ class ListeningComprehensionExercise(BaseModel):
     exercise_type: Literal["listening_comprehension"] = Field(
         "listening_comprehension", title="Exercise Type"
     )
+    explanation: str | None = Field(None, title="Explanation")
     generation_job_id: UUID_aliased | None = Field(None, title="Generation Job Id")
     generation_model: str | None = Field(None, title="Generation Model")
+    generation_provenance: ExerciseGenerationProvenance | None = None
     is_placeholder: bool | None = Field(False, title="Is Placeholder")
-    item_id_fk: UUID_aliased = Field(..., title="Item Id Fk")
-    item_type_fk: ItemTypeFk = Field(..., title="Item Type Fk")
+    item_id_fk: UUID_aliased | None = Field(..., title="Item Id Fk")
+    item_type_fk: ItemTypeFk | None = Field(..., title="Item Type Fk")
     objective_id: UUID_aliased | None = Field(None, title="Objective Id")
     options: list[dict[str, str]] = Field(
         ...,
@@ -3343,6 +3433,7 @@ class MicroDrill(BaseModel):
 
 
 class Mindmap(BaseModel):
+    content_entry_id: UUID_aliased | None = None
     content_version_id: UUID_aliased | None = None
     created_at: AwareDatetime
     graph: Any
@@ -3369,6 +3460,7 @@ class Morphology(BaseModel):
 
 class MultipleChoiceTranslationExercise(BaseModel):
     cache_entry_id: str | None = Field(None, title="Cache Entry Id")
+    content_ref: ContentRef | None = None
     context_hint: str | None = Field(
         None,
         description="A specific concept or hint for the exercise, e.g., 'inessive case'.",
@@ -3389,11 +3481,13 @@ class MultipleChoiceTranslationExercise(BaseModel):
     exercise_type: Literal["multiple_choice_translation"] = Field(
         "multiple_choice_translation", title="Exercise Type"
     )
+    explanation: str | None = Field(None, title="Explanation")
     generation_job_id: UUID_aliased | None = Field(None, title="Generation Job Id")
     generation_model: str | None = Field(None, title="Generation Model")
+    generation_provenance: ExerciseGenerationProvenance | None = None
     is_placeholder: bool | None = Field(False, title="Is Placeholder")
-    item_id_fk: UUID_aliased = Field(..., title="Item Id Fk")
-    item_type_fk: ItemTypeFk = Field(..., title="Item Type Fk")
+    item_id_fk: UUID_aliased | None = Field(..., title="Item Id Fk")
+    item_type_fk: ItemTypeFk | None = Field(..., title="Item Type Fk")
     objective_id: UUID_aliased | None = Field(None, title="Objective Id")
     options: list[dict[str, str]] = Field(
         ...,
@@ -3459,6 +3553,7 @@ class CtaId(StrEnum):
     open_topic = "open_topic"
     start_conversation = "start_conversation"
     study_collection = "study_collection"
+    watch_video = "watch_video"
 
 
 class Intent1(StrEnum):
@@ -3481,6 +3576,13 @@ class Type(StrEnum):
     topic = "topic"
     conversation = "conversation"
     saved_collection = "saved_collection"
+    ktv_video = "ktv_video"
+
+
+class SourceKind(StrEnum):
+    article = "article"
+    ktv_video = "ktv_video"
+    conversation = "conversation"
 
 
 class NotificationDedupeClaimRequest(BaseModel):
@@ -3598,6 +3700,7 @@ class OmorfiForm(BaseModel):
 class OmorfiInflection(BaseModel):
     case: str | None = Field(None, title="Case")
     comparison: str | None = Field(None, title="Comparison")
+    definiteness: str | None = Field(None, title="Definiteness")
     form: str = Field(..., title="Form")
     mood: str | None = Field(None, title="Mood")
     number: str | None = Field(None, title="Number")
@@ -3692,6 +3795,7 @@ class PhraseFrame(BaseModel):
 
 class PlaceholderExercise(BaseModel):
     cache_entry_id: str | None = Field(None, title="Cache Entry Id")
+    content_ref: ContentRef | None = None
     context_hint: str | None = Field(
         None,
         description="A specific concept or hint for the exercise, e.g., 'inessive case'.",
@@ -3705,12 +3809,19 @@ class PlaceholderExercise(BaseModel):
         title="Exercise Id",
     )
     exercise_type: Literal["pending"] = Field("pending", title="Exercise Type")
+    explanation: str | None = Field(None, title="Explanation")
     generation_job_id: UUID_aliased | None = Field(None, title="Generation Job Id")
     generation_model: str | None = Field(None, title="Generation Model")
+    generation_provenance: ExerciseGenerationProvenance | None = None
     is_placeholder: bool | None = Field(True, title="Is Placeholder")
-    item_id_fk: UUID_aliased = Field(..., title="Item Id Fk")
-    item_type_fk: ItemTypeFk = Field(..., title="Item Type Fk")
+    item_id_fk: UUID_aliased | None = Field(..., title="Item Id Fk")
+    item_type_fk: ItemTypeFk | None = Field(..., title="Item Type Fk")
     objective_id: UUID_aliased | None = Field(None, title="Objective Id")
+    planned_exercise_type: str | None = Field(
+        None,
+        description="Planned task type for progress display; this placeholder remains ungradable.",
+        title="Planned Exercise Type",
+    )
     prompt: str | None = Field("", title="Prompt")
     prompt_version: str | None = Field(None, title="Prompt Version")
     quality_score: float | None = Field(None, title="Quality Score")
@@ -3749,6 +3860,20 @@ class PlacementTestItem(BaseModel):
 class PlacementTestItemsResponse(BaseModel):
     grammar_items: list[ItemSummary] = Field(..., title="Grammar Items")
     vocabulary_items: list[ItemSummary] = Field(..., title="Vocabulary Items")
+
+
+class PracticeContext(BaseModel):
+    entry_id: UUID_aliased
+    excerpt: str
+    item_id: UUID_aliased
+    kind: str
+    learning_language_code: str
+    locator: str
+    occurrence_id: UUID_aliased | None = None
+    proof: str
+    target_form: str
+    title: str
+    version_id: UUID_aliased
 
 
 class UserSetCefrLevel(StrEnum):
@@ -3877,6 +4002,7 @@ class RecommendationCampaignRunNowResult(BaseModel):
 
 class RecommendationLaunchParams(BaseModel):
     article_id: UUID_aliased | None = Field(None, title="Article Id")
+    content_ref: str | None = Field(None, title="Content Ref")
     context_sentence: str | None = Field(None, title="Context Sentence")
     deck_id: str | None = Field(None, title="Deck Id")
     exercise_types: list[str] | None = Field(None, title="Exercise Types")
@@ -3884,9 +4010,28 @@ class RecommendationLaunchParams(BaseModel):
     item_ids: list[UUID_aliased] | None = Field(None, title="Item Ids")
     item_type: ItemTypeFk | None = Field(None, title="Item Type")
     lesson_id: UUID_aliased | None = Field(None, title="Lesson Id")
+    scenario_id: str | None = Field(None, title="Scenario Id")
     source_session_id: UUID_aliased | None = Field(None, title="Source Session Id")
     source_session_mode: str | None = Field(None, title="Source Session Mode")
     topic_list_id: UUID_aliased | None = Field(None, title="Topic List Id")
+    video_id: UUID_aliased | None = Field(None, title="Video Id")
+
+
+class RecommendationLaunchParamsV3(BaseModel):
+    article_id: str | None = None
+    content_ref: str | None = None
+    context_sentence: str | None = None
+    deck_id: str | None = None
+    exercise_types: list[str] | None = None
+    item_id: str | None = None
+    item_ids: list[str] | None = None
+    item_type: str | None = None
+    lesson_id: str | None = None
+    scenario_id: str | None = None
+    source_session_id: str | None = None
+    source_session_mode: str | None = None
+    topic_list_id: str | None = None
+    video_id: str | None = None
 
 
 class RefreshTokenRequest(BaseModel):
@@ -4360,6 +4505,7 @@ class SavedItemsDashboardResponseV3(SavedItemsDashboardResponse):
 class Scenario(BaseModel):
     ambient_audio_url: str | None = None
     category: str | None = None
+    category_label: str | None = None
     cefr_level: str | None = None
     created_at: AwareDatetime
     created_by: UUID_aliased | None = None
@@ -4392,6 +4538,7 @@ class Scenario(BaseModel):
 
 class ScenarioChoiceExercise(BaseModel):
     cache_entry_id: str | None = Field(None, title="Cache Entry Id")
+    content_ref: ContentRef | None = None
     context_hint: str | None = Field(
         None,
         description="A specific concept or hint for the exercise, e.g., 'inessive case'.",
@@ -4408,11 +4555,13 @@ class ScenarioChoiceExercise(BaseModel):
     exercise_type: Literal["scenario_choice"] = Field(
         "scenario_choice", title="Exercise Type"
     )
+    explanation: str | None = Field(None, title="Explanation")
     generation_job_id: UUID_aliased | None = Field(None, title="Generation Job Id")
     generation_model: str | None = Field(None, title="Generation Model")
+    generation_provenance: ExerciseGenerationProvenance | None = None
     is_placeholder: bool | None = Field(False, title="Is Placeholder")
-    item_id_fk: UUID_aliased = Field(..., title="Item Id Fk")
-    item_type_fk: ItemTypeFk = Field(..., title="Item Type Fk")
+    item_id_fk: UUID_aliased | None = Field(..., title="Item Id Fk")
+    item_type_fk: ItemTypeFk | None = Field(..., title="Item Type Fk")
     objective_id: UUID_aliased | None = Field(None, title="Objective Id")
     phrase_options: list[str] = Field(..., title="Phrase Options")
     prompt: str = Field(..., title="Prompt")
@@ -4429,6 +4578,7 @@ class ScenarioChoiceExercise(BaseModel):
 class ScenarioListItem(BaseModel):
     agent_avatar_url: str | None = None
     category: str | None = None
+    category_label: str | None = None
     cefr_level: str | None = None
     description: str | None = None
     difficulty: str | None = None
@@ -5380,6 +5530,7 @@ class SpellingChallengeExercise(BaseModel):
     audio_text: str | None = Field("", title="Audio Text")
     audio_url: str | None = Field(None, title="Audio Url")
     cache_entry_id: str | None = Field(None, title="Cache Entry Id")
+    content_ref: ContentRef | None = None
     context_hint: str | None = Field(
         None,
         description="A specific concept or hint for the exercise, e.g., 'inessive case'.",
@@ -5396,12 +5547,14 @@ class SpellingChallengeExercise(BaseModel):
     exercise_type: Literal["spelling_challenge"] = Field(
         "spelling_challenge", title="Exercise Type"
     )
+    explanation: str | None = Field(None, title="Explanation")
     generation_job_id: UUID_aliased | None = Field(None, title="Generation Job Id")
     generation_model: str | None = Field(None, title="Generation Model")
+    generation_provenance: ExerciseGenerationProvenance | None = None
     hint: str | None = Field("", title="Hint")
     is_placeholder: bool | None = Field(False, title="Is Placeholder")
-    item_id_fk: UUID_aliased = Field(..., title="Item Id Fk")
-    item_type_fk: ItemTypeFk = Field(..., title="Item Type Fk")
+    item_id_fk: UUID_aliased | None = Field(..., title="Item Id Fk")
+    item_type_fk: ItemTypeFk | None = Field(..., title="Item Type Fk")
     objective_id: UUID_aliased | None = Field(None, title="Objective Id")
     prompt: str = Field(..., title="Prompt")
     prompt_version: str | None = Field(None, title="Prompt Version")
@@ -5493,27 +5646,12 @@ class StudyListWithItems(BaseModel):
     items: list[StudyListItem]
 
 
-class SubmissionResult(BaseModel):
-    correct_answer: Any = Field(..., title="Correct Answer")
-    explanation: str | None = Field(None, title="Explanation")
-    is_correct: bool = Field(..., title="Is Correct")
-
-
 class SubmitAnswerRequest(BaseModel):
     exercise_id: str
     response_time_ms: int | None = None
     submission_id: str | None = None
     submitted_at_client: str | None = None
     user_answer: Any
-
-
-class SubmitAnswerResponseV3(BaseModel):
-    correct_answer: Any | None = None
-    explanation: str | None = None
-    is_correct: bool
-    next_item_index: int | None = None
-    score: int | None = None
-    xp_awarded: int | None = None
 
 
 class SubmitFeedbackRequest(BaseModel):
@@ -5571,6 +5709,21 @@ class SuggestedConceptHub(BaseModel):
     localization: LocalizationStatus | None = None
     reason: str
     title: str
+
+
+class SurfaceItem(BaseModel):
+    item_id: UUID_aliased
+    item_type: str
+    occurrence_count: int
+    snippet_text: str | None = None
+    token_phrase: str | None = None
+
+
+class SurfaceItemsResponse(BaseModel):
+    items: list[SurfaceItem]
+    language_code: str
+    surface_id: UUID_aliased
+    surface_type: str
 
 
 class SurfaceReference(BaseModel):
@@ -6713,6 +6866,7 @@ class ContentDiscoveryResponse(BaseModel):
 
 class ContextMatchingExercise(BaseModel):
     cache_entry_id: str | None = Field(None, title="Cache Entry Id")
+    content_ref: ContentRef | None = None
     context_hint: str | None = Field(
         None,
         description="A specific concept or hint for the exercise, e.g., 'inessive case'.",
@@ -6733,11 +6887,13 @@ class ContextMatchingExercise(BaseModel):
     exercise_type: Literal["context_matching"] = Field(
         "context_matching", title="Exercise Type"
     )
+    explanation: str | None = Field(None, title="Explanation")
     generation_job_id: UUID_aliased | None = Field(None, title="Generation Job Id")
     generation_model: str | None = Field(None, title="Generation Model")
+    generation_provenance: ExerciseGenerationProvenance | None = None
     is_placeholder: bool | None = Field(False, title="Is Placeholder")
-    item_id_fk: UUID_aliased = Field(..., title="Item Id Fk")
-    item_type_fk: ItemTypeFk = Field(..., title="Item Type Fk")
+    item_id_fk: UUID_aliased | None = Field(..., title="Item Id Fk")
+    item_type_fk: ItemTypeFk | None = Field(..., title="Item Type Fk")
     objective_id: UUID_aliased | None = Field(None, title="Objective Id")
     options: list[dict[str, str]] = Field(
         ...,
@@ -6875,6 +7031,12 @@ class CurriculumTreeTrack(BaseModel):
     track_type: str = Field(..., title="Track Type")
 
 
+class CursorPageAchievementCatalogItemV3(BaseModel):
+    items: list[AchievementCatalogItemV3]
+    meta: CursorPageMeta | None = None
+    next_page_key: str | None = None
+
+
 class CursorPageAchievementV3(BaseModel):
     items: list[AchievementV3]
     meta: CursorPageMeta | None = None
@@ -6959,6 +7121,9 @@ class DecisionLog(BaseModel):
     objectives_considered: int | None = Field(0, title="Objectives Considered")
     objectives_planned: int | None = Field(0, title="Objectives Planned")
     objectives_selected: int | None = Field(0, title="Objectives Selected")
+    objectives_skipped_unresolved_saved: int | None = Field(
+        0, title="Objectives Skipped Unresolved Saved"
+    )
     pinned_item_count: int | None = Field(0, title="Pinned Item Count")
     profile_snapshot: dict[str, Any] | None = Field(None, title="Profile Snapshot")
     rejection_reasons: dict[str, int] | None = Field(None, title="Rejection Reasons")
@@ -7266,6 +7431,36 @@ class NextStepRecommendation(BaseModel):
     type: Type = Field(..., title="Type")
 
 
+class NextStepRecommendationV3(BaseModel):
+    article_id: str | None = None
+    cta_id: str | None = None
+    cta_label: str | None = None
+    destination_mode: str | None = None
+    exercise_types: list[str] | None = None
+    intent: str | None = None
+    item_id: str | None = None
+    item_ids: list[str] | None = None
+    item_type: str | None = None
+    launch_params: RecommendationLaunchParamsV3 | None = None
+    rationale: str | None = None
+    session_mode: str | None = None
+    subtitle: str | None = None
+    title: str
+    type: str
+
+
+class NextStepsResponse(BaseModel):
+    next_steps: list[NextStepRecommendation] | None = Field(None, title="Next Steps")
+    source_id: str = Field(..., title="Source Id")
+    source_kind: SourceKind = Field(..., title="Source Kind")
+
+
+class NextStepsResponseV3(BaseModel):
+    next_steps: list[NextStepRecommendationV3]
+    source_id: str
+    source_kind: str
+
+
 class NotificationJobListResponse(BaseModel):
     data: list[NotificationJob]
     meta: OffsetMeta
@@ -7279,14 +7474,17 @@ class NotificationPreferences(BaseModel):
 class OmorfiAnalysisCandidate(BaseModel):
     base_form: str = Field(..., title="Base Form")
     inflection: OmorfiInflection | None = None
+    source: str | None = Field(None, title="Source")
     upos: str | None = Field(None, title="Upos")
     weight: float | None = Field(None, title="Weight")
     word_class: str = Field(..., title="Word Class")
 
 
 class OmorfiAnalysisResponse(BaseModel):
+    analysis_source: str | None = Field(None, title="Analysis Source")
     base_form: str = Field(..., title="Base Form")
     candidates: list[OmorfiAnalysisCandidate] | None = Field(None, title="Candidates")
+    confidence: float | None = Field(None, title="Confidence")
     inflections: list[OmorfiInflection] | None = Field(None, title="Inflections")
     is_valid_word: bool = Field(..., title="Is Valid Word")
     suggestions: list[str] | None = Field(None, title="Suggestions")
@@ -7456,7 +7654,9 @@ class SemanticSearchResponse(BaseModel):
 
 
 class SentenceConstructionExercise(BaseModel):
+    accepted_answers: list[str] | None = Field(None, title="Accepted Answers")
     cache_entry_id: str | None = Field(None, title="Cache Entry Id")
+    content_ref: ContentRef | None = None
     context_hint: str | None = Field(
         None,
         description="A specific concept or hint for the exercise, e.g., 'inessive case'.",
@@ -7473,11 +7673,13 @@ class SentenceConstructionExercise(BaseModel):
     exercise_type: Literal["sentence_construction"] = Field(
         "sentence_construction", title="Exercise Type"
     )
+    explanation: str | None = Field(None, title="Explanation")
     generation_job_id: UUID_aliased | None = Field(None, title="Generation Job Id")
     generation_model: str | None = Field(None, title="Generation Model")
+    generation_provenance: ExerciseGenerationProvenance | None = None
     is_placeholder: bool | None = Field(False, title="Is Placeholder")
-    item_id_fk: UUID_aliased = Field(..., title="Item Id Fk")
-    item_type_fk: ItemTypeFk = Field(..., title="Item Type Fk")
+    item_id_fk: UUID_aliased | None = Field(..., title="Item Id Fk")
+    item_type_fk: ItemTypeFk | None = Field(..., title="Item Type Fk")
     objective_id: UUID_aliased | None = Field(None, title="Objective Id")
     prompt: str = Field(..., title="Prompt")
     prompt_version: str | None = Field(None, title="Prompt Version")
@@ -7489,25 +7691,6 @@ class SentenceConstructionExercise(BaseModel):
     state: ExerciseState | None = None
     translation_prompt: str | None = Field(None, title="Translation Prompt")
     validation_signature: str | None = Field(None, title="Validation Signature")
-
-
-class SessionReconcileItemResult(BaseModel):
-    exercise_id: UUID_aliased = Field(..., title="Exercise Id")
-    result: SubmissionResult | None = None
-    status: Status6 | None = Field("applied", title="Status")
-    submission_id: str | None = Field(None, title="Submission Id")
-
-
-class SessionReconcileItemResultV3(BaseModel):
-    exercise_id: str
-    result: SubmitAnswerResponseV3 | None = None
-    status: str
-    submission_id: str | None = None
-
-
-class SessionReconcileResponseV3(BaseModel):
-    results: list[SessionReconcileItemResultV3]
-    session: LearningSessionV3
 
 
 class SingletonAllFeatureLimitsResponse(BaseModel):
@@ -7638,6 +7821,10 @@ class SingletonMediaMetadata(BaseModel):
     data: MediaMetadata
 
 
+class SingletonNextStepsResponseV3(BaseModel):
+    data: NextStepsResponseV3
+
+
 class SingletonNotificationPreferences(BaseModel):
     data: NotificationPreferences
 
@@ -7660,10 +7847,6 @@ class SingletonSearchResponse(BaseModel):
 
 class SingletonSemanticSearchResponse(BaseModel):
     data: SemanticSearchResponse
-
-
-class SingletonSessionReconcileResponseV3(BaseModel):
-    data: SessionReconcileResponseV3
 
 
 class SingletonSpeechTranscriptionResponse(BaseModel):
@@ -7698,12 +7881,12 @@ class SingletonStudyListWithItems(BaseModel):
     data: StudyListWithItems
 
 
-class SingletonSubmitAnswerResponseV3(BaseModel):
-    data: SubmitAnswerResponseV3
-
-
 class SingletonSubscriptionInfo(BaseModel):
     data: SubscriptionInfo
+
+
+class SingletonSurfaceItemsResponse(BaseModel):
+    data: SurfaceItemsResponse
 
 
 class SingletonSurfacesResponse(BaseModel):
@@ -7881,6 +8064,27 @@ class SingletonWebIngestTargetList(BaseModel):
 class StatsChartResponse(BaseModel):
     data: list[TimeSeriesPoint]
     days: int
+
+
+class SubmissionResult(BaseModel):
+    correct_answer: Any = Field(..., title="Correct Answer")
+    explanation: str | None = Field(None, title="Explanation")
+    is_correct: bool = Field(..., title="Is Correct")
+    item_standings: list[ItemStanding] | None = Field(None, title="Item Standings")
+    next_steps: list[NextStepRecommendation] | None = Field(None, title="Next Steps")
+    session_completed: bool | None = Field(False, title="Session Completed")
+
+
+class SubmitAnswerResponseV3(BaseModel):
+    correct_answer: Any | None = None
+    explanation: str | None = None
+    is_correct: bool
+    item_standings: list[ItemStandingV3] | None = None
+    next_item_index: int | None = None
+    next_steps: list[NextStepRecommendationV3] | None = None
+    score: int | None = None
+    session_completed: bool
+    xp_awarded: int | None = None
 
 
 class TTSParagraphJobStatus(BaseModel):
@@ -8364,9 +8568,28 @@ class Paragraph(BaseModel):
     words: list[str] | None = None
 
 
+class SessionReconcileItemResult(BaseModel):
+    exercise_id: UUID_aliased = Field(..., title="Exercise Id")
+    result: SubmissionResult | None = None
+    status: Status6 | None = Field("applied", title="Status")
+    submission_id: str | None = Field(None, title="Submission Id")
+
+
+class SessionReconcileItemResultV3(BaseModel):
+    exercise_id: str
+    result: SubmitAnswerResponseV3 | None = None
+    status: str
+    submission_id: str | None = None
+
+
 class SessionReconcileResponse(BaseModel):
     results: list[SessionReconcileItemResult] | None = Field(None, title="Results")
     session: LearningSession
+
+
+class SessionReconcileResponseV3(BaseModel):
+    results: list[SessionReconcileItemResultV3]
+    session: LearningSessionV3
 
 
 class SingletonConceptHub(BaseModel):
@@ -8399,6 +8622,14 @@ class SingletonDictionaryLookupResponse(BaseModel):
 
 class SingletonLearningSession(BaseModel):
     data: LearningSession
+
+
+class SingletonSessionReconcileResponseV3(BaseModel):
+    data: SessionReconcileResponseV3
+
+
+class SingletonSubmitAnswerResponseV3(BaseModel):
+    data: SubmitAnswerResponseV3
 
 
 class SingletonTTSParagraphJobStatus(BaseModel):
@@ -8452,6 +8683,7 @@ class ArticleParagraph(Paragraph):
 class ArticleVersion(BaseModel):
     article_type: str | None = None
     brand: Brand
+    content_entry_id: UUID_aliased
     content_locale: str | None = None
     contextual_learning_opportunities: (
         list[KLearnContextualLearningOpportunity] | None

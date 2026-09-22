@@ -33,3 +33,18 @@ def test_provider_id_left_the_pre_rule_tag() -> None:
     provider = op.OpenAIProvider(text_generator=_gen)
     assert "@phase-b" not in provider.provider_id
     assert provider.provider_id.endswith("@phase-c")
+
+
+def test_plain_rule_translates_quoted_english_glosses():
+    """On device (2026-09-14) Vietnamese lesson feedback kept English glosses such
+    as 'I have a holiday' because the rule read as "preserve quoted examples".
+    Only learning-language material is preserved; quoted English is translated."""
+    for prompt in (
+        op._PLAIN_PROMPT.format(lang="Vietnamese"),
+        op._BATCH_SYSTEM.format(source_lang="English", target_lang="Vietnamese"),
+    ):
+        assert "quoted learning-language examples" in prompt
+        assert "quoted examples" not in prompt.replace(
+            "quoted learning-language examples", ""
+        )
+        assert "translate it into" in prompt

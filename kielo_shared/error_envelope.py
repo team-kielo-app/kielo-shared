@@ -88,8 +88,22 @@ async def _validation_exception_handler(
 
 async def _unhandled_exception_handler(
     request: Request,
-    _exc: Exception,
+    exc: Exception,
 ) -> JSONResponse:
+    # Two records, not one. Cloud Logging splits a long traceback across
+    # entries and the line that names the exception is routinely the part
+    # that does not survive (2026-09-18: five engine 500s whose cause could
+    # not be read back). The first record is short, single-line and
+    # grep/metric-friendly; the traceback follows as its own record.
+    trace = current_trace_context()
+    logger.error(
+        "UNHANDLED_EXCEPTION type=%s route=%s method=%s trace_id=%s detail=%s",
+        type(exc).__name__,
+        request.url.path,
+        request.method,
+        trace.trace_id if trace is not None else "",
+        str(exc).replace("\n", " ")[:300],
+    )
     logger.exception("Unhandled exception in %s %s", request.method, request.url.path)
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
