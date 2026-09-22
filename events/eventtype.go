@@ -78,6 +78,10 @@ const (
 	EventRecommendationShown     EventType = "recommendation.shown"
 	EventRecommendationTapped    EventType = "recommendation.tapped"
 	EventRecommendationDismissed EventType = "recommendation.dismissed"
+
+	// Diagnostics (ADR-011 D1.7). Client-emitted: a render crash or an
+	// unhandled rejection has no server-side moment to hook.
+	EventClientError EventType = "client.error"
 )
 
 // AllEventTypes is the closed set producers can publish. Used by the
@@ -117,4 +121,7 @@ var AllEventTypes = []EventType{
 	EventRecommendationShown,
 	EventRecommendationTapped,
 	EventRecommendationDismissed,
+
+	// D1.7 diagnostics
+	EventClientError,
 }
