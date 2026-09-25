@@ -81,7 +81,7 @@ func TestSharedPlumbingExclusionCoversSubpackages(t *testing.T) {
 		{"github.com/team-kielo-app/kielo-shared/db.AcquireForLanguage", true},
 		{"github.com/team-kielo-app/kielo-shared/observe/metrics.Emit", true},
 		// Callers we must NOT hide: the services themselves, and the
-		// external test packages that verify this behaviour.
+		// external test packages that verify this behavior.
 		{"kielo.app/user-service/internal/repository.IncrementFeatureUsage", false},
 		{"github.com/team-kielo-app/kielo-shared/observe/metrics_test.TestX", false},
 		{"github.com/team-kielo-app/kielo-shared/db_test.TestY", false},

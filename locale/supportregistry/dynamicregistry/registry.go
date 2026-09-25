@@ -442,8 +442,16 @@ func (r *Registry) cacheKeyFor(resourceID, sourceVersion, locale string) string 
 	return r.keyPrefx + resourceID + ":" + sourceVersion + ":" + locale
 }
 
-// dbLookupQuery is identical in shape to overridepgx.Store.Lookup —
-// see that package for the rationale on status filter + ordering.
+// dbLookupQuery is the registry's durable read path, so it serves what
+// the autotranslate-on-miss hook writes: status='machine'. It mirrors the
+// Python read path (support_locale_overrides._PREFETCH_QUERY) and this
+// file's own coverage probe, not overridepgx.Store.Lookup — that store is
+// the seam's "admin edit beats the cache" layer, where machine rows are
+// already served from the cache. Excluding 'machine' here meant no
+// autotranslated ui.string was ever served by a Go registry: every read
+// missed, cached a negative, re-queued the autotranslate and returned
+// English (vi Progress showed "practice" beside a stored "luyện tập";
+// 7,078 machine rows locally, none reachable).
 const dbLookupQuery = `
 	SELECT translated_text
 	  FROM localization.dynamic_translations
@@ -451,8 +459,8 @@ const dbLookupQuery = `
 	   AND resource_id     = $2
 	   AND source_version  = $3
 	   AND language_code   = $4
-	   AND status         IN ('override', 'approved')
-	 ORDER BY CASE status WHEN 'override' THEN 0 ELSE 1 END
+	   AND status         IN ('machine', 'override', 'approved')
+	 ORDER BY CASE status WHEN 'override' THEN 0 WHEN 'approved' THEN 1 ELSE 2 END
 	 LIMIT 1
 `
 

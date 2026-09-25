@@ -48,3 +48,15 @@ def test_plain_rule_translates_quoted_english_glosses():
             "quoted learning-language examples", ""
         )
         assert "translate it into" in prompt
+
+
+def test_every_role_addresses_the_learner_informally():
+    """One German session mixed "Wählen Sie" and "Höre dir an" card to card;
+    the app's own German copy says "du" throughout (audit 2026-09-25)."""
+    for prompt in (
+        op._PLAIN_PROMPT.format(lang="German"),
+        op._HTML_PROMPT.format(lang="German"),
+        op._BATCH_SYSTEM.format(source_lang="English", target_lang="German"),
+    ):
+        assert "informal second person" in prompt
+        assert "{lang}" not in prompt

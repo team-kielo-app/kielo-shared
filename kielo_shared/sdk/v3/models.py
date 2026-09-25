@@ -6152,6 +6152,19 @@ class UpdateNamespaceRequest(CreateNamespaceRequest):
     pass
 
 
+class LearningReason(StrEnum):
+    living_here = "living_here"
+    work = "work"
+    healthcare_work = "healthcare_work"
+    study = "study"
+    partner_family = "partner_family"
+    citizenship = "citizenship"
+    travel = "travel"
+    heritage = "heritage"
+    curiosity = "curiosity"
+    other = "other"
+
+
 class UpdateProfileRequest(BaseModel):
     avatar_media_id: str | None = None
     estimated_skill_level: str | None = None
@@ -6160,6 +6173,22 @@ class UpdateProfileRequest(BaseModel):
     learning_minutes_goal: int | None = None
     name: str | None = None
     newsletter_consent: bool | None = None
+    country_code: constr(pattern=r"^[A-Za-z]{2}$") | None = Field(
+        None,
+        description="Where the learner is from (ISO 3166-1 alpha-2). Not the device region. Any case accepted; stored uppercase.",
+    )
+    learning_reason: LearningReason | None = Field(
+        None,
+        description="Why the learner is studying the language. Routes the onboarding track recommendation.",
+    )
+    onboarding_variant: constr(max_length=64) | None = Field(
+        None,
+        description="PostHog flag value for the onboarding flow the learner went through.",
+    )
+    onboarding_completed: bool | None = Field(
+        None,
+        description="true stamps onboarding_completed_at once. false is ignored; a second true never moves the timestamp.",
+    )
 
 
 class UpdateProgressRequest(BaseModel):
@@ -6354,6 +6383,13 @@ class UserProfile(BaseModel):
     support_language_source: SupportLanguageSource | None = Field(
         None,
         description="Sweep VVV: write-source classifier for users.users.support_language_code. 8 canonical values.",
+    )
+    country_code: str | None = Field(None, description="ISO 3166-1 alpha-2, uppercase.")
+    learning_reason: LearningReason | None = None
+    onboarding_variant: str | None = None
+    onboarding_completed_at: AwareDatetime | None = Field(
+        None,
+        description="When setup finished. Sent as null when the account still owes setup, and always present on servers that know the field, so an absent key means an older server. (Plain string, not a [string, null] type array: the Go SDK generator cannot resolve type arrays.)",
     )
 
 
