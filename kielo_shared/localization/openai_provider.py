@@ -87,6 +87,15 @@ _CONTEXT_RULE = (
     "Return only the translation of text, not a translation of the context."
 )
 
+# The app speaks to the learner informally (German copy says "du" 263 times
+# and "Sie" never; French "tu", Spanish "tú"). Unsteered, one German session
+# mixed "Wählen Sie" and "Höre dir an" card to card (audit 2026-09-25).
+_ADDRESS_RULE = (
+    "Address the learner in the informal second person singular wherever "
+    "{lang} distinguishes it (German du, French tu, Spanish tú, Swedish du), "
+    "the same way on every item."
+)
+
 _PLAIN_PROMPT = (
     "Translate English educational content into natural {lang} for "
     "language learners. "
@@ -97,6 +106,8 @@ _PLAIN_PROMPT = (
     "'I have a holiday' or (to have) — is English content: translate it "
     "into {lang} like the rest and keep the quotes. "
     + _TITLE_RULE
+    + " "
+    + _ADDRESS_RULE
     + " Do not add commentary."
 )
 
@@ -105,7 +116,7 @@ _HTML_PROMPT = (
     "natural {lang} for language learners. Preserve all HTML tags and "
     "attributes exactly. Preserve any embedded non-English tokens "
     "(learning-language words, inflected forms, and grammar markers) "
-    "exactly as written."
+    "exactly as written. " + _ADDRESS_RULE
 )
 
 _GLOSS_PROMPT = (
@@ -133,7 +144,11 @@ _BATCH_SYSTEM = (
     "learning-language examples, grammar markers like case suffixes). "
     "Quoted or parenthesised {source_lang} — glosses and translations — is "
     "{source_lang} content: translate it into {target_lang} and keep the "
-    "quotes. " + _TITLE_RULE + " "
+    "quotes. "
+    + _TITLE_RULE
+    + " "
+    + _ADDRESS_RULE.replace("{lang}", "{target_lang}")
+    + " "
     "No commentary.\n"
     "- gloss: short glossary; output ONLY {target_lang}. Do not output "
     "{source_lang} or any other language. Preserve slashes, semicolons, "

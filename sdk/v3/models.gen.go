@@ -645,6 +645,34 @@ const (
 	UpdateDevicePreferencesRequestSupportLanguageSourceOnboardingPicker UpdateDevicePreferencesRequestSupportLanguageSource = "onboarding_picker"
 )
 
+// Defines values for UpdateProfileRequestLearningReason.
+const (
+	UpdateProfileRequestLearningReasonCitizenship    UpdateProfileRequestLearningReason = "citizenship"
+	UpdateProfileRequestLearningReasonCuriosity      UpdateProfileRequestLearningReason = "curiosity"
+	UpdateProfileRequestLearningReasonHealthcareWork UpdateProfileRequestLearningReason = "healthcare_work"
+	UpdateProfileRequestLearningReasonHeritage       UpdateProfileRequestLearningReason = "heritage"
+	UpdateProfileRequestLearningReasonLivingHere     UpdateProfileRequestLearningReason = "living_here"
+	UpdateProfileRequestLearningReasonOther          UpdateProfileRequestLearningReason = "other"
+	UpdateProfileRequestLearningReasonPartnerFamily  UpdateProfileRequestLearningReason = "partner_family"
+	UpdateProfileRequestLearningReasonStudy          UpdateProfileRequestLearningReason = "study"
+	UpdateProfileRequestLearningReasonTravel         UpdateProfileRequestLearningReason = "travel"
+	UpdateProfileRequestLearningReasonWork           UpdateProfileRequestLearningReason = "work"
+)
+
+// Defines values for UserProfileLearningReason.
+const (
+	UserProfileLearningReasonCitizenship    UserProfileLearningReason = "citizenship"
+	UserProfileLearningReasonCuriosity      UserProfileLearningReason = "curiosity"
+	UserProfileLearningReasonHealthcareWork UserProfileLearningReason = "healthcare_work"
+	UserProfileLearningReasonHeritage       UserProfileLearningReason = "heritage"
+	UserProfileLearningReasonLivingHere     UserProfileLearningReason = "living_here"
+	UserProfileLearningReasonOther          UserProfileLearningReason = "other"
+	UserProfileLearningReasonPartnerFamily  UserProfileLearningReason = "partner_family"
+	UserProfileLearningReasonStudy          UserProfileLearningReason = "study"
+	UserProfileLearningReasonTravel         UserProfileLearningReason = "travel"
+	UserProfileLearningReasonWork           UserProfileLearningReason = "work"
+)
+
 // Defines values for UserProfileSupportLanguageSource.
 const (
 	UserProfileSupportLanguageSourceAdminOverride     UserProfileSupportLanguageSource = "admin_override"
@@ -9905,14 +9933,29 @@ type UpdateNamespaceRequest struct {
 
 // UpdateProfileRequest defines model for UpdateProfileRequest.
 type UpdateProfileRequest struct {
-	AvatarMediaId       *string `json:"avatar_media_id,omitempty"`
+	AvatarMediaId *string `json:"avatar_media_id,omitempty"`
+
+	// CountryCode Where the learner is from (ISO 3166-1 alpha-2). Not the device region. Any case accepted; stored uppercase.
+	CountryCode         *string `json:"country_code,omitempty"`
 	EstimatedSkillLevel *string `json:"estimated_skill_level,omitempty"`
 	HowDidYouFindOut    *string `json:"how_did_you_find_out,omitempty"`
 	LearningLanguage    *string `json:"learning_language,omitempty"`
 	LearningMinutesGoal *int    `json:"learning_minutes_goal,omitempty"`
-	Name                *string `json:"name,omitempty"`
-	NewsletterConsent   *bool   `json:"newsletter_consent,omitempty"`
+
+	// LearningReason Why the learner is studying the language. Routes the onboarding track recommendation.
+	LearningReason    *UpdateProfileRequestLearningReason `json:"learning_reason,omitempty"`
+	Name              *string                             `json:"name,omitempty"`
+	NewsletterConsent *bool                               `json:"newsletter_consent,omitempty"`
+
+	// OnboardingCompleted true stamps onboarding_completed_at once. false is ignored; a second true never moves the timestamp.
+	OnboardingCompleted *bool `json:"onboarding_completed,omitempty"`
+
+	// OnboardingVariant PostHog flag value for the onboarding flow the learner went through.
+	OnboardingVariant *string `json:"onboarding_variant,omitempty"`
 }
+
+// UpdateProfileRequestLearningReason Why the learner is studying the language. Routes the onboarding track recommendation.
+type UpdateProfileRequestLearningReason string
 
 // UpdateProgressRequest defines model for UpdateProgressRequest.
 type UpdateProgressRequest struct {
@@ -10128,23 +10171,34 @@ type UserNotificationV3 struct {
 
 // UserProfile defines model for UserProfile.
 type UserProfile struct {
-	AvatarMediaId       *string `json:"avatar_media_id,omitempty"`
-	CurrentStreakDays   int     `json:"current_streak_days"`
-	Email               string  `json:"email"`
-	EstimatedSkillLevel *string `json:"estimated_skill_level,omitempty"`
-	HowDidYouFindOut    *string `json:"how_did_you_find_out,omitempty"`
-	Id                  string  `json:"id"`
-	LastActiveDate      *string `json:"last_active_date,omitempty"`
-	LearningLanguage    *string `json:"learning_language,omitempty"`
-	LearningMinutesGoal *int    `json:"learning_minutes_goal,omitempty"`
-	LongestStreakDays   int     `json:"longest_streak_days"`
-	Name                *string `json:"name,omitempty"`
-	NewsletterConsent   *bool   `json:"newsletter_consent,omitempty"`
-	SupportLanguageCode *string `json:"support_language_code,omitempty"`
+	AvatarMediaId *string `json:"avatar_media_id,omitempty"`
+
+	// CountryCode ISO 3166-1 alpha-2, uppercase.
+	CountryCode         *string                    `json:"country_code,omitempty"`
+	CurrentStreakDays   int                        `json:"current_streak_days"`
+	Email               string                     `json:"email"`
+	EstimatedSkillLevel *string                    `json:"estimated_skill_level,omitempty"`
+	HowDidYouFindOut    *string                    `json:"how_did_you_find_out,omitempty"`
+	Id                  string                     `json:"id"`
+	LastActiveDate      *string                    `json:"last_active_date,omitempty"`
+	LearningLanguage    *string                    `json:"learning_language,omitempty"`
+	LearningMinutesGoal *int                       `json:"learning_minutes_goal,omitempty"`
+	LearningReason      *UserProfileLearningReason `json:"learning_reason,omitempty"`
+	LongestStreakDays   int                        `json:"longest_streak_days"`
+	Name                *string                    `json:"name,omitempty"`
+	NewsletterConsent   *bool                      `json:"newsletter_consent,omitempty"`
+
+	// OnboardingCompletedAt When setup finished. Sent as null when the account still owes setup, and always present on servers that know the field, so an absent key means an older server. (Plain string, not a [string, null] type array: the Go SDK generator cannot resolve type arrays.)
+	OnboardingCompletedAt *time.Time `json:"onboarding_completed_at,omitempty"`
+	OnboardingVariant     *string    `json:"onboarding_variant,omitempty"`
+	SupportLanguageCode   *string    `json:"support_language_code,omitempty"`
 
 	// SupportLanguageSource Sweep VVV: write-source classifier for users.users.support_language_code. 8 canonical values.
 	SupportLanguageSource *UserProfileSupportLanguageSource `json:"support_language_source,omitempty"`
 }
+
+// UserProfileLearningReason defines model for UserProfile.LearningReason.
+type UserProfileLearningReason string
 
 // UserProfileSupportLanguageSource Sweep VVV: write-source classifier for users.users.support_language_code. 8 canonical values.
 type UserProfileSupportLanguageSource string
