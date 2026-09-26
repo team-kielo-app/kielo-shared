@@ -60,3 +60,9 @@ def test_every_role_addresses_the_learner_informally():
     ):
         assert "informal second person" in prompt
         assert "{lang}" not in prompt
+
+
+def test_vietnamese_address_is_named():
+    """A vi flashcard explanation opened "Em có thể dùng…" while the app says
+    "bạn" everywhere; Vietnamese has no single informal pronoun to infer."""
+    assert "Vietnamese bạn" in op._PLAIN_PROMPT.format(lang="Vietnamese")

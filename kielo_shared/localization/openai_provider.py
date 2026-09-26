@@ -92,8 +92,8 @@ _CONTEXT_RULE = (
 # mixed "Wählen Sie" and "Höre dir an" card to card (audit 2026-09-25).
 _ADDRESS_RULE = (
     "Address the learner in the informal second person singular wherever "
-    "{lang} distinguishes it (German du, French tu, Spanish tú, Swedish du), "
-    "the same way on every item."
+    "{lang} distinguishes it (German du, French tu, Spanish tú, Swedish du; "
+    "Vietnamese bạn, never em, anh or chị), the same way on every item."
 )
 
 _PLAIN_PROMPT = (
