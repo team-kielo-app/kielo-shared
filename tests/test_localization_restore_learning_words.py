@@ -20,3 +20,28 @@ def test_translations_that_kept_the_words_are_untouched() -> None:
 def test_target_language_words_that_only_share_letters_stay() -> None:
     assert restore_learning_words("Say 'kiitos'.", "Hãy nói 'kiitos'.") == "Hãy nói 'kiitos'."
     assert restore_learning_words("Hyvää päivää", "Chúc một ngày tốt lành") == "Chúc một ngày tốt lành"
+
+
+
+def test_the_gemini_provider_restores_learning_words() -> None:
+    import asyncio
+    import json
+
+    from kielo_shared.localization.gemini_provider import GeminiProvider
+    from kielo_shared.localization.types import TranslationItem
+
+    async def mangling_model(system: str, user: str, extra: dict | None) -> str:
+        items = json.loads((extra or {})["payload"])
+        return json.dumps(
+            [{"id": item["id"], "text": "Mã/Sä so với Minä/Sinä"} for item in items]
+        )
+
+    provider = GeminiProvider(mangling_model)
+    results = asyncio.run(
+        provider.translate_batch(
+            [TranslationItem(text="Mä/Sä vs. Minä/Sinä")],
+            source_locale="en",
+            target_locale="vi",
+        )
+    )
+    assert results[0].text == "Mä/Sä so với Minä/Sinä"
