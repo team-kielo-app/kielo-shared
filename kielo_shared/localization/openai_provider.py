@@ -17,10 +17,12 @@ two injected callables (`text_generator` and `single_text_generator`) so:
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import json
 import logging
 import re
 import time
+import unicodedata
 from typing import Awaitable, Callable
 
 from kielo_shared.localization.types import TranslationItem, TranslationResult
@@ -48,6 +50,47 @@ _LANGUAGE_NAMES = {
     "no": "Norwegian",
     "da": "Danish",
 }
+
+
+# Learning-language words the model "corrected" into the target language:
+# the lesson title "Mä/Sä vs. Minä/Sinä" reached a vi learner as "Mã/Sä"
+# (device, 2026-09-26), Finnish colloquial "mä" read as a Vietnamese word
+# missing its tone mark. A source word with ä, ö or å is unmistakably
+# learning-language material; if the output lost it but holds the same
+# letters under different diacritics, the source spelling is put back.
+_NORDIC_WORD_RE = re.compile(r"\w*[äöåÄÖÅ]\w*")
+_WORD_RE = re.compile(r"\w+")
+
+
+def _fold(word: str) -> str:
+    decomposed = unicodedata.normalize("NFD", word)
+    return "".join(ch for ch in decomposed if not unicodedata.combining(ch)).casefold()
+
+
+def restore_learning_words(source: str, translated: str) -> str:
+    if not source or not translated:
+        return translated
+    restored = translated
+    for word in dict.fromkeys(_NORDIC_WORD_RE.findall(source)):
+        if word in restored:
+            continue
+        folded = _fold(word)
+        for candidate in dict.fromkeys(_WORD_RE.findall(restored)):
+            if candidate != word and _fold(candidate) == folded:
+                restored = re.sub(rf"(?<!\w){re.escape(candidate)}(?!\w)", word, restored)
+                break
+    return restored
+
+
+def _with_learning_words(
+    items: list[TranslationItem], results: list[TranslationResult]
+) -> list[TranslationResult]:
+    return [
+        dataclasses.replace(result, text=restore_learning_words(item.text, result.text))
+        if result.text
+        else result
+        for item, result in zip(items, results)
+    ]
 
 
 def _language_name(code: str) -> str:
@@ -287,11 +330,12 @@ class OpenAIProvider:
             for i in range(0, len(items), self._max_batch_items)
         ]
         if len(chunks) == 1:
-            return await self._translate_chunk(
+            single = await self._translate_chunk(
                 chunks[0],
                 source_locale=source_locale or "en",
                 target_locale=target_locale,
             )
+            return _with_learning_words(items, single)
 
         sem = asyncio.Semaphore(self._max_parallel_chunks)
 
@@ -307,7 +351,7 @@ class OpenAIProvider:
         flat: list[TranslationResult] = []
         for sub in chunk_results:
             flat.extend(sub)
-        return flat
+        return _with_learning_words(items, flat)
 
     # ─────────────────────────── internals ───────────────────────────────
 
