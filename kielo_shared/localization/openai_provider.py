@@ -77,7 +77,9 @@ def restore_learning_words(source: str, translated: str) -> str:
         folded = _fold(word)
         for candidate in dict.fromkeys(_WORD_RE.findall(restored)):
             if candidate != word and _fold(candidate) == folded:
-                restored = re.sub(rf"(?<!\w){re.escape(candidate)}(?!\w)", word, restored)
+                restored = re.sub(
+                    rf"(?<!\w){re.escape(candidate)}(?!\w)", word, restored
+                )
                 break
     return restored
 

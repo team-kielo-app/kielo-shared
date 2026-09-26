@@ -93,6 +93,26 @@ const (
 	ContextualLearningOpportunityTargetItemTypeGrammarConcept ContextualLearningOpportunityTargetItemType = "GrammarConcept"
 )
 
+// Defines values for ConversationBriefRequestOriginKind.
+const (
+	ConversationBriefRequestOriginKindConcept ConversationBriefRequestOriginKind = "concept"
+	ConversationBriefRequestOriginKindLesson  ConversationBriefRequestOriginKind = "lesson"
+	ConversationBriefRequestOriginKindWord    ConversationBriefRequestOriginKind = "word"
+)
+
+// Defines values for ConversationBriefWordExampleSpeaker.
+const (
+	Learner ConversationBriefWordExampleSpeaker = "learner"
+	Partner ConversationBriefWordExampleSpeaker = "partner"
+)
+
+// Defines values for ConversationBriefWordSource.
+const (
+	ConversationBriefWordSourceFocus ConversationBriefWordSource = "focus"
+	ConversationBriefWordSourceNew   ConversationBriefWordSource = "new"
+	ConversationBriefWordSourceStudy ConversationBriefWordSource = "study"
+)
+
 // Defines values for CreateCustomDeckRequestExerciseTypes.
 const (
 	ContextMatching           CreateCustomDeckRequestExerciseTypes = "context_matching"
@@ -115,10 +135,10 @@ const (
 
 // Defines values for CurriculumReorderRequestEntityType.
 const (
-	Chapter CurriculumReorderRequestEntityType = "chapter"
-	Lesson  CurriculumReorderRequestEntityType = "lesson"
-	Level   CurriculumReorderRequestEntityType = "level"
-	Track   CurriculumReorderRequestEntityType = "track"
+	CurriculumReorderRequestEntityTypeChapter CurriculumReorderRequestEntityType = "chapter"
+	CurriculumReorderRequestEntityTypeLesson  CurriculumReorderRequestEntityType = "lesson"
+	CurriculumReorderRequestEntityTypeLevel   CurriculumReorderRequestEntityType = "level"
+	CurriculumReorderRequestEntityTypeTrack   CurriculumReorderRequestEntityType = "track"
 )
 
 // Defines values for DevicePreferencesSupportLanguageSource.
@@ -661,16 +681,16 @@ const (
 
 // Defines values for UserProfileLearningReason.
 const (
-	UserProfileLearningReasonCitizenship    UserProfileLearningReason = "citizenship"
-	UserProfileLearningReasonCuriosity      UserProfileLearningReason = "curiosity"
-	UserProfileLearningReasonHealthcareWork UserProfileLearningReason = "healthcare_work"
-	UserProfileLearningReasonHeritage       UserProfileLearningReason = "heritage"
-	UserProfileLearningReasonLivingHere     UserProfileLearningReason = "living_here"
-	UserProfileLearningReasonOther          UserProfileLearningReason = "other"
-	UserProfileLearningReasonPartnerFamily  UserProfileLearningReason = "partner_family"
-	UserProfileLearningReasonStudy          UserProfileLearningReason = "study"
-	UserProfileLearningReasonTravel         UserProfileLearningReason = "travel"
-	UserProfileLearningReasonWork           UserProfileLearningReason = "work"
+	Citizenship    UserProfileLearningReason = "citizenship"
+	Curiosity      UserProfileLearningReason = "curiosity"
+	HealthcareWork UserProfileLearningReason = "healthcare_work"
+	Heritage       UserProfileLearningReason = "heritage"
+	LivingHere     UserProfileLearningReason = "living_here"
+	Other          UserProfileLearningReason = "other"
+	PartnerFamily  UserProfileLearningReason = "partner_family"
+	Study          UserProfileLearningReason = "study"
+	Travel         UserProfileLearningReason = "travel"
+	Work           UserProfileLearningReason = "work"
 )
 
 // Defines values for UserProfileSupportLanguageSource.
@@ -689,6 +709,13 @@ const (
 const (
 	WordDeckItemCreateItemTypeBaseWord       WordDeckItemCreateItemType = "BaseWord"
 	WordDeckItemCreateItemTypeGrammarConcept WordDeckItemCreateItemType = "GrammarConcept"
+)
+
+// Defines values for GetConversationFocusKlearnApiV3ConversationFocusGetParamsOriginKind.
+const (
+	Concept GetConversationFocusKlearnApiV3ConversationFocusGetParamsOriginKind = "concept"
+	Lesson  GetConversationFocusKlearnApiV3ConversationFocusGetParamsOriginKind = "lesson"
+	Word    GetConversationFocusKlearnApiV3ConversationFocusGetParamsOriginKind = "word"
 )
 
 // Defines values for GetSurfaceNextStepsKlearnApiV3NextStepsGetParamsSourceKind.
@@ -1661,6 +1688,19 @@ type ClaimResult struct {
 	Status    string    `json:"status"`
 }
 
+// ClientErrorEnvelope defines model for ClientErrorEnvelope.
+type ClientErrorEnvelope struct {
+	DeviceId *string     `json:"device_id,omitempty"`
+	ErrorId  string      `json:"error_id"`
+	Props    interface{} `json:"props"`
+	Ts       time.Time   `json:"ts"`
+}
+
+// ClientErrorResponse defines model for ClientErrorResponse.
+type ClientErrorResponse struct {
+	Accepted bool `json:"accepted"`
+}
+
 // ClusterWord defines model for ClusterWord.
 type ClusterWord struct {
 	Pos         *string `json:"pos,omitempty"`
@@ -2351,6 +2391,7 @@ type ContextMatchingExercise struct {
 	ItemIdFk             *uuid.UUID                         `json:"item_id_fk"`
 	ItemTypeFk           *ContextMatchingExerciseItemTypeFk `json:"item_type_fk"`
 	ObjectiveId          *uuid.UUID                         `json:"objective_id"`
+	OptionFeedback       *map[string]string                 `json:"option_feedback"`
 
 	// Options List of scenario options with keys: id, scenario_name
 	Options             []map[string]string                `json:"options"`
@@ -2390,6 +2431,54 @@ type ContextualLearningOpportunity struct {
 
 // ContextualLearningOpportunityTargetItemType defines model for ContextualLearningOpportunity.TargetItemType.
 type ContextualLearningOpportunityTargetItemType string
+
+// ConversationBriefRequest defines model for ConversationBriefRequest.
+type ConversationBriefRequest struct {
+	Lines      *[]string                           `json:"lines,omitempty"`
+	OriginId   *string                             `json:"origin_id"`
+	OriginKind *ConversationBriefRequestOriginKind `json:"origin_kind"`
+	ScenarioId string                              `json:"scenario_id"`
+	UserId     uuid.UUID                           `json:"user_id"`
+}
+
+// ConversationBriefRequestOriginKind defines model for ConversationBriefRequest.OriginKind.
+type ConversationBriefRequestOriginKind string
+
+// ConversationBriefResponse defines model for ConversationBriefResponse.
+type ConversationBriefResponse struct {
+	LearnerLevel *string                  `json:"learner_level"`
+	ScenarioId   string                   `json:"scenario_id"`
+	Words        *[]ConversationBriefWord `json:"words,omitempty"`
+}
+
+// ConversationBriefWord defines model for ConversationBriefWord.
+type ConversationBriefWord struct {
+	BaseWordId uuid.UUID `json:"base_word_id"`
+	Due        *bool     `json:"due,omitempty"`
+
+	// Example The scene's sentence at that step
+	Example *string `json:"example,omitempty"`
+
+	// ExampleSpeaker Whether the learner says that sentence or hears it
+	ExampleSpeaker *ConversationBriefWordExampleSpeaker `json:"example_speaker,omitempty"`
+
+	// Form How the scene says it, e.g. 'kahvia' for kahvi
+	Form string `json:"form"`
+
+	// Gloss Meaning in the learner's support language
+	Gloss  string                      `json:"gloss"`
+	Source ConversationBriefWordSource `json:"source"`
+	Term   string                      `json:"term"`
+
+	// TurnIndex First scene step using the word; -1 unknown
+	TurnIndex *int `json:"turn_index,omitempty"`
+}
+
+// ConversationBriefWordExampleSpeaker Whether the learner says that sentence or hears it
+type ConversationBriefWordExampleSpeaker string
+
+// ConversationBriefWordSource defines model for ConversationBriefWord.Source.
+type ConversationBriefWordSource string
 
 // ConversationBrowseFacets defines model for ConversationBrowseFacets.
 type ConversationBrowseFacets struct {
@@ -2458,6 +2547,29 @@ type ConversationDrillCorrection struct {
 	YouSaid string  `json:"you_said"`
 }
 
+// ConversationFocusResponse defines model for ConversationFocusResponse.
+type ConversationFocusResponse struct {
+	Covered      *int      `json:"covered,omitempty"`
+	CoveredTerms *[]string `json:"covered_terms,omitempty"`
+	ExampleForms *[]string `json:"example_forms,omitempty"`
+	ExampleLine  *string   `json:"example_line"`
+	FocusItemIds *[]string `json:"focus_item_ids,omitempty"`
+	FocusTerms   *[]string `json:"focus_terms,omitempty"`
+	OriginId     string    `json:"origin_id"`
+	OriginKind   string    `json:"origin_kind"`
+	ScenarioId   *string   `json:"scenario_id"`
+}
+
+// ConversationForOrigin defines model for ConversationForOrigin.
+type ConversationForOrigin struct {
+	Covered      int      `json:"covered"`
+	CoveredTerms []string `json:"covered_terms"`
+	FocusItemIds []string `json:"focus_item_ids"`
+	OriginId     string   `json:"origin_id"`
+	OriginKind   string   `json:"origin_kind"`
+	ScenarioId   *string  `json:"scenario_id,omitempty"`
+}
+
 // ConversationHistory defines model for ConversationHistory.
 type ConversationHistory struct {
 	DurationSeconds       *int       `json:"duration_seconds,omitempty"`
@@ -2508,6 +2620,7 @@ type ConversationScenario struct {
 	AmbientAudioUrl      *string             `json:"ambient_audio_url,omitempty"`
 	AvatarWaveReversed   *bool               `json:"avatar_wave_reversed,omitempty"`
 	Category             *string             `json:"category,omitempty"`
+	CategoryLabel        *string             `json:"category_label,omitempty"`
 	CefrLevel            *string             `json:"cefr_level,omitempty"`
 	CharacterPosition    *string             `json:"character_position,omitempty"`
 	Description          string              `json:"description"`
@@ -2528,10 +2641,18 @@ type ConversationScenario struct {
 	Title                string              `json:"title"`
 }
 
+// ConversationScenarioBrief defines model for ConversationScenarioBrief.
+type ConversationScenarioBrief struct {
+	LearnerLevel *string                 `json:"learner_level,omitempty"`
+	ScenarioId   string                  `json:"scenario_id"`
+	Words        []ConversationBriefWord `json:"words"`
+}
+
 // ConversationScenarioStep defines model for ConversationScenarioStep.
 type ConversationScenarioStep struct {
-	State       string  `json:"state"`
-	StepSummary *string `json:"step_summary,omitempty"`
+	ExamplePhrase *string `json:"example_phrase,omitempty"`
+	State         string  `json:"state"`
+	StepSummary   *string `json:"step_summary,omitempty"`
 }
 
 // ConversationScenarioStepsResponse defines model for ConversationScenarioStepsResponse.
@@ -4011,6 +4132,7 @@ type FillInTheBlankExercise struct {
 	ItemIdFk             *uuid.UUID                        `json:"item_id_fk"`
 	ItemTypeFk           *FillInTheBlankExerciseItemTypeFk `json:"item_type_fk"`
 	ObjectiveId          *uuid.UUID                        `json:"objective_id"`
+	OptionFeedback       *map[string]string                `json:"option_feedback"`
 	Options              *[]string                         `json:"options"`
 	Prompt               string                            `json:"prompt"`
 	PromptVersion        *string                           `json:"prompt_version"`
@@ -4058,7 +4180,10 @@ type FlashcardExercise struct {
 	Explanation  *string    `json:"explanation"`
 
 	// ExplanationHtml Optional secondary teaching content rendered below the answer block when present.
-	ExplanationHtml      *string                       `json:"explanation_html"`
+	ExplanationHtml *string `json:"explanation_html"`
+
+	// ExplanationIsExample True when explanation_html is an example sentence, so clients head it 'Example'.
+	ExplanationIsExample *bool                         `json:"explanation_is_example,omitempty"`
 	GenerationJobId      *uuid.UUID                    `json:"generation_job_id"`
 	GenerationModel      *string                       `json:"generation_model"`
 	GenerationProvenance *ExerciseGenerationProvenance `json:"generation_provenance"`
@@ -4066,6 +4191,7 @@ type FlashcardExercise struct {
 	ItemIdFk             *uuid.UUID                    `json:"item_id_fk"`
 	ItemTypeFk           *FlashcardExerciseItemTypeFk  `json:"item_type_fk"`
 	ObjectiveId          *uuid.UUID                    `json:"objective_id"`
+	OptionFeedback       *map[string]string            `json:"option_feedback"`
 	Prompt               string                        `json:"prompt"`
 	PromptVersion        *string                       `json:"prompt_version"`
 	QualityScore         *float32                      `json:"quality_score"`
@@ -4323,6 +4449,7 @@ type IdentifyConceptExercise struct {
 	ItemIdFk             *uuid.UUID                         `json:"item_id_fk"`
 	ItemTypeFk           *IdentifyConceptExerciseItemTypeFk `json:"item_type_fk"`
 	ObjectiveId          *uuid.UUID                         `json:"objective_id"`
+	OptionFeedback       *map[string]string                 `json:"option_feedback"`
 
 	// Options List of option objects with 'id' (UUID) and 'name' (text) keys
 	Options       []map[string]string `json:"options"`
@@ -4524,9 +4651,11 @@ type JoinResp struct {
 
 // JoinSessionRequest defines model for JoinSessionRequest.
 type JoinSessionRequest struct {
-	LearningLanguageCode *string `json:"learning_language_code,omitempty"`
-	ScenarioId           string  `json:"scenario_id"`
-	SupportLanguageCode  *string `json:"support_language_code,omitempty"`
+	FocusWords           *[]ConversationBriefWord `json:"focus_words,omitempty"`
+	LearningLanguageCode *string                  `json:"learning_language_code,omitempty"`
+	Level                *string                  `json:"level,omitempty"`
+	ScenarioId           string                   `json:"scenario_id"`
+	SupportLanguageCode  *string                  `json:"support_language_code,omitempty"`
 }
 
 // JoinSessionResponse defines model for JoinSessionResponse.
@@ -5497,6 +5626,7 @@ type ListeningComprehensionExercise struct {
 	ItemIdFk             *uuid.UUID                                `json:"item_id_fk"`
 	ItemTypeFk           *ListeningComprehensionExerciseItemTypeFk `json:"item_type_fk"`
 	ObjectiveId          *uuid.UUID                                `json:"objective_id"`
+	OptionFeedback       *map[string]string                        `json:"option_feedback"`
 
 	// Options List of options with 'id' (UUID) and 'text' keys
 	Options             []map[string]string                       `json:"options"`
@@ -5773,6 +5903,7 @@ type MultipleChoiceTranslationExercise struct {
 	ItemIdFk             *uuid.UUID                                   `json:"item_id_fk"`
 	ItemTypeFk           *MultipleChoiceTranslationExerciseItemTypeFk `json:"item_type_fk"`
 	ObjectiveId          *uuid.UUID                                   `json:"objective_id"`
+	OptionFeedback       *map[string]string                           `json:"option_feedback"`
 
 	// Options List of translation options with 'id' (UUID) and 'text' keys
 	Options       []map[string]string `json:"options"`
@@ -6231,6 +6362,7 @@ type PlaceholderExercise struct {
 	ItemIdFk             *uuid.UUID                     `json:"item_id_fk"`
 	ItemTypeFk           *PlaceholderExerciseItemTypeFk `json:"item_type_fk"`
 	ObjectiveId          *uuid.UUID                     `json:"objective_id"`
+	OptionFeedback       *map[string]string             `json:"option_feedback"`
 
 	// PlannedExerciseType Planned task type for progress display; this placeholder remains ungradable.
 	PlannedExerciseType *string                        `json:"planned_exercise_type"`
@@ -6504,6 +6636,21 @@ type RecommendationLaunchParamsV3 struct {
 	VideoId           *string   `json:"video_id,omitempty"`
 }
 
+// RecurringConfusion A pair the learner has now confused more than once (item_confusions).
+//
+// The verdict turns it into a contrast card: the form they chose again beside
+// the right one, and, when the mistake has a name, what each form is.
+type RecurringConfusion struct {
+	ChosenCue   *string `json:"chosen_cue"`
+	ChosenForm  string  `json:"chosen_form"`
+	ChosenTerm  *string `json:"chosen_term"`
+	ContrastTag *string `json:"contrast_tag"`
+	CorrectCue  *string `json:"correct_cue"`
+	CorrectForm string  `json:"correct_form"`
+	CorrectTerm *string `json:"correct_term"`
+	Times       int     `json:"times"`
+}
+
 // RefreshTokenRequest defines model for RefreshTokenRequest.
 type RefreshTokenRequest struct {
 	RefreshToken string `json:"refresh_token"`
@@ -6618,6 +6765,12 @@ type RemoveFromStudyListRequest struct {
 // RemoveFromStudyListRequestV3 defines model for RemoveFromStudyListRequestV3.
 type RemoveFromStudyListRequestV3 struct {
 	BaseWordIds []string `json:"base_word_ids"`
+}
+
+// ReplaceItemReferencesResponse defines model for ReplaceItemReferencesResponse.
+type ReplaceItemReferencesResponse struct {
+	ItemCount  int    `json:"item_count"`
+	ScenarioId string `json:"scenario_id"`
 }
 
 // ReplaceWebIngestPlanRequest defines model for ReplaceWebIngestPlanRequest.
@@ -7203,6 +7356,7 @@ type ScenarioChoiceExercise struct {
 	ItemIdFk             *uuid.UUID                        `json:"item_id_fk"`
 	ItemTypeFk           *ScenarioChoiceExerciseItemTypeFk `json:"item_type_fk"`
 	ObjectiveId          *uuid.UUID                        `json:"objective_id"`
+	OptionFeedback       *map[string]string                `json:"option_feedback"`
 	PhraseOptions        []string                          `json:"phrase_options"`
 	Prompt               string                            `json:"prompt"`
 	PromptVersion        *string                           `json:"prompt_version"`
@@ -7381,6 +7535,7 @@ type SentenceConstructionExercise struct {
 	ItemIdFk             *uuid.UUID                              `json:"item_id_fk"`
 	ItemTypeFk           *SentenceConstructionExerciseItemTypeFk `json:"item_type_fk"`
 	ObjectiveId          *uuid.UUID                              `json:"objective_id"`
+	OptionFeedback       *map[string]string                      `json:"option_feedback"`
 	Prompt               string                                  `json:"prompt"`
 	PromptVersion        *string                                 `json:"prompt_version"`
 	QualityScore         *float32                                `json:"quality_score"`
@@ -7857,6 +8012,11 @@ type SingletonConversationDiscoveryResponse struct {
 	Data ConversationDiscoveryResponse `json:"data"`
 }
 
+// SingletonConversationForOrigin defines model for SingletonConversationForOrigin.
+type SingletonConversationForOrigin struct {
+	Data ConversationForOrigin `json:"data"`
+}
+
 // SingletonConversationHistoryResponse defines model for SingletonConversationHistoryResponse.
 type SingletonConversationHistoryResponse struct {
 	Data ConversationHistoryResponse `json:"data"`
@@ -7875,6 +8035,11 @@ type SingletonConversationLooseResponse struct {
 // SingletonConversationScenario defines model for SingletonConversationScenario.
 type SingletonConversationScenario struct {
 	Data ConversationScenario `json:"data"`
+}
+
+// SingletonConversationScenarioBrief defines model for SingletonConversationScenarioBrief.
+type SingletonConversationScenarioBrief struct {
+	Data ConversationScenarioBrief `json:"data"`
 }
 
 // SingletonConversationScenarioStepsResponse defines model for SingletonConversationScenarioStepsResponse.
@@ -9056,6 +9221,7 @@ type SpellingChallengeExercise struct {
 	ItemIdFk             *uuid.UUID                           `json:"item_id_fk"`
 	ItemTypeFk           *SpellingChallengeExerciseItemTypeFk `json:"item_type_fk"`
 	ObjectiveId          *uuid.UUID                           `json:"objective_id"`
+	OptionFeedback       *map[string]string                   `json:"option_feedback"`
 	Prompt               string                               `json:"prompt"`
 	PromptVersion        *string                              `json:"prompt_version"`
 	QualityScore         *float32                             `json:"quality_score"`
@@ -9181,12 +9347,13 @@ type StudyListWithItems struct {
 
 // SubmissionResult defines model for SubmissionResult.
 type SubmissionResult struct {
-	CorrectAnswer    interface{}               `json:"correct_answer"`
-	Explanation      *string                   `json:"explanation"`
-	IsCorrect        bool                      `json:"is_correct"`
-	ItemStandings    *[]ItemStanding           `json:"item_standings,omitempty"`
-	NextSteps        *[]NextStepRecommendation `json:"next_steps,omitempty"`
-	SessionCompleted *bool                     `json:"session_completed,omitempty"`
+	CorrectAnswer      interface{}               `json:"correct_answer"`
+	Explanation        *string                   `json:"explanation"`
+	IsCorrect          bool                      `json:"is_correct"`
+	ItemStandings      *[]ItemStanding           `json:"item_standings,omitempty"`
+	NextSteps          *[]NextStepRecommendation `json:"next_steps,omitempty"`
+	RecurringConfusion *RecurringConfusion       `json:"recurring_confusion"`
+	SessionCompleted   *bool                     `json:"session_completed,omitempty"`
 }
 
 // SubmitAnswerRequest defines model for SubmitAnswerRequest.
@@ -9650,6 +9817,7 @@ type TrackRoadmapChapterStatus string
 
 // TrackRoadmapLesson defines model for TrackRoadmapLesson.
 type TrackRoadmapLesson struct {
+	Gloss            *string                 `json:"gloss"`
 	Kind             *string                 `json:"kind"`
 	LessonId         uuid.UUID               `json:"lesson_id"`
 	OrderIndex       int                     `json:"order_index"`
@@ -11011,6 +11179,15 @@ type GetApiV3ContentGrammarConceptsGrammarConceptIdParams struct {
 	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
 }
 
+// GetApiV3ConversationsForOriginParams defines parameters for GetApiV3ConversationsForOrigin.
+type GetApiV3ConversationsForOriginParams struct {
+	// OriginKind lesson | concept | word
+	OriginKind string `form:"origin_kind" json:"origin_kind"`
+
+	// OriginId UUID of the lesson, grammar concept or base word
+	OriginId string `form:"origin_id" json:"origin_id"`
+}
+
 // GetApiV3ConversationsQueueStatusParams defines parameters for GetApiV3ConversationsQueueStatus.
 type GetApiV3ConversationsQueueStatusParams struct {
 	// SessionId Identifier of the session this request belongs to.
@@ -11067,6 +11244,12 @@ type GetApiV3ConversationsScenariosBrowseParams struct {
 
 // GetApiV3ConversationsScenariosScenarioIdParams defines parameters for GetApiV3ConversationsScenariosScenarioId.
 type GetApiV3ConversationsScenariosScenarioIdParams struct {
+	// SupportLanguageCode Two-letter ISO 639-1 code for translated UI strings (per ADR-006 §3.83).
+	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
+}
+
+// GetApiV3ConversationsScenariosScenarioIdBriefParams defines parameters for GetApiV3ConversationsScenariosScenarioIdBrief.
+type GetApiV3ConversationsScenariosScenarioIdBriefParams struct {
 	// SupportLanguageCode Two-letter ISO 639-1 code for translated UI strings (per ADR-006 §3.83).
 	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
 }
@@ -12769,6 +12952,16 @@ type GetArticleLearningOpportunitiesKlearnApiV3ContextualArticleArticleIdLearnin
 	MaxOpportunities *int      `form:"max_opportunities,omitempty" json:"max_opportunities,omitempty"`
 }
 
+// GetConversationFocusKlearnApiV3ConversationFocusGetParams defines parameters for GetConversationFocusKlearnApiV3ConversationFocusGet.
+type GetConversationFocusKlearnApiV3ConversationFocusGetParams struct {
+	UserId     uuid.UUID                                                           `form:"user_id" json:"user_id"`
+	OriginKind GetConversationFocusKlearnApiV3ConversationFocusGetParamsOriginKind `form:"origin_kind" json:"origin_kind"`
+	OriginId   string                                                              `form:"origin_id" json:"origin_id"`
+}
+
+// GetConversationFocusKlearnApiV3ConversationFocusGetParamsOriginKind defines parameters for GetConversationFocusKlearnApiV3ConversationFocusGet.
+type GetConversationFocusKlearnApiV3ConversationFocusGetParamsOriginKind string
+
 // GetTrackRoadmapKlearnApiV3CurriculumTracksTrackIdRoadmapGetParams defines parameters for GetTrackRoadmapKlearnApiV3CurriculumTracksTrackIdRoadmapGet.
 type GetTrackRoadmapKlearnApiV3CurriculumTracksTrackIdRoadmapGetParams struct {
 	UserId uuid.UUID `form:"user_id" json:"user_id"`
@@ -13436,6 +13629,9 @@ type PostApiV3SubscriptionsRestoreAccessJSONRequestBody = RestoreAccessRequest
 // PostApiV3SubscriptionsTransferJSONRequestBody defines body for PostApiV3SubscriptionsTransfer for application/json ContentType.
 type PostApiV3SubscriptionsTransferJSONRequestBody = TransferSubscriptionRequest
 
+// PostApiV3TelemetryClientErrorJSONRequestBody defines body for PostApiV3TelemetryClientError for application/json ContentType.
+type PostApiV3TelemetryClientErrorJSONRequestBody = ClientErrorEnvelope
+
 // PostApiV3TopicListsJSONRequestBody defines body for PostApiV3TopicLists for application/json ContentType.
 type PostApiV3TopicListsJSONRequestBody = GenerateTopicListRequest
 
@@ -13729,6 +13925,9 @@ type CreateDailyChallengeGenerationKlearnApiV3ChallengesDailyGenerationsPostJSON
 
 // RegenerateDailyChallengeKlearnApiV3ChallengesDailyRegeneratePostJSONRequestBody defines body for RegenerateDailyChallengeKlearnApiV3ChallengesDailyRegeneratePost for application/json ContentType.
 type RegenerateDailyChallengeKlearnApiV3ChallengesDailyRegeneratePostJSONRequestBody = DailyChallengeGenerationCreateRequest
+
+// PostConversationBriefKlearnApiV3ConversationBriefPostJSONRequestBody defines body for PostConversationBriefKlearnApiV3ConversationBriefPost for application/json ContentType.
+type PostConversationBriefKlearnApiV3ConversationBriefPostJSONRequestBody = ConversationBriefRequest
 
 // CreateChapterKlearnApiV3CurriculumAdminChaptersPostJSONRequestBody defines body for CreateChapterKlearnApiV3CurriculumAdminChaptersPost for application/json ContentType.
 type CreateChapterKlearnApiV3CurriculumAdminChaptersPostJSONRequestBody = CurriculumChapterUpsertRequest

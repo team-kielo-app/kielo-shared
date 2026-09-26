@@ -604,6 +604,17 @@ class ClaimResult(BaseModel):
     status: str
 
 
+class ClientErrorEnvelope(BaseModel):
+    device_id: str | None = None
+    error_id: str
+    props: Any
+    ts: AwareDatetime
+
+
+class ClientErrorResponse(BaseModel):
+    accepted: bool
+
+
 class ClusterWord(BaseModel):
     pos: str | None = None
     term: str | None = None
@@ -1091,6 +1102,57 @@ class ContextualLearningOpportunity(BaseModel):
     user_id: UUID_aliased = Field(..., title="User Id")
 
 
+class OriginKind(StrEnum):
+    lesson = "lesson"
+    concept = "concept"
+    word = "word"
+
+
+class ConversationBriefRequest(BaseModel):
+    lines: list[str] | None = Field(None, max_length=200, title="Lines")
+    origin_id: constr(max_length=64) | None = Field(None, title="Origin Id")
+    origin_kind: OriginKind | None = Field(None, title="Origin Kind")
+    scenario_id: constr(min_length=1, max_length=128) = Field(..., title="Scenario Id")
+    user_id: UUID_aliased = Field(..., title="User Id")
+
+
+class ExampleSpeaker(StrEnum):
+    learner = "learner"
+    partner = "partner"
+
+
+class Source(StrEnum):
+    focus = "focus"
+    study = "study"
+    new = "new"
+
+
+class ConversationBriefWord(BaseModel):
+    base_word_id: UUID_aliased = Field(..., title="Base Word Id")
+    due: bool | None = Field(False, title="Due")
+    example: str | None = Field(
+        "", description="The scene's sentence at that step", title="Example"
+    )
+    example_speaker: ExampleSpeaker | None = Field(
+        "learner",
+        description="Whether the learner says that sentence or hears it",
+        title="Example Speaker",
+    )
+    form: str = Field(
+        ..., description="How the scene says it, e.g. 'kahvia' for kahvi", title="Form"
+    )
+    gloss: str = Field(
+        ..., description="Meaning in the learner's support language", title="Gloss"
+    )
+    source: Source = Field(..., title="Source")
+    term: str = Field(..., title="Term")
+    turn_index: int | None = Field(
+        -1,
+        description="First scene step using the word; -1 unknown",
+        title="Turn Index",
+    )
+
+
 class ConversationCommandRequest(BaseModel):
     payload: dict[str, Any] | None = None
     type: str
@@ -1101,6 +1163,27 @@ class ConversationDrillCorrection(BaseModel):
     try_this: str = Field(..., title="Try This")
     why: str | None = Field(None, title="Why")
     you_said: str = Field(..., title="You Said")
+
+
+class ConversationFocusResponse(BaseModel):
+    covered: int | None = Field(0, title="Covered")
+    covered_terms: list[str] | None = Field([], title="Covered Terms")
+    example_forms: list[str] | None = Field([], title="Example Forms")
+    example_line: str | None = Field(None, title="Example Line")
+    focus_item_ids: list[str] | None = Field([], title="Focus Item Ids")
+    focus_terms: list[str] | None = Field([], title="Focus Terms")
+    origin_id: str = Field(..., title="Origin Id")
+    origin_kind: str = Field(..., title="Origin Kind")
+    scenario_id: str | None = Field(None, title="Scenario Id")
+
+
+class ConversationForOrigin(BaseModel):
+    covered: int
+    covered_terms: list[str]
+    focus_item_ids: list[str]
+    origin_id: str
+    origin_kind: str
+    scenario_id: str | None = None
 
 
 class ConversationHistory(BaseModel):
@@ -1138,7 +1221,14 @@ class ConversationPersona(BaseModel):
     style: str
 
 
+class ConversationScenarioBrief(BaseModel):
+    learner_level: str | None = None
+    scenario_id: str
+    words: list[ConversationBriefWord]
+
+
 class ConversationScenarioStep(BaseModel):
+    example_phrase: str | None = None
     state: str
     step_summary: str | None = None
 
@@ -2216,6 +2306,7 @@ class FillInTheBlankExercise(BaseModel):
     item_id_fk: UUID_aliased | None = Field(..., title="Item Id Fk")
     item_type_fk: ItemTypeFk | None = Field(..., title="Item Type Fk")
     objective_id: UUID_aliased | None = Field(None, title="Objective Id")
+    option_feedback: dict[str, str] | None = Field(None, title="Option Feedback")
     options: list[str] | None = Field(None, title="Options")
     prompt: str = Field(..., title="Prompt")
     prompt_version: str | None = Field(None, title="Prompt Version")
@@ -2265,6 +2356,11 @@ class FlashcardExercise(BaseModel):
         description="Optional secondary teaching content rendered below the answer block when present.",
         title="Explanation Html",
     )
+    explanation_is_example: bool | None = Field(
+        False,
+        description="True when explanation_html is an example sentence, so clients head it 'Example'.",
+        title="Explanation Is Example",
+    )
     generation_job_id: UUID_aliased | None = Field(None, title="Generation Job Id")
     generation_model: str | None = Field(None, title="Generation Model")
     generation_provenance: ExerciseGenerationProvenance | None = None
@@ -2272,6 +2368,7 @@ class FlashcardExercise(BaseModel):
     item_id_fk: UUID_aliased | None = Field(..., title="Item Id Fk")
     item_type_fk: ItemTypeFk | None = Field(..., title="Item Type Fk")
     objective_id: UUID_aliased | None = Field(None, title="Objective Id")
+    option_feedback: dict[str, str] | None = Field(None, title="Option Feedback")
     prompt: str = Field(..., title="Prompt")
     prompt_version: str | None = Field(None, title="Prompt Version")
     quality_score: float | None = Field(None, title="Quality Score")
@@ -2434,6 +2531,7 @@ class IdentifyConceptExercise(BaseModel):
     item_id_fk: UUID_aliased | None = Field(..., title="Item Id Fk")
     item_type_fk: ItemTypeFk | None = Field(..., title="Item Type Fk")
     objective_id: UUID_aliased | None = Field(None, title="Objective Id")
+    option_feedback: dict[str, str] | None = Field(None, title="Option Feedback")
     options: list[dict[str, str]] = Field(
         ...,
         description="List of option objects with 'id' (UUID) and 'name' (text) keys",
@@ -2553,7 +2651,9 @@ class JoinResp(BaseModel):
 
 
 class JoinSessionRequest(BaseModel):
+    focus_words: list[ConversationBriefWord] | None = None
     learning_language_code: str | None = None
+    level: str | None = None
     scenario_id: str
     support_language_code: str | None = None
 
@@ -3257,6 +3357,7 @@ class ListeningComprehensionExercise(BaseModel):
     item_id_fk: UUID_aliased | None = Field(..., title="Item Id Fk")
     item_type_fk: ItemTypeFk | None = Field(..., title="Item Type Fk")
     objective_id: UUID_aliased | None = Field(None, title="Objective Id")
+    option_feedback: dict[str, str] | None = Field(None, title="Option Feedback")
     options: list[dict[str, str]] = Field(
         ...,
         description="List of options with 'id' (UUID) and 'text' keys",
@@ -3489,6 +3590,7 @@ class MultipleChoiceTranslationExercise(BaseModel):
     item_id_fk: UUID_aliased | None = Field(..., title="Item Id Fk")
     item_type_fk: ItemTypeFk | None = Field(..., title="Item Type Fk")
     objective_id: UUID_aliased | None = Field(None, title="Objective Id")
+    option_feedback: dict[str, str] | None = Field(None, title="Option Feedback")
     options: list[dict[str, str]] = Field(
         ...,
         description="List of translation options with 'id' (UUID) and 'text' keys",
@@ -3817,6 +3919,7 @@ class PlaceholderExercise(BaseModel):
     item_id_fk: UUID_aliased | None = Field(..., title="Item Id Fk")
     item_type_fk: ItemTypeFk | None = Field(..., title="Item Type Fk")
     objective_id: UUID_aliased | None = Field(None, title="Objective Id")
+    option_feedback: dict[str, str] | None = Field(None, title="Option Feedback")
     planned_exercise_type: str | None = Field(
         None,
         description="Planned task type for progress display; this placeholder remains ungradable.",
@@ -4034,6 +4137,17 @@ class RecommendationLaunchParamsV3(BaseModel):
     video_id: str | None = None
 
 
+class RecurringConfusion(BaseModel):
+    chosen_cue: str | None = Field(None, title="Chosen Cue")
+    chosen_form: str = Field(..., title="Chosen Form")
+    chosen_term: str | None = Field(None, title="Chosen Term")
+    contrast_tag: str | None = Field(None, title="Contrast Tag")
+    correct_cue: str | None = Field(None, title="Correct Cue")
+    correct_form: str = Field(..., title="Correct Form")
+    correct_term: str | None = Field(None, title="Correct Term")
+    times: conint(ge=2) = Field(..., title="Times")
+
+
 class RefreshTokenRequest(BaseModel):
     refresh_token: str
 
@@ -4114,6 +4228,11 @@ class RemoveFromStudyListRequest(AddToStudyListRequest):
 
 class RemoveFromStudyListRequestV3(AddToStudyListRequestV3):
     pass
+
+
+class ReplaceItemReferencesResponse(BaseModel):
+    item_count: int
+    scenario_id: str
 
 
 class ReplaceWebIngestPlanRequest(BaseModel):
@@ -4563,6 +4682,7 @@ class ScenarioChoiceExercise(BaseModel):
     item_id_fk: UUID_aliased | None = Field(..., title="Item Id Fk")
     item_type_fk: ItemTypeFk | None = Field(..., title="Item Type Fk")
     objective_id: UUID_aliased | None = Field(None, title="Objective Id")
+    option_feedback: dict[str, str] | None = Field(None, title="Option Feedback")
     phrase_options: list[str] = Field(..., title="Phrase Options")
     prompt: str = Field(..., title="Prompt")
     prompt_version: str | None = Field(None, title="Prompt Version")
@@ -4976,6 +5096,10 @@ class SingletonContentVersionStatusResponse(BaseModel):
     data: ContentVersionStatusResponse
 
 
+class SingletonConversationForOrigin(BaseModel):
+    data: ConversationForOrigin
+
+
 class SingletonConversationHistoryResponse(BaseModel):
     data: ConversationHistoryResponse
 
@@ -4986,6 +5110,10 @@ class SingletonConversationInterestResponse(BaseModel):
 
 class SingletonConversationLooseResponse(BaseModel):
     data: dict[str, Any]
+
+
+class SingletonConversationScenarioBrief(BaseModel):
+    data: ConversationScenarioBrief
 
 
 class SingletonConversationScenarioStepsResponse(BaseModel):
@@ -5556,6 +5684,7 @@ class SpellingChallengeExercise(BaseModel):
     item_id_fk: UUID_aliased | None = Field(..., title="Item Id Fk")
     item_type_fk: ItemTypeFk | None = Field(..., title="Item Type Fk")
     objective_id: UUID_aliased | None = Field(None, title="Objective Id")
+    option_feedback: dict[str, str] | None = Field(None, title="Option Feedback")
     prompt: str = Field(..., title="Prompt")
     prompt_version: str | None = Field(None, title="Prompt Version")
     quality_score: float | None = Field(None, title="Quality Score")
@@ -5981,6 +6110,7 @@ class Status14(StrEnum):
 
 
 class TrackRoadmapLesson(BaseModel):
+    gloss: str | None = Field(None, title="Gloss")
     kind: str | None = Field(None, title="Kind")
     lesson_id: UUID_aliased = Field(..., title="Lesson Id")
     order_index: int = Field(..., title="Order Index")
@@ -6167,27 +6297,27 @@ class LearningReason(StrEnum):
 
 class UpdateProfileRequest(BaseModel):
     avatar_media_id: str | None = None
-    estimated_skill_level: str | None = None
-    how_did_you_find_out: str | None = None
-    learning_language: str | None = None
-    learning_minutes_goal: int | None = None
-    name: str | None = None
-    newsletter_consent: bool | None = None
     country_code: constr(pattern=r"^[A-Za-z]{2}$") | None = Field(
         None,
         description="Where the learner is from (ISO 3166-1 alpha-2). Not the device region. Any case accepted; stored uppercase.",
     )
+    estimated_skill_level: str | None = None
+    how_did_you_find_out: str | None = None
+    learning_language: str | None = None
+    learning_minutes_goal: int | None = None
     learning_reason: LearningReason | None = Field(
         None,
         description="Why the learner is studying the language. Routes the onboarding track recommendation.",
     )
-    onboarding_variant: constr(max_length=64) | None = Field(
-        None,
-        description="PostHog flag value for the onboarding flow the learner went through.",
-    )
+    name: str | None = None
+    newsletter_consent: bool | None = None
     onboarding_completed: bool | None = Field(
         None,
         description="true stamps onboarding_completed_at once. false is ignored; a second true never moves the timestamp.",
+    )
+    onboarding_variant: constr(max_length=64) | None = Field(
+        None,
+        description="PostHog flag value for the onboarding flow the learner went through.",
     )
 
 
@@ -6368,6 +6498,7 @@ class UserNotificationV3(BaseModel):
 
 class UserProfile(BaseModel):
     avatar_media_id: str | None = None
+    country_code: str | None = Field(None, description="ISO 3166-1 alpha-2, uppercase.")
     current_streak_days: int
     email: str
     estimated_skill_level: str | None = None
@@ -6376,20 +6507,19 @@ class UserProfile(BaseModel):
     last_active_date: str | None = None
     learning_language: str | None = None
     learning_minutes_goal: int | None = None
+    learning_reason: LearningReason | None = None
     longest_streak_days: int
     name: str | None = None
     newsletter_consent: bool | None = None
+    onboarding_completed_at: AwareDatetime | None = Field(
+        None,
+        description="When setup finished. Sent as null when the account still owes setup, and always present on servers that know the field, so an absent key means an older server. (Plain string, not a [string, null] type array: the Go SDK generator cannot resolve type arrays.)",
+    )
+    onboarding_variant: str | None = None
     support_language_code: str | None = None
     support_language_source: SupportLanguageSource | None = Field(
         None,
         description="Sweep VVV: write-source classifier for users.users.support_language_code. 8 canonical values.",
-    )
-    country_code: str | None = Field(None, description="ISO 3166-1 alpha-2, uppercase.")
-    learning_reason: LearningReason | None = None
-    onboarding_variant: str | None = None
-    onboarding_completed_at: AwareDatetime | None = Field(
-        None,
-        description="When setup finished. Sent as null when the account still owes setup, and always present on servers that know the field, so an absent key means an older server. (Plain string, not a [string, null] type array: the Go SDK generator cannot resolve type arrays.)",
     )
 
 
@@ -6931,6 +7061,7 @@ class ContextMatchingExercise(BaseModel):
     item_id_fk: UUID_aliased | None = Field(..., title="Item Id Fk")
     item_type_fk: ItemTypeFk | None = Field(..., title="Item Type Fk")
     objective_id: UUID_aliased | None = Field(None, title="Objective Id")
+    option_feedback: dict[str, str] | None = Field(None, title="Option Feedback")
     options: list[dict[str, str]] = Field(
         ...,
         description="List of scenario options with keys: id, scenario_name",
@@ -6951,6 +7082,12 @@ class ContextMatchingExercise(BaseModel):
         title="Target Items",
     )
     validation_signature: str | None = Field(None, title="Validation Signature")
+
+
+class ConversationBriefResponse(BaseModel):
+    learner_level: str | None = Field(None, title="Learner Level")
+    scenario_id: str = Field(..., title="Scenario Id")
+    words: list[ConversationBriefWord] | None = Field(None, title="Words")
 
 
 class ConversationBrowseFacets(BaseModel):
@@ -6987,6 +7124,7 @@ class ConversationScenario(BaseModel):
     ambient_audio_url: str | None = None
     avatar_wave_reversed: bool | None = None
     category: str | None = None
+    category_label: str | None = None
     cefr_level: str | None = None
     character_position: str | None = None
     description: str
@@ -7717,6 +7855,7 @@ class SentenceConstructionExercise(BaseModel):
     item_id_fk: UUID_aliased | None = Field(..., title="Item Id Fk")
     item_type_fk: ItemTypeFk | None = Field(..., title="Item Type Fk")
     objective_id: UUID_aliased | None = Field(None, title="Objective Id")
+    option_feedback: dict[str, str] | None = Field(None, title="Option Feedback")
     prompt: str = Field(..., title="Prompt")
     prompt_version: str | None = Field(None, title="Prompt Version")
     quality_score: float | None = Field(None, title="Quality Score")
@@ -8108,6 +8247,7 @@ class SubmissionResult(BaseModel):
     is_correct: bool = Field(..., title="Is Correct")
     item_standings: list[ItemStanding] | None = Field(None, title="Item Standings")
     next_steps: list[NextStepRecommendation] | None = Field(None, title="Next Steps")
+    recurring_confusion: RecurringConfusion | None = None
     session_completed: bool | None = Field(False, title="Session Completed")
 
 
