@@ -96,6 +96,15 @@ _ADDRESS_RULE = (
     "Vietnamese bạn, never em, anh or chị), the same way on every item."
 )
 
+# "Choose the adverbial that describes the location" reached a vi learner as
+# "trạng từ" (adverb) over four case forms of a NOUN (device, 2026-09-26): a
+# sentence function rendered as a word class teaches the wrong category.
+_TERM_RULE = (
+    "Keep grammar terms for a sentence function apart from word classes: "
+    "an adverbial, subject or object is a role in the sentence, not an adverb "
+    "or noun (Vietnamese trạng ngữ, not trạng từ)."
+)
+
 _PLAIN_PROMPT = (
     "Translate English educational content into natural {lang} for "
     "language learners. "
@@ -108,6 +117,8 @@ _PLAIN_PROMPT = (
     + _TITLE_RULE
     + " "
     + _ADDRESS_RULE
+    + " "
+    + _TERM_RULE
     + " Do not add commentary."
 )
 
@@ -116,7 +127,7 @@ _HTML_PROMPT = (
     "natural {lang} for language learners. Preserve all HTML tags and "
     "attributes exactly. Preserve any embedded non-English tokens "
     "(learning-language words, inflected forms, and grammar markers) "
-    "exactly as written. " + _ADDRESS_RULE
+    "exactly as written. " + _ADDRESS_RULE + " " + _TERM_RULE
 )
 
 _GLOSS_PROMPT = (
@@ -148,6 +159,8 @@ _BATCH_SYSTEM = (
     + _TITLE_RULE
     + " "
     + _ADDRESS_RULE.replace("{lang}", "{target_lang}")
+    + " "
+    + _TERM_RULE
     + " "
     "No commentary.\n"
     "- gloss: short glossary; output ONLY {target_lang}. Do not output "

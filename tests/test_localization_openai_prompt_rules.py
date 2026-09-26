@@ -66,3 +66,13 @@ def test_vietnamese_address_is_named():
     """A vi flashcard explanation opened "Em có thể dùng…" while the app says
     "bạn" everywhere; Vietnamese has no single informal pronoun to infer."""
     assert "Vietnamese bạn" in op._PLAIN_PROMPT.format(lang="Vietnamese")
+
+
+def test_function_terms_stay_apart_from_word_classes():
+    """'adverbial' reached a vi learner as 'trạng từ' (adverb) over noun forms."""
+    for prompt in (
+        op._PLAIN_PROMPT.format(lang="Vietnamese"),
+        op._HTML_PROMPT.format(lang="Vietnamese"),
+        op._BATCH_SYSTEM.format(source_lang="English", target_lang="Vietnamese"),
+    ):
+        assert "trạng ngữ, not trạng từ" in prompt
