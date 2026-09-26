@@ -93,7 +93,9 @@ _CONTEXT_RULE = (
 _ADDRESS_RULE = (
     "Address the learner in the informal second person singular wherever "
     "{lang} distinguishes it (German du, French tu, Spanish tú, Swedish du; "
-    "Vietnamese bạn, never em, anh or chị), the same way on every item."
+    "Vietnamese bạn, never em, anh or chị), the same way on every item. "
+    "This is only how 'you' is said: never change who a sentence is about, so "
+    "an example's 'I' stays first person (Vietnamese tôi)."
 )
 
 # "Choose the adverbial that describes the location" reached a vi learner as

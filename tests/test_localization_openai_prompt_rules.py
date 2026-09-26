@@ -76,3 +76,9 @@ def test_function_terms_stay_apart_from_word_classes():
         op._BATCH_SYSTEM.format(source_lang="English", target_lang="Vietnamese"),
     ):
         assert "trạng ngữ, not trạng từ" in prompt
+
+
+def test_address_rule_keeps_first_person():
+    """'(I am waiting for the bus.)' came back as 'Bạn đang đợi xe buýt' once
+    the rule named bạn: the example's subject changed."""
+    assert "an example's 'I' stays first person" in op._PLAIN_PROMPT.format(lang="Vietnamese")
