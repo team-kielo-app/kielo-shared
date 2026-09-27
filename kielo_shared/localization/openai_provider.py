@@ -122,7 +122,11 @@ _TITLE_RULE = (
     "NAME of that concept: an English infinitive becomes the target "
     "language's dictionary form of the verb (never a tense, aspect or "
     "particle word), and anything in parentheses is learning-language "
-    "material kept exactly as written. Capitalise a title the way "
+    "material kept exactly as written. An English grammar-concept name "
+    'is translated like any other English: "Mastering the Passive Voice" '
+    'is Vietnamese "Làm chủ thể bị động", never "Làm chủ Passive '
+    'Voice"; no English word stays in a '
+    "translated title. Capitalise a title the way "
     "{lang} capitalises one, not in English Title Case: "
     '"Adjective and Noun Agreement" is Vietnamese "Sự hòa hợp giữa tính '
     'từ và danh từ", not "Sự hòa hợp giữa Tính từ và Danh từ"; only '

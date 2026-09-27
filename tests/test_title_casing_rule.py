@@ -18,3 +18,12 @@ def test_the_plain_prompt_carries_the_casing_rule() -> None:
 def test_the_batch_prompt_carries_the_casing_rule() -> None:
     prompt = _BATCH_SYSTEM.format(source_lang="English", target_lang="Vietnamese")
     assert "the way Vietnamese capitalises" in prompt
+
+
+def test_both_prompts_forbid_english_left_in_a_translated_title() -> None:
+    # "Làm chủ Finnish Passive Voice" reached vi learners: the concept name
+    # was treated as a name to keep (2026-09-27).
+    plain = _PLAIN_PROMPT.format(lang="Vietnamese")
+    batch = _BATCH_SYSTEM.format(source_lang="English", target_lang="Vietnamese")
+    for prompt in (plain, batch):
+        assert "no English word stays in a translated title" in prompt
