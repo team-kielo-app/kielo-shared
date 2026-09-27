@@ -84,11 +84,48 @@ def restore_learning_words(source: str, translated: str) -> str:
     return restored
 
 
+# "Luyện tập cách illative và cách allative" (vi, 2026-09-27): the English
+# names of Finland's own cases reached learners inside support-language prose,
+# and when the model did switch to the Finnish name it misspelt one (essivi).
+# These spellings occur only in Finnish-course text, and every other support
+# language spells its own term differently (German Illativ), so renaming them
+# in a translation is always right.
+_FINNISH_CASE_NAMES = {
+    "inessive": "inessiivi",
+    "elative": "elatiivi",
+    "illative": "illatiivi",
+    "adessive": "adessiivi",
+    "ablative": "ablatiivi",
+    "allative": "allatiivi",
+    "essive": "essiivi",
+    "essivi": "essiivi",
+    "translative": "translatiivi",
+    "abessive": "abessiivi",
+    "comitative": "komitatiivi",
+    "instructive": "instruktiivi",
+}
+_FINNISH_CASE_RE = re.compile(
+    r"(?<!\w)(" + "|".join(_FINNISH_CASE_NAMES) + r")(?!\w)", re.IGNORECASE
+)
+
+
+def name_finnish_cases(translated: str) -> str:
+    def _finnish(match: re.Match[str]) -> str:
+        found = match.group(1)
+        name = _FINNISH_CASE_NAMES[found.lower()]
+        return name.capitalize() if found[0].isupper() else name
+
+    return _FINNISH_CASE_RE.sub(_finnish, translated) if translated else translated
+
+
 def _with_learning_words(
     items: list[TranslationItem], results: list[TranslationResult]
 ) -> list[TranslationResult]:
     return [
-        dataclasses.replace(result, text=restore_learning_words(item.text, result.text))
+        dataclasses.replace(
+            result,
+            text=name_finnish_cases(restore_learning_words(item.text, result.text)),
+        )
         if result.text
         else result
         for item, result in zip(items, results)
@@ -158,7 +195,12 @@ _ADDRESS_RULE = (
 _TERM_RULE = (
     "Keep grammar terms for a sentence function apart from word classes: "
     "an adverbial, subject or object is a role in the sentence, not an adverb "
-    "or noun (Vietnamese trạng ngữ, not trạng từ)."
+    "or noun (Vietnamese trạng ngữ, not trạng từ). "
+    "Never leave an English grammar term (partitive, adessive, passive, "
+    "past tense) in {lang} text: use {lang}'s standard term where it has "
+    "one (Vietnamese cách bộ phận, cách sở hữu, thể bị động, thì quá khứ), "
+    "and otherwise the learning-language name of the case as the learner "
+    "meets it in the course (Vietnamese cách adessiivi, not cách adessive)."
 )
 
 _PLAIN_PROMPT = (
@@ -216,7 +258,7 @@ _BATCH_SYSTEM = (
     + " "
     + _ADDRESS_RULE.replace("{lang}", "{target_lang}")
     + " "
-    + _TERM_RULE
+    + _TERM_RULE.replace("{lang}", "{target_lang}")
     + " "
     "No commentary.\n"
     "- gloss: short glossary; output ONLY {target_lang}. Do not output "

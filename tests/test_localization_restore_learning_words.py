@@ -45,3 +45,20 @@ def test_the_gemini_provider_restores_learning_words() -> None:
         )
     )
     assert results[0].text == "Mä/Sä so với Minä/Sinä"
+
+
+def test_english_names_of_finnish_cases_become_the_finnish_names() -> None:
+    from kielo_shared.localization.openai_provider import name_finnish_cases
+
+    assert (
+        name_finnish_cases("Bạn phải dùng cách illative (vào trong) và cách Allative.")
+        == "Bạn phải dùng cách illatiivi (vào trong) và cách Allatiivi."
+    )
+    assert name_finnish_cases("đuôi cách essivi -na/-nä") == "đuôi cách essiivi -na/-nä"
+
+
+def test_case_renaming_leaves_other_words_and_spellings_alone() -> None:
+    from kielo_shared.localization.openai_provider import name_finnish_cases
+
+    for text in ("Der Illativ zeigt eine Richtung.", "cách bộ phận", "elatiivi", "relative clause", ""):
+        assert name_finnish_cases(text) == text
