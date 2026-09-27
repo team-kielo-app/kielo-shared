@@ -122,7 +122,12 @@ _TITLE_RULE = (
     "NAME of that concept: an English infinitive becomes the target "
     "language's dictionary form of the verb (never a tense, aspect or "
     "particle word), and anything in parentheses is learning-language "
-    "material kept exactly as written."
+    "material kept exactly as written. Capitalise a title the way "
+    "{lang} capitalises one, not in English Title Case: "
+    '"Adjective and Noun Agreement" is Vietnamese "Sự hòa hợp giữa tính '
+    'từ và danh từ", not "Sự hòa hợp giữa Tính từ và Danh từ"; only '
+    "the first word and names take a capital unless {lang} "
+    "grammar says otherwise (German nouns)."
 )
 
 _CONTEXT_RULE = (
@@ -203,7 +208,7 @@ _BATCH_SYSTEM = (
     "Quoted or parenthesised {source_lang} — glosses and translations — is "
     "{source_lang} content: translate it into {target_lang} and keep the "
     "quotes. "
-    + _TITLE_RULE
+    + _TITLE_RULE.replace("{lang}", "{target_lang}")
     + " "
     + _ADDRESS_RULE.replace("{lang}", "{target_lang}")
     + " "
