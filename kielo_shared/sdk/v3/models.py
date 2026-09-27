@@ -4190,8 +4190,27 @@ class RegisterResponse(LoginResponse):
     pass
 
 
-class RelatedConcept(DictionaryRelatedConcept):
+class RelatedConcept(BaseModel):
+    grammar_concept_id: str
+    reason: str
+    relation: str
+    title: str
+
+
+class RelatedConceptSummary(RelatedConcept):
     pass
+
+
+class Relation(StrEnum):
+    contrasts_with = "contrasts_with"
+    often_used_with = "often_used_with"
+
+
+class RelatedConceptTeaser(BaseModel):
+    grammar_concept_id: UUID_aliased = Field(..., title="Grammar Concept Id")
+    reason: str = Field(..., title="Reason")
+    relation: Relation = Field(..., title="Relation")
+    title: str = Field(..., title="Title")
 
 
 class RelatedLemmas(DictionaryRelatedLemmas):
@@ -6816,6 +6835,7 @@ class FieldTranslateBatchResponse(BaseModel):
 
 
 class AIConversation(BaseModel):
+    description: str | None = None
     id: str
     persona: ConversationPersona
     setting: ConversationSetting
@@ -6827,12 +6847,8 @@ class AiConversationFlow(BaseModel):
     steps: list[str | AiConversationStep] = Field(..., title="Steps")
 
 
-class AiConversationSummary(BaseModel):
-    description: str | None = None
-    id: str
-    persona: ConversationPersona
-    setting: ConversationSetting
-    title: str
+class AiConversationSummary(AIConversation):
+    pass
 
 
 class AllFeatureLimitsResponse(BaseModel):
@@ -7030,6 +7046,7 @@ class ConceptHubCoreContent(BaseModel):
 class ConceptHubFollowUps(BaseModel):
     ai_conversations: list[AiConversationSummary]
     exercise_decks: list[ExerciseDeckSummary]
+    related_concepts: list[RelatedConceptSummary] | None = None
     simplified_articles: list[SimplifiedArticleTeaser]
 
 
@@ -7360,6 +7377,9 @@ class FindBySourceResponse(BaseModel):
 class FollowUpActivities(BaseModel):
     ai_conversations: list[AiConversationTeaser] = Field(..., title="Ai Conversations")
     exercise_decks: list[ExerciseDeckTeaser] = Field(..., title="Exercise Decks")
+    related_concepts: list[RelatedConceptTeaser] | None = Field(
+        None, title="Related Concepts"
+    )
     simplified_articles: list[SimplifiedArticleTeaser] | None = Field(
         None, title="Simplified Articles"
     )

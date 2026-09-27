@@ -419,6 +419,12 @@ const (
 	RecommendationLaunchParamsItemTypeGrammarConcept RecommendationLaunchParamsItemType = "GrammarConcept"
 )
 
+// Defines values for RelatedConceptTeaserRelation.
+const (
+	ContrastsWith RelatedConceptTeaserRelation = "contrasts_with"
+	OftenUsedWith RelatedConceptTeaserRelation = "often_used_with"
+)
+
 // Defines values for RoadmapCompleteLessonResponsePracticeStatus.
 const (
 	RoadmapCompleteLessonResponsePracticeStatusAvailable   RoadmapCompleteLessonResponsePracticeStatus = "available"
@@ -727,10 +733,11 @@ const (
 
 // AIConversation defines model for AIConversation.
 type AIConversation struct {
-	Id      string              `json:"id"`
-	Persona ConversationPersona `json:"persona"`
-	Setting ConversationSetting `json:"setting"`
-	Title   string              `json:"title"`
+	Description *string             `json:"description,omitempty"`
+	Id          string              `json:"id"`
+	Persona     ConversationPersona `json:"persona"`
+	Setting     ConversationSetting `json:"setting"`
+	Title       string              `json:"title"`
 }
 
 // APIKey defines model for APIKey.
@@ -2202,6 +2209,7 @@ type ConceptHubExample struct {
 type ConceptHubFollowUps struct {
 	AiConversations    []AiConversationSummary   `json:"ai_conversations"`
 	ExerciseDecks      []ExerciseDeckSummary     `json:"exercise_decks"`
+	RelatedConcepts    *[]RelatedConceptSummary  `json:"related_concepts,omitempty"`
 	SimplifiedArticles []SimplifiedArticleTeaser `json:"simplified_articles"`
 }
 
@@ -4217,6 +4225,7 @@ type FlashcardExerciseSourceType string
 type FollowUpActivities struct {
 	AiConversations    []AiConversationTeaser     `json:"ai_conversations"`
 	ExerciseDecks      []ExerciseDeckTeaser       `json:"exercise_decks"`
+	RelatedConcepts    *[]RelatedConceptTeaser    `json:"related_concepts,omitempty"`
 	SimplifiedArticles *[]SimplifiedArticleTeaser `json:"simplified_articles,omitempty"`
 }
 
@@ -6712,9 +6721,30 @@ type RegisterResponse struct {
 
 // RelatedConcept defines model for RelatedConcept.
 type RelatedConcept struct {
-	Id   string  `json:"id"`
-	Term *string `json:"term,omitempty"`
+	GrammarConceptId string `json:"grammar_concept_id"`
+	Reason           string `json:"reason"`
+	Relation         string `json:"relation"`
+	Title            string `json:"title"`
 }
+
+// RelatedConceptSummary defines model for RelatedConceptSummary.
+type RelatedConceptSummary struct {
+	GrammarConceptId string `json:"grammar_concept_id"`
+	Reason           string `json:"reason"`
+	Relation         string `json:"relation"`
+	Title            string `json:"title"`
+}
+
+// RelatedConceptTeaser A concept a tutor would send the learner to next from this one.
+type RelatedConceptTeaser struct {
+	GrammarConceptId uuid.UUID                    `json:"grammar_concept_id"`
+	Reason           string                       `json:"reason"`
+	Relation         RelatedConceptTeaserRelation `json:"relation"`
+	Title            string                       `json:"title"`
+}
+
+// RelatedConceptTeaserRelation defines model for RelatedConceptTeaser.Relation.
+type RelatedConceptTeaserRelation string
 
 // RelatedLemmas defines model for RelatedLemmas.
 type RelatedLemmas struct {

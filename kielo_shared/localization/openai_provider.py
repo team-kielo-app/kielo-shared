@@ -107,6 +107,12 @@ _FINNISH_CASE_NAMES = {
 _FINNISH_CASE_RE = re.compile(
     r"(?<!\w)(" + "|".join(_FINNISH_CASE_NAMES) + r")(?!\w)", re.IGNORECASE
 )
+_REPEATED_CASE_RE = re.compile(
+    r"(?<!\w)("
+    + "|".join(sorted(set(_FINNISH_CASE_NAMES.values())))
+    + r")\s*\(\s*\1\s*\)",
+    re.IGNORECASE,
+)
 
 
 def name_finnish_cases(translated: str) -> str:
@@ -115,7 +121,11 @@ def name_finnish_cases(translated: str) -> str:
         name = _FINNISH_CASE_NAMES[found.lower()]
         return name.capitalize() if found[0].isupper() else name
 
-    return _FINNISH_CASE_RE.sub(_finnish, translated) if translated else translated
+    if not translated:
+        return translated
+    # "the illative case (Illatiivi)" came out "cách illatiivi (Illatiivi)":
+    # once renamed, a gloss that repeats the name says nothing.
+    return _REPEATED_CASE_RE.sub(r"\1", _FINNISH_CASE_RE.sub(_finnish, translated))
 
 
 def _with_learning_words(

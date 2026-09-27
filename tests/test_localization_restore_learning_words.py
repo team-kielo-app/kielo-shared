@@ -62,3 +62,10 @@ def test_case_renaming_leaves_other_words_and_spellings_alone() -> None:
 
     for text in ("Der Illativ zeigt eine Richtung.", "cách bộ phận", "elatiivi", "relative clause", ""):
         assert name_finnish_cases(text) == text
+
+
+def test_a_gloss_that_repeats_the_renamed_case_is_dropped() -> None:
+    from kielo_shared.localization.openai_provider import name_finnish_cases
+
+    assert name_finnish_cases("Cách illative (Illatiivi) là một cách.") == "Cách illatiivi là một cách."
+    assert name_finnish_cases("cách inessiivi (-ssa/-ssä)") == "cách inessiivi (-ssa/-ssä)"
