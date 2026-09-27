@@ -28,6 +28,7 @@ from kielo_shared.localization.openai_provider import (
     _parse_batch_payload,
     _role_prompt,
     _strip_code_fences,
+    _with_learning_words,
 )
 from kielo_shared.localization.types import TranslationItem, TranslationResult
 
@@ -97,11 +98,12 @@ class GeminiProvider:
             for i in range(0, len(items), self._max_batch_items)
         ]
         if len(chunks) == 1:
-            return await self._translate_chunk(
+            single = await self._translate_chunk(
                 chunks[0],
                 source_locale=source_locale or "en",
                 target_locale=target_locale,
             )
+            return _with_learning_words(items, single)
 
         sem = asyncio.Semaphore(self._max_parallel_chunks)
 
@@ -117,7 +119,7 @@ class GeminiProvider:
         flat: list[TranslationResult] = []
         for sub in chunk_results:
             flat.extend(sub)
-        return flat
+        return _with_learning_words(items, flat)
 
     # ──────────────────────────── chunk ──────────────────────────────────
 
