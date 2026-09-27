@@ -944,14 +944,16 @@ type AiConversationStep struct {
 
 // AiConversationSummary defines model for AiConversationSummary.
 type AiConversationSummary struct {
-	Id      string              `json:"id"`
-	Persona ConversationPersona `json:"persona"`
-	Setting ConversationSetting `json:"setting"`
-	Title   string              `json:"title"`
+	Description *string             `json:"description,omitempty"`
+	Id          string              `json:"id"`
+	Persona     ConversationPersona `json:"persona"`
+	Setting     ConversationSetting `json:"setting"`
+	Title       string              `json:"title"`
 }
 
 // AiConversationTeaser defines model for AiConversationTeaser.
 type AiConversationTeaser struct {
+	Description          *string               `json:"description,omitempty"`
 	Id                   string                `json:"id"`
 	LearningLanguageCode *string               `json:"learning_language_code,omitempty"`
 	Persona              AiConversationPersona `json:"persona"`
@@ -2564,7 +2566,10 @@ type ConversationFocusResponse struct {
 type ConversationForOrigin struct {
 	Covered      int      `json:"covered"`
 	CoveredTerms []string `json:"covered_terms"`
+	ExampleForms []string `json:"example_forms"`
+	ExampleLine  *string  `json:"example_line,omitempty"`
 	FocusItemIds []string `json:"focus_item_ids"`
+	FocusTerms   []string `json:"focus_terms"`
 	OriginId     string   `json:"origin_id"`
 	OriginKind   string   `json:"origin_kind"`
 	ScenarioId   *string  `json:"scenario_id,omitempty"`

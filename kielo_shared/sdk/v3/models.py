@@ -172,6 +172,7 @@ class AiConversationStep(BaseModel):
 
 
 class AiConversationTeaser(BaseModel):
+    description: str | None = Field("", title="Description")
     id: str = Field(..., title="Id")
     learning_language_code: str | None = Field("", title="Learning Language Code")
     persona: AiConversationPersona
@@ -1180,7 +1181,10 @@ class ConversationFocusResponse(BaseModel):
 class ConversationForOrigin(BaseModel):
     covered: int
     covered_terms: list[str]
+    example_forms: list[str]
+    example_line: str | None = None
     focus_item_ids: list[str]
+    focus_terms: list[str]
     origin_id: str
     origin_kind: str
     scenario_id: str | None = None
@@ -6823,8 +6827,12 @@ class AiConversationFlow(BaseModel):
     steps: list[str | AiConversationStep] = Field(..., title="Steps")
 
 
-class AiConversationSummary(AIConversation):
-    pass
+class AiConversationSummary(BaseModel):
+    description: str | None = None
+    id: str
+    persona: ConversationPersona
+    setting: ConversationSetting
+    title: str
 
 
 class AllFeatureLimitsResponse(BaseModel):
