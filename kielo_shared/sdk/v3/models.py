@@ -181,6 +181,12 @@ class AiConversationTeaser(BaseModel):
     title: str = Field(..., title="Title")
 
 
+class AnswerForm(BaseModel):
+    form: str = Field(..., title="Form")
+    lemma: str = Field(..., title="Lemma")
+    slot: str = Field(..., title="Slot")
+
+
 class AppFeedback(BaseModel):
     app_version: str | None = None
     category: str
@@ -2284,6 +2290,7 @@ class FetchDynamicTranslationsResponse(BaseModel):
 
 
 class FillInTheBlankExercise(BaseModel):
+    answer_form: AnswerForm | None = None
     cache_entry_id: str | None = Field(None, title="Cache Entry Id")
     content_ref: ContentRef | None = None
     context_hint: str | None = Field(
@@ -2323,6 +2330,11 @@ class FillInTheBlankExercise(BaseModel):
     validation_signature: str | None = Field(None, title="Validation Signature")
 
 
+class FlashcardExample(BaseModel):
+    text: str = Field(..., title="Text")
+    translation: str | None = Field("", title="Translation")
+
+
 class FlashcardExercise(BaseModel):
     answer_html: str | None = Field(
         None,
@@ -2348,6 +2360,7 @@ class FlashcardExercise(BaseModel):
     )
     difficulty: int | None = Field(None, title="Difficulty")
     error_pattern_tag: str | None = Field(None, title="Error Pattern Tag")
+    example: FlashcardExample | None = None
     exercise_id: UUID_aliased | None = Field(
         None,
         description="Unique ID for this specific exercise instance.",
@@ -3328,6 +3341,11 @@ class ListVideoItem(BaseModel):
     video_url: str
 
 
+class OptionKind(StrEnum):
+    meaning = "meaning"
+    word = "word"
+
+
 class ListeningComprehensionExercise(BaseModel):
     audio_text: str | None = Field("", title="Audio Text")
     audio_url: str | None = Field(None, title="Audio Url")
@@ -3362,6 +3380,7 @@ class ListeningComprehensionExercise(BaseModel):
     item_type_fk: ItemTypeFk | None = Field(..., title="Item Type Fk")
     objective_id: UUID_aliased | None = Field(None, title="Objective Id")
     option_feedback: dict[str, str] | None = Field(None, title="Option Feedback")
+    option_kind: OptionKind | None = Field("meaning", title="Option Kind")
     options: list[dict[str, str]] = Field(
         ...,
         description="List of options with 'id' (UUID) and 'text' keys",
@@ -6342,6 +6361,7 @@ class UpdateProfileRequest(BaseModel):
         None,
         description="PostHog flag value for the onboarding flow the learner went through.",
     )
+    reminder_hour: int | None = None
 
 
 class UpdateProgressRequest(BaseModel):
@@ -6539,6 +6559,7 @@ class UserProfile(BaseModel):
         description="When setup finished. Sent as null when the account still owes setup, and always present on servers that know the field, so an absent key means an older server. (Plain string, not a [string, null] type array: the Go SDK generator cannot resolve type arrays.)",
     )
     onboarding_variant: str | None = None
+    reminder_hour: int | None = None
     support_language_code: str | None = None
     support_language_source: SupportLanguageSource | None = Field(
         None,
@@ -7304,6 +7325,7 @@ class DecisionLog(BaseModel):
     breadth_mode: str | None = Field("", title="Breadth Mode")
     breadth_reason: str | None = Field("", title="Breadth Reason")
     depth_bonus: int | None = Field(0, title="Depth Bonus")
+    earned_promotions: int | None = Field(0, title="Earned Promotions")
     exercises_generated: int | None = Field(0, title="Exercises Generated")
     exercises_planned: int | None = Field(0, title="Exercises Planned")
     exercises_rejected: int | None = Field(0, title="Exercises Rejected")
