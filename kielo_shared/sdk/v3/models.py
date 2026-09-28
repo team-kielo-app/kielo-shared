@@ -6788,6 +6788,7 @@ class WebIngestTargetRequest(BaseModel):
 class WeeklyActivityDay(BaseModel):
     day: str
     minutes: int
+    study_minutes: int | None = None
 
 
 class WeeklyActivityDayV3(WeeklyActivityDay):
