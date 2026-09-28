@@ -79,6 +79,13 @@ class AchievementDetails(BaseModel):
     points: int
 
 
+class AchievementProgressV3(BaseModel):
+    achievement_id: str
+    current: int | None = None
+    metric: str
+    target: int
+
+
 class AchievementV3(BaseModel):
     achievement_id: str
     details: AchievementDetails
@@ -6283,8 +6290,9 @@ class UpdateAuthUserFirebaseUIDRequest(BaseModel):
     firebase_uid: str
 
 
-class UpdateContentStatusRequest(AppFeedbackUpdateStatusRequest):
-    pass
+class UpdateContentStatusRequest(BaseModel):
+    force: bool | None = None
+    status: str
 
 
 class UpdateConversationInterestsRequest(BaseModel):
@@ -7280,6 +7288,12 @@ class CurriculumTreeTrack(BaseModel):
 
 class CursorPageAchievementCatalogItemV3(BaseModel):
     items: list[AchievementCatalogItemV3]
+    meta: CursorPageMeta | None = None
+    next_page_key: str | None = None
+
+
+class CursorPageAchievementProgressV3(BaseModel):
+    items: list[AchievementProgressV3]
     meta: CursorPageMeta | None = None
     next_page_key: str | None = None
 
