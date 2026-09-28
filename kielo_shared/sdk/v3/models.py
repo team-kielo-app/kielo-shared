@@ -3301,6 +3301,29 @@ class LegalHoldResult(BaseModel):
     media_id: str
 
 
+class Direction(StrEnum):
+    up = "up"
+    down = "down"
+
+
+class LevelCheckResponse(BaseModel):
+    current_level: str | None = Field(None, title="Current Level")
+    direction: Direction | None = Field(None, title="Direction")
+    evidence_correct: int | None = Field(0, title="Evidence Correct")
+    evidence_days: int | None = Field(0, title="Evidence Days")
+    evidence_total: int | None = Field(0, title="Evidence Total")
+    suggested_level: str | None = Field(None, title="Suggested Level")
+
+
+class LevelCheckV3(BaseModel):
+    current_level: str | None = None
+    direction: str | None = None
+    evidence_correct: int
+    evidence_days: int
+    evidence_total: int
+    suggested_level: str | None = None
+
+
 class LinkRevenueCatUserRequest(BaseModel):
     revenue_cat_user_id: str
 
@@ -5436,6 +5459,10 @@ class SingletonLearningSessionV3(BaseModel):
 
 class SingletonLegalHoldResult(BaseModel):
     data: LegalHoldResult
+
+
+class SingletonLevelCheckV3(BaseModel):
+    data: LevelCheckV3
 
 
 class SingletonLinkRevenueCatUserResponse(BaseModel):
