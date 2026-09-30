@@ -8274,6 +8274,7 @@ type Scenario struct {
 	CreatedBy                *uuid.UUID              `json:"created_by,omitempty"`
 	Description              *string                 `json:"description,omitempty"`
 	Difficulty               *string                 `json:"difficulty,omitempty"`
+	ElevenlabsVoiceId        *string                 `json:"elevenlabs_voice_id,omitempty"`
 	EstimatedDurationMinutes *int                    `json:"estimated_duration_minutes,omitempty"`
 	Id                       uuid.UUID               `json:"id"`
 	IsFeatured               bool                    `json:"is_featured"`
@@ -11887,17 +11888,18 @@ type VideoListPage struct {
 
 // VoiceAgent defines model for VoiceAgent.
 type VoiceAgent struct {
-	AvatarUrl    *string   `json:"avatar_url,omitempty"`
-	CreatedAt    time.Time `json:"created_at"`
-	Description  *string   `json:"description,omitempty"`
-	Gender       *string   `json:"gender,omitempty"`
-	Id           uuid.UUID `json:"id"`
-	IsActive     bool      `json:"is_active"`
-	Language     string    `json:"language"`
-	LanguageCode *string   `json:"language_code,omitempty"`
-	Name         string    `json:"name"`
-	UpdatedAt    time.Time `json:"updated_at"`
-	VoiceId      string    `json:"voice_id"`
+	AvatarUrl         *string   `json:"avatar_url,omitempty"`
+	CreatedAt         time.Time `json:"created_at"`
+	Description       *string   `json:"description,omitempty"`
+	ElevenlabsVoiceId *string   `json:"elevenlabs_voice_id,omitempty"`
+	Gender            *string   `json:"gender,omitempty"`
+	Id                uuid.UUID `json:"id"`
+	IsActive          bool      `json:"is_active"`
+	Language          string    `json:"language"`
+	LanguageCode      *string   `json:"language_code,omitempty"`
+	Name              string    `json:"name"`
+	UpdatedAt         time.Time `json:"updated_at"`
+	VoiceId           string    `json:"voice_id"`
 }
 
 // WatchedVideo defines model for WatchedVideo.
@@ -11935,7 +11937,9 @@ type WebIngestPlanItem struct {
 	DisplayName          string     `json:"display_name"`
 	IsActive             bool       `json:"is_active"`
 	LearningLanguageCode string     `json:"learning_language_code"`
+	MaxArticlesPerRun    *int       `json:"max_articles_per_run,omitempty"`
 	Position             int        `json:"position"`
+	RunHoursUtc          *[]int     `json:"run_hours_utc,omitempty"`
 	SourceUrl            string     `json:"source_url"`
 	TargetId             string     `json:"target_id"`
 }
@@ -11980,29 +11984,35 @@ type WebIngestRunItem struct {
 
 // WebIngestTarget defines model for WebIngestTarget.
 type WebIngestTarget struct {
-	BrandId              *uuid.UUID `json:"brand_id,omitempty"`
-	BrandName            *string    `json:"brand_name,omitempty"`
-	CreatedAt            time.Time  `json:"created_at"`
-	CreatedBy            *uuid.UUID `json:"created_by,omitempty"`
-	DisplayName          string     `json:"display_name"`
-	IsActive             bool       `json:"is_active"`
-	LearningLanguageCode string     `json:"learning_language_code"`
-	Notes                *string    `json:"notes,omitempty"`
-	SourceUrl            string     `json:"source_url"`
-	TargetId             string     `json:"target_id"`
-	UpdatedAt            time.Time  `json:"updated_at"`
-	UpdatedBy            *uuid.UUID `json:"updated_by,omitempty"`
+	BrandId                 *uuid.UUID `json:"brand_id,omitempty"`
+	BrandName               *string    `json:"brand_name,omitempty"`
+	CreatedAt               time.Time  `json:"created_at"`
+	CreatedBy               *uuid.UUID `json:"created_by,omitempty"`
+	DisplayName             string     `json:"display_name"`
+	HideContentWhenInactive bool       `json:"hide_content_when_inactive"`
+	IsActive                bool       `json:"is_active"`
+	LearningLanguageCode    string     `json:"learning_language_code"`
+	MaxArticlesPerRun       *int       `json:"max_articles_per_run,omitempty"`
+	Notes                   *string    `json:"notes,omitempty"`
+	RunHoursUtc             *[]int     `json:"run_hours_utc,omitempty"`
+	SourceUrl               string     `json:"source_url"`
+	TargetId                string     `json:"target_id"`
+	UpdatedAt               time.Time  `json:"updated_at"`
+	UpdatedBy               *uuid.UUID `json:"updated_by,omitempty"`
 }
 
 // WebIngestTargetRequest defines model for WebIngestTargetRequest.
 type WebIngestTargetRequest struct {
-	BrandId              *string `json:"brand_id,omitempty"`
-	DisplayName          string  `json:"display_name"`
-	IsActive             *bool   `json:"is_active,omitempty"`
-	LearningLanguageCode string  `json:"learning_language_code"`
-	Notes                *string `json:"notes,omitempty"`
-	SourceUrl            string  `json:"source_url"`
-	TargetId             string  `json:"target_id"`
+	BrandId                 *string `json:"brand_id,omitempty"`
+	DisplayName             string  `json:"display_name"`
+	HideContentWhenInactive *bool   `json:"hide_content_when_inactive,omitempty"`
+	IsActive                *bool   `json:"is_active,omitempty"`
+	LearningLanguageCode    string  `json:"learning_language_code"`
+	MaxArticlesPerRun       *int    `json:"max_articles_per_run,omitempty"`
+	Notes                   *string `json:"notes,omitempty"`
+	RunHoursUtc             *[]int  `json:"run_hours_utc,omitempty"`
+	SourceUrl               string  `json:"source_url"`
+	TargetId                string  `json:"target_id"`
 }
 
 // WeeklyActivityDay defines model for WeeklyActivityDay.

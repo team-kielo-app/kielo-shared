@@ -5199,6 +5199,7 @@ class Scenario(BaseModel):
     created_by: UUID_aliased | None = None
     description: str | None = None
     difficulty: str | None = None
+    elevenlabs_voice_id: str | None = None
     estimated_duration_minutes: int | None = None
     id: UUID_aliased
     is_featured: bool
@@ -7428,6 +7429,7 @@ class VoiceAgent(BaseModel):
     avatar_url: str | None = None
     created_at: AwareDatetime
     description: str | None = None
+    elevenlabs_voice_id: str | None = None
     gender: str | None = None
     id: UUID_aliased
     is_active: bool
@@ -7457,7 +7459,9 @@ class WebIngestPlanItem(BaseModel):
     display_name: str
     is_active: bool
     learning_language_code: str
+    max_articles_per_run: int | None = None
     position: int
+    run_hours_utc: list[int] | None = None
     source_url: str
     target_id: str
 
@@ -7483,9 +7487,12 @@ class WebIngestTarget(BaseModel):
     created_at: AwareDatetime
     created_by: UUID_aliased | None = None
     display_name: str
+    hide_content_when_inactive: bool
     is_active: bool
     learning_language_code: str
+    max_articles_per_run: int | None = None
     notes: str | None = None
+    run_hours_utc: list[int] | None = None
     source_url: str
     target_id: str
     updated_at: AwareDatetime
@@ -7495,9 +7502,12 @@ class WebIngestTarget(BaseModel):
 class WebIngestTargetRequest(BaseModel):
     brand_id: str | None = None
     display_name: str
+    hide_content_when_inactive: bool | None = None
     is_active: bool | None = None
     learning_language_code: str
+    max_articles_per_run: int | None = None
     notes: str | None = None
+    run_hours_utc: list[int] | None = None
     source_url: str
     target_id: str
 
