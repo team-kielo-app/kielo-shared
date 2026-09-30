@@ -1002,6 +1002,12 @@ class EnrichmentStatus(StrEnum):
 
 
 class ConceptHubSentenceExample(BaseModel):
+    article_title: str | None = None
+    text: str | None = None
+    translation: str | None = None
+
+
+class ConceptHubSentenceExampleKielolearnEngine(BaseModel):
     article_title: str | None = Field(None, title="Article Title")
     text: str | None = Field(None, title="Text")
     translation: str | None = Field(None, title="Translation")
@@ -1147,6 +1153,15 @@ class ConversationBriefRequest(BaseModel):
     user_id: UUID_aliased = Field(..., title="User Id")
 
 
+class ConversationBriefWord(BaseModel):
+    base_word_id: str
+    due: bool
+    form: str
+    gloss: str
+    source: str
+    term: str
+
+
 class ExampleSpeaker(StrEnum):
     learner = "learner"
     partner = "partner"
@@ -1158,7 +1173,7 @@ class Source(StrEnum):
     new = "new"
 
 
-class ConversationBriefWord(BaseModel):
+class ConversationBriefWordKielolearnEngine(BaseModel):
     base_word_id: UUID_aliased = Field(..., title="Base Word Id")
     due: bool | None = Field(False, title="Due")
     example: str | None = Field(
@@ -1433,7 +1448,7 @@ class CoreContent(BaseModel):
     common_mistakes: list[dict[str, str]] = Field(..., title="Common Mistakes")
     examples: list[dict[str, str]] = Field(..., title="Examples")
     explanation_html: str = Field(..., title="Explanation Html")
-    in_the_wild: list[ConceptHubSentenceExample] | None = Field(
+    in_the_wild: list[ConceptHubSentenceExampleKielolearnEngine] | None = Field(
         [], title="In The Wild", validate_default=True
     )
 
@@ -1683,6 +1698,11 @@ class CreateTranslationRequest(BaseModel):
 
 
 class CreateWordClusterSessionRequest(BaseModel):
+    context_sentence: str | None = None
+    item_id: str
+
+
+class CreateWordClusterSessionRequestKielolearnEngine(BaseModel):
     context_sentence: str | None = Field(None, title="Context Sentence")
     item_id: UUID_aliased = Field(..., title="Item Id")
     learning_language_code: str | None = Field("", title="Learning Language Code")
@@ -1690,10 +1710,30 @@ class CreateWordClusterSessionRequest(BaseModel):
 
 
 class CurriculumChapterLessonsRequest(BaseModel):
+    lesson_ids: list[UUID_aliased]
+
+
+class CurriculumChapterLessonsRequestKielolearnEngine(BaseModel):
     lesson_ids: list[UUID_aliased] = Field(..., title="Lesson Ids")
 
 
 class CurriculumChapterResponse(BaseModel):
+    color_hex: str | None = None
+    created_at: AwareDatetime
+    description: str | None = None
+    icon_emoji: str | None = None
+    id: UUID_aliased
+    learning_objectives: list[str]
+    lesson_count: int
+    level_id: UUID_aliased
+    order_index: int
+    status: str
+    thumbnail_url: str | None = None
+    title: str
+    updated_at: AwareDatetime
+
+
+class CurriculumChapterResponseKielolearnEngine(BaseModel):
     color_hex: str | None = Field(None, title="Color Hex")
     created_at: AwareDatetime = Field(..., title="Created At")
     description: str | None = Field(None, title="Description")
@@ -1711,6 +1751,18 @@ class CurriculumChapterResponse(BaseModel):
 
 
 class CurriculumChapterUpsertRequest(BaseModel):
+    color_hex: str | None = None
+    description: str | None = None
+    icon_emoji: str | None = None
+    learning_objectives: list[str]
+    level_id: UUID_aliased
+    order_index: int
+    status: str
+    thumbnail_url: str | None = None
+    title: str
+
+
+class CurriculumChapterUpsertRequestKielolearnEngine(BaseModel):
     color_hex: str | None = Field(None, title="Color Hex")
     description: str | None = Field(None, title="Description")
     icon_emoji: str | None = Field(None, title="Icon Emoji")
@@ -1724,6 +1776,22 @@ class CurriculumChapterUpsertRequest(BaseModel):
 
 
 class CurriculumLevelResponse(BaseModel):
+    cefr_level: str | None = None
+    chapter_count: int
+    color_hex: str | None = None
+    created_at: AwareDatetime
+    description: str | None = None
+    icon_emoji: str | None = None
+    id: UUID_aliased
+    order_index: int
+    status: str
+    thumbnail_url: str | None = None
+    title: str
+    track_id: UUID_aliased
+    updated_at: AwareDatetime
+
+
+class CurriculumLevelResponseKielolearnEngine(BaseModel):
     cefr_level: str | None = Field(None, title="Cefr Level")
     chapter_count: int | None = Field(0, title="Chapter Count")
     color_hex: str | None = Field(None, title="Color Hex")
@@ -1741,6 +1809,18 @@ class CurriculumLevelResponse(BaseModel):
 
 
 class CurriculumLevelUpsertRequest(BaseModel):
+    cefr_level: str | None = None
+    color_hex: str | None = None
+    description: str | None = None
+    icon_emoji: str | None = None
+    order_index: int
+    status: str
+    thumbnail_url: str | None = None
+    title: str
+    track_id: UUID_aliased
+
+
+class CurriculumLevelUpsertRequestKielolearnEngine(BaseModel):
     cefr_level: str | None = Field(None, title="Cefr Level")
     color_hex: str | None = Field(None, title="Color Hex")
     description: str | None = Field(None, title="Description")
@@ -1754,8 +1834,18 @@ class CurriculumLevelUpsertRequest(BaseModel):
 
 
 class CurriculumReorderItem(BaseModel):
+    id: UUID_aliased
+    order_index: int
+
+
+class CurriculumReorderItemKielolearnEngine(BaseModel):
     id: UUID_aliased = Field(..., title="Id")
     order_index: int = Field(..., title="Order Index")
+
+
+class CurriculumReorderRequest(BaseModel):
+    entity_type: str
+    items: list[CurriculumReorderItem]
 
 
 class EntityType(StrEnum):
@@ -1765,12 +1855,29 @@ class EntityType(StrEnum):
     lesson = "lesson"
 
 
-class CurriculumReorderRequest(BaseModel):
+class CurriculumReorderRequestKielolearnEngine(BaseModel):
     entity_type: EntityType = Field(..., title="Entity Type")
-    items: list[CurriculumReorderItem] = Field(..., title="Items")
+    items: list[CurriculumReorderItemKielolearnEngine] = Field(..., title="Items")
 
 
 class CurriculumTrackResponse(BaseModel):
+    audience: str | None = None
+    color_hex: str | None = None
+    created_at: AwareDatetime
+    description: str | None = None
+    icon_emoji: str | None = None
+    id: UUID_aliased
+    level_count: int
+    order_index: int
+    slug: str
+    status: str
+    thumbnail_url: str | None = None
+    title: str
+    track_type: str
+    updated_at: AwareDatetime
+
+
+class CurriculumTrackResponseKielolearnEngine(BaseModel):
     audience: str | None = Field(None, title="Audience")
     color_hex: str | None = Field(None, title="Color Hex")
     created_at: AwareDatetime = Field(..., title="Created At")
@@ -1790,6 +1897,19 @@ class CurriculumTrackResponse(BaseModel):
 
 
 class CurriculumTrackUpsertRequest(BaseModel):
+    audience: str | None = None
+    color_hex: str | None = None
+    description: str | None = None
+    icon_emoji: str | None = None
+    order_index: int
+    slug: str
+    status: str
+    thumbnail_url: str | None = None
+    title: str
+    track_type: str
+
+
+class CurriculumTrackUpsertRequestKielolearnEngine(BaseModel):
     audience: str | None = Field(None, title="Audience")
     color_hex: str | None = Field(None, title="Color Hex")
     description: str | None = Field(None, title="Description")
@@ -1825,6 +1945,13 @@ class CurriculumTracksV3(BaseModel):
 
 
 class CurriculumTreeLesson(BaseModel):
+    id: UUID_aliased
+    order_index: int
+    status: str
+    title: str
+
+
+class CurriculumTreeLessonKielolearnEngine(BaseModel):
     id: UUID_aliased = Field(..., title="Id")
     kind: str | None = Field(None, title="Kind")
     order_index: int = Field(..., title="Order Index")
@@ -1952,11 +2079,21 @@ class DictionaryConfusable(Confusable):
     pass
 
 
-class DictionaryDefinition(Definition):
+class DictionaryDefinition(BaseModel):
+    primary: str | None = None
+    secondary: list[str] | None = None
+
+
+class DictionaryDefinitionContentService(Definition):
     pass
 
 
-class DictionaryExample(ConceptHubExample):
+class DictionaryExample(BaseModel):
+    en: str
+    fi: str
+
+
+class DictionaryExampleContentService(ConceptHubExample):
     pass
 
 
@@ -1996,7 +2133,7 @@ class DictionaryRelatedLemmas(BaseModel):
 class DictionarySense(BaseModel):
     definition: str | None = None
     definition_html: str | None = None
-    examples: list[DictionaryExample] | None = None
+    examples: list[DictionaryExampleContentService] | None = None
     index: int
     tags: list[str] | None = None
     translation: str | None = None
@@ -2064,7 +2201,12 @@ class Example(BaseModel):
     translation: str
 
 
-class ExampleSentencePair(ConceptHubExample):
+class ExampleSentencePair(BaseModel):
+    text: str
+    translation: str | None = None
+
+
+class ExampleSentencePairCms(ConceptHubExample):
     pass
 
 
@@ -2204,8 +2346,17 @@ class FeatureCommentListResponse(BaseModel):
     comments: list[FeatureComment]
 
 
-class FeatureCommentsAdminResponse(FeatureCommentListResponse):
-    pass
+class FeatureCommentUserService(BaseModel):
+    author_id: UUID_aliased
+    author_name: str | None = None
+    content: str
+    created_at: AwareDatetime
+    feature_id: UUID_aliased
+    id: UUID_aliased
+
+
+class FeatureCommentsAdminResponse(BaseModel):
+    comments: list[FeatureCommentUserService]
 
 
 class FeatureLimit(BaseModel):
@@ -2216,12 +2367,27 @@ class FeatureLimit(BaseModel):
     reset_date: AwareDatetime
 
 
+class FeatureLimitCms(BaseModel):
+    feature: str
+    limit_value: int
+    tier: str
+    user_id: UUID_aliased | None = None
+
+
 class FeatureLimitResult(CreateTierLimitRequest):
     pass
 
 
 class FeatureLimitRow(CreateTierLimitRequest):
     pass
+
+
+class FeatureLimitUserService(BaseModel):
+    feature: str
+    limit: int
+    period: str
+    reset_date: AwareDatetime
+    used: int
 
 
 class FeatureLimitWithUsage(BaseModel):
@@ -2240,13 +2406,29 @@ class FeatureRequest(BaseModel):
     comment_count: int
     created_at: str
     description: str
+    has_voted: bool
     id: str
     is_private: bool
     status: str
     title: str
     updated_at: str
     vote_count: int
-    has_voted: bool
+
+
+class FeatureRequestCms(BaseModel):
+    author_id: str
+    author_learning_language_code: str | None = None
+    author_name: str | None = None
+    category: str | None = None
+    comment_count: int
+    created_at: str
+    description: str
+    id: str
+    is_private: bool
+    status: str
+    title: str
+    updated_at: str
+    vote_count: int
 
 
 class FeatureRequestListResponse(BaseModel):
@@ -2256,13 +2438,44 @@ class FeatureRequestListResponse(BaseModel):
     total: int
 
 
-class FeatureRequestsAdminResponse(FeatureRequestListResponse):
-    pass
+class FeatureRequestListResponseCms(BaseModel):
+    features: list[FeatureRequestCms]
+    limit: int
+    offset: int
+    total: int
+
+
+class FeatureRequestUserService(BaseModel):
+    author_id: UUID_aliased
+    author_learning_language_code: str | None = None
+    author_name: str | None = None
+    category: str | None = None
+    comment_count: int
+    created_at: AwareDatetime
+    description: str
+    has_voted: bool
+    id: UUID_aliased
+    is_private: bool
+    status: str
+    title: str
+    updated_at: AwareDatetime
+    vote_count: int
+
+
+class FeatureRequestsAdminResponse(BaseModel):
+    features: list[FeatureRequestUserService]
+    limit: int
+    offset: int
+    total: int
 
 
 class FeatureVoteResult(BaseModel):
     has_voted: bool
     vote_count: int
+
+
+class FeatureVoteResultUserService(FeatureVoteResult):
+    pass
 
 
 class Feedback(AppFeedback):
@@ -2287,6 +2500,13 @@ class FeedbackListResponse(BaseModel):
 class FeedbackMessageCreateRequest(BaseModel):
     body: str | None = None
     media_id: UUID_aliased | None = None
+
+
+class FeedbackMessageCreateRequestUserService(BaseModel):
+    body: str
+    media_id: UUID_aliased | None = None
+    sender_id: UUID_aliased | None = None
+    sender_type: str
 
 
 class FeedbackMessageMedia(BaseModel):
@@ -2435,8 +2655,9 @@ class ForgotPasswordRequest(BaseModel):
     email: str
 
 
-class ForgotPasswordResponse(CancelSubscriptionResponse):
-    pass
+class ForgotPasswordResponse(BaseModel):
+    code: str | None = None
+    message: str
 
 
 class GeneralScheduleUpdateItem(BaseModel):
@@ -2496,6 +2717,41 @@ class GrammarConcept(BaseModel):
     description: str | None = None
     example_structures: Any | None = None
     examples: list[ExampleSentencePair] | None = None
+    grammar_concept_id: UUID_aliased
+    meaning: str | None = None
+    notes: str | None = None
+    related_concepts: Any | None = None
+    term: str | None = None
+    updated_at: AwareDatetime | None = None
+    user_status: str | None = None
+
+
+class GrammarConceptCms(BaseModel):
+    category: str | None = None
+    cefr_level: str | None = None
+    common_mistakes: str | None = None
+    description: str | None = None
+    example_structures: Any | None = None
+    examples: list[ExampleSentencePairCms] | None = None
+    explanation: str | None = None
+    grammar_concept_id: UUID_aliased
+    learning_language_code: str
+    meaning: str | None = None
+    notes: str | None = None
+    related_concepts: Any | None = None
+    term: str | None = None
+    user_status: str | None = None
+    vector_embedding: str | None = None
+
+
+class GrammarConceptContentService(BaseModel):
+    category: str | None = None
+    cefr_level: str | None = None
+    common_mistakes: str | None = None
+    created_at: AwareDatetime | None = None
+    description: str | None = None
+    example_structures: Any | None = None
+    examples: list[ExampleSentencePairCms] | None = None
     grammar_concept_id: UUID_aliased
     meaning: str | None = None
     notes: str | None = None
@@ -2606,13 +2862,77 @@ class IdentifyConceptExercise(BaseModel):
     validation_signature: str | None = Field(None, title="Validation Signature")
 
 
+class InAppNudge(BaseModel):
+    anchor_target: str
+    context: str
+    cooldown_seconds: int
+    data: dict[str, Any] | None = None
+    deep_link: str
+    expires_at: AwareDatetime | None = None
+    nudge_id: str
+    nudge_type: str
+    required_feature_type: str | None = None
+
+
 class InAppNudgeData(BaseModel):
     model_config = ConfigDict(
         extra="allow",
     )
 
 
+class InAppNudgeKielolearnEngine(BaseModel):
+    anchor_target: str = Field(
+        ...,
+        description="Where on the nav bar the tooltip points. Mobile resolves to TutorialContext registered ID via anchor_target_to_tutorial_id helper. tab_settings is desktop-only — server suppresses this anchor for phone clients.",
+        title="Anchor Target",
+    )
+    context: str = Field(
+        ...,
+        description="Canonical context this nudge fires in. Echoes the request param so mobile can verify the response matches the request (defense against stale cached responses across context transitions).",
+        title="Context",
+    )
+    cooldown_seconds: conint(ge=0) | None = Field(
+        14400,
+        description="Mobile MAY use this to throttle re-poll within the same context. Server enforces cooldown at the eligibility-query layer; this is an advisory for client-side polling.",
+        title="Cooldown Seconds",
+    )
+    data: InAppNudgeData | None = Field(
+        None,
+        description="Structured data for mobile i18n interpolation. Server populates per-nudge-type fields (e.g. due_count for review_backlog). Mobile interpolates via the i18n key template like ''{{due_count}} reviews waiting''.",
+    )
+    deep_link: str = Field(
+        ...,
+        description="kielo://path the mobile CTA tap routes to. Resolved by the existing notificationRouting.parseRecommendationDeepLink parser. Routes to existing screens only — no new mobile navigation required for Arc G3.",
+        title="Deep Link",
+    )
+    expires_at: AwareDatetime | None = Field(
+        None,
+        description="Optional. If set, mobile MUST stop rendering after this timestamp (covers e.g. flash-sale-style nudges). Not used by the 4 v1 nudges; reserved for future types.",
+        title="Expires At",
+    )
+    nudge_id: UUID_aliased = Field(
+        ...,
+        description="Stable per-(user, nudge_type, context) composite ID. Server generates deterministically from the composite PK so mobile can dedupe optimistically when the same nudge re-fires across polls. Used as the dismiss_id in POST state transitions.",
+        title="Nudge Id",
+    )
+    nudge_type: str = Field(
+        ...,
+        description="Canonical nudge category from Arc G1 SoT. Mobile uses this as the i18n key prefix (e.g. nudge_type='review_backlog_idle' → i18n key 'in_app_nudge_review_backlog_title'). Pinned by V117 CHECK constraint + cross-language SoT parity.",
+        title="Nudge Type",
+    )
+    required_feature_type: str | None = Field(
+        None,
+        description="Optional cross-check when anchor_target='tab_quick_feature'. Values: 'news' | 'ktv' | 'juka'. Mobile suppresses render if useLastUsedFeature() doesn't match. Defends against the quick-feature slot-swap race (Arc G1 brittleness defense #1).",
+        title="Required Feature Type",
+    )
+
+
 class InAppNudgeStateTransition(BaseModel):
+    snoozed_until: AwareDatetime | None = None
+    transition: str
+
+
+class InAppNudgeStateTransitionKielolearnEngine(BaseModel):
     snoozed_until: AwareDatetime | None = Field(
         None,
         description="Required when transition='snoozed'. Ignored for other transitions. Server clamps to max 7 days from now.",
@@ -2640,6 +2960,10 @@ class Inflection(BaseModel):
 class IngestResponse(BaseModel):
     event_id: str
     idempotent: bool
+
+
+class InternalMergeGuestRequest(BaseModel):
+    from_user_id: UUID_aliased
 
 
 class InvalidateCacheResponse(BaseModel):
@@ -2718,6 +3042,16 @@ class JoinSessionResponse(JoinResp):
     pass
 
 
+class KLearnArticleInjection(BaseModel):
+    action: str
+    base_word_id: UUID_aliased | None = None
+    grammar_concept_id: UUID_aliased | None = None
+    paragraph_index: int
+    payload: dict[str, Any] | None = None
+    sentence_index: int | None = None
+    target_text: str | None = None
+
+
 class KLearnContextualLearningOpportunity(BaseModel):
     article_id: UUID_aliased
     context_snippet: str | None = None
@@ -2729,6 +3063,12 @@ class KLearnContextualLearningOpportunity(BaseModel):
     target_item_id: UUID_aliased
     target_item_type: str
     user_id: UUID_aliased
+
+
+class KLearnPersonalizedArticleResponse(BaseModel):
+    article_version_id: UUID_aliased
+    injections: list[KLearnArticleInjection] | None = None
+    modified_markdown_content: str | None = None
 
 
 class KLearnScrambledWord(BaseModel):
@@ -3373,6 +3713,12 @@ class LinkRevenueCatUserResponse(BaseModel):
     success: bool
 
 
+class LinkRevenueCatUserResponseUserService(BaseModel):
+    linked_at: AwareDatetime | None = None
+    message: str
+    success: bool
+
+
 class ListVideoItem(BaseModel):
     audio_url: str | None = None
     brand_id: UUID_aliased
@@ -3472,12 +3818,17 @@ class LocalizationLanguage(BaseModel):
     native_name: str | None = None
 
 
+class LocalizationStatus(BaseModel):
+    locale: str | None = None
+    status: str
+
+
 class Status5(StrEnum):
     pending = "pending"
     ready = "ready"
 
 
-class LocalizationStatus(BaseModel):
+class LocalizationStatusKielolearnEngine(BaseModel):
     locale: str | None = Field(None, title="Locale")
     status: Status5 = Field(..., title="Status")
 
@@ -3612,9 +3963,8 @@ class MessageAudioRequest(BaseModel):
     text: str
 
 
-class MessageResponse(BaseModel):
-    code: str | None = None
-    message: str
+class MessageResponse(ForgotPasswordResponse):
+    pass
 
 
 class MicroDrill(BaseModel):
@@ -3638,7 +3988,11 @@ class Mindmap(BaseModel):
     video_id: UUID_aliased
 
 
-class Morphology(BaseModel):
+class Morphology(DictionaryMorphology):
+    pass
+
+
+class MorphologyContentService(BaseModel):
     case: str | None = None
     clitics: list[str] | None = None
     mood: str | None = None
@@ -3646,6 +4000,10 @@ class Morphology(BaseModel):
     person: str | None = None
     tense: str | None = None
     voice: str | None = None
+
+
+class MorphologyContentbridge(MorphologyContentService):
+    pass
 
 
 class MultipleChoiceTranslationExercise(BaseModel):
@@ -3946,6 +4304,15 @@ class PaymentHistory(BaseModel):
     event_type: str
 
 
+class PaymentHistoryUserService(BaseModel):
+    amount: float
+    currency: str
+    date: AwareDatetime
+    description: str
+    event_type: str
+    status: str
+
+
 class PendingDeletionRow(BaseModel):
     deleted_at: AwareDatetime | None = None
     legal_hold: bool
@@ -4050,6 +4417,10 @@ class PlacementTestItem(BaseModel):
 
 
 class PlacementTestItemsResponse(BaseModel):
+    items: list[PlacementTestItem]
+
+
+class PlacementTestItemsResponseKielolearnEngine(BaseModel):
     grammar_items: list[ItemSummary] = Field(..., title="Grammar Items")
     vocabulary_items: list[ItemSummary] = Field(..., title="Vocabulary Items")
 
@@ -4106,6 +4477,15 @@ class PurchaseHistory(BaseModel):
     currency: str
     transaction_id: str
     status: str = Field(..., description="completed | refunded | failed")
+
+
+class PurchaseHistoryUserService(BaseModel):
+    amount: float
+    currency: str
+    product_id: str
+    purchase_date: AwareDatetime
+    status: str
+    transaction_id: str
 
 
 class PushTokensResponse(BaseModel):
@@ -4275,14 +4655,18 @@ class RegisterResponse(LoginResponse):
     pass
 
 
-class RelatedConcept(BaseModel):
+class RelatedConcept(DictionaryRelatedConcept):
+    pass
+
+
+class RelatedConceptContentService(BaseModel):
     grammar_concept_id: str
     reason: str
     relation: str
     title: str
 
 
-class RelatedConceptSummary(RelatedConcept):
+class RelatedConceptSummary(RelatedConceptContentService):
     pass
 
 
@@ -4303,6 +4687,15 @@ class RelatedLemmas(DictionaryRelatedLemmas):
 
 
 class RelatedWord(BaseModel):
+    base_word_id: str
+    cefr_level: str | None = None
+    part_of_speech: str | None = None
+    similarity_score: float
+    term: str | None = None
+    translation: str | None = None
+
+
+class RelatedWordContentService(BaseModel):
     base_word_id: UUID_aliased
     cefr_level: str | None = None
     part_of_speech: str | None = None
@@ -4326,7 +4719,7 @@ class RelatedWordsSource(BaseModel):
 
 class RelatedWordsSummaryResponse(BaseModel):
     count: int
-    related_words: list[RelatedWord]
+    related_words: list[RelatedWordContentService]
     source_word: RelatedWordsSource
 
 
@@ -4375,7 +4768,7 @@ class ResetPasswordRequest(BaseModel):
     token: str
 
 
-class ResetPasswordResponse(CancelSubscriptionResponse):
+class ResetPasswordResponse(ForgotPasswordResponse):
     pass
 
 
@@ -4457,6 +4850,23 @@ class RevokeSubscriptionResponse(CancelSubscriptionResponse):
 
 
 class RoadmapAdminLessonResponse(BaseModel):
+    category: str
+    cefr_level: str | None = None
+    chapter_id: UUID_aliased | None = None
+    created_at: AwareDatetime
+    description: str | None = None
+    difficulty_level: str
+    estimated_duration_minutes: int
+    is_published: bool
+    lesson_content: dict[str, Any]
+    lesson_id: UUID_aliased
+    order_index: int
+    thumbnail_url: str | None = None
+    title: str
+    updated_at: AwareDatetime
+
+
+class RoadmapAdminLessonResponseKielolearnEngine(BaseModel):
     category: str = Field(..., title="Category")
     cefr_level: str | None = Field(None, title="Cefr Level")
     chapter_id: UUID_aliased | None = Field(None, title="Chapter Id")
@@ -4492,13 +4902,24 @@ class State(StrEnum):
     completed = "completed"
 
 
+class RoadmapLessonGenerationSettings(BaseModel):
+    category: str
+    cefr_level: str | None = None
+    difficulty_level: str | None = None
+    estimated_duration_minutes: int
+    force_regenerate: bool | None = None
+    shape: str | None = None
+    step_count: int | None = None
+    tts_language: str
+
+
 class DifficultyLevel(StrEnum):
     beginner = "beginner"
     intermediate = "intermediate"
     advanced = "advanced"
 
 
-class RoadmapLessonGenerationSettings(BaseModel):
+class RoadmapLessonGenerationSettingsKielolearnEngine(BaseModel):
     category: str | None = Field("Getting Started", title="Category")
     cefr_level: str | None = Field(None, title="Cefr Level")
     difficulty_level: DifficultyLevel | None = Field(None, title="Difficulty Level")
@@ -4546,6 +4967,20 @@ class RoadmapLessonSummaryV3(BaseModel):
 
 
 class RoadmapLessonUpsertRequest(BaseModel):
+    category: str
+    cefr_level: str | None = None
+    chapter_id: UUID_aliased | None = None
+    description: str | None = None
+    difficulty_level: str
+    estimated_duration_minutes: int
+    is_published: bool
+    lesson_content: dict[str, Any]
+    order_index: int
+    thumbnail_url: str | None = None
+    title: str
+
+
+class RoadmapLessonUpsertRequestKielolearnEngine(BaseModel):
     category: str | None = Field("Getting Started", title="Category")
     cefr_level: str | None = Field(None, title="Cefr Level")
     chapter_id: UUID_aliased | None = Field(None, title="Chapter Id")
@@ -4625,6 +5060,10 @@ class RoadmapStepCompleteResponse(BaseModel):
 
 
 class RoadmapStepTTSRequest(BaseModel):
+    text: str | None = None
+
+
+class RoadmapStepTTSRequestKielolearnEngine(BaseModel):
     text: constr(max_length=600) | None = Field(None, title="Text")
 
 
@@ -4710,6 +5149,17 @@ class SavedItem(BaseModel):
     user_id: str
 
 
+class SavedItemUserService(BaseModel):
+    id: UUID_aliased
+    item_details: dict[str, Any] | None = None
+    item_id: str
+    item_type: str
+    notes: str | None = None
+    saved_at: AwareDatetime
+    saved_context: dict[str, Any] | None = None
+    user_id: UUID_aliased
+
+
 class SavedItemsCountsResponse(BaseModel):
     counts: dict[str, int]
     total: int
@@ -4721,12 +5171,14 @@ class SavedItemsCountsResponseV3(SavedItemsCountsResponse):
 
 class SavedItemsDashboardResponse(BaseModel):
     counts: dict[str, int]
-    recent_items: dict[str, list[SavedItem]]
+    recent_items: dict[str, list[SavedItemUserService]]
     totals: dict[str, int] | None = None
 
 
-class SavedItemsDashboardResponseV3(SavedItemsDashboardResponse):
-    pass
+class SavedItemsDashboardResponseV3(BaseModel):
+    counts: dict[str, int]
+    recent_items: dict[str, list[SavedItem]]
+    totals: dict[str, int] | None = None
 
 
 class Scenario(BaseModel):
@@ -4894,6 +5346,14 @@ class SendNotificationRequest(BaseModel):
     data: dict[str, Any] | None = None
     title: str
     type: str
+    user_id: str
+
+
+class SendNotificationRequestCommunicationsService(BaseModel):
+    body: str
+    data: dict[str, Any] | None = None
+    title: str
+    type: str
     user_id: UUID_aliased
 
 
@@ -4950,7 +5410,7 @@ class Status6(StrEnum):
     missing = "missing"
 
 
-class SessionReconcileRequest(BaseModel):
+class SessionReconcileRequestKielolearnEngine(BaseModel):
     submissions: list[ExerciseSubmission] | None = Field(None, title="Submissions")
 
 
@@ -5025,6 +5485,26 @@ class SimpleAiConversationFlow(BaseModel):
 
 
 class SimplifiedArticleTeaser(BaseModel):
+    article_id: str
+    content_version_id: str
+    difficulty_score: float
+    estimated_reading_time_minutes: int
+    simplification_level: str
+    thumbnail_media_id: str | None = None
+    title: str
+
+
+class SimplifiedArticleTeaserContentService(BaseModel):
+    article_id: UUID_aliased
+    content_version_id: UUID_aliased
+    difficulty_score: float
+    estimated_reading_time_minutes: int
+    simplification_level: str
+    thumbnail_media_id: str | None = None
+    title: str
+
+
+class SimplifiedArticleTeaserKielolearnEngine(BaseModel):
     article_id: UUID_aliased = Field(..., title="Article Id")
     content_version_id: UUID_aliased = Field(..., title="Content Version Id")
     difficulty_score: float = Field(..., title="Difficulty Score")
@@ -5320,12 +5800,16 @@ class SingletonFeatureCommentListResponse(BaseModel):
     data: FeatureCommentListResponse
 
 
+class SingletonFeatureCommentUserService(BaseModel):
+    data: FeatureCommentUserService
+
+
 class SingletonFeatureCommentsAdminResponse(BaseModel):
     data: FeatureCommentsAdminResponse
 
 
 class SingletonFeatureLimitList(BaseModel):
-    data: list[FeatureLimit]
+    data: list[FeatureLimitCms]
 
 
 class SingletonFeatureLimitResult(BaseModel):
@@ -5340,12 +5824,24 @@ class SingletonFeatureRequestListResponse(BaseModel):
     data: FeatureRequestListResponse
 
 
+class SingletonFeatureRequestListResponseCms(BaseModel):
+    data: FeatureRequestListResponseCms
+
+
+class SingletonFeatureRequestUserService(BaseModel):
+    data: FeatureRequestUserService
+
+
 class SingletonFeatureRequestsAdminResponse(BaseModel):
     data: FeatureRequestsAdminResponse
 
 
 class SingletonFeatureVoteResult(BaseModel):
     data: FeatureVoteResult
+
+
+class SingletonFeatureVoteResultUserService(BaseModel):
+    data: FeatureVoteResultUserService
 
 
 class SingletonFeedback(BaseModel):
@@ -5369,11 +5865,15 @@ class SingletonGetUploadURLResponse(BaseModel):
 
 
 class SingletonGrammarConcept(BaseModel):
-    data: GrammarConcept
+    data: GrammarConceptCms
+
+
+class SingletonGrammarConceptContentService(BaseModel):
+    data: GrammarConceptContentService
 
 
 class SingletonGrammarConceptList(BaseModel):
-    data: list[GrammarConcept]
+    data: list[GrammarConceptCms]
 
 
 class SingletonGrantSubscriptionResponse(BaseModel):
@@ -5382,6 +5882,10 @@ class SingletonGrantSubscriptionResponse(BaseModel):
 
 class SingletonHintResponse(BaseModel):
     data: HintResponse
+
+
+class SingletonInAppNudge(BaseModel):
+    data: InAppNudge
 
 
 class SingletonInvalidateCacheResponse(BaseModel):
@@ -5514,6 +6018,10 @@ class SingletonLevelCheckV3(BaseModel):
 
 class SingletonLinkRevenueCatUserResponse(BaseModel):
     data: LinkRevenueCatUserResponse
+
+
+class SingletonLinkRevenueCatUserResponseUserService(BaseModel):
+    data: LinkRevenueCatUserResponseUserService
 
 
 class SingletonLocalizationLanguageList(BaseModel):
@@ -5704,6 +6212,10 @@ class SingletonSavedItem(BaseModel):
     data: SavedItem
 
 
+class SingletonSavedItemUserService(BaseModel):
+    data: SavedItemUserService
+
+
 class SingletonSavedItemsCountsResponse(BaseModel):
     data: SavedItemsCountsResponse
 
@@ -5738,6 +6250,10 @@ class SingletonSetUserFeatureLimitResponse(BaseModel):
 
 class SingletonSetUserOverrideResponse(BaseModel):
     data: SetUserOverrideResponse
+
+
+class SingletonTranslationBundle(BaseModel):
+    data: dict[str, str]
 
 
 class SingletonTranslationBundleSet(BaseModel):
@@ -5925,6 +6441,33 @@ class GrantSource(StrEnum):
 class SubscriptionInfo(BaseModel):
     auto_renew: bool
     canceled_at: str | None = None
+    current_period_status: str = Field(
+        ..., description="paid | unpaid | trial | grace_period"
+    )
+    expires_at: str | None = None
+    features: list[FeatureLimit]
+    grace_period_ends_at: str | None = None
+    grant_source: GrantSource = Field(
+        ..., description="Sweep SSS-B typed write-source tag."
+    )
+    is_manual: bool
+    next_payment_date: AwareDatetime | None = None
+    payment_history: list[PaymentHistory] | None = None
+    product_id: str
+    purchase_history: list[PurchaseHistory] | None = None
+    started_at: str
+    status: str
+    subscription_id: str
+    subscription_type: str | None = Field(
+        None, description="monthly | yearly | weekly | etc."
+    )
+    tier: str
+    trial_ends_at: str | None = None
+
+
+class SubscriptionInfoCms(BaseModel):
+    auto_renew: bool
+    canceled_at: str | None = None
     expires_at: str | None = None
     grace_period_ends_at: str | None = None
     product_id: str
@@ -5933,20 +6476,27 @@ class SubscriptionInfo(BaseModel):
     subscription_id: str
     tier: str
     trial_ends_at: str | None = None
+
+
+class SubscriptionInfoUserService(BaseModel):
+    auto_renew: bool
+    canceled_at: AwareDatetime | None = None
+    current_period_status: str
+    expires_at: AwareDatetime | None = None
+    features: list[FeatureLimitUserService]
+    grace_period_ends_at: AwareDatetime | None = None
+    grant_source: str
     is_manual: bool
-    grant_source: GrantSource = Field(
-        ..., description="Sweep SSS-B typed write-source tag."
-    )
-    features: list[FeatureLimit]
-    subscription_type: str | None = Field(
-        None, description="monthly | yearly | weekly | etc."
-    )
     next_payment_date: AwareDatetime | None = None
-    current_period_status: str = Field(
-        ..., description="paid | unpaid | trial | grace_period"
-    )
-    purchase_history: list[PurchaseHistory] | None = None
-    payment_history: list[PaymentHistory] | None = None
+    payment_history: list[PaymentHistoryUserService] | None = None
+    product_id: str
+    purchase_history: list[PurchaseHistoryUserService] | None = None
+    started_at: AwareDatetime
+    status: str
+    subscription_id: UUID_aliased
+    subscription_type: str | None = None
+    tier: str
+    trial_ends_at: AwareDatetime | None = None
 
 
 class SuggestedConceptHub(BaseModel):
@@ -5975,7 +6525,27 @@ class SurfaceReference(BaseModel):
     caption_index: int | None = None
     inflected_form_details_raw: str | None = None
     language_code: str
-    morphology: Morphology | None = None
+    morphology: MorphologyContentbridge
+    original_token_phrase: str | None = None
+    paragraph_id: UUID_aliased | None = None
+    prompt_segment_index: int | None = None
+    published_at: AwareDatetime
+    snippet_text: str | None = None
+    start_word_index: int | None = None
+    surface_entry_id: UUID_aliased
+    surface_id: UUID_aliased
+    surface_title: str | None = None
+    surface_type: str
+    timestamp_start_seconds: float | None = None
+    token_count: int
+    turn_index: int | None = None
+
+
+class SurfaceReferenceContentService(BaseModel):
+    caption_index: int | None = None
+    inflected_form_details_raw: str | None = None
+    language_code: str
+    morphology: MorphologyContentService | None = None
     original_token_phrase: str | None = None
     paragraph_id: UUID_aliased | None = None
     prompt_segment_index: int | None = None
@@ -5993,6 +6563,11 @@ class SurfaceReference(BaseModel):
 
 class SurfacesResponse(BaseModel):
     items: list[SurfaceReference]
+    next_page_key: str | None = None
+
+
+class SurfacesResponseContentService(BaseModel):
+    items: list[SurfaceReferenceContentService]
     next_page_key: str | None = None
 
 
@@ -6064,6 +6639,11 @@ class TTSParagraphGenerateResponse(BaseModel):
 
 
 class TTSWordTiming(BaseModel):
+    end_ms: int
+    start_ms: int
+
+
+class TTSWordTimingKielolearnEngine(BaseModel):
     end_ms: int = Field(..., title="End Ms")
     start_ms: int = Field(..., title="Start Ms")
 
@@ -6076,7 +6656,7 @@ class Tag(BaseModel):
 
 class TargetedLearningSuggestion(BaseModel):
     grammar_concept_id: UUID_aliased = Field(..., title="Grammar Concept Id")
-    localization: LocalizationStatus | None = Field(
+    localization: LocalizationStatusKielolearnEngine | None = Field(
         None,
         description="readiness of the lazily-localized title; pending = title is source fallback, refetch when warm",
     )
@@ -6127,6 +6707,14 @@ class TopicListItemCreate(BaseModel):
 
 
 class TopicListItemResponse(BaseModel):
+    base_word_id: UUID_aliased
+    meaning: str | None = None
+    position: int
+    similarity_to_centroid: float | None = None
+    term: str | None = None
+
+
+class TopicListItemResponseKielolearnEngine(BaseModel):
     base_word_id: UUID_aliased = Field(..., title="Base Word Id")
     meaning: str | None = Field(None, title="Meaning")
     position: int = Field(..., title="Position")
@@ -6142,26 +6730,42 @@ class TopicListPreview(BaseModel):
     icon: str | None = Field(None, title="Icon")
     name: str | None = Field(None, title="Name")
     seed_word_id: UUID_aliased = Field(..., title="Seed Word Id")
-    words: list[TopicListItemResponse] | None = Field(None, title="Words")
+    words: list[TopicListItemResponseKielolearnEngine] | None = Field(
+        None, title="Words"
+    )
 
 
 class TopicListResponse(BaseModel):
+    category: str | None = None
+    cefr_level: str | None = None
+    description: str | None = None
+    display_name: str | None = None
+    icon: str | None = None
+    id: UUID_aliased
+    name: str
+    owner_user_id: UUID_aliased | None = Field(
+        None,
+        description="User who owns this topic list; null/absent for system-curated lists.",
+    )
+    status: str
+    source_type: str | None = Field(
+        None, description="ai_generated | admin_curated | user_created"
+    )
+    created_at: AwareDatetime
+
+
+class TopicListResponseKielolearnEngine(BaseModel):
     category: str = Field(..., title="Category")
     cefr_level: str | None = Field(None, title="Cefr Level")
-    created_at: AwareDatetime
+    created_at: AwareDatetime = Field(..., title="Created At")
     description: str | None = Field(None, title="Description")
     display_name: str | None = Field(None, title="Display Name")
     icon: str | None = Field(None, title="Icon")
     id: UUID_aliased = Field(..., title="Id")
     name: str = Field(..., title="Name")
-    owner_user_id: UUID_aliased | None = Field(
-        None,
-        description="User who owns this topic list; null/absent for system-curated lists.",
-    )
-    source_type: str | None = Field(
-        None, description="ai_generated | admin_curated | user_created"
-    )
-    status: str
+    owner_user_id: UUID_aliased | None = Field(None, title="Owner User Id")
+    source_type: str | None = Field("ai_generated", title="Source Type")
+    status: str = Field(..., title="Status")
     word_count: int | None = Field(0, title="Word Count")
 
 
@@ -6172,6 +6776,17 @@ class Status13(StrEnum):
 
 
 class TopicListTeaser(BaseModel):
+    category: str | None = None
+    cefr_level: str | None = None
+    display_name: str | None = None
+    icon: str | None = None
+    id: UUID_aliased
+    name: str
+    sample_words: list[str]
+    word_count: int
+
+
+class TopicListTeaserKielolearnEngine(BaseModel):
     category: str = Field(..., title="Category")
     cefr_level: str | None = Field(None, title="Cefr Level")
     display_name: str | None = Field(None, title="Display Name")
@@ -6190,11 +6805,21 @@ class TopicListTeaser(BaseModel):
 
 class TopicListWithWordsResponse(BaseModel):
     topic: TopicListResponse
-    words: list[TopicListItemResponse] = Field(..., title="Words")
+    words: list[TopicListItemResponse]
+
+
+class TopicListWithWordsResponseKielolearnEngine(BaseModel):
+    topic: TopicListResponseKielolearnEngine
+    words: list[TopicListItemResponseKielolearnEngine] = Field(..., title="Words")
 
 
 class TopicListsForWordResponse(BaseModel):
-    topic_lists: list[TopicListTeaser] = Field(..., title="Topic Lists")
+    topic_lists: list[TopicListTeaser]
+    word_id: UUID_aliased
+
+
+class TopicListsForWordResponseKielolearnEngine(BaseModel):
+    topic_lists: list[TopicListTeaserKielolearnEngine] = Field(..., title="Topic Lists")
     word_id: UUID_aliased = Field(..., title="Word Id")
 
 
@@ -6255,6 +6880,11 @@ class TransactionHistoryResponse(BaseModel):
     transactions: list[Transaction]
 
 
+class TransactionHistoryResponseUserService(BaseModel):
+    total_count: int
+    transactions: list[TransactionEntry]
+
+
 class TranscriptResponse(BaseModel):
     evaluation: dict[str, Any] | None = None
     evaluation_progress: dict[str, Any] | None = None
@@ -6266,6 +6896,11 @@ class TranscriptResponse(BaseModel):
 
 
 class TransferCodeResponse(BaseModel):
+    code: str
+    expires_at: str
+
+
+class TransferCodeResponseAuthService(BaseModel):
     code: str
     expires_at: AwareDatetime
 
@@ -6284,6 +6919,12 @@ class TransferSubscriptionResponse(BaseModel):
     message: str
     success: bool
     transferred_at: str | None = None
+
+
+class TransferSubscriptionResponseUserService(BaseModel):
+    message: str
+    success: bool
+    transferred_at: AwareDatetime | None = None
 
 
 class Translation(BaseModel):
@@ -6518,12 +7159,26 @@ class UserAchievementWithDetails(BaseModel):
     points: int
 
 
+class Details(BaseModel):
+    achievement_id: str
+    description: str | None = None
+    icon_name: str | None = None
+    name: str
+    points: int
+
+
+class UserAchievementWithDetailsUserService(BaseModel):
+    achievement_id: str
+    details: Details
+    earned_at: AwareDatetime
+
+
 class UserAchievementsCountResponse(CommsUserCountResult):
     pass
 
 
 class UserAchievementsResponse(BaseModel):
-    achievements: list[UserAchievementWithDetails]
+    achievements: list[UserAchievementWithDetailsUserService]
 
 
 class UserActionEnvelope(BaseModel):
@@ -6572,7 +7227,7 @@ class UserFeatureLimitsResponse(BaseModel):
 
 
 class UserFeatureOverridesResult(BaseModel):
-    overrides: list[FeatureLimit]
+    overrides: list[FeatureLimitCms]
     user: UserBasicInfo | None = None
 
 
@@ -6604,8 +7259,10 @@ class UserProfile(BaseModel):
     estimated_skill_level: str | None = None
     how_did_you_find_out: str | None = None
     id: str
+    is_guest: bool
     last_active_date: str | None = None
     learning_language: str | None = None
+    learning_language_code: str | None = None
     learning_minutes_goal: int | None = None
     learning_reason: LearningReason | None = None
     longest_streak_days: int
@@ -6617,6 +7274,7 @@ class UserProfile(BaseModel):
     )
     onboarding_variant: str | None = None
     reminder_hour: int | None = None
+    streak_grace_used_on: str | None = None
     support_language_code: str | None = None
     support_language_source: SupportLanguageSource | None = Field(
         None,
@@ -6634,6 +7292,30 @@ class UserProfileData(BaseModel):
 class UserProfilePersonalizationUpdate(BaseModel):
     learning_style: LearningStyleProfile | None = None
     preferred_difficulty: PreferredDifficultyProfile | None = None
+
+
+class UserProfileUserService(BaseModel):
+    avatar_media_id: str | None = None
+    country_code: str | None = None
+    current_streak_days: int
+    email: str
+    estimated_skill_level: str | None = None
+    how_did_you_find_out: str | None = None
+    id: UUID_aliased
+    is_guest: bool
+    last_active_date: AwareDatetime | None = None
+    learning_language_code: str | None = None
+    learning_minutes_goal: int | None = None
+    learning_reason: str | None = None
+    longest_streak_days: int
+    name: str | None = None
+    newsletter_consent: bool | None = None
+    onboarding_completed_at: AwareDatetime | None = None
+    onboarding_variant: str | None = None
+    reminder_hour: int | None = None
+    streak_grace_used_on: AwareDatetime | None = None
+    support_language_code: str | None = None
+    support_language_source: str | None = None
 
 
 class UserProgress(BaseModel):
@@ -6936,6 +7618,25 @@ class AllFeatureLimitsResponse(BaseModel):
 
 class ArticleVersionSnippet(BaseModel):
     article_type: str | None = None
+    brand: ArticleBrand
+    difficulty_score: float | None = None
+    estimated_reading_time_minutes: int | None = None
+    id: UUID_aliased
+    learning_language_code: str | None = None
+    original_title: str | None = None
+    publication_date: AwareDatetime | None = None
+    source_url: str | None = None
+    support_language_code: str | None = None
+    tags: list[str] | None = None
+    thumbnail: MediaAssetResponse | None = None
+    title: str
+    title_support_language_code: str | None = None
+    title_translation_fallback: bool | None = None
+    title_translation_source_locale: str | None = None
+
+
+class ArticleVersionSnippetContentService(BaseModel):
+    article_type: str | None = None
     brand: Brand
     difficulty_score: float | None = None
     estimated_reading_time_minutes: int | None = None
@@ -6959,6 +7660,42 @@ class BaseWord(BaseModel):
     cefr_level: str | None = None
     created_at: AwareDatetime
     examples: list[ExampleSentencePair] | None = None
+    frequency_score: float | None = None
+    meaning: str | None = None
+    notes: str | None = None
+    part_of_speech: str | None = None
+    pronunciation_ipa: str | None = None
+    related_lemmas: Any | None = None
+    secondary_meanings: Any | None = None
+    term: str | None = None
+    updated_at: AwareDatetime
+    user_status: str | None = None
+
+
+class BaseWordCms(BaseModel):
+    audio_pronunciation_url: str | None = None
+    base_word_id: UUID_aliased
+    cefr_level: str | None = None
+    examples: list[ExampleSentencePairCms] | None = None
+    frequency_score: float | None = None
+    learning_language_code: str
+    meaning: str | None = None
+    notes: str | None = None
+    part_of_speech: str | None = None
+    pronunciation_ipa: str | None = None
+    related_lemmas: Any | None = None
+    secondary_translations: Any | None = None
+    term: str | None = None
+    user_status: str | None = None
+    vector_embedding: str | None = None
+
+
+class BaseWordContentService(BaseModel):
+    audio_url: str | None = None
+    base_word_id: UUID_aliased
+    cefr_level: str | None = None
+    created_at: AwareDatetime
+    examples: list[ExampleSentencePairCms] | None = None
     frequency_score: float | None = None
     meaning: str | None = None
     notes: str | None = None
@@ -7000,7 +7737,7 @@ class BatchEmailResult(BaseModel):
 class BatchLookupResponse(BaseModel):
     counts_by_item: dict[str, dict[str, int]]
     language_code: str
-    surfaces_by_item: dict[str, list[SurfaceReference]]
+    surfaces_by_item: dict[str, list[SurfaceReferenceContentService]]
 
 
 class BatchSaveTranslationsRequest(BaseModel):
@@ -7034,8 +7771,8 @@ class BulkUpsertDynamicTranslationsResponse(BaseModel):
 class CAMArticleContent(BaseModel):
     article_version_id: UUID_aliased
     occurrences: list[CAMOccurrence]
-    unique_base_words: list[BaseWord] | None = None
-    unique_grammar_concepts: list[GrammarConcept] | None = None
+    unique_base_words: list[BaseWordContentService] | None = None
+    unique_grammar_concepts: list[GrammarConceptContentService] | None = None
 
 
 class CampaignConfigSchema(BaseModel):
@@ -7108,7 +7845,7 @@ class ConceptHubCategory(BaseModel):
 
 class ConceptHubCore(BaseModel):
     common_mistakes: list[CommonMistake]
-    examples: list[ExampleSentencePair]
+    examples: list[ExampleSentencePairCms]
     explanation_html: str
     image_url: str | None = None
     in_the_wild: list[ConceptHubSentenceExample]
@@ -7191,7 +7928,9 @@ class ContextMatchingExercise(BaseModel):
 class ConversationBriefResponse(BaseModel):
     learner_level: str | None = Field(None, title="Learner Level")
     scenario_id: str = Field(..., title="Scenario Id")
-    words: list[ConversationBriefWord] | None = Field(None, title="Words")
+    words: list[ConversationBriefWordKielolearnEngine] | None = Field(
+        None, title="Words"
+    )
 
 
 class ConversationBrowseFacets(BaseModel):
@@ -7256,6 +7995,17 @@ class ConversationScenariosResponse(BaseModel):
 
 class CreateTranslationKeyRequest(BaseModel):
     context_screenshot_url: str | None = None
+    description: str | None = None
+    key: str
+    max_length: int | None = None
+    namespace_id: UUID_aliased
+    placeholders: list[TranslationKeyPlaceholder] | None = None
+    source_text: str
+    tags: list[str] | None = None
+
+
+class CreateTranslationKeyRequestLocalization(BaseModel):
+    context_screenshot_url: str | None = None
     created_by: UUID_aliased | None = None
     description: str | None = None
     key: str
@@ -7267,11 +8017,25 @@ class CreateTranslationKeyRequest(BaseModel):
 
 
 class CurriculumTreeChapter(BaseModel):
+    description: str | None = None
+    icon_emoji: str | None = None
+    id: UUID_aliased
+    lesson_count: int
+    lessons: list[CurriculumTreeLesson]
+    order_index: int
+    status: str
+    thumbnail_url: str | None = None
+    title: str
+
+
+class CurriculumTreeChapterKielolearnEngine(BaseModel):
     description: str | None = Field(None, title="Description")
     icon_emoji: str | None = Field(None, title="Icon Emoji")
     id: UUID_aliased = Field(..., title="Id")
     lesson_count: int | None = Field(0, title="Lesson Count")
-    lessons: list[CurriculumTreeLesson] | None = Field(None, title="Lessons")
+    lessons: list[CurriculumTreeLessonKielolearnEngine] | None = Field(
+        None, title="Lessons"
+    )
     order_index: int = Field(..., title="Order Index")
     status: str = Field(..., title="Status")
     thumbnail_media_id: UUID_aliased | None = Field(None, title="Thumbnail Media Id")
@@ -7280,9 +8044,24 @@ class CurriculumTreeChapter(BaseModel):
 
 
 class CurriculumTreeLevel(BaseModel):
+    cefr_level: str | None = None
+    chapter_count: int
+    chapters: list[CurriculumTreeChapter]
+    description: str | None = None
+    icon_emoji: str | None = None
+    id: UUID_aliased
+    order_index: int
+    status: str
+    thumbnail_url: str | None = None
+    title: str
+
+
+class CurriculumTreeLevelKielolearnEngine(BaseModel):
     cefr_level: str | None = Field(None, title="Cefr Level")
     chapter_count: int | None = Field(0, title="Chapter Count")
-    chapters: list[CurriculumTreeChapter] | None = Field(None, title="Chapters")
+    chapters: list[CurriculumTreeChapterKielolearnEngine] | None = Field(
+        None, title="Chapters"
+    )
     description: str | None = Field(None, title="Description")
     icon_emoji: str | None = Field(None, title="Icon Emoji")
     id: UUID_aliased = Field(..., title="Id")
@@ -7294,12 +8073,28 @@ class CurriculumTreeLevel(BaseModel):
 
 
 class CurriculumTreeTrack(BaseModel):
+    description: str | None = None
+    icon_emoji: str | None = None
+    id: UUID_aliased
+    level_count: int
+    levels: list[CurriculumTreeLevel]
+    order_index: int
+    slug: str
+    status: str
+    thumbnail_url: str | None = None
+    title: str
+    track_type: str
+
+
+class CurriculumTreeTrackKielolearnEngine(BaseModel):
     description: str | None = Field(None, title="Description")
     icon_emoji: str | None = Field(None, title="Icon Emoji")
     id: UUID_aliased = Field(..., title="Id")
     label: str | None = Field(None, title="Label")
     level_count: int | None = Field(0, title="Level Count")
-    levels: list[CurriculumTreeLevel] | None = Field(None, title="Levels")
+    levels: list[CurriculumTreeLevelKielolearnEngine] | None = Field(
+        None, title="Levels"
+    )
     order_index: int = Field(..., title="Order Index")
     slug: str = Field(..., title="Slug")
     status: str = Field(..., title="Status")
@@ -7333,6 +8128,12 @@ class CursorPageArticleVersionSnippet(BaseModel):
     next_page_key: str | None = None
 
 
+class CursorPageArticleVersionSnippetContentService(BaseModel):
+    items: list[ArticleVersionSnippetContentService]
+    meta: CursorPageMeta | None = None
+    next_page_key: str | None = None
+
+
 class CursorPageLearningItemV3(BaseModel):
     items: list[LearningItemV3]
     meta: CursorPageMeta | None = None
@@ -7341,6 +8142,12 @@ class CursorPageLearningItemV3(BaseModel):
 
 class CursorPageSavedItem(BaseModel):
     items: list[SavedItem]
+    meta: CursorPageMeta | None = None
+    next_page_key: str | None = None
+
+
+class CursorPageSavedItemUserService(BaseModel):
+    items: list[SavedItemUserService]
     meta: CursorPageMeta | None = None
     next_page_key: str | None = None
 
@@ -7420,6 +8227,28 @@ class DecisionLog(BaseModel):
     timing_ms: dict[str, int] | None = Field(None, title="Timing Ms")
 
 
+class DictionaryEntryCms(BaseModel):
+    audio_url: str | None = None
+    cefr_level: str | None = None
+    definition: DictionaryDefinition
+    examples: list[DictionaryExample] | None = None
+    id: str
+    learning_language_code: str | None = None
+    morphology: DictionaryMorphology | None = None
+    part_of_speech: str | None = None
+    pronunciation_ipa: str | None = None
+    related_grammar: list[DictionaryRelatedConcept] | None = None
+    term: str | None = None
+
+
+class DictionaryLookupResponseCms(BaseModel):
+    entry: DictionaryEntryCms | None = None
+    found: bool
+    morphology: DictionaryMorphology | None = None
+    suggestions: list[str] | None = None
+    word: str
+
+
 class DictionaryParadigm(BaseModel):
     headers: list[str]
     rows: list[DictionaryParadigmRow]
@@ -7439,6 +8268,16 @@ class EffectiveUserLimitsResponse(BaseModel):
 
 class FeedbackMessage(BaseModel):
     body: str
+    created_at: str
+    feedback_id: str
+    id: str
+    media: FeedbackMessageMedia | None = None
+    read_at: str | None = None
+    sender_type: str
+
+
+class FeedbackMessageCms(BaseModel):
+    body: str
     created_at: AwareDatetime
     feedback_id: UUID_aliased
     id: UUID_aliased
@@ -7449,7 +8288,7 @@ class FeedbackMessage(BaseModel):
 
 class FeedbackMessageList(BaseModel):
     feedback_user_id: UUID_aliased | None = None
-    items: list[FeedbackMessage]
+    items: list[FeedbackMessageCms]
 
 
 class FeedbackMessageListResponse(FeedbackMessageList):
@@ -7466,12 +8305,19 @@ class FirstScene(BaseModel):
 
 
 class FollowUpActivities(BaseModel):
+    ai_conversations: list[AIConversation]
+    exercise_decks: list[ExerciseDeckHeader]
+    related_concepts: list[RelatedConceptContentService] | None = None
+    simplified_articles: list[SimplifiedArticleTeaserContentService]
+
+
+class FollowUpActivitiesKielolearnEngine(BaseModel):
     ai_conversations: list[AiConversationTeaser] = Field(..., title="Ai Conversations")
     exercise_decks: list[ExerciseDeckTeaser] = Field(..., title="Exercise Decks")
     related_concepts: list[RelatedConceptTeaser] | None = Field(
         None, title="Related Concepts"
     )
-    simplified_articles: list[SimplifiedArticleTeaser] | None = Field(
+    simplified_articles: list[SimplifiedArticleTeaserKielolearnEngine] | None = Field(
         None, title="Simplified Articles"
     )
 
@@ -7514,54 +8360,7 @@ class HTTPValidationError(BaseModel):
     detail: list[ValidationError] | None = Field(None, title="Detail")
 
 
-class InAppNudge(BaseModel):
-    anchor_target: str = Field(
-        ...,
-        description="Where on the nav bar the tooltip points. Mobile resolves to TutorialContext registered ID via anchor_target_to_tutorial_id helper. tab_settings is desktop-only — server suppresses this anchor for phone clients.",
-        title="Anchor Target",
-    )
-    context: str = Field(
-        ...,
-        description="Canonical context this nudge fires in. Echoes the request param so mobile can verify the response matches the request (defense against stale cached responses across context transitions).",
-        title="Context",
-    )
-    cooldown_seconds: conint(ge=0) | None = Field(
-        14400,
-        description="Mobile MAY use this to throttle re-poll within the same context. Server enforces cooldown at the eligibility-query layer; this is an advisory for client-side polling.",
-        title="Cooldown Seconds",
-    )
-    data: InAppNudgeData | None = Field(
-        None,
-        description="Structured data for mobile i18n interpolation. Server populates per-nudge-type fields (e.g. due_count for review_backlog). Mobile interpolates via the i18n key template like ''{{due_count}} reviews waiting''.",
-    )
-    deep_link: str = Field(
-        ...,
-        description="kielo://path the mobile CTA tap routes to. Resolved by the existing notificationRouting.parseRecommendationDeepLink parser. Routes to existing screens only — no new mobile navigation required for Arc G3.",
-        title="Deep Link",
-    )
-    expires_at: AwareDatetime | None = Field(
-        None,
-        description="Optional. If set, mobile MUST stop rendering after this timestamp (covers e.g. flash-sale-style nudges). Not used by the 4 v1 nudges; reserved for future types.",
-        title="Expires At",
-    )
-    nudge_id: UUID_aliased = Field(
-        ...,
-        description="Stable per-(user, nudge_type, context) composite ID. Server generates deterministically from the composite PK so mobile can dedupe optimistically when the same nudge re-fires across polls. Used as the dismiss_id in POST state transitions.",
-        title="Nudge Id",
-    )
-    nudge_type: str = Field(
-        ...,
-        description="Canonical nudge category from Arc G1 SoT. Mobile uses this as the i18n key prefix (e.g. nudge_type='review_backlog_idle' → i18n key 'in_app_nudge_review_backlog_title'). Pinned by V117 CHECK constraint + cross-language SoT parity.",
-        title="Nudge Type",
-    )
-    required_feature_type: str | None = Field(
-        None,
-        description="Optional cross-check when anchor_target='tab_quick_feature'. Values: 'news' | 'ktv' | 'juka'. Mobile suppresses render if useLastUsedFeature() doesn't match. Defends against the quick-feature slot-swap race (Arc G1 brittleness defense #1).",
-        title="Required Feature Type",
-    )
-
-
-class KLearnArticleInjection(BaseModel):
+class KLearnArticleInjectionContentService(BaseModel):
     action: str
     base_word_id: NullUUID | None = None
     grammar_concept_id: NullUUID | None = None
@@ -7604,9 +8403,9 @@ class KLearnExercise(BaseModel):
     translation_prompt: str | None = None
 
 
-class KLearnPersonalizedArticleResponse(BaseModel):
+class KLearnPersonalizedArticleResponseContentService(BaseModel):
     article_version_id: UUID_aliased
-    injections: list[KLearnArticleInjection] | None = None
+    injections: list[KLearnArticleInjectionContentService] | None = None
     modified_markdown_content: str | None = None
 
 
@@ -7688,6 +8487,17 @@ class KieloTVVideo(BaseModel):
     transcription_status: str
     updated_at: AwareDatetime
     video_url: str
+
+
+class LearningSession(BaseModel):
+    created_at: AwareDatetime
+    estimated_duration_minutes: int | None = None
+    exercises: list[KLearnExercise]
+    session_id: UUID_aliased
+    session_type: str
+    status: str | None = None
+    title: str
+    user_id: UUID_aliased | None = None
 
 
 class ListScenariosResponse(BaseModel):
@@ -7847,11 +8657,21 @@ class RelatedVersionsResponse(BaseModel):
 
 
 class RoadmapAdminGenerateLessonRequest(BaseModel):
+    chapter_id: UUID_aliased | None = None
+    description: str | None = None
+    is_published: bool
+    order_index: int | None = None
+    settings: RoadmapLessonGenerationSettings
+    thumbnail_url: str | None = None
+    title: str
+
+
+class RoadmapAdminGenerateLessonRequestKielolearnEngine(BaseModel):
     chapter_id: UUID_aliased | None = Field(None, title="Chapter Id")
     description: str | None = Field(None, title="Description")
     is_published: bool | None = Field(False, title="Is Published")
     order_index: int | None = Field(None, title="Order Index")
-    settings: RoadmapLessonGenerationSettings | None = None
+    settings: RoadmapLessonGenerationSettingsKielolearnEngine | None = None
     thumbnail_media_id: UUID_aliased | None = Field(None, title="Thumbnail Media Id")
     thumbnail_url: str | None = Field(None, title="Thumbnail Url")
     title: constr(min_length=3, max_length=255) = Field(..., title="Title")
@@ -7987,16 +8807,24 @@ class SentenceConstructionExercise(BaseModel):
     validation_signature: str | None = Field(None, title="Validation Signature")
 
 
+class SessionReconcileRequest(BaseModel):
+    submissions: list[SubmitAnswerRequest]
+
+
 class SingletonAllFeatureLimitsResponse(BaseModel):
     data: AllFeatureLimitsResponse
 
 
 class SingletonBaseWord(BaseModel):
-    data: BaseWord
+    data: BaseWordCms
+
+
+class SingletonBaseWordContentService(BaseModel):
+    data: BaseWordContentService
 
 
 class SingletonBaseWordList(BaseModel):
-    data: list[BaseWord]
+    data: list[BaseWordCms]
 
 
 class SingletonBatchEmailResult(BaseModel):
@@ -8055,6 +8883,14 @@ class SingletonDataQualityRunsPage(BaseModel):
     data: DataQualityRunsPage
 
 
+class SingletonDictionaryEntryCms(BaseModel):
+    data: DictionaryEntryCms
+
+
+class SingletonDictionaryLookupResponseCms(BaseModel):
+    data: DictionaryLookupResponseCms
+
+
 class SingletonEffectiveUserLimitsResponse(BaseModel):
     data: EffectiveUserLimitsResponse
 
@@ -8063,16 +8899,16 @@ class SingletonFeedbackMessage(BaseModel):
     data: FeedbackMessage
 
 
+class SingletonFeedbackMessageCms(BaseModel):
+    data: FeedbackMessageCms
+
+
 class SingletonFeedbackMessageList(BaseModel):
     data: FeedbackMessageList
 
 
 class SingletonGetMediaResponse(BaseModel):
     data: GetMediaResponse
-
-
-class SingletonInAppNudge(BaseModel):
-    data: InAppNudge
 
 
 class SingletonKTVCaptionGenerateResponse(BaseModel):
@@ -8109,6 +8945,10 @@ class SingletonKieloTVVideo(BaseModel):
 
 class SingletonKieloTVVideoList(BaseModel):
     data: list[KieloTVVideo]
+
+
+class SingletonLearningSession(BaseModel):
+    data: LearningSession
 
 
 class SingletonMediaMetadata(BaseModel):
@@ -8179,12 +9019,24 @@ class SingletonSubscriptionInfo(BaseModel):
     data: SubscriptionInfo
 
 
+class SingletonSubscriptionInfoCms(BaseModel):
+    data: SubscriptionInfoCms
+
+
+class SingletonSubscriptionInfoUserService(BaseModel):
+    data: SubscriptionInfoUserService
+
+
 class SingletonSurfaceItemsResponse(BaseModel):
     data: SurfaceItemsResponse
 
 
 class SingletonSurfacesResponse(BaseModel):
     data: SurfacesResponse
+
+
+class SingletonSurfacesResponseContentService(BaseModel):
+    data: SurfacesResponseContentService
 
 
 class SingletonTTSBaseWordStreamSession(BaseModel):
@@ -8211,6 +9063,10 @@ class SingletonTransactionHistoryResponse(BaseModel):
     data: TransactionHistoryResponse
 
 
+class SingletonTransactionHistoryResponseUserService(BaseModel):
+    data: TransactionHistoryResponseUserService
+
+
 class SingletonTranscriptResponse(BaseModel):
     data: TranscriptResponse
 
@@ -8219,15 +9075,23 @@ class SingletonTransferCodeResponse(BaseModel):
     data: TransferCodeResponse
 
 
+class SingletonTransferCodeResponseAuthService(BaseModel):
+    data: TransferCodeResponseAuthService
+
+
 class SingletonTransferSubscriptionResponse(BaseModel):
     data: TransferSubscriptionResponse
+
+
+class SingletonTransferSubscriptionResponseUserService(BaseModel):
+    data: TransferSubscriptionResponseUserService
 
 
 class SingletonTranslation(BaseModel):
     data: Translation
 
 
-class SingletonTranslationBundle(BaseModel):
+class SingletonTranslationBundleCms(BaseModel):
     data: TranslationBundle
 
 
@@ -8305,6 +9169,10 @@ class SingletonUserFeatureOverridesResult(BaseModel):
 
 class SingletonUserProfile(BaseModel):
     data: UserProfile
+
+
+class SingletonUserProfileUserService(BaseModel):
+    data: UserProfileUserService
 
 
 class SingletonUserProgress(BaseModel):
@@ -8405,7 +9273,9 @@ class TTSParagraphJobStatusResponse(BaseModel):
     paragraph_id: UUID_aliased = Field(..., title="Paragraph Id")
     stage: str | None = Field(None, title="Stage")
     status: Status1 | None = Field(None, title="Status")
-    word_timings: list[TTSWordTiming] | None = Field(None, title="Word Timings")
+    word_timings: list[TTSWordTimingKielolearnEngine] | None = Field(
+        None, title="Word Timings"
+    )
 
 
 class TTSParagraphStreamSessionResponse(BaseModel):
@@ -8414,7 +9284,9 @@ class TTSParagraphStreamSessionResponse(BaseModel):
     job_id: UUID_aliased | None = Field(None, title="Job Id")
     session_id: UUID_aliased = Field(..., title="Session Id")
     token: str = Field(..., title="Token")
-    word_timings: list[TTSWordTiming] | None = Field(None, title="Word Timings")
+    word_timings: list[TTSWordTimingKielolearnEngine] | None = Field(
+        None, title="Word Timings"
+    )
 
 
 class TTSStreamSession(BaseModel):
@@ -8445,7 +9317,9 @@ class TopicListStatusResponse(BaseModel):
     seed_word_id: UUID_aliased = Field(..., title="Seed Word Id")
     stage: str | None = Field(None, title="Stage")
     status: Status13 = Field(..., title="Status")
-    topic_lists: list[TopicListTeaser] | None = Field(None, title="Topic Lists")
+    topic_lists: list[TopicListTeaserKielolearnEngine] | None = Field(
+        None, title="Topic Lists"
+    )
 
 
 class TrackRoadmapChapter(BaseModel):
@@ -8495,6 +9369,22 @@ class TrackRoadmapResponse(BaseModel):
 
 
 class TranslationKey(BaseModel):
+    context_screenshot_url: str | None = None
+    created_at: AwareDatetime
+    created_by: UUID_aliased | None = None
+    description: str | None = None
+    id: UUID_aliased
+    key: str
+    max_length: int | None = None
+    namespace_id: UUID_aliased
+    namespace_name: str | None = None
+    placeholders: list[TranslationKeyPlaceholder] | None = None
+    source_text: str
+    tags: list[str] | None = None
+    updated_at: AwareDatetime
+
+
+class TranslationKeyLocalization(BaseModel):
     context_screenshot_url: str | None = None
     created_at: AwareDatetime
     created_by: UUID_aliased | None = None
@@ -8639,13 +9529,36 @@ class ArticleVersionOccurrence(BaseModel):
     start_word_index: int | None = None
 
 
+class ArticleVersionOccurrenceContentService(BaseModel):
+    base_word_detail: BaseWordContentService | None = None
+    base_word_id: UUID_aliased | None = None
+    end_char_offset: int
+    end_word_index: int | None = None
+    grammar_concept_id: UUID_aliased | None = None
+    grammar_detail: GrammarConceptContentService | None = None
+    inflected_form_details: Any | None = None
+    is_kpt_change_example: bool | None = None
+    kpt_original_stem: str | None = None
+    kpt_rule_applied: str | None = None
+    occurrence_id: UUID_aliased
+    occurrence_type: str
+    original_token_phrase: str | None = None
+    paragraph_id: UUID_aliased
+    sentence_text: str | None = None
+    sentence_translation: str | None = None
+    specific_explanation: str | None = None
+    specific_explanation_html: str | None = None
+    start_char_offset: int
+    start_word_index: int | None = None
+
+
 class BulkCreateTranslationKeysRequest(BaseModel):
     created_by: UUID_aliased | None = None
-    keys: list[CreateTranslationKeyRequest]
+    keys: list[CreateTranslationKeyRequestLocalization]
 
 
 class BulkCreateTranslationKeysResponse(BaseModel):
-    items: list[TranslationKey]
+    items: list[TranslationKeyLocalization]
 
 
 class ChallengeSection(BaseModel):
@@ -8698,12 +9611,27 @@ class ConceptHub(BaseModel):
 class ConceptHubPreview(BaseModel):
     core_content: CoreContent | None = None
     description: str | None = Field(None, title="Description")
-    follow_up_activities: FollowUpActivities | None = None
+    follow_up_activities: FollowUpActivitiesKielolearnEngine | None = None
     grammar_concept_id: UUID_aliased = Field(..., title="Grammar Concept Id")
     title: str | None = Field(None, title="Title")
 
 
 class ConceptHubResponse(BaseModel):
+    category: str | None = None
+    cefr_level: str | None = None
+    core_content: ConceptHubCore | None = None
+    description: str | None = None
+    enrichment_completed_at: AwareDatetime | None = None
+    enrichment_error_message: str | None = None
+    enrichment_started_at: AwareDatetime | None = None
+    enrichment_status: str | None = None
+    follow_up_activities: FollowUpActivities
+    grammar_concept_id: UUID_aliased
+    id: UUID_aliased
+    title: str
+
+
+class ConceptHubResponseKielolearnEngine(BaseModel):
     category: str | None = Field(None, title="Category")
     cefr_level: str | None = Field(None, title="Cefr Level")
     core_content: CoreContent | None = None
@@ -8718,7 +9646,7 @@ class ConceptHubResponse(BaseModel):
     enrichment_status: EnrichmentStatus | None = Field(
         "none", title="Enrichment Status"
     )
-    follow_up_activities: FollowUpActivities
+    follow_up_activities: FollowUpActivitiesKielolearnEngine
     grammar_concept_id: UUID_aliased = Field(..., title="Grammar Concept Id")
     id: UUID_aliased = Field(..., title="Id")
     title: str = Field(..., title="Title")
@@ -8737,6 +9665,13 @@ class ConversationDiscoveryCard(BaseModel):
     scenario: ConversationScenario
 
 
+class ConversationDiscoveryCardUserService(BaseModel):
+    badges: list[str] | None = None
+    level_match: str | None = None
+    reason: str
+    scenario: ConversationDiscoveryScenario
+
+
 class ConversationDiscoveryResponse(BaseModel):
     cards: list[ConversationDiscoveryCard]
     interest_options: list[ConversationInterestOption]
@@ -8745,8 +9680,21 @@ class ConversationDiscoveryResponse(BaseModel):
     user_level: ConversationUserLevel
 
 
+class ConversationDiscoveryResponseUserService(BaseModel):
+    cards: list[ConversationDiscoveryCardUserService]
+    interest_options: list[ConversationInterestOption]
+    next_cursor: str | None = Field(None, deprecated=True)
+    next_page_key: str | None = None
+    selected_interests: list[str]
+    user_level: ConversationUserLevel
+
+
 class CurriculumTreeResponse(BaseModel):
-    tracks: list[CurriculumTreeTrack] = Field(..., title="Tracks")
+    tracks: list[CurriculumTreeTrack]
+
+
+class CurriculumTreeResponseKielolearnEngine(BaseModel):
+    tracks: list[CurriculumTreeTrackKielolearnEngine] = Field(..., title="Tracks")
 
 
 class CursorPageFeedbackMessage(BaseModel):
@@ -8767,13 +9715,52 @@ class DevicePreferences(BaseModel):
     user_id: str
 
 
+class DevicePreferencesUserService(BaseModel):
+    device_id: str | None = None
+    notifications: NotificationPreferences
+    sound_enabled: bool
+    support_language_code: str
+    support_language_source: str | None = None
+    user_id: UUID_aliased
+
+
 class DictionaryEntry(BaseModel):
+    all_forms: list[WordForm] | None = None
+    audio_url: str | None = None
+    cefr_level: str | None = None
+    confusables: list[Confusable] | None = None
+    definition: Definition
+    examples: list[Example] | None = None
+    id: str
+    inflection_features: Inflection | None = None
+    inflections: list[Inflection] | None = None
+    key_forms: list[WordForm] | None = None
+    learning_language_code: str | None = None
+    meaning: str | None = None
+    mnemonic_help: str | None = None
+    mnemonic_html: str | None = None
+    morphology: Morphology | None = None
+    paradigm: Paradigm | None = None
+    part_of_speech: str | None = None
+    phrase_frames: list[PhraseFrame] | None = None
+    pronunciation_ipa: str | None = None
+    related_grammar: list[RelatedConcept] | None = None
+    related_lemmas: RelatedLemmas | None = None
+    senses: list[Sense] | None = None
+    similar_words: list[Confusable] | None = None
+    support_language_code: str | None = None
+    surface_form: str | None = None
+    term: str | None = None
+    word_cluster: WordCluster | None = None
+
+
+class DictionaryEntryContentService(BaseModel):
     all_forms: list[DictionaryWordForm] | None = None
     audio_url: str | None = None
     cefr_level: str | None = None
     confusables: list[DictionaryConfusable] | None = None
-    definition: DictionaryDefinition
-    examples: list[DictionaryExample] | None = None
+    definition: DictionaryDefinitionContentService
+    examples: list[DictionaryExampleContentService] | None = None
     id: str
     inflection_features: DictionaryInflection | None = None
     inflections: list[DictionaryInflection] | None = None
@@ -8798,7 +9785,16 @@ class DictionaryEntry(BaseModel):
 
 
 class DictionaryLookupResponse(BaseModel):
+    cached: bool
     entry: DictionaryEntry | None = None
+    found: bool
+    suggestions: list[str] | None = None
+    took_ms: int
+    word: str
+
+
+class DictionaryLookupResponseContentService(BaseModel):
+    entry: DictionaryEntryContentService | None = None
     found: bool
     suggestions: list[str] | None = None
     word: str
@@ -8818,7 +9814,7 @@ class HubStatusResponse(BaseModel):
     status: Status3 = Field(..., title="Status")
 
 
-class LearningSession(BaseModel):
+class LearningSessionKielolearnEngine(BaseModel):
     checkpoint_metadata: SessionCheckpointMetadata | None = None
     completion_summary: SessionCompletionSummary | None = None
     created_at: AwareDatetime | None = Field(None, title="Created At")
@@ -8884,7 +9880,7 @@ class LearningSession(BaseModel):
 class Paragraph(BaseModel):
     audio_url: str | None = None
     content_locale: str | None = None
-    grammar_occurrences: list[ArticleVersionOccurrence] | None = None
+    grammar_occurrences: list[ArticleVersionOccurrenceContentService] | None = None
     localization: LocalizationStatus | None = None
     paragraph_id: UUID_aliased
     paragraph_index: int
@@ -8892,7 +9888,7 @@ class Paragraph(BaseModel):
     text: str | None = None
     translation: str | None = None
     translation_fallback: bool | None = None
-    word_occurrences: list[ArticleVersionOccurrence] | None = None
+    word_occurrences: list[ArticleVersionOccurrenceContentService] | None = None
     words: list[str] | None = None
 
 
@@ -8912,7 +9908,7 @@ class SessionReconcileItemResultV3(BaseModel):
 
 class SessionReconcileResponse(BaseModel):
     results: list[SessionReconcileItemResult] | None = Field(None, title="Results")
-    session: LearningSession
+    session: LearningSessionKielolearnEngine
 
 
 class SessionReconcileResponseV3(BaseModel):
@@ -8932,6 +9928,10 @@ class SingletonConversationDiscoveryResponse(BaseModel):
     data: ConversationDiscoveryResponse
 
 
+class SingletonConversationDiscoveryResponseUserService(BaseModel):
+    data: ConversationDiscoveryResponseUserService
+
+
 class SingletonCurriculumTreeResponse(BaseModel):
     data: CurriculumTreeResponse
 
@@ -8940,16 +9940,24 @@ class SingletonDevicePreferences(BaseModel):
     data: DevicePreferences
 
 
+class SingletonDevicePreferencesUserService(BaseModel):
+    data: DevicePreferencesUserService
+
+
 class SingletonDictionaryEntry(BaseModel):
     data: DictionaryEntry
+
+
+class SingletonDictionaryEntryContentService(BaseModel):
+    data: DictionaryEntryContentService
 
 
 class SingletonDictionaryLookupResponse(BaseModel):
     data: DictionaryLookupResponse
 
 
-class SingletonLearningSession(BaseModel):
-    data: LearningSession
+class SingletonDictionaryLookupResponseContentService(BaseModel):
+    data: DictionaryLookupResponseContentService
 
 
 class SingletonSessionReconcileResponseV3(BaseModel):
@@ -9004,11 +10012,53 @@ class SingletonWebIngestRunList(BaseModel):
     data: list[WebIngestRun]
 
 
-class ArticleParagraph(Paragraph):
-    pass
+class ArticleParagraph(BaseModel):
+    audio_url: str | None = None
+    content_locale: str | None = None
+    grammar_occurrences: list[ArticleVersionOccurrence] | None = None
+    localization: LocalizationStatus | None = None
+    paragraph_id: UUID_aliased
+    paragraph_index: int
+    support_language_code: str | None = None
+    text: str | None = None
+    translation: str | None = None
+    translation_fallback: bool | None = None
+    word_occurrences: list[ArticleVersionOccurrence] | None = None
+    words: list[str] | None = None
 
 
 class ArticleVersion(BaseModel):
+    article_type: str | None = None
+    brand: ArticleBrand
+    content_entry_id: UUID_aliased
+    content_locale: str | None = None
+    contextual_learning_opportunities: (
+        list[KLearnContextualLearningOpportunity] | None
+    ) = None
+    difficulty_score: float | None = None
+    estimated_reading_time_minutes: int | None = None
+    familiar_word_count: int | None = None
+    id: UUID_aliased
+    learning_language_code: str | None = None
+    original_article_version_id: UUID_aliased | None = None
+    original_title: str | None = None
+    paragraphs: list[ArticleParagraph] | None = None
+    personalized_content: KLearnPersonalizedArticleResponse | None = None
+    publication_date: AwareDatetime | None = None
+    simplified_article_version_id: UUID_aliased | None = None
+    source_url: str | None = None
+    support_language_code: str | None = None
+    tags: list[str] | None = None
+    thumbnail: MediaAssetResponse | None = None
+    title: str
+    title_support_language_code: str | None = None
+    title_translation_fallback: bool | None = None
+    title_translation_source_locale: str | None = None
+    tracked_word_count: int | None = None
+    translation_fallback: bool | None = None
+
+
+class ArticleVersionContentService(BaseModel):
     article_type: str | None = None
     brand: Brand
     content_entry_id: UUID_aliased
@@ -9024,7 +10074,7 @@ class ArticleVersion(BaseModel):
     original_article_version_id: UUID_aliased | None = None
     original_title: str | None = None
     paragraphs: list[Paragraph] | None = None
-    personalized_content: KLearnPersonalizedArticleResponse | None = None
+    personalized_content: KLearnPersonalizedArticleResponseContentService | None = None
     publication_date: AwareDatetime | None = None
     simplified_article_version_id: UUID_aliased | None = None
     source_url: str | None = None
@@ -9052,10 +10102,14 @@ class ConceptHubGenerationJobResponse(BaseModel):
 
 
 class CursorPageArticleVersion(BaseModel):
-    items: list[ArticleVersion]
+    items: list[ArticleVersionContentService]
     meta: CursorPageMeta | None = None
     next_page_key: str | None = None
 
 
 class SingletonArticleVersion(BaseModel):
     data: ArticleVersion
+
+
+class SingletonArticleVersionContentService(BaseModel):
+    data: ArticleVersionContentService
