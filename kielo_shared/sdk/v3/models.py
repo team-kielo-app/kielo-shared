@@ -2962,6 +2962,15 @@ class IngestResponse(BaseModel):
     idempotent: bool
 
 
+class IngestedURLsRequest(BaseModel):
+    learning_language_code: str
+    urls: list[str]
+
+
+class IngestedURLsResponse(BaseModel):
+    ingested_urls: list[str]
+
+
 class InternalMergeGuestRequest(BaseModel):
     from_user_id: UUID_aliased
 
@@ -5886,6 +5895,10 @@ class SingletonHintResponse(BaseModel):
 
 class SingletonInAppNudge(BaseModel):
     data: InAppNudge
+
+
+class SingletonIngestedURLsResponse(BaseModel):
+    data: IngestedURLsResponse
 
 
 class SingletonInvalidateCacheResponse(BaseModel):

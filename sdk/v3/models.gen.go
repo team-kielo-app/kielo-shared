@@ -5290,6 +5290,17 @@ type IngestResponse struct {
 	Idempotent bool   `json:"idempotent"`
 }
 
+// IngestedURLsRequest defines model for IngestedURLsRequest.
+type IngestedURLsRequest struct {
+	LearningLanguageCode string   `json:"learning_language_code"`
+	Urls                 []string `json:"urls"`
+}
+
+// IngestedURLsResponse defines model for IngestedURLsResponse.
+type IngestedURLsResponse struct {
+	IngestedUrls []string `json:"ingested_urls"`
+}
+
 // InternalMergeGuestRequest defines model for InternalMergeGuestRequest.
 type InternalMergeGuestRequest struct {
 	FromUserId uuid.UUID `json:"from_user_id"`
@@ -9360,6 +9371,11 @@ type SingletonHintResponse struct {
 // SingletonInAppNudge defines model for SingletonInAppNudge.
 type SingletonInAppNudge struct {
 	Data InAppNudge `json:"data"`
+}
+
+// SingletonIngestedURLsResponse defines model for SingletonIngestedURLsResponse.
+type SingletonIngestedURLsResponse struct {
+	Data IngestedURLsResponse `json:"data"`
 }
 
 // SingletonInvalidateCacheResponse defines model for SingletonInvalidateCacheResponse.
@@ -15184,6 +15200,9 @@ type EnrichWordsByIdsInternalEnrichWordsByIdsPostJSONRequestBody = EnrichWordsBy
 
 // BackfillExerciseVariantsInternalExerciseVariantsBackfillPostJSONRequestBody defines body for BackfillExerciseVariantsInternalExerciseVariantsBackfillPost for application/json ContentType.
 type BackfillExerciseVariantsInternalExerciseVariantsBackfillPostJSONRequestBody = ExerciseVariantBackfillRequest
+
+// PostInternalIngestIngestedUrlsJSONRequestBody defines body for PostInternalIngestIngestedUrls for application/json ContentType.
+type PostInternalIngestIngestedUrlsJSONRequestBody = IngestedURLsRequest
 
 // PostInternalKielotvVideoIdClaimForTranscriptionJSONRequestBody defines body for PostInternalKielotvVideoIdClaimForTranscription for application/json ContentType.
 type PostInternalKielotvVideoIdClaimForTranscriptionJSONRequestBody = ClaimContentVersionForProcessingRequest
