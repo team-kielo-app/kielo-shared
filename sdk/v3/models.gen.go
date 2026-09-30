@@ -300,10 +300,22 @@ const (
 	LearningSessionSessionTypeMicroDrill     LearningSessionSessionType = "micro_drill"
 )
 
+// Defines values for LevelCheckResponseDirection.
+const (
+	Down LevelCheckResponseDirection = "down"
+	Up   LevelCheckResponseDirection = "up"
+)
+
 // Defines values for ListeningComprehensionExerciseItemTypeFk.
 const (
 	ListeningComprehensionExerciseItemTypeFkBaseWord       ListeningComprehensionExerciseItemTypeFk = "BaseWord"
 	ListeningComprehensionExerciseItemTypeFkGrammarConcept ListeningComprehensionExerciseItemTypeFk = "GrammarConcept"
+)
+
+// Defines values for ListeningComprehensionExerciseOptionKind.
+const (
+	ListeningComprehensionExerciseOptionKindMeaning ListeningComprehensionExerciseOptionKind = "meaning"
+	ListeningComprehensionExerciseOptionKindWord    ListeningComprehensionExerciseOptionKind = "word"
 )
 
 // Defines values for ListeningComprehensionExerciseSourceType.
@@ -719,9 +731,9 @@ const (
 
 // Defines values for GetConversationFocusKlearnApiV3ConversationFocusGetParamsOriginKind.
 const (
-	Concept GetConversationFocusKlearnApiV3ConversationFocusGetParamsOriginKind = "concept"
-	Lesson  GetConversationFocusKlearnApiV3ConversationFocusGetParamsOriginKind = "lesson"
-	Word    GetConversationFocusKlearnApiV3ConversationFocusGetParamsOriginKind = "word"
+	GetConversationFocusKlearnApiV3ConversationFocusGetParamsOriginKindConcept GetConversationFocusKlearnApiV3ConversationFocusGetParamsOriginKind = "concept"
+	GetConversationFocusKlearnApiV3ConversationFocusGetParamsOriginKindLesson  GetConversationFocusKlearnApiV3ConversationFocusGetParamsOriginKind = "lesson"
+	GetConversationFocusKlearnApiV3ConversationFocusGetParamsOriginKindWord    GetConversationFocusKlearnApiV3ConversationFocusGetParamsOriginKind = "word"
 )
 
 // Defines values for GetSurfaceNextStepsKlearnApiV3NextStepsGetParamsSourceKind.
@@ -806,6 +818,14 @@ type AchievementDetails struct {
 	IconName      *string `json:"icon_name,omitempty"`
 	Name          string  `json:"name"`
 	Points        int     `json:"points"`
+}
+
+// AchievementProgressV3 defines model for AchievementProgressV3.
+type AchievementProgressV3 struct {
+	AchievementId string `json:"achievement_id"`
+	Current       *int   `json:"current,omitempty"`
+	Metric        string `json:"metric"`
+	Target        int    `json:"target"`
 }
 
 // AchievementV3 defines model for AchievementV3.
@@ -972,6 +992,17 @@ type AiConversationTeaser struct {
 // AllFeatureLimitsResponse defines model for AllFeatureLimitsResponse.
 type AllFeatureLimitsResponse struct {
 	Limits []FeatureLimitRow `json:"limits"`
+}
+
+// AnswerForm Which form of the item the answer is: "pidän" is pitää, PRES_SG1.
+//
+// Attached at serve time from the item's own `word_forms` paradigm, only
+// when the answer maps to exactly one slot, so the verdict can name the
+// form instead of saying only "correct".
+type AnswerForm struct {
+	Form  string `json:"form"`
+	Lemma string `json:"lemma"`
+	Slot  string `json:"slot"`
 }
 
 // AppFeedback defines model for AppFeedback.
@@ -1390,6 +1421,11 @@ type BehavioralEventRequest struct {
 	Timestamp  string                  `json:"timestamp"`
 }
 
+// BodyEvaluateFirstSentenceSpeechKlearnApiV3RoadmapFirstSentenceSpeechEvaluatePost defines model for Body_evaluate_first_sentence_speech_klearn_api_v3_roadmap_first_sentence_speech_evaluate_post.
+type BodyEvaluateFirstSentenceSpeechKlearnApiV3RoadmapFirstSentenceSpeechEvaluatePost struct {
+	File File `json:"file"`
+}
+
 // BodyEvaluateRoadmapStepSpeechKlearnApiV3RoadmapLessonsLessonIdStepsStepIndexSpeechEvaluatePost defines model for Body_evaluate_roadmap_step_speech_klearn_api_v3_roadmap_lessons__lesson_id__steps__step_index__speech_evaluate_post.
 type BodyEvaluateRoadmapStepSpeechKlearnApiV3RoadmapLessonsLessonIdStepsStepIndexSpeechEvaluatePost struct {
 	File File `json:"file"`
@@ -1687,6 +1723,19 @@ type CheckFeatureUniqueRequest struct {
 type ClaimContentVersionForProcessingRequest struct {
 	ClaimantId string `json:"claimant_id"`
 	TtlMinutes int    `json:"ttl_minutes"`
+}
+
+// ClaimEmailRequest defines model for ClaimEmailRequest.
+type ClaimEmailRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+// ClaimGuestRequest defines model for ClaimGuestRequest.
+type ClaimGuestRequest struct {
+	Email       string  `json:"email"`
+	FirebaseUid *string `json:"firebase_uid,omitempty"`
+	Name        *string `json:"name,omitempty"`
 }
 
 // ClaimResult defines model for ClaimResult.
@@ -2217,6 +2266,7 @@ type ConceptHubFollowUps struct {
 type ConceptHubGenerationJobResponse struct {
 	ConceptHubId *uuid.UUID                              `json:"concept_hub_id"`
 	ConceptId    uuid.UUID                               `json:"concept_id"`
+	Error        *string                                 `json:"error"`
 	ErrorMessage *string                                 `json:"error_message"`
 	JobId        uuid.UUID                               `json:"job_id"`
 	JobType      *ConceptHubGenerationJobResponseJobType `json:"job_type,omitempty"`
@@ -3331,6 +3381,13 @@ type CursorPageAchievementCatalogItemV3 struct {
 	NextPageKey *string                    `json:"next_page_key,omitempty"`
 }
 
+// CursorPageAchievementProgressV3 defines model for CursorPageAchievementProgressV3.
+type CursorPageAchievementProgressV3 struct {
+	Items       []AchievementProgressV3 `json:"items"`
+	Meta        *CursorPageMeta         `json:"meta,omitempty"`
+	NextPageKey *string                 `json:"next_page_key,omitempty"`
+}
+
 // CursorPageAchievementV3 defines model for CursorPageAchievementV3.
 type CursorPageAchievementV3 struct {
 	Items       []AchievementV3 `json:"items"`
@@ -3528,6 +3585,7 @@ type DecisionLog struct {
 	BreadthMode                      *string                 `json:"breadth_mode,omitempty"`
 	BreadthReason                    *string                 `json:"breadth_reason,omitempty"`
 	DepthBonus                       *int                    `json:"depth_bonus,omitempty"`
+	EarnedPromotions                 *int                    `json:"earned_promotions,omitempty"`
 	ExercisesGenerated               *int                    `json:"exercises_generated,omitempty"`
 	ExercisesPlanned                 *int                    `json:"exercises_planned,omitempty"`
 	ExercisesRejected                *int                    `json:"exercises_rejected,omitempty"`
@@ -4125,6 +4183,7 @@ type FetchDynamicTranslationsResponse struct {
 
 // FillInTheBlankExercise defines model for FillInTheBlankExercise.
 type FillInTheBlankExercise struct {
+	AnswerForm   *AnswerForm `json:"answer_form"`
 	CacheEntryId *string     `json:"cache_entry_id"`
 	ContentRef   *ContentRef `json:"content_ref"`
 
@@ -4169,6 +4228,36 @@ type FindBySourceResponse struct {
 	Scenarios []Scenario `json:"scenarios"`
 }
 
+// FirstScene defines model for FirstScene.
+type FirstScene struct {
+	Lines   []FirstSceneLine `json:"lines"`
+	Version int              `json:"version"`
+}
+
+// FirstSceneLine defines model for FirstSceneLine.
+type FirstSceneLine struct {
+	Id       string   `json:"id"`
+	Lemmas   []string `json:"lemmas"`
+	Sentence string   `json:"sentence"`
+}
+
+// FirstSentenceSpeechResponse defines model for FirstSentenceSpeechResponse.
+type FirstSentenceSpeechResponse struct {
+	Similarity float32 `json:"similarity"`
+	Transcript string  `json:"transcript"`
+}
+
+// FlashcardExample A sentence that shows the card's rule at work, with its meaning.
+//
+// A grammar card stating "adjectives agree with the noun in case and number"
+// showed no sentence at all (device 2026-09-28): 31% of stored fi grammar
+// flashcards had no example on either face. Attached at serve time from the
+// concept's own examples.
+type FlashcardExample struct {
+	Text        string  `json:"text"`
+	Translation *string `json:"translation,omitempty"`
+}
+
 // FlashcardExercise defines model for FlashcardExercise.
 type FlashcardExercise struct {
 	// AnswerHtml Optional rich answer block. Clients should render this instead of correct_answer when present.
@@ -4183,9 +4272,10 @@ type FlashcardExercise struct {
 	ContextHint *string `json:"context_hint"`
 
 	// CorrectAnswer Canonical plain-text answer used for grading and fallback rendering.
-	CorrectAnswer   string  `json:"correct_answer"`
-	Difficulty      *int    `json:"difficulty"`
-	ErrorPatternTag *string `json:"error_pattern_tag"`
+	CorrectAnswer   string            `json:"correct_answer"`
+	Difficulty      *int              `json:"difficulty"`
+	ErrorPatternTag *string           `json:"error_pattern_tag"`
+	Example         *FlashcardExample `json:"example"`
 
 	// ExerciseId Unique ID for this specific exercise instance.
 	ExerciseId   *uuid.UUID `json:"exercise_id,omitempty"`
@@ -4384,6 +4474,11 @@ type GrantSubscriptionResponse struct {
 	Message        string    `json:"message"`
 	SubscriptionId uuid.UUID `json:"subscription_id"`
 	Success        bool      `json:"success"`
+}
+
+// GuestRequest defines model for GuestRequest.
+type GuestRequest struct {
+	LearningLanguageCode *string `json:"learning_language_code,omitempty"`
 }
 
 // HTTPValidationError defines model for HTTPValidationError.
@@ -5566,6 +5661,29 @@ type LegalHoldResult struct {
 	MediaId   string `json:"media_id"`
 }
 
+// LevelCheckResponse defines model for LevelCheckResponse.
+type LevelCheckResponse struct {
+	CurrentLevel    *string                      `json:"current_level"`
+	Direction       *LevelCheckResponseDirection `json:"direction"`
+	EvidenceCorrect *int                         `json:"evidence_correct,omitempty"`
+	EvidenceDays    *int                         `json:"evidence_days,omitempty"`
+	EvidenceTotal   *int                         `json:"evidence_total,omitempty"`
+	SuggestedLevel  *string                      `json:"suggested_level"`
+}
+
+// LevelCheckResponseDirection defines model for LevelCheckResponse.Direction.
+type LevelCheckResponseDirection string
+
+// LevelCheckV3 defines model for LevelCheckV3.
+type LevelCheckV3 struct {
+	CurrentLevel    *string `json:"current_level,omitempty"`
+	Direction       *string `json:"direction,omitempty"`
+	EvidenceCorrect int     `json:"evidence_correct"`
+	EvidenceDays    int     `json:"evidence_days"`
+	EvidenceTotal   int     `json:"evidence_total"`
+	SuggestedLevel  *string `json:"suggested_level,omitempty"`
+}
+
 // LinkRevenueCatUserRequest defines model for LinkRevenueCatUserRequest.
 type LinkRevenueCatUserRequest struct {
 	RevenueCatUserId string `json:"revenue_cat_user_id"`
@@ -5641,6 +5759,7 @@ type ListeningComprehensionExercise struct {
 	ItemTypeFk           *ListeningComprehensionExerciseItemTypeFk `json:"item_type_fk"`
 	ObjectiveId          *uuid.UUID                                `json:"objective_id"`
 	OptionFeedback       *map[string]string                        `json:"option_feedback"`
+	OptionKind           *ListeningComprehensionExerciseOptionKind `json:"option_kind,omitempty"`
 
 	// Options List of options with 'id' (UUID) and 'text' keys
 	Options             []map[string]string                       `json:"options"`
@@ -5658,6 +5777,9 @@ type ListeningComprehensionExercise struct {
 
 // ListeningComprehensionExerciseItemTypeFk defines model for ListeningComprehensionExercise.ItemTypeFk.
 type ListeningComprehensionExerciseItemTypeFk string
+
+// ListeningComprehensionExerciseOptionKind defines model for ListeningComprehensionExercise.OptionKind.
+type ListeningComprehensionExerciseOptionKind string
 
 // ListeningComprehensionExerciseSourceType defines model for ListeningComprehensionExercise.SourceType.
 type ListeningComprehensionExerciseSourceType string
@@ -5704,6 +5826,7 @@ type LoginResponse struct {
 type LoginSocialRequest struct {
 	AccessToken          string  `json:"access_token"`
 	LearningLanguageCode *string `json:"learning_language_code,omitempty"`
+	Name                 *string `json:"name,omitempty"`
 	Nonce                *string `json:"nonce,omitempty"`
 	Provider             string  `json:"provider"`
 }
@@ -5844,6 +5967,11 @@ type MediaVariantInfo struct {
 	Path        string `json:"path"`
 	SizeBytes   int    `json:"size_bytes"`
 	Width       *int   `json:"width,omitempty"`
+}
+
+// MergeGuestRequest defines model for MergeGuestRequest.
+type MergeGuestRequest struct {
+	GuestRefreshToken string `json:"guest_refresh_token"`
 }
 
 // MessageAudioRequest defines model for MessageAudioRequest.
@@ -6498,8 +6626,9 @@ type ProgressSummaryV3 struct {
 
 // PubSubMessage defines model for PubSubMessage.
 type PubSubMessage struct {
-	Message      map[string]interface{} `json:"message"`
-	Subscription string                 `json:"subscription"`
+	DeliveryAttempt *int                   `json:"deliveryAttempt"`
+	Message         map[string]interface{} `json:"message"`
+	Subscription    string                 `json:"subscription"`
 }
 
 // PurchaseHistory defines model for PurchaseHistory.
@@ -6706,7 +6835,6 @@ type RegisterPushTokenResponse struct {
 type RegisterRequest struct {
 	Email                string  `json:"email"`
 	LearningLanguageCode *string `json:"learning_language_code,omitempty"`
-	Name                 string  `json:"name"`
 	Password             string  `json:"password"`
 }
 
@@ -8107,6 +8235,11 @@ type SingletonConvoVoiceAgentList struct {
 	Data []ConvoVoiceAgent `json:"data"`
 }
 
+// SingletonCopyMediaResponse defines model for SingletonCopyMediaResponse.
+type SingletonCopyMediaResponse struct {
+	Data CopyMediaResponse `json:"data"`
+}
+
 // SingletonCountResponse defines model for SingletonCountResponse.
 type SingletonCountResponse struct {
 	Data CountResponse `json:"data"`
@@ -8539,6 +8672,11 @@ type SingletonLearningSessionV3 struct {
 // SingletonLegalHoldResult defines model for SingletonLegalHoldResult.
 type SingletonLegalHoldResult struct {
 	Data LegalHoldResult `json:"data"`
+}
+
+// SingletonLevelCheckV3 defines model for SingletonLevelCheckV3.
+type SingletonLevelCheckV3 struct {
+	Data LevelCheckV3 `json:"data"`
 }
 
 // SingletonLinkRevenueCatUserResponse defines model for SingletonLinkRevenueCatUserResponse.
@@ -8974,6 +9112,11 @@ type SingletonTransactionHistoryResponse struct {
 // SingletonTranscriptResponse defines model for SingletonTranscriptResponse.
 type SingletonTranscriptResponse struct {
 	Data TranscriptResponse `json:"data"`
+}
+
+// SingletonTransferCodeResponse defines model for SingletonTransferCodeResponse.
+type SingletonTransferCodeResponse struct {
+	Data TransferCodeResponse `json:"data"`
 }
 
 // SingletonTransferSubscriptionResponse defines model for SingletonTransferSubscriptionResponse.
@@ -9706,6 +9849,7 @@ type TopicListGenerateRequest struct {
 
 // TopicListGenerationJobResponse defines model for TopicListGenerationJobResponse.
 type TopicListGenerationJobResponse struct {
+	Error        *string                              `json:"error"`
 	ErrorMessage *string                              `json:"error_message"`
 	JobId        uuid.UUID                            `json:"job_id"`
 	Preview      *TopicListPreview                    `json:"preview"`
@@ -9940,6 +10084,17 @@ type TranscriptResponse struct {
 	Status             string                    `json:"status"`
 }
 
+// TransferCodeResponse defines model for TransferCodeResponse.
+type TransferCodeResponse struct {
+	Code      string    `json:"code"`
+	ExpiresAt time.Time `json:"expires_at"`
+}
+
+// TransferRedeemRequest defines model for TransferRedeemRequest.
+type TransferRedeemRequest struct {
+	Code string `json:"code"`
+}
+
 // TransferSubscriptionRequest defines model for TransferSubscriptionRequest.
 type TransferSubscriptionRequest struct {
 	FromAppUserId    string `json:"from_app_user_id"`
@@ -10046,6 +10201,7 @@ type UpdateAuthUserFirebaseUIDRequest struct {
 
 // UpdateContentStatusRequest defines model for UpdateContentStatusRequest.
 type UpdateContentStatusRequest struct {
+	Force  *bool  `json:"force,omitempty"`
 	Status string `json:"status"`
 }
 
@@ -10139,11 +10295,12 @@ type UpdateProfileRequest struct {
 	AvatarMediaId *string `json:"avatar_media_id,omitempty"`
 
 	// CountryCode Where the learner is from (ISO 3166-1 alpha-2). Not the device region. Any case accepted; stored uppercase.
-	CountryCode         *string `json:"country_code,omitempty"`
-	EstimatedSkillLevel *string `json:"estimated_skill_level,omitempty"`
-	HowDidYouFindOut    *string `json:"how_did_you_find_out,omitempty"`
-	LearningLanguage    *string `json:"learning_language,omitempty"`
-	LearningMinutesGoal *int    `json:"learning_minutes_goal,omitempty"`
+	CountryCode         *string     `json:"country_code,omitempty"`
+	EstimatedSkillLevel *string     `json:"estimated_skill_level,omitempty"`
+	FirstScene          *FirstScene `json:"first_scene,omitempty"`
+	HowDidYouFindOut    *string     `json:"how_did_you_find_out,omitempty"`
+	LearningLanguage    *string     `json:"learning_language,omitempty"`
+	LearningMinutesGoal *int        `json:"learning_minutes_goal,omitempty"`
 
 	// LearningReason Why the learner is studying the language. Routes the onboarding track recommendation.
 	LearningReason    *UpdateProfileRequestLearningReason `json:"learning_reason,omitempty"`
@@ -10155,6 +10312,7 @@ type UpdateProfileRequest struct {
 
 	// OnboardingVariant PostHog flag value for the onboarding flow the learner went through.
 	OnboardingVariant *string `json:"onboarding_variant,omitempty"`
+	ReminderHour      *int    `json:"reminder_hour,omitempty"`
 }
 
 // UpdateProfileRequestLearningReason Why the learner is studying the language. Routes the onboarding track recommendation.
@@ -10394,6 +10552,7 @@ type UserProfile struct {
 	// OnboardingCompletedAt When setup finished. Sent as null when the account still owes setup, and always present on servers that know the field, so an absent key means an older server. (Plain string, not a [string, null] type array: the Go SDK generator cannot resolve type arrays.)
 	OnboardingCompletedAt *time.Time `json:"onboarding_completed_at,omitempty"`
 	OnboardingVariant     *string    `json:"onboarding_variant,omitempty"`
+	ReminderHour          *int       `json:"reminder_hour,omitempty"`
 	SupportLanguageCode   *string    `json:"support_language_code,omitempty"`
 
 	// SupportLanguageSource Sweep VVV: write-source classifier for users.users.support_language_code. 8 canonical values.
@@ -10695,14 +10854,16 @@ type WebIngestTargetRequest struct {
 
 // WeeklyActivityDay defines model for WeeklyActivityDay.
 type WeeklyActivityDay struct {
-	Day     string `json:"day"`
-	Minutes int    `json:"minutes"`
+	Day          string `json:"day"`
+	Minutes      int    `json:"minutes"`
+	StudyMinutes *int   `json:"study_minutes,omitempty"`
 }
 
 // WeeklyActivityDayV3 defines model for WeeklyActivityDayV3.
 type WeeklyActivityDayV3 struct {
-	Day     string `json:"day"`
-	Minutes int    `json:"minutes"`
+	Day          string `json:"day"`
+	Minutes      int    `json:"minutes"`
+	StudyMinutes *int   `json:"study_minutes,omitempty"`
 }
 
 // WontFixIssueRequest defines model for WontFixIssueRequest.
@@ -12195,6 +12356,15 @@ type GetApiV3RecommendationCampaignsCampaignIdRunsParams struct {
 	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
+// PostApiV3RoadmapFirstSentenceSpeechEvaluateParams defines parameters for PostApiV3RoadmapFirstSentenceSpeechEvaluate.
+type PostApiV3RoadmapFirstSentenceSpeechEvaluateParams struct {
+	// ExpectedText The line the learner was asked to say
+	ExpectedText string `form:"expected_text" json:"expected_text"`
+
+	// Language fi or sv
+	Language string `form:"language" json:"language"`
+}
+
 // GetApiV3RoadmapLessonsParams defines parameters for GetApiV3RoadmapLessons.
 type GetApiV3RoadmapLessonsParams struct {
 	// SupportLanguageCode Two-letter ISO 639-1 code for translated UI strings (per ADR-006 §3.83).
@@ -12768,6 +12938,11 @@ type CreateCustomExerciseDeckInternalKlearnExerciseDecksPostParams struct {
 	LearningLanguageCode *string   `form:"learning_language_code,omitempty" json:"learning_language_code,omitempty"`
 }
 
+// EvictRetiredExerciseCacheInternalKlearnExercisesCacheEvictRetiredPostParams defines parameters for EvictRetiredExerciseCacheInternalKlearnExercisesCacheEvictRetiredPost.
+type EvictRetiredExerciseCacheInternalKlearnExercisesCacheEvictRetiredPostParams struct {
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
 // GetInternalKlearnGrammarConceptsGrammarConceptIdExampleSentencesParams defines parameters for GetInternalKlearnGrammarConceptsGrammarConceptIdExampleSentences.
 type GetInternalKlearnGrammarConceptsGrammarConceptIdExampleSentencesParams struct {
 	// Limit Legacy offset-pagination limit. Prefer page_size on new routes.
@@ -13070,6 +13245,14 @@ type AdminGenerateRoadmapLessonKlearnApiV3RoadmapAdminLessonsGeneratePostParams 
 	LearningLanguageCode string `form:"learning_language_code" json:"learning_language_code"`
 }
 
+// EvaluateFirstSentenceSpeechKlearnApiV3RoadmapFirstSentenceSpeechEvaluatePostParams defines parameters for EvaluateFirstSentenceSpeechKlearnApiV3RoadmapFirstSentenceSpeechEvaluatePost.
+type EvaluateFirstSentenceSpeechKlearnApiV3RoadmapFirstSentenceSpeechEvaluatePostParams struct {
+	// UserId The ID of the user
+	UserId       uuid.UUID `form:"user_id" json:"user_id"`
+	ExpectedText string    `form:"expected_text" json:"expected_text"`
+	Language     string    `form:"language" json:"language"`
+}
+
 // ListRoadmapLessonsKlearnApiV3RoadmapLessonsGetParams defines parameters for ListRoadmapLessonsKlearnApiV3RoadmapLessonsGet.
 type ListRoadmapLessonsKlearnApiV3RoadmapLessonsGetParams struct {
 	// UserId The ID of the user
@@ -13247,6 +13430,9 @@ type PostApiV3ArticlesArticleIdParagraphTranslationsJSONRequestBody = ParagraphT
 // PostApiV3AuthForgotPasswordJSONRequestBody defines body for PostApiV3AuthForgotPassword for application/json ContentType.
 type PostApiV3AuthForgotPasswordJSONRequestBody = ForgotPasswordRequest
 
+// PostApiV3AuthGuestJSONRequestBody defines body for PostApiV3AuthGuest for application/json ContentType.
+type PostApiV3AuthGuestJSONRequestBody = GuestRequest
+
 // PostApiV3AuthLoginEmailJSONRequestBody defines body for PostApiV3AuthLoginEmail for application/json ContentType.
 type PostApiV3AuthLoginEmailJSONRequestBody = LoginRequest
 
@@ -13261,6 +13447,9 @@ type PostApiV3AuthRegisterJSONRequestBody = RegisterRequest
 
 // PostApiV3AuthResetPasswordJSONRequestBody defines body for PostApiV3AuthResetPassword for application/json ContentType.
 type PostApiV3AuthResetPasswordJSONRequestBody = ResetPasswordRequest
+
+// PostApiV3AuthTransferJSONRequestBody defines body for PostApiV3AuthTransfer for application/json ContentType.
+type PostApiV3AuthTransferJSONRequestBody = TransferRedeemRequest
 
 // PostApiV3AuthVerifyResetTokenJSONRequestBody defines body for PostApiV3AuthVerifyResetToken for application/json ContentType.
 type PostApiV3AuthVerifyResetTokenJSONRequestBody = VerifyResetTokenRequest
@@ -13565,6 +13754,9 @@ type PostApiV3MeItemsItemTypeItemIdReportErrorJSONRequestBody = ReportErrorReque
 // PostApiV3MeLogoutJSONRequestBody defines body for PostApiV3MeLogout for application/json ContentType.
 type PostApiV3MeLogoutJSONRequestBody = LogoutRequest
 
+// PostApiV3MeMergeGuestJSONRequestBody defines body for PostApiV3MeMergeGuest for application/json ContentType.
+type PostApiV3MeMergeGuestJSONRequestBody = MergeGuestRequest
+
 // PatchApiV3MeNotificationPreferencesJSONRequestBody defines body for PatchApiV3MeNotificationPreferences for application/json ContentType.
 type PatchApiV3MeNotificationPreferencesJSONRequestBody = NotificationPreferences
 
@@ -13799,6 +13991,9 @@ type PostInternalApiV3NotificationDedupeClaimsJSONRequestBody = NotificationDedu
 // PostInternalApiV3UsersJSONRequestBody defines body for PostInternalApiV3Users for application/json ContentType.
 type PostInternalApiV3UsersJSONRequestBody = CreateAuthUserRequest
 
+// PatchInternalApiV3UsersUserIdClaimJSONRequestBody defines body for PatchInternalApiV3UsersUserIdClaim for application/json ContentType.
+type PatchInternalApiV3UsersUserIdClaimJSONRequestBody = ClaimGuestRequest
+
 // PutInternalApiV3UsersUserIdConversationsInterestsJSONRequestBody defines body for PutInternalApiV3UsersUserIdConversationsInterests for application/json ContentType.
 type PutInternalApiV3UsersUserIdConversationsInterestsJSONRequestBody = UpdateConversationInterestsRequest
 
@@ -13810,6 +14005,9 @@ type PostInternalApiV3UsersUserIdFeaturesFeatureCheckUniqueJSONRequestBody = Che
 
 // PatchInternalApiV3UsersUserIdFirebaseUidJSONRequestBody defines body for PatchInternalApiV3UsersUserIdFirebaseUid for application/json ContentType.
 type PatchInternalApiV3UsersUserIdFirebaseUidJSONRequestBody = UpdateAuthUserFirebaseUIDRequest
+
+// PostInternalApiV3UsersUserIdMergeGuestJSONRequestBody defines body for PostInternalApiV3UsersUserIdMergeGuest for application/json ContentType.
+type PostInternalApiV3UsersUserIdMergeGuestJSONRequestBody = MergeGuestRequest
 
 // PostInternalApiV3UsersUserIdPushTokenJSONRequestBody defines body for PostInternalApiV3UsersUserIdPushToken for application/json ContentType.
 type PostInternalApiV3UsersUserIdPushTokenJSONRequestBody = RegisterPushTokenRequest
@@ -14017,6 +14215,9 @@ type AdminBackfillRoadmapPracticeTargetsKlearnApiV3RoadmapAdminLessonsPracticeTa
 
 // AdminUpdateRoadmapLessonKlearnApiV3RoadmapAdminLessonsLessonIdPutJSONRequestBody defines body for AdminUpdateRoadmapLessonKlearnApiV3RoadmapAdminLessonsLessonIdPut for application/json ContentType.
 type AdminUpdateRoadmapLessonKlearnApiV3RoadmapAdminLessonsLessonIdPutJSONRequestBody = RoadmapLessonUpsertRequest
+
+// EvaluateFirstSentenceSpeechKlearnApiV3RoadmapFirstSentenceSpeechEvaluatePostMultipartRequestBody defines body for EvaluateFirstSentenceSpeechKlearnApiV3RoadmapFirstSentenceSpeechEvaluatePost for multipart/form-data ContentType.
+type EvaluateFirstSentenceSpeechKlearnApiV3RoadmapFirstSentenceSpeechEvaluatePostMultipartRequestBody = BodyEvaluateFirstSentenceSpeechKlearnApiV3RoadmapFirstSentenceSpeechEvaluatePost
 
 // CompleteRoadmapStepKlearnApiV3RoadmapLessonsLessonIdStepsStepIndexCompletePostJSONRequestBody defines body for CompleteRoadmapStepKlearnApiV3RoadmapLessonsLessonIdStepsStepIndexCompletePost for application/json ContentType.
 type CompleteRoadmapStepKlearnApiV3RoadmapLessonsLessonIdStepsStepIndexCompletePostJSONRequestBody = RoadmapStepCompleteRequest

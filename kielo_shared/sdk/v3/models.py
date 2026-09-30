@@ -420,10 +420,16 @@ class BehavioralEventRequest(BaseModel):
     timestamp: str
 
 
-class BodyEvaluateRoadmapStepSpeechKlearnApiV3RoadmapLessonsLessonIdStepsStepIndexSpeechEvaluatePost(
+class BodyEvaluateFirstSentenceSpeechKlearnApiV3RoadmapFirstSentenceSpeechEvaluatePost(
     BaseModel
 ):
     file: bytes = Field(..., title="File")
+
+
+class BodyEvaluateRoadmapStepSpeechKlearnApiV3RoadmapLessonsLessonIdStepsStepIndexSpeechEvaluatePost(
+    BodyEvaluateFirstSentenceSpeechKlearnApiV3RoadmapFirstSentenceSpeechEvaluatePost
+):
+    pass
 
 
 class Brand(ArticleBrand):
@@ -609,6 +615,17 @@ class CheckFeatureUniqueRequest(BaseModel):
 class ClaimContentVersionForProcessingRequest(BaseModel):
     claimant_id: str
     ttl_minutes: int
+
+
+class ClaimEmailRequest(BaseModel):
+    email: str
+    password: str
+
+
+class ClaimGuestRequest(BaseModel):
+    email: str
+    firebase_uid: str | None = None
+    name: str | None = None
 
 
 class ClaimResult(BaseModel):
@@ -2337,6 +2354,17 @@ class FillInTheBlankExercise(BaseModel):
     validation_signature: str | None = Field(None, title="Validation Signature")
 
 
+class FirstSceneLine(BaseModel):
+    id: str
+    lemmas: list[str]
+    sentence: str
+
+
+class FirstSentenceSpeechResponse(BaseModel):
+    similarity: float = Field(..., title="Similarity")
+    transcript: str = Field(..., title="Transcript")
+
+
 class FlashcardExample(BaseModel):
     text: str = Field(..., title="Text")
     translation: str | None = Field("", title="Translation")
@@ -2499,6 +2527,10 @@ class GrantSubscriptionResponse(BaseModel):
     message: str
     subscription_id: UUID_aliased
     success: bool
+
+
+class GuestRequest(BaseModel):
+    learning_language_code: str | None = None
 
 
 class HintCard(BaseModel):
@@ -3450,9 +3482,8 @@ class LocalizationStatus(BaseModel):
     status: Status5 = Field(..., title="Status")
 
 
-class LoginRequest(BaseModel):
-    email: str
-    password: str
+class LoginRequest(ClaimEmailRequest):
+    pass
 
 
 class LoginResponse(BaseModel):
@@ -3466,6 +3497,7 @@ class LoginResponse(BaseModel):
 class LoginSocialRequest(BaseModel):
     access_token: str
     learning_language_code: str | None = None
+    name: str | None = None
     nonce: str | None = None
     provider: str
 
@@ -3568,6 +3600,10 @@ class MediaVariant(BaseModel):
 
 class MediaVariantInfo(MediaVariant):
     pass
+
+
+class MergeGuestRequest(BaseModel):
+    guest_refresh_token: str
 
 
 class MessageAudioRequest(BaseModel):
@@ -4058,6 +4094,7 @@ class PreferredDifficultyProfile(BaseModel):
 
 
 class PubSubMessage(BaseModel):
+    deliveryAttempt: int | None = Field(None, title="Deliveryattempt")
     message: dict[str, Any] = Field(..., title="Message")
     subscription: str = Field(..., title="Subscription")
 
@@ -4231,7 +4268,6 @@ class RegisterPushTokenResponse(CancelSubscriptionResponse):
 class RegisterRequest(BaseModel):
     email: str
     learning_language_code: str | None = None
-    name: str
     password: str
 
 
@@ -5206,6 +5242,10 @@ class SingletonConvoVoiceAgent(BaseModel):
 
 class SingletonConvoVoiceAgentList(BaseModel):
     data: list[ConvoVoiceAgent]
+
+
+class SingletonCopyMediaResponse(BaseModel):
+    data: CopyMediaResponse
 
 
 class SingletonCountResponse(BaseModel):
@@ -6225,6 +6265,15 @@ class TranscriptResponse(BaseModel):
     status: str
 
 
+class TransferCodeResponse(BaseModel):
+    code: str
+    expires_at: AwareDatetime
+
+
+class TransferRedeemRequest(BaseModel):
+    code: str
+
+
 class TransferSubscriptionRequest(BaseModel):
     from_app_user_id: str
     revenue_cat_user_id: str
@@ -6370,33 +6419,6 @@ class LearningReason(StrEnum):
     heritage = "heritage"
     curiosity = "curiosity"
     other = "other"
-
-
-class UpdateProfileRequest(BaseModel):
-    avatar_media_id: str | None = None
-    country_code: constr(pattern=r"^[A-Za-z]{2}$") | None = Field(
-        None,
-        description="Where the learner is from (ISO 3166-1 alpha-2). Not the device region. Any case accepted; stored uppercase.",
-    )
-    estimated_skill_level: str | None = None
-    how_did_you_find_out: str | None = None
-    learning_language: str | None = None
-    learning_minutes_goal: int | None = None
-    learning_reason: LearningReason | None = Field(
-        None,
-        description="Why the learner is studying the language. Routes the onboarding track recommendation.",
-    )
-    name: str | None = None
-    newsletter_consent: bool | None = None
-    onboarding_completed: bool | None = Field(
-        None,
-        description="true stamps onboarding_completed_at once. false is ignored; a second true never moves the timestamp.",
-    )
-    onboarding_variant: constr(max_length=64) | None = Field(
-        None,
-        description="PostHog flag value for the onboarding flow the learner went through.",
-    )
-    reminder_hour: int | None = None
 
 
 class UpdateProgressRequest(BaseModel):
@@ -7438,6 +7460,11 @@ class FindBySourceResponse(BaseModel):
     scenarios: list[Scenario]
 
 
+class FirstScene(BaseModel):
+    lines: list[FirstSceneLine]
+    version: int
+
+
 class FollowUpActivities(BaseModel):
     ai_conversations: list[AiConversationTeaser] = Field(..., title="Ai Conversations")
     exercise_decks: list[ExerciseDeckTeaser] = Field(..., title="Exercise Decks")
@@ -8188,6 +8215,10 @@ class SingletonTranscriptResponse(BaseModel):
     data: TranscriptResponse
 
 
+class SingletonTransferCodeResponse(BaseModel):
+    data: TransferCodeResponse
+
+
 class SingletonTransferSubscriptionResponse(BaseModel):
     data: TransferSubscriptionResponse
 
@@ -8396,6 +8427,7 @@ class TTSStreamSession(BaseModel):
 
 
 class TopicListGenerationJobResponse(BaseModel):
+    error: str | None = Field(None, title="Error")
     error_message: str | None = Field(None, title="Error Message")
     job_id: UUID_aliased = Field(..., title="Job Id")
     preview: TopicListPreview | None = None
@@ -8496,6 +8528,34 @@ class UpdateDevicePreferencesRequest(BaseModel):
         None,
         description="Sweep VVV: write-source classifier. Writer subset — only deliberate-choice + auto-detected sources may be emitted via the API.",
     )
+
+
+class UpdateProfileRequest(BaseModel):
+    avatar_media_id: str | None = None
+    country_code: constr(pattern=r"^[A-Za-z]{2}$") | None = Field(
+        None,
+        description="Where the learner is from (ISO 3166-1 alpha-2). Not the device region. Any case accepted; stored uppercase.",
+    )
+    estimated_skill_level: str | None = None
+    first_scene: FirstScene | None = None
+    how_did_you_find_out: str | None = None
+    learning_language: str | None = None
+    learning_minutes_goal: int | None = None
+    learning_reason: LearningReason | None = Field(
+        None,
+        description="Why the learner is studying the language. Routes the onboarding track recommendation.",
+    )
+    name: str | None = None
+    newsletter_consent: bool | None = None
+    onboarding_completed: bool | None = Field(
+        None,
+        description="true stamps onboarding_completed_at once. false is ignored; a second true never moves the timestamp.",
+    )
+    onboarding_variant: constr(max_length=64) | None = Field(
+        None,
+        description="PostHog flag value for the onboarding flow the learner went through.",
+    )
+    reminder_hour: int | None = None
 
 
 class UserAchievementsResult(BaseModel):
@@ -8982,6 +9042,7 @@ class ArticleVersion(BaseModel):
 class ConceptHubGenerationJobResponse(BaseModel):
     concept_hub_id: UUID_aliased | None = Field(None, title="Concept Hub Id")
     concept_id: UUID_aliased = Field(..., title="Concept Id")
+    error: str | None = Field(None, title="Error")
     error_message: str | None = Field(None, title="Error Message")
     job_id: UUID_aliased = Field(..., title="Job Id")
     job_type: JobType | None = Field("concept_hub", title="Job Type")
