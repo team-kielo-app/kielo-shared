@@ -36,12 +36,15 @@ package openapi
 import (
 	"encoding/json"
 	"fmt"
+	"hash/fnv"
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
+	"unicode"
 
 	"github.com/labstack/echo/v4"
 )
@@ -55,7 +58,13 @@ type Registry struct {
 	title   string
 	version string
 	routes  []routeEntry
-	schemas map[string]any // by Go type name; populated lazily on use
+	schemas map[string]any // by schema name; populated lazily on use
+	// typeNames/nameOwners disambiguate distinct Go types that share a
+	// bare name (e.g. two `Morphology` structs in different packages).
+	// The first type to claim a bare name keeps it; later different
+	// types get a package-qualified name unless structurally identical.
+	typeNames  map[reflect.Type]string
+	nameOwners map[string]reflect.Type
 }
 
 type routeEntry struct {
@@ -427,7 +436,7 @@ func (r *Registry) operationDoc(rt routeEntry) map[string]any {
 			"required": true,
 			"content": map[string]any{
 				"application/json": map[string]any{
-					"schema": map[string]any{"$ref": schemaRef(rt.requestBody)},
+					"schema": map[string]any{"$ref": schemaRef(rt.requestBody, r)},
 				},
 			},
 		}
@@ -555,11 +564,93 @@ func (r *Registry) collectSchema(v any) {
 	if t.Kind() != reflect.Struct {
 		return
 	}
-	name := t.Name()
-	if name == "" || r.schemas[name] != nil {
+	if t.Name() == "" {
 		return
 	}
-	r.schemas[name] = structSchema(t, r)
+	r.refFor(t)
+}
+
+// refFor returns the schema name for struct type t, registering the
+// schema on first use. Distinct Go types that share a bare name get a
+// deterministic package-qualified name (see qualifiedSchemaName);
+// structurally identical duplicates collapse to the bare name.
+func (r *Registry) refFor(t reflect.Type) string {
+	if r.schemas == nil {
+		r.schemas = map[string]any{}
+	}
+	if r.typeNames == nil {
+		r.typeNames = map[reflect.Type]string{}
+		r.nameOwners = map[string]reflect.Type{}
+	}
+	if n, ok := r.typeNames[t]; ok {
+		return n
+	}
+	bare := t.Name()
+	name := bare
+	if owner, taken := r.nameOwners[bare]; taken && owner != t {
+		name = qualifiedSchemaName(t)
+		for {
+			o, used := r.nameOwners[name]
+			if !used || o == t {
+				break
+			}
+			name += "X" + shortHash(t.PkgPath()+"."+t.String())
+		}
+	}
+	if _, ok := r.nameOwners[name]; !ok {
+		r.nameOwners[name] = t
+	}
+	r.typeNames[t] = name
+	if r.schemas[name] == nil {
+		r.schemas[name] = map[string]any{}
+		r.schemas[name] = structSchema(t, r)
+	}
+	if name != bare {
+		if existing, ok := r.schemas[bare]; ok && reflect.DeepEqual(existing, r.schemas[name]) {
+			delete(r.schemas, name)
+			delete(r.nameOwners, name)
+			r.typeNames[t] = bare
+			return bare
+		}
+	}
+	return name
+}
+
+// qualifiedSchemaName suffixes the bare type name with the PascalCase
+// last non-version segment of its package path: Morphology in
+// kielo.app/kielo-cms/internal/models becomes MorphologyModels.
+func qualifiedSchemaName(t reflect.Type) string {
+	segs := strings.Split(t.PkgPath(), "/")
+	seg := ""
+	for i := len(segs) - 1; i >= 0; i-- {
+		if !versionSegment.MatchString(segs[i]) && segs[i] != "" {
+			seg = segs[i]
+			break
+		}
+	}
+	var b strings.Builder
+	up := true
+	for _, c := range seg {
+		if !unicode.IsLetter(c) && !unicode.IsDigit(c) {
+			up = true
+			continue
+		}
+		if up {
+			b.WriteRune(unicode.ToUpper(c))
+			up = false
+		} else {
+			b.WriteRune(c)
+		}
+	}
+	return t.Name() + b.String()
+}
+
+var versionSegment = regexp.MustCompile(`^v\d+$`)
+
+func shortHash(s string) string {
+	h := fnv.New32a()
+	_, _ = h.Write([]byte(s))
+	return fmt.Sprintf("%08x", h.Sum32())
 }
 
 // structSchema renders a Go struct as an OpenAPI schema object. Recurses
@@ -671,10 +762,7 @@ func fieldSchema(t reflect.Type, r *Registry) any {
 	case reflect.Struct:
 		// Register a sub-schema and reference it.
 		if t.Name() != "" {
-			if r.schemas[t.Name()] == nil {
-				r.schemas[t.Name()] = structSchema(t, r)
-			}
-			return map[string]any{"$ref": "#/components/schemas/" + t.Name()}
+			return map[string]any{"$ref": "#/components/schemas/" + r.refFor(t)}
 		}
 		// Anonymous struct — inline.
 		return structSchema(t, r)
@@ -818,10 +906,13 @@ func canonicalErrorResponses() map[string]any {
 	}
 }
 
-func schemaRef(v any) string {
+func schemaRef(v any, r *Registry) string {
 	t := reflect.TypeOf(v)
 	for t.Kind() == reflect.Ptr {
 		t = t.Elem()
+	}
+	if t.Name() != "" && t.Kind() == reflect.Struct {
+		return "#/components/schemas/" + r.refFor(t)
 	}
 	if t.Name() != "" {
 		return "#/components/schemas/" + t.Name()
@@ -853,10 +944,10 @@ func responseSchema(v any, r *Registry) map[string]any {
 		}
 	default:
 		if t.Kind() == reflect.Struct && t.Name() != "" {
-			return map[string]any{"$ref": "#/components/schemas/" + t.Name()}
+			return map[string]any{"$ref": "#/components/schemas/" + r.refFor(t)}
 		}
 		// Legacy fallback (anonymous types, maps, primitives).
-		return map[string]any{"$ref": schemaRef(v)}
+		return map[string]any{"$ref": schemaRef(v, r)}
 	}
 }
 
