@@ -26,8 +26,8 @@ the heuristic is "embedded tail contains a space ⇒ English-keyed".
 
 from __future__ import annotations
 
+import ast
 import os
-import re
 from pathlib import Path
 from typing import Any, AsyncIterator
 
@@ -62,26 +62,59 @@ async def real_pool() -> AsyncIterator[Any]:
         await pool.close()
 
 
-def _convo_canonical_strings() -> set[str]:
-    """The canonical English strings from the convo agent's
-    ``_TRANSLATIONS`` dict — the source of truth the DB rows key on."""
-    module = (
+def _services_dir() -> Path:
+    return (
         Path(__file__).resolve().parents[2]
         / "kielo-convo"
         / "python_agent"
         / "services"
-        / "evaluation_fallbacks.py"
     )
-    if not module.is_file():
+
+
+def _convo_canonical_strings() -> set[str]:
+    """The canonical English strings from the convo agent's
+    ``_TRANSLATIONS`` dict — the source of truth the DB rows key on.
+    Read with ``ast`` so a string split over source lines counts as one."""
+    fallbacks = _services_dir() / "evaluation_fallbacks.py"
+    if not fallbacks.is_file():
         pytest.skip("kielo-convo checkout not present next to kielo-shared")
-    text = module.read_text(encoding="utf-8")
-    match = re.search(
-        r"^_TRANSLATIONS[^=]*=\s*\{$(.*?)^\}$", text, re.M | re.S
-    )
-    assert match, "could not locate _TRANSLATIONS dict in evaluation_fallbacks.py"
-    keys = set(re.findall(r'^    "((?:[^"\\]|\\.)+)": \{$', match.group(1), re.M))
-    assert keys, "parsed zero canonical strings — the dict layout changed?"
+    keys: set[str] = set()
+    for node in ast.walk(ast.parse(fallbacks.read_text(encoding="utf-8"))):
+        targets = (
+            node.targets
+            if isinstance(node, ast.Assign)
+            else [node.target]
+            if isinstance(node, ast.AnnAssign)
+            else []
+        )
+        if isinstance(getattr(node, "value", None), ast.Dict) and any(
+            isinstance(t, ast.Name) and t.id == "_TRANSLATIONS" for t in targets
+        ):
+            keys.update(
+                k.value
+                for k in node.value.keys
+                if isinstance(k, ast.Constant) and isinstance(k.value, str)
+            )
+    assert keys, "parsed zero canonical strings — the _TRANSLATIONS layout changed?"
     return keys
+
+
+def _convo_known_strings() -> set[str]:
+    """The canonical strings plus every string constant in
+    evaluation_service.py, where the LLM-success normalizer localizes its
+    backfills (default tips, drill titles, correction reasons) through
+    ``localize_supplementary_text``. A row is an orphan only when its English
+    appears in neither file; V276 seeded the normalizer's strings, which the
+    dict-only check reported as orphans."""
+    service = _services_dir() / "evaluation_service.py"
+    known = _convo_canonical_strings()
+    if service.is_file():
+        known.update(
+            node.value
+            for node in ast.walk(ast.parse(service.read_text(encoding="utf-8")))
+            if isinstance(node, ast.Constant) and isinstance(node.value, str)
+        )
+    return known
 
 
 async def _english_keyed_rows(pool: Any) -> list[Any]:
@@ -99,15 +132,15 @@ async def _english_keyed_rows(pool: Any) -> list[Any]:
 
 @pytest.mark.asyncio
 async def test_convo_fallback_rows_match_code_strings(real_pool: Any) -> None:
-    canonical = _convo_canonical_strings()
+    known = _convo_known_strings()
     orphans = [
         row["resource_id"]
         for row in await _english_keyed_rows(real_pool)
-        if row["resource_id"][len(_PREFIX) :] not in canonical
+        if row["resource_id"][len(_PREFIX) :] not in known
     ]
     assert not orphans, (
         "dynamic_translations rows keyed on English that no longer exists in "
-        "evaluation_fallbacks.py — a copy edit shipped without a re-key "
+        "evaluation_fallbacks.py or evaluation_service.py — a copy edit shipped without a re-key "
         "migration (V220 pattern: re-seed at the new hash, delete the old "
         f"rows): {sorted(orphans)}"
     )
@@ -136,9 +169,7 @@ async def test_convo_code_strings_keep_their_curated_locales(real_pool: Any) -> 
     (autotranslate covers it); a string whose rows all sit at other
     resource_ids means the curation was orphaned by an English edit."""
     canonical = _convo_canonical_strings()
-    seeded_ids = {
-        row["resource_id"] for row in await _english_keyed_rows(real_pool)
-    }
+    seeded_ids = {row["resource_id"] for row in await _english_keyed_rows(real_pool)}
     if not seeded_ids:
         pytest.skip("no seeded evaluation-fallback rows in this database")
     missing = [
