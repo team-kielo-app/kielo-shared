@@ -1049,6 +1049,19 @@ type AppFeedbackUpdateStatusRequest struct {
 	Status string `json:"status"`
 }
 
+// AppLinkRule defines model for AppLinkRule.
+type AppLinkRule struct {
+	Enabled    bool   `json:"enabled"`
+	Platform   string `json:"platform"`
+	Storefront string `json:"storefront"`
+	Surface    string `json:"surface"`
+}
+
+// AppLinkRuleList defines model for AppLinkRuleList.
+type AppLinkRuleList struct {
+	Rules []AppLinkRule `json:"rules"`
+}
+
 // ApproveTransactionResponse defines model for ApproveTransactionResponse.
 type ApproveTransactionResponse struct {
 	Message       string `json:"message"`
@@ -1531,6 +1544,20 @@ type BehavioralEventRequest struct {
 	ItemType   *string                 `json:"item_type,omitempty"`
 	Properties *map[string]interface{} `json:"properties,omitempty"`
 	Timestamp  string                  `json:"timestamp"`
+}
+
+// BillingPlan defines model for BillingPlan.
+type BillingPlan struct {
+	Active         bool       `json:"active"`
+	AutoRenew      bool       `json:"auto_renew"`
+	CanceledAt     *time.Time `json:"canceled_at,omitempty"`
+	ExpiresAt      *time.Time `json:"expires_at,omitempty"`
+	GrantSource    string     `json:"grant_source"`
+	ProductId      string     `json:"product_id"`
+	StartedAt      time.Time  `json:"started_at"`
+	Status         string     `json:"status"`
+	Store          string     `json:"store"`
+	SubscriptionId uuid.UUID  `json:"subscription_id"`
 }
 
 // BodyEvaluateFirstSentenceSpeechKlearnApiV3RoadmapFirstSentenceSpeechEvaluatePost defines model for Body_evaluate_first_sentence_speech_klearn_api_v3_roadmap_first_sentence_speech_evaluate_post.
@@ -3268,6 +3295,23 @@ type CreateParagraphTTSSessionRequest struct {
 	Text        string `json:"text"`
 }
 
+// CreatePromoCampaignRequest defines model for CreatePromoCampaignRequest.
+type CreatePromoCampaignRequest struct {
+	Channel        *string    `json:"channel,omitempty"`
+	DisplayName    string     `json:"display_name"`
+	Eligibility    *string    `json:"eligibility,omitempty"`
+	EndsAt         *time.Time `json:"ends_at,omitempty"`
+	GrantDays      *int       `json:"grant_days,omitempty"`
+	GrantUntil     *time.Time `json:"grant_until,omitempty"`
+	Kind           string     `json:"kind"`
+	MaxRedemptions *int       `json:"max_redemptions,omitempty"`
+	Name           string     `json:"name"`
+	Note           *string    `json:"note,omitempty"`
+	SharedCode     *string    `json:"shared_code,omitempty"`
+	StartsAt       *time.Time `json:"starts_at,omitempty"`
+	UniqueCount    *int       `json:"unique_count,omitempty"`
+}
+
 // CreateScheduleRequest defines model for CreateScheduleRequest.
 type CreateScheduleRequest struct {
 	Body          *string                 `json:"body,omitempty"`
@@ -4784,9 +4828,10 @@ type FirstScene struct {
 
 // FirstSceneLine defines model for FirstSceneLine.
 type FirstSceneLine struct {
-	Id       string   `json:"id"`
-	Lemmas   []string `json:"lemmas"`
-	Sentence string   `json:"sentence"`
+	Id          string    `json:"id"`
+	Lemmas      []string  `json:"lemmas"`
+	SceneLemmas *[]string `json:"scene_lemmas,omitempty"`
+	Sentence    string    `json:"sentence"`
 }
 
 // FirstSentenceSpeechResponse defines model for FirstSentenceSpeechResponse.
@@ -4925,6 +4970,11 @@ type GenerateParagraphTTSRequest struct {
 	Text        string `json:"text"`
 }
 
+// GeneratePromoCodesRequest defines model for GeneratePromoCodesRequest.
+type GeneratePromoCodesRequest struct {
+	Count int `json:"count"`
+}
+
 // GenerateScenarioResponse defines model for GenerateScenarioResponse.
 type GenerateScenarioResponse struct {
 	Message  string    `json:"message"`
@@ -4953,6 +5003,11 @@ type GenerateUploadURLRequest struct {
 type GenerateUploadURLResponse struct {
 	MediaId   string `json:"media_id"`
 	UploadUrl string `json:"upload_url"`
+}
+
+// GeneratedPromoCodes defines model for GeneratedPromoCodes.
+type GeneratedPromoCodes struct {
+	Codes []string `json:"codes"`
 }
 
 // GetMediaResponse defines model for GetMediaResponse.
@@ -6113,6 +6168,18 @@ type LanguageUpdateRequest struct {
 	NativeName *string `json:"native_name,omitempty"`
 }
 
+// LearnerBilling defines model for LearnerBilling.
+type LearnerBilling struct {
+	CreatedAt     time.Time          `json:"created_at"`
+	Email         string             `json:"email"`
+	IsGuest       bool               `json:"is_guest"`
+	PaidPlanCount int                `json:"paid_plan_count"`
+	Redemptions   []PromoRedemption  `json:"redemptions"`
+	Subscriptions []BillingPlan      `json:"subscriptions"`
+	Transactions  []TransactionEntry `json:"transactions"`
+	UserId        uuid.UUID          `json:"user_id"`
+}
+
 // LearningArcStage defines model for LearningArcStage.
 type LearningArcStage struct {
 	ExerciseIds  *[]uuid.UUID            `json:"exercise_ids,omitempty"`
@@ -6513,6 +6580,12 @@ type LogoutResponse struct {
 	Success bool   `json:"success"`
 }
 
+// ManageURLResponse defines model for ManageURLResponse.
+type ManageURLResponse struct {
+	Kind string `json:"kind"`
+	Url  string `json:"url"`
+}
+
 // MarkAllNotificationsReadResponse defines model for MarkAllNotificationsReadResponse.
 type MarkAllNotificationsReadResponse struct {
 	MarkedCount int `json:"marked_count"`
@@ -6761,6 +6834,11 @@ type MultipleChoiceTranslationExerciseItemTypeFk string
 
 // MultipleChoiceTranslationExerciseSourceType defines model for MultipleChoiceTranslationExercise.SourceType.
 type MultipleChoiceTranslationExerciseSourceType string
+
+// MyTopicListsResponse defines model for MyTopicListsResponse.
+type MyTopicListsResponse struct {
+	TopicLists []TopicListTeaser `json:"topic_lists"`
+}
 
 // Namespace defines model for Namespace.
 type Namespace struct {
@@ -7327,6 +7405,130 @@ type ProgressSummaryV3 struct {
 	WeeklyActivity          []WeeklyActivityDayV3      `json:"weekly_activity"`
 }
 
+// PromoCampaign defines model for PromoCampaign.
+type PromoCampaign struct {
+	Channel         string     `json:"channel"`
+	CodeCount       int        `json:"code_count"`
+	CreatedAt       time.Time  `json:"created_at"`
+	CreatedBy       *uuid.UUID `json:"created_by,omitempty"`
+	DisplayName     string     `json:"display_name"`
+	EffectiveStatus string     `json:"effective_status"`
+	Eligibility     string     `json:"eligibility"`
+	EndsAt          *time.Time `json:"ends_at,omitempty"`
+	GeneratedCodes  *[]string  `json:"generated_codes,omitempty"`
+	GrantDays       *int       `json:"grant_days,omitempty"`
+	GrantUntil      *time.Time `json:"grant_until,omitempty"`
+	Id              uuid.UUID  `json:"id"`
+	Kind            string     `json:"kind"`
+	MaxRedemptions  *int       `json:"max_redemptions,omitempty"`
+	Name            string     `json:"name"`
+	Note            string     `json:"note"`
+	PreviewCount    int        `json:"preview_count"`
+	RedeemedCount   int        `json:"redeemed_count"`
+	ShareUrl        *string    `json:"share_url,omitempty"`
+	SharedCode      *string    `json:"shared_code,omitempty"`
+	StartsAt        *time.Time `json:"starts_at,omitempty"`
+	Status          string     `json:"status"`
+	UpdatedAt       time.Time  `json:"updated_at"`
+}
+
+// PromoCampaignDetail defines model for PromoCampaignDetail.
+type PromoCampaignDetail struct {
+	Campaign        PromoCampaign     `json:"campaign"`
+	Daily           []PromoDailyCount `json:"daily"`
+	FirstGiftEndsAt *time.Time        `json:"first_gift_ends_at,omitempty"`
+	OnPlusNow       int               `json:"on_plus_now"`
+	PaidAfterGift   int               `json:"paid_after_gift"`
+}
+
+// PromoCampaignList defines model for PromoCampaignList.
+type PromoCampaignList struct {
+	Campaigns   []PromoCampaign `json:"campaigns"`
+	NextPageKey *string         `json:"next_page_key,omitempty"`
+	TotalCount  int             `json:"total_count"`
+}
+
+// PromoCode defines model for PromoCode.
+type PromoCode struct {
+	CampaignId     uuid.UUID `json:"campaign_id"`
+	Code           string    `json:"code"`
+	CreatedAt      time.Time `json:"created_at"`
+	MaxRedemptions *int      `json:"max_redemptions,omitempty"`
+	RedeemedCount  int       `json:"redeemed_count"`
+	Status         string    `json:"status"`
+}
+
+// PromoCodeList defines model for PromoCodeList.
+type PromoCodeList struct {
+	Codes       []PromoCode `json:"codes"`
+	NextPageKey *string     `json:"next_page_key,omitempty"`
+	TotalCount  int         `json:"total_count"`
+}
+
+// PromoCodePreview defines model for PromoCodePreview.
+type PromoCodePreview struct {
+	Code        string  `json:"code"`
+	DisplayName *string `json:"display_name,omitempty"`
+	Eligibility *string `json:"eligibility,omitempty"`
+	GrantDays   *int    `json:"grant_days,omitempty"`
+	GrantUntil  *string `json:"grant_until,omitempty"`
+	Reason      *string `json:"reason,omitempty"`
+	RedeemBy    *string `json:"redeem_by,omitempty"`
+	Valid       bool    `json:"valid"`
+}
+
+// PromoCodePreviewUserService defines model for PromoCodePreviewUserService.
+type PromoCodePreviewUserService struct {
+	Code        string     `json:"code"`
+	DisplayName *string    `json:"display_name,omitempty"`
+	Eligibility *string    `json:"eligibility,omitempty"`
+	GrantDays   *int       `json:"grant_days,omitempty"`
+	GrantUntil  *time.Time `json:"grant_until,omitempty"`
+	Reason      *string    `json:"reason,omitempty"`
+	RedeemBy    *time.Time `json:"redeem_by,omitempty"`
+	Valid       bool       `json:"valid"`
+}
+
+// PromoDailyCount defines model for PromoDailyCount.
+type PromoDailyCount struct {
+	Date        string `json:"date"`
+	Redemptions int    `json:"redemptions"`
+}
+
+// PromoRedemption defines model for PromoRedemption.
+type PromoRedemption struct {
+	CampaignId     uuid.UUID  `json:"campaign_id"`
+	CampaignName   *string    `json:"campaign_name,omitempty"`
+	Code           string     `json:"code"`
+	GrantExpiresAt time.Time  `json:"grant_expires_at"`
+	Id             uuid.UUID  `json:"id"`
+	IsGuest        bool       `json:"is_guest"`
+	Platform       string     `json:"platform"`
+	RedeemedAt     time.Time  `json:"redeemed_at"`
+	RevokedAt      *time.Time `json:"revoked_at,omitempty"`
+	Status         string     `json:"status"`
+	SubscriptionId *uuid.UUID `json:"subscription_id,omitempty"`
+	UserEmail      *string    `json:"user_email,omitempty"`
+	UserId         uuid.UUID  `json:"user_id"`
+	Via            string     `json:"via"`
+}
+
+// PromoRedemptionList defines model for PromoRedemptionList.
+type PromoRedemptionList struct {
+	NextPageKey *string           `json:"next_page_key,omitempty"`
+	Redemptions []PromoRedemption `json:"redemptions"`
+	TotalCount  int               `json:"total_count"`
+}
+
+// PromoStats defines model for PromoStats.
+type PromoStats struct {
+	ActiveCampaigns    int     `json:"active_campaigns"`
+	EndedGifts         int     `json:"ended_gifts"`
+	OnPlusFromCodeNow  int     `json:"on_plus_from_code_now"`
+	PaidAfterGiftRatio float32 `json:"paid_after_gift_ratio"`
+	Redeemed30d        int     `json:"redeemed_30d"`
+}
+
 // PubSubMessage defines model for PubSubMessage.
 type PubSubMessage struct {
 	DeliveryAttempt *int                   `json:"deliveryAttempt"`
@@ -7505,6 +7707,35 @@ type RecurringConfusion struct {
 	CorrectForm string  `json:"correct_form"`
 	CorrectTerm *string `json:"correct_term"`
 	Times       int     `json:"times"`
+}
+
+// RedeemPromoCodeRequest defines model for RedeemPromoCodeRequest.
+type RedeemPromoCodeRequest struct {
+	Code     string  `json:"code"`
+	Platform *string `json:"platform,omitempty"`
+	Via      *string `json:"via,omitempty"`
+}
+
+// RedeemPromoCodeResponse defines model for RedeemPromoCodeResponse.
+type RedeemPromoCodeResponse struct {
+	CampaignId        string  `json:"campaign_id"`
+	DisplayName       string  `json:"display_name"`
+	ExpiresAt         string  `json:"expires_at"`
+	GrantDays         int     `json:"grant_days"`
+	PreviousExpiresAt *string `json:"previous_expires_at,omitempty"`
+	RedemptionId      string  `json:"redemption_id"`
+	Status            string  `json:"status"`
+}
+
+// RedeemPromoCodeResponseUserService defines model for RedeemPromoCodeResponseUserService.
+type RedeemPromoCodeResponseUserService struct {
+	CampaignId        uuid.UUID  `json:"campaign_id"`
+	DisplayName       string     `json:"display_name"`
+	ExpiresAt         time.Time  `json:"expires_at"`
+	GrantDays         int        `json:"grant_days"`
+	PreviousExpiresAt *time.Time `json:"previous_expires_at,omitempty"`
+	RedemptionId      uuid.UUID  `json:"redemption_id"`
+	Status            string     `json:"status"`
 }
 
 // RefreshTokenRequest defines model for RefreshTokenRequest.
@@ -7750,6 +7981,12 @@ type ResumeSessionResponse struct {
 	SessionId    string `json:"session_id"`
 	State        string `json:"state"`
 	StepIndex    int    `json:"step_index"`
+}
+
+// ResumeSubscriptionResponse defines model for ResumeSubscriptionResponse.
+type ResumeSubscriptionResponse struct {
+	Message string `json:"message"`
+	Success bool   `json:"success"`
 }
 
 // RevenueCatUserResponse defines model for RevenueCatUserResponse.
@@ -8274,6 +8511,7 @@ type Scenario struct {
 	CreatedBy                *uuid.UUID              `json:"created_by,omitempty"`
 	Description              *string                 `json:"description,omitempty"`
 	Difficulty               *string                 `json:"difficulty,omitempty"`
+	ElevenlabsVoiceId        *string                 `json:"elevenlabs_voice_id,omitempty"`
 	EstimatedDurationMinutes *int                    `json:"estimated_duration_minutes,omitempty"`
 	Id                       uuid.UUID               `json:"id"`
 	IsFeatured               bool                    `json:"is_featured"`
@@ -8679,6 +8917,46 @@ type SetUserOverrideResponse struct {
 	UserId     string `json:"user_id"`
 }
 
+// SignInLinkPreview defines model for SignInLinkPreview.
+type SignInLinkPreview struct {
+	EmailHint string  `json:"email_hint"`
+	ExpiresAt string  `json:"expires_at"`
+	IsGuest   bool    `json:"is_guest"`
+	Name      *string `json:"name,omitempty"`
+	UserId    string  `json:"user_id"`
+}
+
+// SignInLinkPreviewAuthService defines model for SignInLinkPreviewAuthService.
+type SignInLinkPreviewAuthService struct {
+	EmailHint string    `json:"email_hint"`
+	ExpiresAt time.Time `json:"expires_at"`
+	IsGuest   bool      `json:"is_guest"`
+	Name      *string   `json:"name,omitempty"`
+	UserId    string    `json:"user_id"`
+}
+
+// SignInLinkRedeemRequest defines model for SignInLinkRedeemRequest.
+type SignInLinkRedeemRequest struct {
+	Code  *string `json:"code,omitempty"`
+	Token *string `json:"token,omitempty"`
+}
+
+// SignInLinkResponse defines model for SignInLinkResponse.
+type SignInLinkResponse struct {
+	Code      string `json:"code"`
+	ExpiresAt string `json:"expires_at"`
+	Token     string `json:"token"`
+	Url       string `json:"url"`
+}
+
+// SignInLinkResponseAuthService defines model for SignInLinkResponseAuthService.
+type SignInLinkResponseAuthService struct {
+	Code      string    `json:"code"`
+	ExpiresAt time.Time `json:"expires_at"`
+	Token     string    `json:"token"`
+	Url       string    `json:"url"`
+}
+
 // SimpleAiConversationFlow defines model for SimpleAiConversationFlow.
 type SimpleAiConversationFlow struct {
 	Id    string   `json:"id"`
@@ -8761,6 +9039,11 @@ type SingletonAllFeatureLimitsResponse struct {
 // SingletonAppFeedback defines model for SingletonAppFeedback.
 type SingletonAppFeedback struct {
 	Data AppFeedback `json:"data"`
+}
+
+// SingletonAppLinkRuleList defines model for SingletonAppLinkRuleList.
+type SingletonAppLinkRuleList struct {
+	Data AppLinkRuleList `json:"data"`
 }
 
 // SingletonApproveTransactionResponse defines model for SingletonApproveTransactionResponse.
@@ -9333,6 +9616,11 @@ type SingletonGenerateUploadURLResponse struct {
 	Data GenerateUploadURLResponse `json:"data"`
 }
 
+// SingletonGeneratedPromoCodes defines model for SingletonGeneratedPromoCodes.
+type SingletonGeneratedPromoCodes struct {
+	Data GeneratedPromoCodes `json:"data"`
+}
+
 // SingletonGetMediaResponse defines model for SingletonGetMediaResponse.
 type SingletonGetMediaResponse struct {
 	Data GetMediaResponse `json:"data"`
@@ -9558,6 +9846,11 @@ type SingletonLanguageReadinessV3List struct {
 	Data []LanguageReadinessV3 `json:"data"`
 }
 
+// SingletonLearnerBilling defines model for SingletonLearnerBilling.
+type SingletonLearnerBilling struct {
+	Data LearnerBilling `json:"data"`
+}
+
 // SingletonLearningItemsCountsResponse defines model for SingletonLearningItemsCountsResponse.
 type SingletonLearningItemsCountsResponse struct {
 	Data LearningItemsCountsResponse `json:"data"`
@@ -9611,6 +9904,11 @@ type SingletonLoginResponse struct {
 // SingletonLogoutResponse defines model for SingletonLogoutResponse.
 type SingletonLogoutResponse struct {
 	Data LogoutResponse `json:"data"`
+}
+
+// SingletonManageURLResponse defines model for SingletonManageURLResponse.
+type SingletonManageURLResponse struct {
+	Data ManageURLResponse `json:"data"`
 }
 
 // SingletonMarkAllNotificationsReadResponse defines model for SingletonMarkAllNotificationsReadResponse.
@@ -9671,6 +9969,11 @@ type SingletonMicroDrill struct {
 // SingletonMindmap defines model for SingletonMindmap.
 type SingletonMindmap struct {
 	Data Mindmap `json:"data"`
+}
+
+// SingletonMyTopicListsResponse defines model for SingletonMyTopicListsResponse.
+type SingletonMyTopicListsResponse struct {
+	Data MyTopicListsResponse `json:"data"`
 }
 
 // SingletonNamespace defines model for SingletonNamespace.
@@ -9743,6 +10046,51 @@ type SingletonProgressSummaryV3 struct {
 	Data ProgressSummaryV3 `json:"data"`
 }
 
+// SingletonPromoCampaign defines model for SingletonPromoCampaign.
+type SingletonPromoCampaign struct {
+	Data PromoCampaign `json:"data"`
+}
+
+// SingletonPromoCampaignDetail defines model for SingletonPromoCampaignDetail.
+type SingletonPromoCampaignDetail struct {
+	Data PromoCampaignDetail `json:"data"`
+}
+
+// SingletonPromoCampaignList defines model for SingletonPromoCampaignList.
+type SingletonPromoCampaignList struct {
+	Data PromoCampaignList `json:"data"`
+}
+
+// SingletonPromoCodeList defines model for SingletonPromoCodeList.
+type SingletonPromoCodeList struct {
+	Data PromoCodeList `json:"data"`
+}
+
+// SingletonPromoCodePreview defines model for SingletonPromoCodePreview.
+type SingletonPromoCodePreview struct {
+	Data PromoCodePreview `json:"data"`
+}
+
+// SingletonPromoCodePreviewUserService defines model for SingletonPromoCodePreviewUserService.
+type SingletonPromoCodePreviewUserService struct {
+	Data PromoCodePreviewUserService `json:"data"`
+}
+
+// SingletonPromoRedemption defines model for SingletonPromoRedemption.
+type SingletonPromoRedemption struct {
+	Data PromoRedemption `json:"data"`
+}
+
+// SingletonPromoRedemptionList defines model for SingletonPromoRedemptionList.
+type SingletonPromoRedemptionList struct {
+	Data PromoRedemptionList `json:"data"`
+}
+
+// SingletonPromoStats defines model for SingletonPromoStats.
+type SingletonPromoStats struct {
+	Data PromoStats `json:"data"`
+}
+
 // SingletonPushTokensResponse defines model for SingletonPushTokensResponse.
 type SingletonPushTokensResponse struct {
 	Data PushTokensResponse `json:"data"`
@@ -9766,6 +10114,16 @@ type SingletonRecommendationCampaign struct {
 // SingletonRecommendationCampaignRunNowResult defines model for SingletonRecommendationCampaignRunNowResult.
 type SingletonRecommendationCampaignRunNowResult struct {
 	Data RecommendationCampaignRunNowResult `json:"data"`
+}
+
+// SingletonRedeemPromoCodeResponse defines model for SingletonRedeemPromoCodeResponse.
+type SingletonRedeemPromoCodeResponse struct {
+	Data RedeemPromoCodeResponse `json:"data"`
+}
+
+// SingletonRedeemPromoCodeResponseUserService defines model for SingletonRedeemPromoCodeResponseUserService.
+type SingletonRedeemPromoCodeResponseUserService struct {
+	Data RedeemPromoCodeResponseUserService `json:"data"`
 }
 
 // SingletonRefreshTokenResponse defines model for SingletonRefreshTokenResponse.
@@ -9821,6 +10179,11 @@ type SingletonRestoreAccessResponse struct {
 // SingletonRestoreSubscriptionResponse defines model for SingletonRestoreSubscriptionResponse.
 type SingletonRestoreSubscriptionResponse struct {
 	Data RestoreSubscriptionResponse `json:"data"`
+}
+
+// SingletonResumeSubscriptionResponse defines model for SingletonResumeSubscriptionResponse.
+type SingletonResumeSubscriptionResponse struct {
+	Data ResumeSubscriptionResponse `json:"data"`
 }
 
 // SingletonRevenueCatUserResponse defines model for SingletonRevenueCatUserResponse.
@@ -9928,6 +10291,26 @@ type SingletonSetUserOverrideResponse struct {
 	Data SetUserOverrideResponse `json:"data"`
 }
 
+// SingletonSignInLinkPreview defines model for SingletonSignInLinkPreview.
+type SingletonSignInLinkPreview struct {
+	Data SignInLinkPreview `json:"data"`
+}
+
+// SingletonSignInLinkPreviewAuthService defines model for SingletonSignInLinkPreviewAuthService.
+type SingletonSignInLinkPreviewAuthService struct {
+	Data SignInLinkPreviewAuthService `json:"data"`
+}
+
+// SingletonSignInLinkResponse defines model for SingletonSignInLinkResponse.
+type SingletonSignInLinkResponse struct {
+	Data SignInLinkResponse `json:"data"`
+}
+
+// SingletonSignInLinkResponseAuthService defines model for SingletonSignInLinkResponseAuthService.
+type SingletonSignInLinkResponseAuthService struct {
+	Data SignInLinkResponseAuthService `json:"data"`
+}
+
 // SingletonSpeechTranscriptionResponse defines model for SingletonSpeechTranscriptionResponse.
 type SingletonSpeechTranscriptionResponse struct {
 	Data SpeechTranscriptionResponse `json:"data"`
@@ -9986,6 +10369,11 @@ type SingletonSubscriptionInfoCms struct {
 // SingletonSubscriptionInfoUserService defines model for SingletonSubscriptionInfoUserService.
 type SingletonSubscriptionInfoUserService struct {
 	Data SubscriptionInfoUserService `json:"data"`
+}
+
+// SingletonSubscriptionOptions defines model for SingletonSubscriptionOptions.
+type SingletonSubscriptionOptions struct {
+	Data SubscriptionOptions `json:"data"`
 }
 
 // SingletonSurfaceItemsResponse defines model for SingletonSurfaceItemsResponse.
@@ -10273,6 +10661,11 @@ type SingletonWatchedVideosResponse struct {
 	Data WatchedVideosResponse `json:"data"`
 }
 
+// SingletonWebCheckoutResponse defines model for SingletonWebCheckoutResponse.
+type SingletonWebCheckoutResponse struct {
+	Data WebCheckoutResponse `json:"data"`
+}
+
 // SingletonWebIngestPlan defines model for SingletonWebIngestPlan.
 type SingletonWebIngestPlan struct {
 	Data WebIngestPlan `json:"data"`
@@ -10526,26 +10919,36 @@ type SubmitFeedbackRequest struct {
 	Rating     *int                    `json:"rating,omitempty"`
 }
 
+// SubscriptionGift defines model for SubscriptionGift.
+type SubscriptionGift struct {
+	CampaignId  string `json:"campaign_id"`
+	Code        string `json:"code"`
+	DisplayName string `json:"display_name"`
+}
+
 // SubscriptionInfo defines model for SubscriptionInfo.
 type SubscriptionInfo struct {
 	AutoRenew  bool    `json:"auto_renew"`
 	CanceledAt *string `json:"canceled_at,omitempty"`
 
 	// CurrentPeriodStatus paid | unpaid | trial | grace_period
-	CurrentPeriodStatus string         `json:"current_period_status"`
-	ExpiresAt           *string        `json:"expires_at,omitempty"`
-	Features            []FeatureLimit `json:"features"`
-	GracePeriodEndsAt   *string        `json:"grace_period_ends_at,omitempty"`
+	CurrentPeriodStatus string            `json:"current_period_status"`
+	ExpiresAt           *string           `json:"expires_at,omitempty"`
+	Features            []FeatureLimit    `json:"features"`
+	Gift                *SubscriptionGift `json:"gift,omitempty"`
+	GracePeriodEndsAt   *string           `json:"grace_period_ends_at,omitempty"`
 
 	// GrantSource Sweep SSS-B typed write-source tag.
 	GrantSource     SubscriptionInfoGrantSource `json:"grant_source"`
 	IsManual        bool                        `json:"is_manual"`
+	Management      SubscriptionManagement      `json:"management"`
 	NextPaymentDate *time.Time                  `json:"next_payment_date,omitempty"`
 	PaymentHistory  *[]PaymentHistory           `json:"payment_history,omitempty"`
 	ProductId       string                      `json:"product_id"`
 	PurchaseHistory *[]PurchaseHistory          `json:"purchase_history,omitempty"`
 	StartedAt       string                      `json:"started_at"`
 	Status          string                      `json:"status"`
+	Store           string                      `json:"store"`
 	SubscriptionId  string                      `json:"subscription_id"`
 
 	// SubscriptionType monthly | yearly | weekly | etc.
@@ -10578,19 +10981,43 @@ type SubscriptionInfoUserService struct {
 	CurrentPeriodStatus string                        `json:"current_period_status"`
 	ExpiresAt           *time.Time                    `json:"expires_at,omitempty"`
 	Features            []FeatureLimitUserService     `json:"features"`
+	Gift                *SubscriptionGift             `json:"gift,omitempty"`
 	GracePeriodEndsAt   *time.Time                    `json:"grace_period_ends_at,omitempty"`
 	GrantSource         string                        `json:"grant_source"`
 	IsManual            bool                          `json:"is_manual"`
+	Management          SubscriptionManagement        `json:"management"`
 	NextPaymentDate     *time.Time                    `json:"next_payment_date,omitempty"`
 	PaymentHistory      *[]PaymentHistoryUserService  `json:"payment_history,omitempty"`
 	ProductId           string                        `json:"product_id"`
 	PurchaseHistory     *[]PurchaseHistoryUserService `json:"purchase_history,omitempty"`
 	StartedAt           time.Time                     `json:"started_at"`
 	Status              string                        `json:"status"`
+	Store               string                        `json:"store"`
 	SubscriptionId      uuid.UUID                     `json:"subscription_id"`
 	SubscriptionType    *string                       `json:"subscription_type,omitempty"`
 	Tier                string                        `json:"tier"`
 	TrialEndsAt         *time.Time                    `json:"trial_ends_at,omitempty"`
+}
+
+// SubscriptionManagement defines model for SubscriptionManagement.
+type SubscriptionManagement struct {
+	CanResume bool    `json:"can_resume"`
+	Cancel    string  `json:"cancel"`
+	HasPortal bool    `json:"has_portal"`
+	StoreUrl  *string `json:"store_url,omitempty"`
+}
+
+// SubscriptionOption defines model for SubscriptionOption.
+type SubscriptionOption struct {
+	Enabled bool    `json:"enabled"`
+	Reason  *string `json:"reason,omitempty"`
+	Url     *string `json:"url,omitempty"`
+}
+
+// SubscriptionOptions defines model for SubscriptionOptions.
+type SubscriptionOptions struct {
+	HaveACode SubscriptionOption `json:"have_a_code"`
+	PayByCard SubscriptionOption `json:"pay_by_card"`
 }
 
 // SuggestedConceptHub defines model for SuggestedConceptHub.
@@ -11447,6 +11874,20 @@ type UpdateProgressResponse struct {
 	TargetValue     *int   `json:"target_value,omitempty"`
 }
 
+// UpdatePromoCampaignRequest defines model for UpdatePromoCampaignRequest.
+type UpdatePromoCampaignRequest struct {
+	Channel         *string    `json:"channel,omitempty"`
+	DisplayName     *string    `json:"display_name,omitempty"`
+	EndsAt          *time.Time `json:"ends_at,omitempty"`
+	MaxRedemptions  *int       `json:"max_redemptions,omitempty"`
+	Name            *string    `json:"name,omitempty"`
+	NoEndDate       *bool      `json:"no_end_date,omitempty"`
+	NoRedemptionCap *bool      `json:"no_redemption_cap,omitempty"`
+	Note            *string    `json:"note,omitempty"`
+	StartsAt        *time.Time `json:"starts_at,omitempty"`
+	Status          *string    `json:"status,omitempty"`
+}
+
 // UpdateScenarioResponse defines model for UpdateScenarioResponse.
 type UpdateScenarioResponse struct {
 	Message string `json:"message"`
@@ -11887,17 +12328,18 @@ type VideoListPage struct {
 
 // VoiceAgent defines model for VoiceAgent.
 type VoiceAgent struct {
-	AvatarUrl    *string   `json:"avatar_url,omitempty"`
-	CreatedAt    time.Time `json:"created_at"`
-	Description  *string   `json:"description,omitempty"`
-	Gender       *string   `json:"gender,omitempty"`
-	Id           uuid.UUID `json:"id"`
-	IsActive     bool      `json:"is_active"`
-	Language     string    `json:"language"`
-	LanguageCode *string   `json:"language_code,omitempty"`
-	Name         string    `json:"name"`
-	UpdatedAt    time.Time `json:"updated_at"`
-	VoiceId      string    `json:"voice_id"`
+	AvatarUrl         *string   `json:"avatar_url,omitempty"`
+	CreatedAt         time.Time `json:"created_at"`
+	Description       *string   `json:"description,omitempty"`
+	ElevenlabsVoiceId *string   `json:"elevenlabs_voice_id,omitempty"`
+	Gender            *string   `json:"gender,omitempty"`
+	Id                uuid.UUID `json:"id"`
+	IsActive          bool      `json:"is_active"`
+	Language          string    `json:"language"`
+	LanguageCode      *string   `json:"language_code,omitempty"`
+	Name              string    `json:"name"`
+	UpdatedAt         time.Time `json:"updated_at"`
+	VoiceId           string    `json:"voice_id"`
 }
 
 // WatchedVideo defines model for WatchedVideo.
@@ -11913,6 +12355,17 @@ type WatchedVideosResponse struct {
 	CooldownHours  int            `json:"cooldown_hours"`
 	VideoIds       []string       `json:"video_ids"`
 	WatchedDetails []WatchedVideo `json:"watched_details"`
+}
+
+// WebCheckoutRequest defines model for WebCheckoutRequest.
+type WebCheckoutRequest struct {
+	Platform   string `json:"platform"`
+	Storefront string `json:"storefront"`
+}
+
+// WebCheckoutResponse defines model for WebCheckoutResponse.
+type WebCheckoutResponse struct {
+	Url string `json:"url"`
 }
 
 // WebIngestPlan defines model for WebIngestPlan.
@@ -11935,7 +12388,9 @@ type WebIngestPlanItem struct {
 	DisplayName          string     `json:"display_name"`
 	IsActive             bool       `json:"is_active"`
 	LearningLanguageCode string     `json:"learning_language_code"`
+	MaxArticlesPerRun    *int       `json:"max_articles_per_run,omitempty"`
 	Position             int        `json:"position"`
+	RunHoursUtc          *[]int     `json:"run_hours_utc,omitempty"`
 	SourceUrl            string     `json:"source_url"`
 	TargetId             string     `json:"target_id"`
 }
@@ -11980,29 +12435,35 @@ type WebIngestRunItem struct {
 
 // WebIngestTarget defines model for WebIngestTarget.
 type WebIngestTarget struct {
-	BrandId              *uuid.UUID `json:"brand_id,omitempty"`
-	BrandName            *string    `json:"brand_name,omitempty"`
-	CreatedAt            time.Time  `json:"created_at"`
-	CreatedBy            *uuid.UUID `json:"created_by,omitempty"`
-	DisplayName          string     `json:"display_name"`
-	IsActive             bool       `json:"is_active"`
-	LearningLanguageCode string     `json:"learning_language_code"`
-	Notes                *string    `json:"notes,omitempty"`
-	SourceUrl            string     `json:"source_url"`
-	TargetId             string     `json:"target_id"`
-	UpdatedAt            time.Time  `json:"updated_at"`
-	UpdatedBy            *uuid.UUID `json:"updated_by,omitempty"`
+	BrandId                 *uuid.UUID `json:"brand_id,omitempty"`
+	BrandName               *string    `json:"brand_name,omitempty"`
+	CreatedAt               time.Time  `json:"created_at"`
+	CreatedBy               *uuid.UUID `json:"created_by,omitempty"`
+	DisplayName             string     `json:"display_name"`
+	HideContentWhenInactive bool       `json:"hide_content_when_inactive"`
+	IsActive                bool       `json:"is_active"`
+	LearningLanguageCode    string     `json:"learning_language_code"`
+	MaxArticlesPerRun       *int       `json:"max_articles_per_run,omitempty"`
+	Notes                   *string    `json:"notes,omitempty"`
+	RunHoursUtc             *[]int     `json:"run_hours_utc,omitempty"`
+	SourceUrl               string     `json:"source_url"`
+	TargetId                string     `json:"target_id"`
+	UpdatedAt               time.Time  `json:"updated_at"`
+	UpdatedBy               *uuid.UUID `json:"updated_by,omitempty"`
 }
 
 // WebIngestTargetRequest defines model for WebIngestTargetRequest.
 type WebIngestTargetRequest struct {
-	BrandId              *string `json:"brand_id,omitempty"`
-	DisplayName          string  `json:"display_name"`
-	IsActive             *bool   `json:"is_active,omitempty"`
-	LearningLanguageCode string  `json:"learning_language_code"`
-	Notes                *string `json:"notes,omitempty"`
-	SourceUrl            string  `json:"source_url"`
-	TargetId             string  `json:"target_id"`
+	BrandId                 *string `json:"brand_id,omitempty"`
+	DisplayName             string  `json:"display_name"`
+	HideContentWhenInactive *bool   `json:"hide_content_when_inactive,omitempty"`
+	IsActive                *bool   `json:"is_active,omitempty"`
+	LearningLanguageCode    string  `json:"learning_language_code"`
+	MaxArticlesPerRun       *int    `json:"max_articles_per_run,omitempty"`
+	Notes                   *string `json:"notes,omitempty"`
+	RunHoursUtc             *[]int  `json:"run_hours_utc,omitempty"`
+	SourceUrl               string  `json:"source_url"`
+	TargetId                string  `json:"target_id"`
 }
 
 // WeeklyActivityDay defines model for WeeklyActivityDay.
@@ -12192,6 +12653,39 @@ type GetAdminApiV3FeedbackFeaturesFeatureIdCommentsParams struct {
 	Offset *int `form:"offset,omitempty" json:"offset,omitempty"`
 }
 
+// GetAdminApiV3PromoCampaignsParams defines parameters for GetAdminApiV3PromoCampaigns.
+type GetAdminApiV3PromoCampaignsParams struct {
+	// Status active, paused or archived
+	Status *string `form:"status,omitempty" json:"status,omitempty"`
+
+	// Q Search name, display name or exact code
+	Q *string `form:"q,omitempty" json:"q,omitempty"`
+
+	// PageSize Maximum number of items per page. Handler default applies if omitted.
+	PageSize *int `form:"page_size,omitempty" json:"page_size,omitempty"`
+
+	// NextPageKey Opaque pagination cursor returned by the previous response.
+	NextPageKey *string `form:"next_page_key,omitempty" json:"next_page_key,omitempty"`
+}
+
+// GetAdminApiV3PromoCampaignsCampaignIdCodesParams defines parameters for GetAdminApiV3PromoCampaignsCampaignIdCodes.
+type GetAdminApiV3PromoCampaignsCampaignIdCodesParams struct {
+	// PageSize Maximum number of items per page. Handler default applies if omitted.
+	PageSize *int `form:"page_size,omitempty" json:"page_size,omitempty"`
+
+	// NextPageKey Opaque pagination cursor returned by the previous response.
+	NextPageKey *string `form:"next_page_key,omitempty" json:"next_page_key,omitempty"`
+}
+
+// GetAdminApiV3PromoCampaignsCampaignIdRedemptionsParams defines parameters for GetAdminApiV3PromoCampaignsCampaignIdRedemptions.
+type GetAdminApiV3PromoCampaignsCampaignIdRedemptionsParams struct {
+	// PageSize Maximum number of items per page. Handler default applies if omitted.
+	PageSize *int `form:"page_size,omitempty" json:"page_size,omitempty"`
+
+	// NextPageKey Opaque pagination cursor returned by the previous response.
+	NextPageKey *string `form:"next_page_key,omitempty" json:"next_page_key,omitempty"`
+}
+
 // GetAdminApiV3SubscriptionTransactionsPendingParams defines parameters for GetAdminApiV3SubscriptionTransactionsPending.
 type GetAdminApiV3SubscriptionTransactionsPendingParams struct {
 	// OlderThanMinutes Only rows pending longer than this many minutes.
@@ -12283,6 +12777,12 @@ type GetApiV3ArticlesArticleIdRelatedVersionsParams struct {
 
 	// SupportLanguageCode Localization target for related-version titles.
 	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
+}
+
+// GetApiV3AuthSignInLinkPreviewParams defines parameters for GetApiV3AuthSignInLinkPreview.
+type GetApiV3AuthSignInLinkPreviewParams struct {
+	// Token The token from the sign-in link
+	Token string `form:"token" json:"token"`
 }
 
 // GetApiV3BrandsParams defines parameters for GetApiV3Brands.
@@ -12779,6 +13279,9 @@ type GetApiV3FeedParams struct {
 	// ExcludeIds Comma-separated article IDs to exclude from the feed.
 	ExcludeIds *string `form:"exclude_ids,omitempty" json:"exclude_ids,omitempty"`
 
+	// ReadIds Comma-separated article IDs the learner has read; ranked below unread ones.
+	ReadIds *string `form:"read_ids,omitempty" json:"read_ids,omitempty"`
+
 	// LearningLanguageCode Two-letter ISO 639-1 code for the language being learned (per ADR-006 §3.83).
 	LearningLanguageCode *string `form:"learning_language_code,omitempty" json:"learning_language_code,omitempty"`
 
@@ -13009,6 +13512,12 @@ type GetApiV3KlearnConceptHubsExerciseDecksDeckIdParams struct {
 type GetApiV3KlearnConceptHubsHubIdParams struct {
 	// Include Sweep CCCCC-A: comma-separated opt-in fields. `core_content` triggers eager localization.
 	Include *string `form:"include,omitempty" json:"include,omitempty"`
+}
+
+// GetApiV3KlearnTopicListsMineParams defines parameters for GetApiV3KlearnTopicListsMine.
+type GetApiV3KlearnTopicListsMineParams struct {
+	// LearningLanguageCode Two-letter ISO 639-1 code for the language being learned (per ADR-006 §3.83).
+	LearningLanguageCode *string `form:"learning_language_code,omitempty" json:"learning_language_code,omitempty"`
 }
 
 // GetApiV3KlearnTopicListsTopicListIdParams defines parameters for GetApiV3KlearnTopicListsTopicListId.
@@ -13596,6 +14105,15 @@ type GetApiV3StatsChartParams struct {
 	Days *int `form:"days,omitempty" json:"days,omitempty"`
 }
 
+// GetApiV3SubscriptionsOptionsParams defines parameters for GetApiV3SubscriptionsOptions.
+type GetApiV3SubscriptionsOptionsParams struct {
+	// Platform ios, android or web
+	Platform *string `form:"platform,omitempty" json:"platform,omitempty"`
+
+	// Storefront Store country, ISO 3166 alpha-3
+	Storefront *string `form:"storefront,omitempty" json:"storefront,omitempty"`
+}
+
 // GetApiV3TagsParams defines parameters for GetApiV3Tags.
 type GetApiV3TagsParams struct {
 	// PageSize Maximum number of items per page. Handler default applies if omitted.
@@ -13607,6 +14125,12 @@ type GetApiV3TagsParams struct {
 
 // GetApiV3TopicListsForWordBaseWordIdParams defines parameters for GetApiV3TopicListsForWordBaseWordId.
 type GetApiV3TopicListsForWordBaseWordIdParams struct {
+	// SupportLanguageCode Two-letter ISO 639-1 code for translated UI strings (per ADR-006 §3.83).
+	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
+}
+
+// GetApiV3TopicListsMineParams defines parameters for GetApiV3TopicListsMine.
+type GetApiV3TopicListsMineParams struct {
 	// SupportLanguageCode Two-letter ISO 639-1 code for translated UI strings (per ADR-006 §3.83).
 	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
 }
@@ -13837,6 +14361,15 @@ type DeleteInternalApiV3UsersUserIdPushTokenParams struct {
 
 	// TokenHash Lowercase SHA-256 hash of the push token to remove
 	TokenHash *string `form:"token_hash,omitempty" json:"token_hash,omitempty"`
+}
+
+// GetInternalApiV3UsersUserIdSubscriptionOptionsParams defines parameters for GetInternalApiV3UsersUserIdSubscriptionOptions.
+type GetInternalApiV3UsersUserIdSubscriptionOptionsParams struct {
+	// Platform ios, android or web
+	Platform *string `form:"platform,omitempty" json:"platform,omitempty"`
+
+	// Storefront Store country, ISO 3166 alpha-3 (USA, FIN, ...)
+	Storefront *string `form:"storefront,omitempty" json:"storefront,omitempty"`
 }
 
 // GetInternalApiV3UsersUserIdWatchedVideosParams defines parameters for GetInternalApiV3UsersUserIdWatchedVideos.
@@ -14541,6 +15074,15 @@ type StartTopicListPracticeKlearnApiV3TopicListsTopicListIdPracticePostParams st
 	UserId uuid.UUID `form:"user_id" json:"user_id"`
 }
 
+// GetSignInLinkPreviewParams defines parameters for GetSignInLinkPreview.
+type GetSignInLinkPreviewParams struct {
+	// Token The token from the sign-in link
+	Token string `form:"token" json:"token"`
+}
+
+// PutAdminApiV3AppLinkRulesJSONRequestBody defines body for PutAdminApiV3AppLinkRules for application/json ContentType.
+type PutAdminApiV3AppLinkRulesJSONRequestBody = AppLinkRuleList
+
 // PostAdminApiV3FeatureLimitsTierJSONRequestBody defines body for PostAdminApiV3FeatureLimitsTier for application/json ContentType.
 type PostAdminApiV3FeatureLimitsTierJSONRequestBody = UpsertTierLimitRequest
 
@@ -14564,6 +15106,15 @@ type PutAdminApiV3FeedbackFeaturesFeatureIdStatusJSONRequestBody = UpdateFeature
 
 // PostAdminApiV3FeedbackFeedbackIdMessagesJSONRequestBody defines body for PostAdminApiV3FeedbackFeedbackIdMessages for application/json ContentType.
 type PostAdminApiV3FeedbackFeedbackIdMessagesJSONRequestBody = FeedbackMessageCreateRequest
+
+// PostAdminApiV3PromoCampaignsJSONRequestBody defines body for PostAdminApiV3PromoCampaigns for application/json ContentType.
+type PostAdminApiV3PromoCampaignsJSONRequestBody = CreatePromoCampaignRequest
+
+// PatchAdminApiV3PromoCampaignsCampaignIdJSONRequestBody defines body for PatchAdminApiV3PromoCampaignsCampaignId for application/json ContentType.
+type PatchAdminApiV3PromoCampaignsCampaignIdJSONRequestBody = UpdatePromoCampaignRequest
+
+// PostAdminApiV3PromoCampaignsCampaignIdCodesJSONRequestBody defines body for PostAdminApiV3PromoCampaignsCampaignIdCodes for application/json ContentType.
+type PostAdminApiV3PromoCampaignsCampaignIdCodesJSONRequestBody = GeneratePromoCodesRequest
 
 // PostAdminApiV3UsersUserIdAchievementsCodeJSONRequestBody defines body for PostAdminApiV3UsersUserIdAchievementsCode for application/json ContentType.
 type PostAdminApiV3UsersUserIdAchievementsCodeJSONRequestBody = AwardAchievementByPathRequest
@@ -14603,6 +15154,9 @@ type PostApiV3AuthResetPasswordJSONRequestBody = ResetPasswordRequest
 
 // PostApiV3AuthRevokeJSONRequestBody defines body for PostApiV3AuthRevoke for application/json ContentType.
 type PostApiV3AuthRevokeJSONRequestBody = RefreshTokenRequest
+
+// PostApiV3AuthSignInLinkRedeemJSONRequestBody defines body for PostApiV3AuthSignInLinkRedeem for application/json ContentType.
+type PostApiV3AuthSignInLinkRedeemJSONRequestBody = SignInLinkRedeemRequest
 
 // PostApiV3AuthTransferJSONRequestBody defines body for PostApiV3AuthTransfer for application/json ContentType.
 type PostApiV3AuthTransferJSONRequestBody = TransferRedeemRequest
@@ -14976,6 +15530,9 @@ type PostApiV3NotificationsSendJSONRequestBody = SendNotificationRequest
 // PostApiV3NotificationsIdEngagementJSONRequestBody defines body for PostApiV3NotificationsIdEngagement for application/json ContentType.
 type PostApiV3NotificationsIdEngagementJSONRequestBody = NotificationEngagementRequest
 
+// PostApiV3PromoCodesRedeemJSONRequestBody defines body for PostApiV3PromoCodesRedeem for application/json ContentType.
+type PostApiV3PromoCodesRedeemJSONRequestBody = RedeemPromoCodeRequest
+
 // PostApiV3RecommendationCampaignsJSONRequestBody defines body for PostApiV3RecommendationCampaigns for application/json ContentType.
 type PostApiV3RecommendationCampaignsJSONRequestBody = RecommendationCampaign
 
@@ -15011,6 +15568,9 @@ type PostApiV3SubscriptionsRestoreAccessJSONRequestBody = RestoreAccessRequest
 
 // PostApiV3SubscriptionsTransferJSONRequestBody defines body for PostApiV3SubscriptionsTransfer for application/json ContentType.
 type PostApiV3SubscriptionsTransferJSONRequestBody = TransferSubscriptionRequest
+
+// PostApiV3SubscriptionsWebCheckoutJSONRequestBody defines body for PostApiV3SubscriptionsWebCheckout for application/json ContentType.
+type PostApiV3SubscriptionsWebCheckoutJSONRequestBody = WebCheckoutRequest
 
 // PostApiV3TelemetryClientErrorJSONRequestBody defines body for PostApiV3TelemetryClientError for application/json ContentType.
 type PostApiV3TelemetryClientErrorJSONRequestBody = ClientErrorEnvelope
@@ -15165,6 +15725,9 @@ type PatchInternalApiV3UsersUserIdFirebaseUidJSONRequestBody = UpdateAuthUserFir
 // PostInternalApiV3UsersUserIdMergeGuestJSONRequestBody defines body for PostInternalApiV3UsersUserIdMergeGuest for application/json ContentType.
 type PostInternalApiV3UsersUserIdMergeGuestJSONRequestBody = InternalMergeGuestRequest
 
+// PostInternalApiV3UsersUserIdPromoCodesRedeemJSONRequestBody defines body for PostInternalApiV3UsersUserIdPromoCodesRedeem for application/json ContentType.
+type PostInternalApiV3UsersUserIdPromoCodesRedeemJSONRequestBody = RedeemPromoCodeRequest
+
 // PostInternalApiV3UsersUserIdPushTokenJSONRequestBody defines body for PostInternalApiV3UsersUserIdPushToken for application/json ContentType.
 type PostInternalApiV3UsersUserIdPushTokenJSONRequestBody = RegisterPushTokenRequest
 
@@ -15185,6 +15748,9 @@ type PostInternalApiV3UsersUserIdSubscriptionRestoreAccessJSONRequestBody = Rest
 
 // PostInternalApiV3UsersUserIdSubscriptionTransferJSONRequestBody defines body for PostInternalApiV3UsersUserIdSubscriptionTransfer for application/json ContentType.
 type PostInternalApiV3UsersUserIdSubscriptionTransferJSONRequestBody = TransferSubscriptionRequest
+
+// PostInternalApiV3UsersUserIdSubscriptionWebCheckoutJSONRequestBody defines body for PostInternalApiV3UsersUserIdSubscriptionWebCheckout for application/json ContentType.
+type PostInternalApiV3UsersUserIdSubscriptionWebCheckoutJSONRequestBody = WebCheckoutRequest
 
 // PostInternalContentBridgeItemsLookupJSONRequestBody defines body for PostInternalContentBridgeItemsLookup for application/json ContentType.
 type PostInternalContentBridgeItemsLookupJSONRequestBody = BatchLookupRequest
@@ -15407,6 +15973,9 @@ type AddTopicListItemKlearnApiV3TopicListsTopicListIdItemsPostJSONRequestBody = 
 
 // UpdateUserPersonalizationProfileKlearnApiV3UserUserIdProfilePersonalizationPutJSONRequestBody defines body for UpdateUserPersonalizationProfileKlearnApiV3UserUserIdProfilePersonalizationPut for application/json ContentType.
 type UpdateUserPersonalizationProfileKlearnApiV3UserUserIdProfilePersonalizationPutJSONRequestBody = UserProfilePersonalizationUpdate
+
+// PostSignInLinkRedeemJSONRequestBody defines body for PostSignInLinkRedeem for application/json ContentType.
+type PostSignInLinkRedeemJSONRequestBody = SignInLinkRedeemRequest
 
 // PostSpeechTranscribeJSONRequestBody defines body for PostSpeechTranscribe for application/json ContentType.
 type PostSpeechTranscribeJSONRequestBody = SpeechTranscriptionRequest
