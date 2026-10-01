@@ -234,6 +234,17 @@ class AppFeedbackUpdateStatusRequest(BaseModel):
     status: str
 
 
+class AppLinkRule(BaseModel):
+    enabled: bool
+    platform: str
+    storefront: str
+    surface: str
+
+
+class AppLinkRuleList(BaseModel):
+    rules: list[AppLinkRule]
+
+
 class ApproveTransactionResponse(BaseModel):
     message: str
     success: bool
@@ -418,6 +429,19 @@ class BehavioralEventRequest(BaseModel):
     item_type: str | None = None
     properties: dict[str, Any] | None = None
     timestamp: str
+
+
+class BillingPlan(BaseModel):
+    active: bool
+    auto_renew: bool
+    canceled_at: AwareDatetime | None = None
+    expires_at: AwareDatetime | None = None
+    grant_source: str
+    product_id: str
+    started_at: AwareDatetime
+    status: str
+    store: str
+    subscription_id: UUID_aliased
 
 
 class BodyEvaluateFirstSentenceSpeechKlearnApiV3RoadmapFirstSentenceSpeechEvaluatePost(
@@ -1655,6 +1679,22 @@ class CreateParagraphTTSSessionRequest(BaseModel):
     text: str
 
 
+class CreatePromoCampaignRequest(BaseModel):
+    channel: str | None = None
+    display_name: str
+    eligibility: str | None = None
+    ends_at: AwareDatetime | None = None
+    grant_days: int | None = None
+    grant_until: AwareDatetime | None = None
+    kind: str
+    max_redemptions: int | None = None
+    name: str
+    note: str | None = None
+    shared_code: str | None = None
+    starts_at: AwareDatetime | None = None
+    unique_count: int | None = None
+
+
 class CreateScheduleRequest(BaseModel):
     body: str | None = None
     metadata: dict[str, Any] | None = None
@@ -2577,6 +2617,7 @@ class FillInTheBlankExercise(BaseModel):
 class FirstSceneLine(BaseModel):
     id: str
     lemmas: list[str]
+    scene_lemmas: list[str] | None = None
     sentence: str
 
 
@@ -2675,6 +2716,10 @@ class GenerateParagraphTTSRequest(CreateParagraphTTSSessionRequest):
     pass
 
 
+class GeneratePromoCodesRequest(CommsUserCountResult):
+    pass
+
+
 class GenerateTopicListRequest(BaseModel):
     must_include: list[str] | None = None
     prompt: str
@@ -2694,6 +2739,10 @@ class GenerateUploadURLRequest(BaseModel):
 class GenerateUploadURLResponse(BaseModel):
     media_id: str
     upload_url: str
+
+
+class GeneratedPromoCodes(BaseModel):
+    codes: list[str]
 
 
 class GetUploadURLRequest(BaseModel):
@@ -3870,6 +3919,11 @@ class LogoutResponse(CancelSubscriptionResponse):
     pass
 
 
+class ManageURLResponse(BaseModel):
+    kind: str
+    url: str
+
+
 class MarkAllNotificationsReadResponse(BaseModel):
     marked_count: int
 
@@ -4473,6 +4527,111 @@ class PreferredDifficultyProfile(BaseModel):
     )
 
 
+class PromoCampaign(BaseModel):
+    channel: str
+    code_count: int
+    created_at: AwareDatetime
+    created_by: UUID_aliased | None = None
+    display_name: str
+    effective_status: str
+    eligibility: str
+    ends_at: AwareDatetime | None = None
+    generated_codes: list[str] | None = None
+    grant_days: int | None = None
+    grant_until: AwareDatetime | None = None
+    id: UUID_aliased
+    kind: str
+    max_redemptions: int | None = None
+    name: str
+    note: str
+    preview_count: int
+    redeemed_count: int
+    share_url: str | None = None
+    shared_code: str | None = None
+    starts_at: AwareDatetime | None = None
+    status: str
+    updated_at: AwareDatetime
+
+
+class PromoCampaignList(BaseModel):
+    campaigns: list[PromoCampaign]
+    next_page_key: str | None = None
+    total_count: int
+
+
+class PromoCode(BaseModel):
+    campaign_id: UUID_aliased
+    code: str
+    created_at: AwareDatetime
+    max_redemptions: int | None = None
+    redeemed_count: int
+    status: str
+
+
+class PromoCodeList(BaseModel):
+    codes: list[PromoCode]
+    next_page_key: str | None = None
+    total_count: int
+
+
+class PromoCodePreview(BaseModel):
+    code: str
+    display_name: str | None = None
+    eligibility: str | None = None
+    grant_days: int | None = None
+    grant_until: str | None = None
+    reason: str | None = None
+    redeem_by: str | None = None
+    valid: bool
+
+
+class PromoCodePreviewUserService(BaseModel):
+    code: str
+    display_name: str | None = None
+    eligibility: str | None = None
+    grant_days: int | None = None
+    grant_until: AwareDatetime | None = None
+    reason: str | None = None
+    redeem_by: AwareDatetime | None = None
+    valid: bool
+
+
+class PromoDailyCount(BaseModel):
+    date: str
+    redemptions: int
+
+
+class PromoRedemption(BaseModel):
+    campaign_id: UUID_aliased
+    campaign_name: str | None = None
+    code: str
+    grant_expires_at: AwareDatetime
+    id: UUID_aliased
+    is_guest: bool
+    platform: str
+    redeemed_at: AwareDatetime
+    revoked_at: AwareDatetime | None = None
+    status: str
+    subscription_id: UUID_aliased | None = None
+    user_email: str | None = None
+    user_id: UUID_aliased
+    via: str
+
+
+class PromoRedemptionList(BaseModel):
+    next_page_key: str | None = None
+    redemptions: list[PromoRedemption]
+    total_count: int
+
+
+class PromoStats(BaseModel):
+    active_campaigns: int
+    ended_gifts: int
+    on_plus_from_code_now: int
+    paid_after_gift_ratio: float
+    redeemed_30d: int
+
+
 class PubSubMessage(BaseModel):
     deliveryAttempt: int | None = Field(None, title="Deliveryattempt")
     message: dict[str, Any] = Field(..., title="Message")
@@ -4625,6 +4784,32 @@ class RecurringConfusion(BaseModel):
     correct_form: str = Field(..., title="Correct Form")
     correct_term: str | None = Field(None, title="Correct Term")
     times: conint(ge=2) = Field(..., title="Times")
+
+
+class RedeemPromoCodeRequest(BaseModel):
+    code: str
+    platform: str | None = None
+    via: str | None = None
+
+
+class RedeemPromoCodeResponse(BaseModel):
+    campaign_id: str
+    display_name: str
+    expires_at: str
+    grant_days: int
+    previous_expires_at: str | None = None
+    redemption_id: str
+    status: str
+
+
+class RedeemPromoCodeResponseUserService(BaseModel):
+    campaign_id: UUID_aliased
+    display_name: str
+    expires_at: AwareDatetime
+    grant_days: int
+    previous_expires_at: AwareDatetime | None = None
+    redemption_id: UUID_aliased
+    status: str
 
 
 class RefreshTokenRequest(BaseModel):
@@ -4816,6 +5001,10 @@ class ResumeSessionResponse(BaseModel):
     session_id: str
     state: str
     step_index: int
+
+
+class ResumeSubscriptionResponse(CancelSubscriptionResponse):
+    pass
 
 
 class RevenueCatUserResponse(BaseModel):
@@ -5489,6 +5678,41 @@ class SetUserOverrideResponse(SetUserFeatureLimitResponse):
     pass
 
 
+class SignInLinkPreview(BaseModel):
+    email_hint: str
+    expires_at: str
+    is_guest: bool
+    name: str | None = None
+    user_id: str
+
+
+class SignInLinkPreviewAuthService(BaseModel):
+    email_hint: str
+    expires_at: AwareDatetime
+    is_guest: bool
+    name: str | None = None
+    user_id: str
+
+
+class SignInLinkRedeemRequest(BaseModel):
+    code: str | None = None
+    token: str | None = None
+
+
+class SignInLinkResponse(BaseModel):
+    code: str
+    expires_at: str
+    token: str
+    url: str
+
+
+class SignInLinkResponseAuthService(BaseModel):
+    code: str
+    expires_at: AwareDatetime
+    token: str
+    url: str
+
+
 class SimpleAiConversationFlow(BaseModel):
     id: str = Field(..., title="Id")
     steps: list[str] = Field(..., title="Steps")
@@ -5556,6 +5780,10 @@ class SingletonAdminContentSyncResponse(BaseModel):
 
 class SingletonAppFeedback(BaseModel):
     data: AppFeedback
+
+
+class SingletonAppLinkRuleList(BaseModel):
+    data: AppLinkRuleList
 
 
 class SingletonApproveTransactionResponse(BaseModel):
@@ -5870,6 +6098,10 @@ class SingletonGenerateUploadURLResponse(BaseModel):
     data: GenerateUploadURLResponse
 
 
+class SingletonGeneratedPromoCodes(BaseModel):
+    data: GeneratedPromoCodes
+
+
 class SingletonGetUploadURLResponse(BaseModel):
     data: GetUploadURLResponse
 
@@ -6050,6 +6282,10 @@ class SingletonLogoutResponse(BaseModel):
     data: LogoutResponse
 
 
+class SingletonManageURLResponse(BaseModel):
+    data: ManageURLResponse
+
+
 class SingletonMarkAllNotificationsReadResponse(BaseModel):
     data: MarkAllNotificationsReadResponse
 
@@ -6134,6 +6370,38 @@ class SingletonPlacementItemsV3(BaseModel):
     data: PlacementItemsV3
 
 
+class SingletonPromoCampaign(BaseModel):
+    data: PromoCampaign
+
+
+class SingletonPromoCampaignList(BaseModel):
+    data: PromoCampaignList
+
+
+class SingletonPromoCodeList(BaseModel):
+    data: PromoCodeList
+
+
+class SingletonPromoCodePreview(BaseModel):
+    data: PromoCodePreview
+
+
+class SingletonPromoCodePreviewUserService(BaseModel):
+    data: PromoCodePreviewUserService
+
+
+class SingletonPromoRedemption(BaseModel):
+    data: PromoRedemption
+
+
+class SingletonPromoRedemptionList(BaseModel):
+    data: PromoRedemptionList
+
+
+class SingletonPromoStats(BaseModel):
+    data: PromoStats
+
+
 class SingletonPushTokensResponse(BaseModel):
     data: PushTokensResponse
 
@@ -6152,6 +6420,14 @@ class SingletonRecommendationCampaign(BaseModel):
 
 class SingletonRecommendationCampaignRunNowResult(BaseModel):
     data: RecommendationCampaignRunNowResult
+
+
+class SingletonRedeemPromoCodeResponse(BaseModel):
+    data: RedeemPromoCodeResponse
+
+
+class SingletonRedeemPromoCodeResponseUserService(BaseModel):
+    data: RedeemPromoCodeResponseUserService
 
 
 class SingletonRefreshTokenResponse(BaseModel):
@@ -6192,6 +6468,10 @@ class SingletonRestoreAccessResponse(BaseModel):
 
 class SingletonRestoreSubscriptionResponse(BaseModel):
     data: RestoreSubscriptionResponse
+
+
+class SingletonResumeSubscriptionResponse(BaseModel):
+    data: ResumeSubscriptionResponse
 
 
 class SingletonRevenueCatUserResponse(BaseModel):
@@ -6264,6 +6544,22 @@ class SingletonSetUserFeatureLimitResponse(BaseModel):
 
 class SingletonSetUserOverrideResponse(BaseModel):
     data: SetUserOverrideResponse
+
+
+class SingletonSignInLinkPreview(BaseModel):
+    data: SignInLinkPreview
+
+
+class SingletonSignInLinkPreviewAuthService(BaseModel):
+    data: SignInLinkPreviewAuthService
+
+
+class SingletonSignInLinkResponse(BaseModel):
+    data: SignInLinkResponse
+
+
+class SingletonSignInLinkResponseAuthService(BaseModel):
+    data: SignInLinkResponseAuthService
 
 
 class SingletonTranslationBundle(BaseModel):
@@ -6439,6 +6735,12 @@ class SubmitFeedbackRequest(BaseModel):
     rating: int | None = None
 
 
+class SubscriptionGift(BaseModel):
+    campaign_id: str
+    code: str
+    display_name: str
+
+
 class GrantSource(StrEnum):
     revenuecat_webhook = "revenuecat_webhook"
     admin_grant = "admin_grant"
@@ -6450,33 +6752,6 @@ class GrantSource(StrEnum):
     beta = "beta"
     legacy_backfill = "legacy_backfill"
     unknown = "unknown"
-
-
-class SubscriptionInfo(BaseModel):
-    auto_renew: bool
-    canceled_at: str | None = None
-    current_period_status: str = Field(
-        ..., description="paid | unpaid | trial | grace_period"
-    )
-    expires_at: str | None = None
-    features: list[FeatureLimit]
-    grace_period_ends_at: str | None = None
-    grant_source: GrantSource = Field(
-        ..., description="Sweep SSS-B typed write-source tag."
-    )
-    is_manual: bool
-    next_payment_date: AwareDatetime | None = None
-    payment_history: list[PaymentHistory] | None = None
-    product_id: str
-    purchase_history: list[PurchaseHistory] | None = None
-    started_at: str
-    status: str
-    subscription_id: str
-    subscription_type: str | None = Field(
-        None, description="monthly | yearly | weekly | etc."
-    )
-    tier: str
-    trial_ends_at: str | None = None
 
 
 class SubscriptionInfoCms(BaseModel):
@@ -6492,25 +6767,22 @@ class SubscriptionInfoCms(BaseModel):
     trial_ends_at: str | None = None
 
 
-class SubscriptionInfoUserService(BaseModel):
-    auto_renew: bool
-    canceled_at: AwareDatetime | None = None
-    current_period_status: str
-    expires_at: AwareDatetime | None = None
-    features: list[FeatureLimitUserService]
-    grace_period_ends_at: AwareDatetime | None = None
-    grant_source: str
-    is_manual: bool
-    next_payment_date: AwareDatetime | None = None
-    payment_history: list[PaymentHistoryUserService] | None = None
-    product_id: str
-    purchase_history: list[PurchaseHistoryUserService] | None = None
-    started_at: AwareDatetime
-    status: str
-    subscription_id: UUID_aliased
-    subscription_type: str | None = None
-    tier: str
-    trial_ends_at: AwareDatetime | None = None
+class SubscriptionManagement(BaseModel):
+    can_resume: bool
+    cancel: str
+    has_portal: bool
+    store_url: str | None = None
+
+
+class SubscriptionOption(BaseModel):
+    enabled: bool
+    reason: str | None = None
+    url: str | None = None
+
+
+class SubscriptionOptions(BaseModel):
+    have_a_code: SubscriptionOption
+    pay_by_card: SubscriptionOption
 
 
 class SuggestedConceptHub(BaseModel):
@@ -7091,6 +7363,19 @@ class UpdateProgressResponse(BaseModel):
     target_value: int | None = None
 
 
+class UpdatePromoCampaignRequest(BaseModel):
+    channel: str | None = None
+    display_name: str | None = None
+    ends_at: AwareDatetime | None = None
+    max_redemptions: int | None = None
+    name: str | None = None
+    no_end_date: bool | None = None
+    no_redemption_cap: bool | None = None
+    note: str | None = None
+    starts_at: AwareDatetime | None = None
+    status: str | None = None
+
+
 class UpdateScenarioResponse(DeleteVoiceAgentResponse):
     pass
 
@@ -7451,6 +7736,15 @@ class WatchedVideosResponse(BaseModel):
     cooldown_hours: int
     video_ids: list[str]
     watched_details: list[WatchedVideo]
+
+
+class WebCheckoutRequest(BaseModel):
+    platform: str
+    storefront: str
+
+
+class WebCheckoutResponse(BaseModel):
+    url: str
 
 
 class WebIngestPlanItem(BaseModel):
@@ -8512,6 +8806,17 @@ class KieloTVVideo(BaseModel):
     video_url: str
 
 
+class LearnerBilling(BaseModel):
+    created_at: AwareDatetime
+    email: str
+    is_guest: bool
+    paid_plan_count: int
+    redemptions: list[PromoRedemption]
+    subscriptions: list[BillingPlan]
+    transactions: list[TransactionEntry]
+    user_id: UUID_aliased
+
+
 class LearningSession(BaseModel):
     created_at: AwareDatetime
     estimated_duration_minutes: int | None = None
@@ -8537,6 +8842,10 @@ class MediaMetadata(BaseModel):
     temporary_url: str | None = None
     updated_at: str
     variants: dict[str, MediaVariantInfo] | None = None
+
+
+class MyTopicListsResponse(BaseModel):
+    topic_lists: list[TopicListTeaser]
 
 
 class NextStepRecommendation(BaseModel):
@@ -8670,6 +8979,14 @@ class ProgressSummaryV3(BaseModel):
     streak: StreakInfoV3
     total_study_time_minutes: int
     weekly_activity: list[WeeklyActivityDayV3]
+
+
+class PromoCampaignDetail(BaseModel):
+    campaign: PromoCampaign
+    daily: list[PromoDailyCount]
+    first_gift_ends_at: AwareDatetime | None = None
+    on_plus_now: int
+    paid_after_gift: int
 
 
 class RelatedVersionsResponse(BaseModel):
@@ -8970,12 +9287,20 @@ class SingletonKieloTVVideoList(BaseModel):
     data: list[KieloTVVideo]
 
 
+class SingletonLearnerBilling(BaseModel):
+    data: LearnerBilling
+
+
 class SingletonLearningSession(BaseModel):
     data: LearningSession
 
 
 class SingletonMediaMetadata(BaseModel):
     data: MediaMetadata
+
+
+class SingletonMyTopicListsResponse(BaseModel):
+    data: MyTopicListsResponse
 
 
 class SingletonNextStepsResponseV3(BaseModel):
@@ -8992,6 +9317,10 @@ class SingletonProgressSummary(BaseModel):
 
 class SingletonProgressSummaryV3(BaseModel):
     data: ProgressSummaryV3
+
+
+class SingletonPromoCampaignDetail(BaseModel):
+    data: PromoCampaignDetail
 
 
 class SingletonRelatedVersionsResponse(BaseModel):
@@ -9038,16 +9367,12 @@ class SingletonStudyListWithItems(BaseModel):
     data: StudyListWithItems
 
 
-class SingletonSubscriptionInfo(BaseModel):
-    data: SubscriptionInfo
-
-
 class SingletonSubscriptionInfoCms(BaseModel):
     data: SubscriptionInfoCms
 
 
-class SingletonSubscriptionInfoUserService(BaseModel):
-    data: SubscriptionInfoUserService
+class SingletonSubscriptionOptions(BaseModel):
+    data: SubscriptionOptions
 
 
 class SingletonSurfaceItemsResponse(BaseModel):
@@ -9242,6 +9567,10 @@ class SingletonWatchedVideosResponse(BaseModel):
     data: WatchedVideosResponse
 
 
+class SingletonWebCheckoutResponse(BaseModel):
+    data: WebCheckoutResponse
+
+
 class SingletonWebIngestTarget(BaseModel):
     data: WebIngestTarget
 
@@ -9275,6 +9604,60 @@ class SubmitAnswerResponseV3(BaseModel):
     score: int | None = None
     session_completed: bool
     xp_awarded: int | None = None
+
+
+class SubscriptionInfo(BaseModel):
+    auto_renew: bool
+    canceled_at: str | None = None
+    current_period_status: str = Field(
+        ..., description="paid | unpaid | trial | grace_period"
+    )
+    expires_at: str | None = None
+    features: list[FeatureLimit]
+    gift: SubscriptionGift | None = None
+    grace_period_ends_at: str | None = None
+    grant_source: GrantSource = Field(
+        ..., description="Sweep SSS-B typed write-source tag."
+    )
+    is_manual: bool
+    management: SubscriptionManagement
+    next_payment_date: AwareDatetime | None = None
+    payment_history: list[PaymentHistory] | None = None
+    product_id: str
+    purchase_history: list[PurchaseHistory] | None = None
+    started_at: str
+    status: str
+    store: str
+    subscription_id: str
+    subscription_type: str | None = Field(
+        None, description="monthly | yearly | weekly | etc."
+    )
+    tier: str
+    trial_ends_at: str | None = None
+
+
+class SubscriptionInfoUserService(BaseModel):
+    auto_renew: bool
+    canceled_at: AwareDatetime | None = None
+    current_period_status: str
+    expires_at: AwareDatetime | None = None
+    features: list[FeatureLimitUserService]
+    gift: SubscriptionGift | None = None
+    grace_period_ends_at: AwareDatetime | None = None
+    grant_source: str
+    is_manual: bool
+    management: SubscriptionManagement
+    next_payment_date: AwareDatetime | None = None
+    payment_history: list[PaymentHistoryUserService] | None = None
+    product_id: str
+    purchase_history: list[PurchaseHistoryUserService] | None = None
+    started_at: AwareDatetime
+    status: str
+    store: str
+    subscription_id: UUID_aliased
+    subscription_type: str | None = None
+    tier: str
+    trial_ends_at: AwareDatetime | None = None
 
 
 class TTSParagraphJobStatus(BaseModel):
@@ -9989,6 +10372,14 @@ class SingletonSessionReconcileResponseV3(BaseModel):
 
 class SingletonSubmitAnswerResponseV3(BaseModel):
     data: SubmitAnswerResponseV3
+
+
+class SingletonSubscriptionInfo(BaseModel):
+    data: SubscriptionInfo
+
+
+class SingletonSubscriptionInfoUserService(BaseModel):
+    data: SubscriptionInfoUserService
 
 
 class SingletonTTSParagraphJobStatus(BaseModel):
