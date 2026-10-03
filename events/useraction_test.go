@@ -15,6 +15,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/team-kielo-app/kielo-shared/timeutil"
 )
 
 func TestHTTPEmitter_HappyPath(t *testing.T) {
@@ -408,4 +410,45 @@ func TestStatusError_PreservesLegacyMessage(t *testing.T) {
 	assert.Equal(t,
 		`events.Emit: kielo-events returned 422: {"code":"VALIDATION_FAILED"}`,
 		err.Error())
+}
+
+func captureEmitContext(t *testing.T, ctx context.Context, envCtx map[string]any) map[string]any {
+	t.Helper()
+	var body []byte
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ = io.ReadAll(r.Body)
+		w.WriteHeader(http.StatusAccepted)
+	}))
+	defer srv.Close()
+	emitter := NewHTTPEmitter(srv.URL, "k", "t", nil)
+	env := UserActionEnvelope{EventID: "01HXY3F4Q5ABCDE0123456789Z", EventType: "article.read", Context: envCtx}
+	require.NoError(t, emitter.Emit(ctx, uuid.New(), env))
+	var parsed struct {
+		Context map[string]any `json:"context"`
+	}
+	require.NoError(t, json.Unmarshal(body, &parsed))
+	return parsed.Context
+}
+
+func TestHTTPEmitter_StampsTimezoneOffsetFromContext(t *testing.T) {
+	callerCtx := map[string]any{"source": "x"}
+	got := captureEmitContext(t, timeutil.WithTimezoneOffsetMinutes(context.Background(), 420), callerCtx)
+	assert.EqualValues(t, 420, got["tz_offset_minutes"])
+	assert.Equal(t, "x", got["source"])
+	assert.NotContains(t, callerCtx, "tz_offset_minutes", "caller map must not be mutated")
+}
+
+func TestHTTPEmitter_StampsExplicitUTCOffset(t *testing.T) {
+	got := captureEmitContext(t, timeutil.WithTimezoneOffsetMinutes(context.Background(), 0), nil)
+	assert.EqualValues(t, 0, got["tz_offset_minutes"])
+}
+
+func TestHTTPEmitter_NoOffsetInContext_NoStamp(t *testing.T) {
+	got := captureEmitContext(t, context.Background(), map[string]any{"source": "x"})
+	assert.NotContains(t, got, "tz_offset_minutes")
+}
+
+func TestHTTPEmitter_CallerOffsetWins(t *testing.T) {
+	got := captureEmitContext(t, timeutil.WithTimezoneOffsetMinutes(context.Background(), 420), map[string]any{"tz_offset_minutes": -60})
+	assert.EqualValues(t, -60, got["tz_offset_minutes"])
 }

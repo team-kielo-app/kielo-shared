@@ -19,6 +19,7 @@ from __future__ import annotations
 import time
 from typing import Any, AsyncIterator, Optional
 
+from kielo_shared.llm.spend_guard import admit_paid_call
 from kielo_shared.seam.llm.types import (
     Error,
     ErrorClass,
@@ -76,6 +77,7 @@ class OpenAIChatProvider:
                 RuntimeError("OpenAI client not configured"),
             )
 
+        admit_paid_call(getattr(request, "task", ""), provider=self.provider_id)
         started = time.perf_counter()
         try:
             completion = await self._client.chat.completions.create(
@@ -115,6 +117,7 @@ class OpenAIChatProvider:
                 RuntimeError("OpenAI client not configured"),
             )
 
+        admit_paid_call(getattr(request, "task", ""), provider=self.provider_id)
         try:
             stream = await self._client.chat.completions.create(
                 stream=True,

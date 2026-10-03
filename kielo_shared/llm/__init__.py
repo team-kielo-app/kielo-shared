@@ -37,6 +37,15 @@ from kielo_shared.llm.registry import (
     UnknownLLMProviderError,
     build_llm_registry_from_env,
 )
+from kielo_shared.llm.spend_guard import (
+    LLMBudgetExceeded,
+    LLMGuardUnavailable,
+    PaidLLMCallRefused,
+    PaidLLMCallsDisabled,
+    admit_paid_call,
+    paid_calls_enabled,
+    record_actual_usd,
+)
 from kielo_shared.llm.sync_bridge import (
     call_llm_sync,
     call_llm_text_sync,
@@ -50,6 +59,13 @@ from kielo_shared.llm.types import (
 
 
 __all__ = [
+    "LLMBudgetExceeded",
+    "LLMGuardUnavailable",
+    "PaidLLMCallRefused",
+    "PaidLLMCallsDisabled",
+    "admit_paid_call",
+    "paid_calls_enabled",
+    "record_actual_usd",
     "call_llm_sync",
     "call_llm_text_sync",
     "CachePolicy",

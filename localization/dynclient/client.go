@@ -29,6 +29,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -117,6 +118,7 @@ type UpsertRequest struct {
 	SourceLocale     string    `json:"source_locale,omitempty"`
 	TranslatorSource string    `json:"translator_source,omitempty"`
 	ReviewerID       uuid.UUID `json:"reviewer_id,omitempty"`
+	SourceText       string    `json:"source_text,omitempty"`
 }
 
 // UpsertResponse wraps the row + the inserted/updated flag
@@ -730,6 +732,63 @@ func (c *Client) SetDynamicTranslationStatus(
 		return nil, err
 	}
 	return &out, nil
+}
+
+// GlossaryTerm mirrors the localization.glossary_terms row.
+type GlossaryTerm struct {
+	ID           uuid.UUID `json:"id"`
+	LanguageCode string    `json:"language_code"`
+	Term         string    `json:"term"`
+	Preferred    string    `json:"preferred"`
+	Note         *string   `json:"note,omitempty"`
+	CreatedAt    time.Time `json:"created_at"`
+}
+
+// GlossaryTermRequest is the body of POST /glossary and PATCH /glossary/:id.
+type GlossaryTermRequest struct {
+	LanguageCode string  `json:"language_code"`
+	Term         string  `json:"term"`
+	Preferred    string  `json:"preferred"`
+	Note         *string `json:"note,omitempty"`
+}
+
+// ListGlossaryTerms GETs /glossary, optionally for one language.
+func (c *Client) ListGlossaryTerms(ctx context.Context, languageCode string) ([]GlossaryTerm, error) {
+	path := "/internal/api/v3/localization/glossary"
+	if languageCode != "" {
+		path += "?language_code=" + url.QueryEscape(languageCode)
+	}
+	var out struct {
+		Items []GlossaryTerm `json:"items"`
+	}
+	if err := c.doJSON(ctx, http.MethodGet, path, nil, &out, http.StatusOK); err != nil {
+		return nil, err
+	}
+	return out.Items, nil
+}
+
+// CreateGlossaryTerm POSTs to /glossary.
+func (c *Client) CreateGlossaryTerm(ctx context.Context, req GlossaryTermRequest) (*GlossaryTerm, error) {
+	var out GlossaryTerm
+	if err := c.doJSON(ctx, http.MethodPost, "/internal/api/v3/localization/glossary", req, &out, http.StatusCreated); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// UpdateGlossaryTerm PATCHes /glossary/:id.
+func (c *Client) UpdateGlossaryTerm(ctx context.Context, id uuid.UUID, req GlossaryTermRequest) (*GlossaryTerm, error) {
+	var out GlossaryTerm
+	path := "/internal/api/v3/localization/glossary/" + id.String()
+	if err := c.doJSON(ctx, http.MethodPatch, path, req, &out, http.StatusOK); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// DeleteGlossaryTerm DELETEs /glossary/:id.
+func (c *Client) DeleteGlossaryTerm(ctx context.Context, id uuid.UUID) error {
+	return c.doJSON(ctx, http.MethodDelete, "/internal/api/v3/localization/glossary/"+id.String(), nil, nil, http.StatusNoContent)
 }
 
 // doJSONWithDelete is a tiny aux so DELETE with no body doesn't

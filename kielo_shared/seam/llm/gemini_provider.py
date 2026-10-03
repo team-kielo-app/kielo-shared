@@ -11,6 +11,7 @@ from __future__ import annotations
 import time
 from typing import Any, AsyncIterator, Optional
 
+from kielo_shared.llm.spend_guard import admit_paid_call
 from kielo_shared.seam.llm.types import (
     Error,
     ErrorClass,
@@ -92,6 +93,7 @@ class GeminiSDKProvider:
         config = self._build_config(request)
         model = request.model or self._default_model
 
+        admit_paid_call(getattr(request, "task", ""), provider=self.provider_id)
         started = time.perf_counter()
         try:
             response = await client.aio.models.generate_content(
@@ -131,6 +133,7 @@ class GeminiSDKProvider:
         config = self._build_config(request)
         model = request.model or self._default_model
 
+        admit_paid_call(getattr(request, "task", ""), provider=self.provider_id)
         try:
             async_stream = await client.aio.models.generate_content_stream(
                 model=model,
