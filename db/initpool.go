@@ -69,7 +69,7 @@ func InitPool(ctx context.Context, dataSourceName string, opts PoolOptions) (*pg
 		minFallback = defaultMinConns
 	}
 	cfg.MaxConns = EnvInt32("PGX_MAX_CONNS", maxFallback)
-	cfg.MinConns = EnvInt32("PGX_MIN_CONNS", minFallback)
+	cfg.MinConns = EnvNonNegInt32("PGX_MIN_CONNS", minFallback)
 
 	cfg.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
 
