@@ -67,6 +67,12 @@ func (p *GeminiJSONProvider) Generate(ctx context.Context, req Request) (*Result
 		model = p.DefaultModel
 	}
 
+	if p.Endpoint == "" || strings.Contains(p.Endpoint, geminiPaidHostMatch) {
+		if err := admitPaidCall(req.Task, p.ProviderID(req)); err != nil {
+			return nil, err
+		}
+	}
+
 	body, err := json.Marshal(buildGeminiPayload(req))
 	if err != nil {
 		return nil, &Error{Class: ErrorClassMarshal, Err: err}
@@ -112,11 +118,29 @@ func (p *GeminiJSONProvider) Generate(ctx context.Context, req Request) (*Result
 		return nil, decodeErr
 	}
 
+	in, out, thinking := decodeGeminiUsage(respBytes)
 	return &Result{
-		RawText:   rawText,
-		Provider:  p.ProviderID(req),
-		LatencyMs: time.Since(started).Milliseconds(),
+		RawText:        rawText,
+		Provider:       p.ProviderID(req),
+		LatencyMs:      time.Since(started).Milliseconds(),
+		InputTokens:    in,
+		OutputTokens:   out,
+		ThinkingTokens: thinking,
 	}, nil
+}
+
+func decodeGeminiUsage(respBytes []byte) (in, out, thinking int64) {
+	var decoded struct {
+		Usage struct {
+			Prompt     int64 `json:"promptTokenCount"`
+			Candidates int64 `json:"candidatesTokenCount"`
+			Thoughts   int64 `json:"thoughtsTokenCount"`
+		} `json:"usageMetadata"`
+	}
+	if err := json.Unmarshal(respBytes, &decoded); err != nil {
+		return 0, 0, 0
+	}
+	return decoded.Usage.Prompt, decoded.Usage.Candidates, decoded.Usage.Thoughts
 }
 
 func buildGeminiPayload(req Request) map[string]any {
@@ -129,6 +153,9 @@ func buildGeminiPayload(req Request) map[string]any {
 	}
 	if req.Temperature != nil {
 		generationConfig["temperature"] = *req.Temperature
+	}
+	if req.ThinkingBudget != nil && *req.ThinkingBudget >= 0 {
+		generationConfig["thinkingConfig"] = map[string]any{"thinkingBudget": *req.ThinkingBudget}
 	}
 
 	payload := map[string]any{

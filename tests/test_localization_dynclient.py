@@ -364,3 +364,12 @@ async def test_upsert_bulk_non2xx_raises():
                 )
             ]
         )
+
+
+def test_upsert_request_payload_source_text():
+    base = dict(
+        resource_type="r", resource_id="1", source_version="v", language_code="vi", translated_text="x"
+    )
+    assert UpsertRequest(**base, source_text="Hello").to_payload()["source_text"] == "Hello"
+    assert "source_text" not in UpsertRequest(**base).to_payload()
+    assert "source_text" not in UpsertRequest(**base, source_text="  ").to_payload()

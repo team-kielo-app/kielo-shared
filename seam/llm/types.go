@@ -54,6 +54,14 @@ type Request struct {
 	// Python LLM seam's `task` label so cross-service dashboards
 	// can pivot on a single label vocabulary. Required.
 	Task string
+	// Family is the control-plane task family (llmroute.Family*). When set and
+	// the request goes through WithRouting, the family's route chooses Model
+	// and ThinkingBudget (Model here is then only the compiled default), the
+	// family's daily budget is enforced and the call is rolled up per family.
+	Family string
+	// ThinkingBudget is the Gemini thinking token budget. nil or negative
+	// leaves the model's default; 0 turns thinking off.
+	ThinkingBudget *int
 }
 
 // Temp is a convenience constructor for the optional temperature
@@ -75,6 +83,10 @@ type Result struct {
 	// already gets latency via the metrics decorator's histogram —
 	// this is here for callers that want to log it themselves.
 	LatencyMs int64
+	// Token counts from the provider's usage metadata (0 when absent).
+	InputTokens    int64
+	OutputTokens   int64
+	ThinkingTokens int64
 }
 
 // ErrorClass categorizes provider failures. Mirrors the TTS seam's

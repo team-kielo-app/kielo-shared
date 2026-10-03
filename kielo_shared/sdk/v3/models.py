@@ -19,6 +19,63 @@ from pydantic import (
 )
 
 
+class AIEvalRun(BaseModel):
+    created_at: AwareDatetime
+    error: str | None = None
+    family: str
+    finished_at: AwareDatetime | None = None
+    id: str
+    items: int | None = None
+    judge_or_prompt_version: str | None = None
+    latency_p50: int | None = None
+    latency_p95: int | None = None
+    max_usd: float
+    model: str
+    report: Any | None = None
+    sensitivity: float | None = None
+    specificity: float | None = None
+    spent_usd: float
+    status: str
+    thinking_budget: int
+    usd_per_item: float | None = None
+
+
+class AIEvalRunRequest(BaseModel):
+    judge_or_prompt_version: str | None = None
+    max_usd: float
+    model: str
+    thinking_budget: int | None = None
+
+
+class AIModelPrice(BaseModel):
+    model: str
+    price_verified: bool
+    usd_per_m_input: float
+    usd_per_m_output: float
+
+
+class AIModelRouteRequest(BaseModel):
+    daily_budget_usd: Any | None = None
+    model: str | None = None
+    thinking_budget: int | None = None
+
+
+class AIModelsListResponse(BaseModel):
+    items: list[AIModelPrice]
+
+
+class AIQuality(BaseModel):
+    evals: list[AIEvalRun]
+    held_rate: float | None = None
+    latest_eval: AIEvalRun | None = None
+    rejected_rate: float | None = None
+
+
+class AIUsageDay(BaseModel):
+    day: str
+    usd: float
+
+
 class APIKey(BaseModel):
     created_at: AwareDatetime
     expires_at: AwareDatetime
@@ -37,6 +94,13 @@ class APIKeyCreateRequest(BaseModel):
 class APIKeyCreateResult(BaseModel):
     api_key: APIKey
     raw_key: str
+
+
+class AccountClassChange(BaseModel):
+    account_class: str
+    account_class_reason: str
+    override: str | None = None
+    previous_override: str | None = None
 
 
 class AchievementCatalogItemV3(BaseModel):
@@ -143,6 +207,7 @@ class AdminContentItem(BaseModel):
     published_at: str | None = None
     slug: str | None = None
     status: str
+    thumbnail_url: str | None = None
     title: str
     updated_at: str | None = None
     updated_by: str | None = None
@@ -151,6 +216,7 @@ class AdminContentItem(BaseModel):
 
 
 class AdminContentListResponse(BaseModel):
+    categories: list[str] | None = None
     items: list[AdminContentItem]
     limit: int
     offset: int
@@ -160,6 +226,19 @@ class AdminContentListResponse(BaseModel):
 class AdminContentSyncResponse(BaseModel):
     message: str
     status: str
+
+
+class AdminDigestItem(BaseModel):
+    age: str
+    count: int
+    detail: str
+    link: str
+    title: str
+
+
+class AdminDigestSection(BaseModel):
+    items: list[AdminDigestItem]
+    label: str
 
 
 class AiConversationPersona(BaseModel):
@@ -369,6 +448,20 @@ class AwardAchievementResponse(BaseModel):
     reason: str | None = None
 
 
+class BaseWordReviewResult(BaseModel):
+    base_word_id: UUID_aliased
+    exercises_restored: int
+    exercises_retired: int
+    meaning: str | None = None
+    meaning_locked_at: AwareDatetime | None = None
+    meaning_source: str | None = None
+    notes: str | None = None
+    retire_reason: str | None = None
+    retired_at: AwareDatetime | None = None
+    status: str
+    term: str
+
+
 class BaseWordTTSRequest(BaseModel):
     base_word_id: UUID_aliased
     force: bool
@@ -478,6 +571,18 @@ class BrowseScenariosFacets(BaseModel):
     buckets: list[BrowseFacetOption]
     categories: list[BrowseFacetOption]
     levels: list[BrowseFacetOption]
+
+
+class BudgetReservation(BaseModel):
+    allowed: bool
+    expires_at: str | None = None
+    feature: str
+    limit: int
+    reserved_seconds: int
+    reset_at: str
+    tier: str
+    unlimited: bool
+    used_today: int
 
 
 class BulkUpdateKeySourceTextRequest(BaseModel):
@@ -634,6 +739,7 @@ class CheckAndIncrementFeatureRequest(BaseModel):
 
 class CheckFeatureUniqueRequest(BaseModel):
     item_id: str | None = None
+    peek: bool | None = None
 
 
 class ClaimContentVersionForProcessingRequest(BaseModel):
@@ -981,6 +1087,8 @@ class CommunicationLog(BaseModel):
     EventType: str
     ID: UUID_aliased
     Metadata: dict[str, Any]
+    Outcome: str
+    OutcomeReason: str
     Recipient: str
     RuleID: UUID_aliased | None = None
     Source: str
@@ -1514,6 +1622,7 @@ class CreateBaseWordResponse(BaseModel):
     is_new: bool
     learning_language_code: str | None = None
     part_of_speech: str | None = None
+    status: str
     term: str | None = None
 
 
@@ -2190,6 +2299,11 @@ class DictionaryWordForm(BaseModel):
     paradigm_slot: str | None = None
 
 
+class DomainCount(BaseModel):
+    count: int
+    domain: str
+
+
 class DrillItem(BaseModel):
     answer: str
     id: str
@@ -2203,10 +2317,13 @@ class DynamicTranslation(BaseModel):
     id: UUID_aliased
     language_code: str
     resource_id: str
+    resource_label: str | None = None
     resource_type: str
     reviewed_at: AwareDatetime | None = None
     reviewed_by: UUID_aliased | None = None
     source_locale: str | None = None
+    source_status: str | None = None
+    source_text: str | None = None
     source_version: str
     status: str
     translated_text: str
@@ -2230,6 +2347,22 @@ class DynamicTranslationListResponse(BaseModel):
     page: int
     page_size: int
     total: int
+
+
+class DynamicTranslationLocalization(BaseModel):
+    created_at: AwareDatetime
+    id: UUID_aliased
+    language_code: str
+    resource_id: str
+    resource_type: str
+    reviewed_at: AwareDatetime | None = None
+    reviewed_by: UUID_aliased | None = None
+    source_locale: str | None = None
+    source_version: str
+    status: str
+    translated_text: str
+    translator_source: str | None = None
+    updated_at: AwareDatetime
 
 
 class EndSessionResponse(AppFeedbackUpdateStatusRequest):
@@ -2368,6 +2501,7 @@ class FeatureCheckUniqueResponse(BaseModel):
     already_accessed: bool
     limit: int
     remaining: int
+    reserved: bool | None = None
     reset_at: str
     tier: str
     used_today: int
@@ -2570,7 +2704,7 @@ class FetchDynamicTranslationsRequest(BaseModel):
 
 
 class FetchDynamicTranslationsResponse(BaseModel):
-    items: list[DynamicTranslation]
+    items: list[DynamicTranslationLocalization]
 
 
 class FillInTheBlankExercise(BaseModel):
@@ -2756,6 +2890,30 @@ class GetUploadURLRequest(BaseModel):
 
 class GetUploadURLResponse(GenerateUploadURLResponse):
     pass
+
+
+class GlossaryTerm(BaseModel):
+    created_at: AwareDatetime
+    id: UUID_aliased
+    language_code: str
+    note: str | None = None
+    preferred: str
+    term: str
+
+
+class GlossaryTermRequest(BaseModel):
+    language_code: str
+    note: str | None = None
+    preferred: str
+    term: str
+
+
+class GlossaryViolation(BaseModel):
+    matched: list[str]
+    note: str | None = None
+    preferred: str
+    term: str
+    term_id: UUID_aliased
 
 
 class GrammarConcept(BaseModel):
@@ -2992,6 +3150,22 @@ class InAppNudgeStateTransitionKielolearnEngine(BaseModel):
         description="One of: 'seen' | 'dismissed' | 'snoozed' | 'acted_on'. Validated server-side; unknown values rejected as 400.",
         title="Transition",
     )
+
+
+class InboxLocalizeItem(BaseModel):
+    body: str
+    data: dict[str, Any] | None = None
+    id: str
+    render_language_code: str | None = None
+    render_rule_id: str | None = None
+    render_source_body: str | None = None
+    render_source_title: str | None = None
+    title: str
+
+
+class InboxLocalizeRequest(BaseModel):
+    items: list[InboxLocalizeItem]
+    target_language_code: str
 
 
 class Inflection(BaseModel):
@@ -3254,6 +3428,17 @@ class KTVListMeta(FeedbackListMeta):
     pass
 
 
+class KTVPromptTemplateResponse(BaseModel):
+    default_template: str
+    is_default: bool
+    placeholders: list[str]
+    template: str
+
+
+class KTVPromptTemplateUpdateRequest(BaseModel):
+    template: str
+
+
 class KTVSocialSheetConfigRequest(BaseModel):
     spreadsheet_id: str | None = None
     worksheet: str | None = None
@@ -3382,6 +3567,7 @@ class KTVWorkflowPromptGenerateResponse(BaseModel):
 
 class KTVWorkflowPromptUpdateRequest(BaseModel):
     prompt: str
+    simplified_prompt: str | None = None
 
 
 class KTVWorkflowSeedRequest(BaseModel):
@@ -3540,6 +3726,111 @@ class KieloTVVideoUpsertRequest(BaseModel):
     video_url: str | None = None
 
 
+class LLMEvalRun(BaseModel):
+    created_at: AwareDatetime
+    created_by: UUID_aliased | None = None
+    error: str | None = None
+    family: str
+    finished_at: AwareDatetime | None = None
+    id: UUID_aliased
+    items: int | None = None
+    judge_or_prompt_version: str | None = None
+    latency_p50: int | None = None
+    latency_p95: int | None = None
+    max_usd: float
+    model: str
+    report: Any | None = None
+    sensitivity: float | None = None
+    specificity: float | None = None
+    spent_usd: float
+    status: str
+    thinking_budget: int
+    usd_per_item: float | None = None
+
+
+class LLMEvalRunListResponse(BaseModel):
+    items: list[LLMEvalRun]
+    total: int
+
+
+class LLMEvalRunPatch(BaseModel):
+    error: str | None = None
+    items: int | None = None
+    judge_or_prompt_version: str | None = None
+    latency_p50: int | None = None
+    latency_p95: int | None = None
+    report: Any | None = None
+    sensitivity: float | None = None
+    specificity: float | None = None
+    spent_usd: float | None = None
+    status: str | None = None
+    usd_per_item: float | None = None
+
+
+class LLMEvalRunRequest(BaseModel):
+    created_by: UUID_aliased | None = None
+    family: str
+    judge_or_prompt_version: str | None = None
+    max_usd: float
+    model: str
+    thinking_budget: int | None = None
+
+
+class LLMModel(BaseModel):
+    active: bool
+    input_usd_per_mtok: float
+    model: str
+    note: str | None = None
+    output_usd_per_mtok: float
+    price_verified: bool
+    provider: str
+
+
+class LLMModelListResponse(BaseModel):
+    items: list[LLMModel]
+    total: int
+
+
+class LLMRoute(BaseModel):
+    daily_budget_usd: float | None = None
+    family: str
+    label: str
+    model: str
+    service: str
+    switch_key: str | None = None
+    thinking_budget: int
+    updated_at: AwareDatetime
+    updated_by: UUID_aliased | None = None
+
+
+class LLMRouteListResponse(BaseModel):
+    items: list[LLMRoute]
+    total: int
+
+
+class LLMRouteRequest(BaseModel):
+    daily_budget_usd: Any | None = None
+    model: str | None = None
+    thinking_budget: int | None = None
+    updated_by: UUID_aliased | None = None
+
+
+class LLMUsageRow(BaseModel):
+    calls: int
+    errors: int
+    family: str
+    hour: AwareDatetime
+    input_tokens: int
+    latency_ms_p50: int | None = None
+    latency_ms_p95: int | None = None
+    model: str
+    output_tokens: int
+    retries: int
+    service: str
+    thinking_tokens: int
+    usd: float
+
+
 class Language(BaseModel):
     code: str
     created_at: AwareDatetime
@@ -3594,6 +3885,207 @@ class LanguageUpdateRequest(BaseModel):
     is_default: bool | None = None
     name: str | None = None
     native_name: str | None = None
+
+
+class LearnerActivity(BaseModel):
+    active_days_7d: int
+    exercises_7d: int
+    study_minutes_7d: int
+
+
+class LearnerClassChange(AccountClassChange):
+    pass
+
+
+class LearnerConversation(BaseModel):
+    created_at: AwareDatetime
+    duration_seconds: int | None = None
+    ended_at: AwareDatetime | None = None
+    focus: str | None = None
+    id: UUID_aliased
+    scenario_id: UUID_aliased | None = None
+    score: float | None = None
+    started_at: AwareDatetime | None = None
+    status: str
+
+
+class LearnerConversations(BaseModel):
+    calls_30d: int
+    recent: list[LearnerConversation]
+
+
+class LearnerDevice(BaseModel):
+    device_language_code: str
+    platform: str
+    updated_at: AwareDatetime
+
+
+class LearnerFeatureUsage(BaseModel):
+    feature: str
+    limit: int
+    period: str
+    reset_date: AwareDatetime | None = None
+    used: int
+
+
+class LearnerFeedback(BaseModel):
+    items: list[Any]
+    total: int
+
+
+class LearnerLearning(BaseModel):
+    activity: LearnerActivity | None = None
+    current_streak_days: int
+    engine_unavailable: str | None = None
+    exercises_total: int | None = None
+    longest_streak_days: int
+    study_minutes: int | None = None
+    words_learned: int | None = None
+
+
+class LearnerLimitOverride(BaseModel):
+    feature: str
+    limit: int
+
+
+class LearnerNotification(BaseModel):
+    body: str
+    created_at: AwareDatetime
+    id: UUID_aliased
+    is_read: bool
+    read_at: AwareDatetime | None = None
+    title: str
+    type: str
+
+
+class LearnerNotifications(BaseModel):
+    recent: list[LearnerNotification]
+    unread: int
+
+
+class LearnerPlan(BaseModel):
+    auto_renew: bool
+    canceled_at: AwareDatetime | None = None
+    current_period_status: str
+    expires_at: AwareDatetime | None = None
+    grant_source: str
+    is_staff_comp: bool
+    product_id: str
+    started_at: AwareDatetime | None = None
+    status: str
+    store: str
+    subscription_type: str
+    tier: str
+
+
+class LearnerProfile(BaseModel):
+    account_class: str
+    account_class_reason: str
+    country_code: str
+    created_at: AwareDatetime
+    current_streak_days: int
+    email: str
+    entitled: bool
+    entitlement_expires_at: AwareDatetime | None = None
+    entitlement_source: str
+    entitlement_tier: str
+    id: UUID_aliased
+    last_active_date: AwareDatetime | None = None
+    last_meaningful_activity_at: AwareDatetime | None = None
+    learning_language: str
+    learning_minutes_goal: int
+    longest_streak_days: int
+    name: str
+    onboarding_completed_at: AwareDatetime | None = None
+    role: str
+    skill_level: str
+    support_language: str
+    timezone_offset_minutes: int | None = None
+
+
+class LearnerProgressSummary(BaseModel):
+    current_streak_days: int
+    days_since_active: int | None = None
+    grace_day_used: bool
+    last_active_date: str | None = None
+    longest_streak_days: int
+    study_minutes: int
+
+
+class LearnerRedemption(BaseModel):
+    code: str
+    grant_days: int
+    grant_expires_at: AwareDatetime | None = None
+    platform: str
+    redeemed_at: AwareDatetime
+    revoked_at: AwareDatetime | None = None
+    via: str
+
+
+class LearnerSearchHit(BaseModel):
+    account_class: str
+    created_at: AwareDatetime
+    email: str
+    id: UUID_aliased
+    learning_language: str
+    name: str
+    role: str
+
+
+class LearnerSearchResult(BaseModel):
+    items: list[LearnerSearchHit]
+
+
+class LearnerSectionLearnerConversations(BaseModel):
+    data: LearnerConversations | None = None
+    error: str | None = None
+
+
+class LearnerSectionLearnerDeviceList(BaseModel):
+    data: list[LearnerDevice] | None = None
+    error: str | None = None
+
+
+class LearnerSectionLearnerFeedback(BaseModel):
+    data: LearnerFeedback | None = None
+    error: str | None = None
+
+
+class LearnerSectionLearnerLearning(BaseModel):
+    data: LearnerLearning | None = None
+    error: str | None = None
+
+
+class LearnerSectionLearnerNotifications(BaseModel):
+    data: LearnerNotifications | None = None
+    error: str | None = None
+
+
+class LearnerSectionLearnerPlan(BaseModel):
+    data: LearnerPlan | None = None
+    error: str | None = None
+
+
+class LearnerSectionLearnerProfile(BaseModel):
+    data: LearnerProfile | None = None
+    error: str | None = None
+
+
+class LearnerTransaction(BaseModel):
+    amount: float | None = None
+    created_at: AwareDatetime
+    currency: str
+    event_type: str
+    product_id: str
+    purchased_at: AwareDatetime | None = None
+    status: str
+    store: str
+    transaction_id: str
+
+
+class LearnerUsage(BaseModel):
+    features: list[LearnerFeatureUsage]
+    overrides: list[LearnerLimitOverride]
 
 
 class Status4(StrEnum):
@@ -3912,7 +4404,12 @@ class LoginSocialRequest(BaseModel):
 
 
 class LogoutRequest(BaseModel):
+    push_token: str | None = None
     refresh_token: str | None = None
+
+
+class LogoutRequestAuthService(BaseModel):
+    push_token: str | None = None
 
 
 class LogoutResponse(CancelSubscriptionResponse):
@@ -4326,6 +4823,51 @@ class OmorfiParadigmRow(BaseModel):
     label: str = Field(..., title="Label")
 
 
+class OperatorSwitch(BaseModel):
+    description: str | None = None
+    enabled: bool
+    message: str | None = None
+    scope_type: str
+    scope_value: str
+    switch_key: str
+    updated_at: str | None = None
+    updated_by: UUID_aliased | None = None
+    updated_by_name: str | None = None
+
+
+class OperatorSwitchListResponse(BaseModel):
+    items: list[OperatorSwitch]
+    total: int
+
+
+class OperatorSwitchLocalization(BaseModel):
+    description: str | None = None
+    enabled: bool
+    message: str | None = None
+    scope_type: str
+    scope_value: str
+    switch_key: str
+    updated_at: AwareDatetime
+    updated_by: UUID_aliased | None = None
+
+
+class OperatorSwitchRequest(BaseModel):
+    enabled: bool
+    message: str | None = None
+    scope_type: str
+    scope_value: str
+    switch_key: str
+
+
+class OperatorSwitchRequestLocalization(BaseModel):
+    enabled: bool
+    message: str | None = None
+    scope_type: str
+    scope_value: str
+    switch_key: str
+    updated_by: UUID_aliased | None = None
+
+
 class OverrideDynamicTranslationRequest(BaseModel):
     translated_text: str
 
@@ -4398,7 +4940,9 @@ class PendingTransactionEntry(BaseModel):
     status: str
     store: str
     transaction_id: str
+    user_email: str | None = None
     user_id: str
+    user_name: str | None = None
 
 
 class PendingTransactionsResponse(BaseModel):
@@ -4956,6 +5500,11 @@ class ReportPurchaseResponse(BaseModel):
     success: bool
 
 
+class ReserveFeatureBudgetRequest(BaseModel):
+    seconds: int | None = None
+    session_id: str
+
+
 class ResetPasswordRequest(BaseModel):
     email: str
     new_password: str
@@ -5013,6 +5562,14 @@ class RevenueCatUserResponse(BaseModel):
     user_id: str
 
 
+class ReviewBaseWordRequest(BaseModel):
+    action: str | None = None
+    locked: bool | None = None
+    meaning: str | None = None
+    notes: str | None = None
+    reason: str | None = None
+
+
 class ReviewItem(BaseModel):
     display_text: str | None = Field(None, title="Display Text")
     item_id: UUID_aliased = Field(..., title="Item Id")
@@ -5041,6 +5598,11 @@ class ReviewScheduleV3(BaseModel):
 class RevokeAchievementResponse(BaseModel):
     reason: str | None = None
     revoked: bool
+
+
+class RevokeRequest(BaseModel):
+    push_token: str | None = None
+    refresh_token: str
 
 
 class RevokeSubscriptionResponse(CancelSubscriptionResponse):
@@ -5507,6 +6069,11 @@ class ScheduledCommunicationListResponse(BaseModel):
     meta: OffsetMeta
 
 
+class SearchExcerpt(BaseModel):
+    path: str
+    text: str
+
+
 class SearchResult(BaseModel):
     id: str
     image_url: str | None = None
@@ -5639,6 +6206,10 @@ class SessionSummary(BaseModel):
     user_message_count: int
 
 
+class SetAccountClassRequest(BaseModel):
+    account_class: str | None = None
+
+
 class SetActiveTrackRequest(BaseModel):
     track_id: UUID_aliased = Field(..., title="Track Id")
 
@@ -5647,6 +6218,10 @@ class SetDynamicTranslationStatusRequest(BaseModel):
     override_text: str | None = None
     reviewed_by: UUID_aliased | None = None
     status: str
+
+
+class SetLearnerClassRequest(SetAccountClassRequest):
+    pass
 
 
 class SetLegalHoldRequest(BaseModel):
@@ -5814,8 +6389,16 @@ class SingletonAwardAchievementResponse(BaseModel):
     data: AwardAchievementResponse
 
 
+class SingletonBaseWordReviewResult(BaseModel):
+    data: BaseWordReviewResult
+
+
 class SingletonBatchSaveTranslationsResponse(BaseModel):
     data: BatchSaveTranslationsResponse
+
+
+class SingletonBudgetReservation(BaseModel):
+    data: BudgetReservation
 
 
 class SingletonCacheInvalidateResponse(BaseModel):
@@ -6106,6 +6689,10 @@ class SingletonGetUploadURLResponse(BaseModel):
     data: GetUploadURLResponse
 
 
+class SingletonGlossaryTerm(BaseModel):
+    data: GlossaryTerm
+
+
 class SingletonGrammarConcept(BaseModel):
     data: GrammarConceptCms
 
@@ -6174,6 +6761,10 @@ class SingletonKTVGenerationJobFinalizeResponse(BaseModel):
     data: KTVGenerationJobFinalizeResponse
 
 
+class SingletonKTVPromptTemplateResponse(BaseModel):
+    data: KTVPromptTemplateResponse
+
+
 class SingletonKTVTempDownloadCleanupResponse(BaseModel):
     data: KTVTempDownloadCleanupResponse
 
@@ -6240,6 +6831,18 @@ class SingletonLanguageList(BaseModel):
 
 class SingletonLanguageReadinessV3List(BaseModel):
     data: list[LanguageReadinessV3]
+
+
+class SingletonLearnerClassChange(BaseModel):
+    data: LearnerClassChange
+
+
+class SingletonLearnerProgressSummary(BaseModel):
+    data: LearnerProgressSummary
+
+
+class SingletonLearnerSearchResult(BaseModel):
+    data: LearnerSearchResult
 
 
 class SingletonLearningItemsCountsResponse(BaseModel):
@@ -6570,6 +7173,10 @@ class SingletonTranslationBundleSet(BaseModel):
     data: dict[str, dict[str, str]]
 
 
+class SingletonMapStringString(SingletonTranslationBundle):
+    pass
+
+
 class SingletonstringList(BaseModel):
     data: list[str]
 
@@ -6649,8 +7256,20 @@ class Stats(CommsStats):
     pass
 
 
-class StatsBreakdown(CommsStatsBreakdown):
-    pass
+class StatsBreakdown(BaseModel):
+    email_failed: int
+    email_sent: int
+    email_suppressed: int
+    push_failed: int
+    push_inbox_only: int
+    push_pending: int
+    push_sent: int
+    push_suppressed: int
+    push_unverified: int
+    success_rate: float
+    total_failed: int
+    total_sent: int
+    total_suppressed: int
 
 
 class StatusResponse(AppFeedbackUpdateStatusRequest):
@@ -7244,6 +7863,34 @@ class TranslationKeyPlaceholder(BaseModel):
     type: str
 
 
+class TranslationSearchHit(BaseModel):
+    excerpts: list[SearchExcerpt] | None = None
+    excerpts_more: int | None = None
+    glossary_violations: list[GlossaryViolation] | None = None
+    id: UUID_aliased
+    key: str | None = None
+    key_id: UUID_aliased | None = None
+    kind: str
+    language_code: str
+    namespace: str | None = None
+    resource_id: str | None = None
+    resource_type: str | None = None
+    source_status: str | None = None
+    source_text: str | None = None
+    status: str
+    structured: bool | None = None
+    translated_text: str
+    translator_source: str | None = None
+    updated_at: AwareDatetime
+
+
+class TranslationSearchResponse(BaseModel):
+    items: list[TranslationSearchHit]
+    limit: int
+    offset: int
+    total: int
+
+
 class TranslationStateResponse(AppFeedbackUpdateStatusRequest):
     pass
 
@@ -7413,6 +8060,7 @@ class UpsertDynamicTranslationRequest(BaseModel):
     resource_type: str
     reviewer_id: UUID_aliased | None = None
     source_locale: str | None = None
+    source_text: str | None = None
     source_version: str
     status: str | None = None
     translated_text: str
@@ -7421,7 +8069,7 @@ class UpsertDynamicTranslationRequest(BaseModel):
 
 class UpsertDynamicTranslationResponse(BaseModel):
     inserted: bool
-    row: DynamicTranslation | None = None
+    row: DynamicTranslationLocalization | None = None
 
 
 class UpsertTierLimitRequest(CreateTierLimitRequest):
@@ -7763,6 +8411,7 @@ class WebIngestPlanItem(BaseModel):
 class WebIngestRunItem(BaseModel):
     article_count: int
     completed_at: AwareDatetime | None = None
+    detail: str | None = None
     display_name: str
     duration_seconds: float | None = None
     error_message: str | None = None
@@ -7920,6 +8569,40 @@ class AIConversation(BaseModel):
     title: str
 
 
+class AIModelFamily(BaseModel):
+    calls_today: int
+    cost_per_good_item_usd: float | None = None
+    daily_budget_usd: float | None = None
+    error_rate: float
+    family: str
+    has_eval_set: bool
+    kill_switch_key: str | None = None
+    label: str
+    latency_p50_ms: int
+    latency_p95_ms: int
+    model: str
+    models: list[AIModelPrice]
+    paused: bool
+    paused_message: str | None = None
+    quality: AIQuality
+    retry_rate: float
+    service: str
+    spend_7d: list[AIUsageDay]
+    spend_today_usd: float
+    thinking_budget: int
+
+
+class AdminDigestEmail(BaseModel):
+    headline: str
+    idempotency_key: str
+    inbox_url: str
+    note: str
+    recipient: str
+    sections: list[AdminDigestSection]
+    subject: str
+    summary: str
+
+
 class AiConversationFlow(BaseModel):
     id: str = Field(..., title="Id")
     steps: list[str | AiConversationStep] = Field(..., title="Steps")
@@ -7993,15 +8676,21 @@ class BaseWordCms(BaseModel):
     audio_pronunciation_url: str | None = None
     base_word_id: UUID_aliased
     cefr_level: str | None = None
+    created_at: AwareDatetime | None = None
     examples: list[ExampleSentencePairCms] | None = None
     frequency_score: float | None = None
     learning_language_code: str
     meaning: str | None = None
+    meaning_locked_at: AwareDatetime | None = None
+    meaning_source: str | None = None
     notes: str | None = None
     part_of_speech: str | None = None
     pronunciation_ipa: str | None = None
     related_lemmas: Any | None = None
+    retire_reason: str | None = None
+    retired_at: AwareDatetime | None = None
     secondary_translations: Any | None = None
+    status: str | None = None
     term: str | None = None
     user_status: str | None = None
     vector_embedding: str | None = None
@@ -8503,10 +9192,17 @@ class DataQualityIssuesPage(BaseModel):
     issues: list[IssueRow]
     limit: int
     offset: int
+    total: int
 
 
 class DataQualityRunsPage(BaseModel):
     runs: list[RunRow]
+
+
+class DataQualitySummary(BaseModel):
+    by_domain: list[DomainCount]
+    by_severity: dict[str, int]
+    open: int
 
 
 class DecisionLog(BaseModel):
@@ -8571,6 +9267,7 @@ class DictionaryParadigm(BaseModel):
     rows: list[DictionaryParadigmRow]
     source: str | None = None
     type: str
+    verified: bool | None = None
 
 
 class DiscoveryItemsResponse(BaseModel):
@@ -8671,6 +9368,11 @@ class GetMediaResponse(BaseModel):
     updated_at: AwareDatetime
     variant_urls: dict[str, str] | None = None
     variants: dict[str, MediaVariant] | None = None
+
+
+class GlossaryListResponse(BaseModel):
+    items: list[GlossaryTerm]
+    total: int
 
 
 class HTTPValidationError(BaseModel):
@@ -8806,6 +9508,21 @@ class KieloTVVideo(BaseModel):
     video_url: str
 
 
+class LLMUsageBatch(BaseModel):
+    rows: list[LLMUsageRow]
+
+
+class LLMUsageListResponse(BaseModel):
+    items: list[LLMUsageRow]
+    total: int
+
+
+class LearnerAchievementSummary(BaseModel):
+    earned: int
+    points: int
+    recent: list[UserAchievementWithDetails]
+
+
 class LearnerBilling(BaseModel):
     created_at: AwareDatetime
     email: str
@@ -8815,6 +9532,26 @@ class LearnerBilling(BaseModel):
     subscriptions: list[BillingPlan]
     transactions: list[TransactionEntry]
     user_id: UUID_aliased
+
+
+class LearnerOverviewBilling(BaseModel):
+    redemptions: list[LearnerRedemption]
+    transactions: list[LearnerTransaction]
+
+
+class LearnerSectionLearnerAchievementSummary(BaseModel):
+    data: LearnerAchievementSummary | None = None
+    error: str | None = None
+
+
+class LearnerSectionLearnerOverviewBilling(BaseModel):
+    data: LearnerOverviewBilling | None = None
+    error: str | None = None
+
+
+class LearnerSectionLearnerUsage(BaseModel):
+    data: LearnerUsage | None = None
+    error: str | None = None
 
 
 class LearningSession(BaseModel):
@@ -8936,6 +9673,11 @@ class OmorfiParadigm(BaseModel):
 class OmorfiResponse(BaseModel):
     forms: list[OmorfiForm] | None = Field(None, title="Forms")
     paradigm: OmorfiParadigm | None = None
+
+
+class OperatorSwitchListResponseLocalization(BaseModel):
+    items: list[OperatorSwitchLocalization]
+    total: int
 
 
 class Paradigm(BaseModel):
@@ -9221,6 +9963,10 @@ class SingletonDataQualityIssuesPage(BaseModel):
 
 class SingletonDataQualityRunsPage(BaseModel):
     data: DataQualityRunsPage
+
+
+class SingletonDataQualitySummary(BaseModel):
+    data: DataQualitySummary
 
 
 class SingletonDictionaryEntryCms(BaseModel):
@@ -10220,6 +10966,20 @@ class HubStatusResponse(BaseModel):
     status: Status3 = Field(..., title="Status")
 
 
+class LearnerOverview(BaseModel):
+    achievements: LearnerSectionLearnerAchievementSummary
+    billing: LearnerSectionLearnerOverviewBilling
+    conversations: LearnerSectionLearnerConversations
+    devices: LearnerSectionLearnerDeviceList
+    feedback: LearnerSectionLearnerFeedback
+    learning: LearnerSectionLearnerLearning
+    notifications: LearnerSectionLearnerNotifications
+    plan: LearnerSectionLearnerPlan
+    profile: LearnerSectionLearnerProfile
+    usage: LearnerSectionLearnerUsage
+    user_id: UUID_aliased
+
+
 class LearningSessionKielolearnEngine(BaseModel):
     checkpoint_metadata: SessionCheckpointMetadata | None = None
     completion_summary: SessionCompletionSummary | None = None
@@ -10364,6 +11124,10 @@ class SingletonDictionaryLookupResponse(BaseModel):
 
 class SingletonDictionaryLookupResponseContentService(BaseModel):
     data: DictionaryLookupResponseContentService
+
+
+class SingletonLearnerOverview(BaseModel):
+    data: LearnerOverview
 
 
 class SingletonSessionReconcileResponseV3(BaseModel):

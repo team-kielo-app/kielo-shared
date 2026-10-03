@@ -17,6 +17,7 @@ import logging
 import time
 from typing import Awaitable, Callable
 
+from kielo_shared.llm.spend_guard import admit_paid_call
 from kielo_shared.llm.types import LLMRequest, LLMResult
 
 
@@ -51,7 +52,9 @@ class OpenAILLMProvider:
         *,
         json_generator: OpenAIJsonGenerator | None = None,
         provider_id: str = "openai:gpt-4o-mini@phase-d",
+        guard_calls: bool = True,
     ) -> None:
+        self._guard_calls = guard_calls
         self._text = text_generator
         self._json = json_generator
         self._provider_id = provider_id
@@ -61,6 +64,9 @@ class OpenAILLMProvider:
         return self._provider_id
 
     async def generate(self, request: LLMRequest) -> LLMResult:
+        admit_paid_call(
+            request.task, provider=self._provider_id, book=self._guard_calls
+        )
         started = time.perf_counter()
 
         if request.response_schema is not None and self._json is not None:

@@ -94,6 +94,7 @@ class UpsertRequest:
     source_locale: str = ""
     translator_source: str = ""
     reviewer_id: str = ""  # uuid; empty = uuid.Nil = NULL on column
+    source_text: Optional[str] = None
 
     def to_payload(self) -> dict:
         payload = {
@@ -113,6 +114,8 @@ class UpsertRequest:
             payload["translator_source"] = self.translator_source
         if self.reviewer_id:
             payload["reviewer_id"] = self.reviewer_id
+        if self.source_text and self.source_text.strip():
+            payload["source_text"] = self.source_text
         return payload
 
 

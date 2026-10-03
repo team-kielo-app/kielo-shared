@@ -175,3 +175,13 @@ func TestUpsert_NilClientReturnsError(t *testing.T) {
 	require.Error(t, err)
 	assert.True(t, strings.Contains(err.Error(), "nil client"))
 }
+
+func TestUpsertRequest_SourceTextWireShape(t *testing.T) {
+	withText, err := json.Marshal(UpsertRequest{ResourceType: "r", ResourceID: "1", SourceText: "Hello"})
+	require.NoError(t, err)
+	assert.Contains(t, string(withText), `"source_text":"Hello"`)
+
+	without, err := json.Marshal(UpsertRequest{ResourceType: "r", ResourceID: "1"})
+	require.NoError(t, err)
+	assert.NotContains(t, string(without), "source_text")
+}

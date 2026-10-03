@@ -228,6 +228,7 @@ class CMSWritersClient:
         *,
         senses: Optional[list[dict[str, Any]]] = None,
         only_if_blank: bool = False,
+        source: Optional[str] = None,
     ) -> "BaseWordTranslationResult":
         """POST /internal/klearn/base-words/{id}/translation.
 
@@ -251,6 +252,11 @@ class CMSWritersClient:
             only writes when the current value is NULL or empty.
             Site 9 (dictionary_enrichment back-fill) sets this True;
             other call sites pass False.
+          source: who is writing (lookup | llm | ingest | heuristic |
+            curated). Every automated source only fills a BLANK meaning of
+            an unlocked word and never replaces a non-blank gloss; the
+            label lands in base_words.meaning_source. Omitted = "llm"
+            (cms default). "human" is rejected by the endpoint.
 
         Returns:
           BaseWordTranslationResult with .meaning_action
@@ -266,6 +272,8 @@ class CMSWritersClient:
             "only_if_blank": only_if_blank,
             "senses": senses or [],
         }
+        if source:
+            payload["source"] = source
         response = await self._client.post(url, json=payload)
         if response.status_code == 404:
             raise CMSWriterNotFoundError(

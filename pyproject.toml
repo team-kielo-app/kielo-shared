@@ -36,6 +36,7 @@ DEP001 = [
     "livekit",
     "prometheus_client",
     "pydantic",
+    "redis",
     "starlette",
 ]
 

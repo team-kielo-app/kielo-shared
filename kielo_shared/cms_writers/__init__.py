@@ -191,6 +191,7 @@ Request body:
   {
     "meaning": "...",                     # required string
     "only_if_blank": False,               # optional; site 9 back-fill flag
+    "source": "lookup",                   # optional; lookup|llm|ingest|heuristic|curated
     "senses": [                           # optional list (may be empty)
       {
         "language_code": "en",

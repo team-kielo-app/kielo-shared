@@ -13,7 +13,33 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/team-kielo-app/kielo-shared/observe/httputil"
+	"github.com/team-kielo-app/kielo-shared/timeutil"
 )
+
+// ContextTZOffsetKey is the envelope.Context key carrying the learner's UTC
+// offset (minutes east) at event time. The user-service consumer buckets the
+// event's local day with it in preference to the learner's stored offset.
+const ContextTZOffsetKey = "tz_offset_minutes"
+
+// stampTimezoneOffset adds ContextTZOffsetKey from the request context when the
+// caller did not set one itself. Optional: no offset in ctx leaves the
+// envelope untouched. The Context map is copied, never mutated in place.
+func stampTimezoneOffset(ctx context.Context, envelope UserActionEnvelope) UserActionEnvelope {
+	if _, set := envelope.Context[ContextTZOffsetKey]; set {
+		return envelope
+	}
+	offset, ok := timeutil.LookupTimezoneOffsetMinutesFromContext(ctx)
+	if !ok {
+		return envelope
+	}
+	stamped := make(map[string]any, len(envelope.Context)+1)
+	for k, v := range envelope.Context {
+		stamped[k] = v
+	}
+	stamped[ContextTZOffsetKey] = offset
+	envelope.Context = stamped
+	return envelope
+}
 
 // UserActionEnvelope is the canonical ADR-011 §D2.2 wire shape every
 // emitter POSTs to kielo-events. Mirrors
@@ -121,6 +147,7 @@ func (h *HTTPEmitter) Emit(ctx context.Context, userID uuid.UUID, envelope UserA
 	if envelope.SchemaVersion == 0 {
 		envelope.SchemaVersion = 1
 	}
+	envelope = stampTimezoneOffset(ctx, envelope)
 
 	body, err := json.Marshal(envelope)
 	if err != nil {
