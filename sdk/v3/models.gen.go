@@ -789,6 +789,7 @@ type AIModelFamily struct {
 	DailyBudgetUsd     *float32       `json:"daily_budget_usd,omitempty"`
 	ErrorRate          float32        `json:"error_rate"`
 	Family             string         `json:"family"`
+	HasEvalSet         bool           `json:"has_eval_set"`
 	KillSwitchKey      *string        `json:"kill_switch_key,omitempty"`
 	Label              string         `json:"label"`
 	LatencyP50Ms       int            `json:"latency_p50_ms"`
@@ -796,6 +797,7 @@ type AIModelFamily struct {
 	Model              string         `json:"model"`
 	Models             []AIModelPrice `json:"models"`
 	Paused             bool           `json:"paused"`
+	PausedMessage      *string        `json:"paused_message,omitempty"`
 	Quality            AIQuality      `json:"quality"`
 	RetryRate          float32        `json:"retry_rate"`
 	Service            string         `json:"service"`
@@ -5962,6 +5964,19 @@ type KTVListMeta struct {
 	Total  int `json:"total"`
 }
 
+// KTVPromptTemplateResponse defines model for KTVPromptTemplateResponse.
+type KTVPromptTemplateResponse struct {
+	DefaultTemplate string   `json:"default_template"`
+	IsDefault       bool     `json:"is_default"`
+	Placeholders    []string `json:"placeholders"`
+	Template        string   `json:"template"`
+}
+
+// KTVPromptTemplateUpdateRequest defines model for KTVPromptTemplateUpdateRequest.
+type KTVPromptTemplateUpdateRequest struct {
+	Template string `json:"template"`
+}
+
 // KTVSocialSheetConfigOptionsResponse defines model for KTVSocialSheetConfigOptionsResponse.
 type KTVSocialSheetConfigOptionsResponse struct {
 	SelectedWorksheet *string                         `json:"selected_worksheet,omitempty"`
@@ -6143,7 +6158,8 @@ type KTVWorkflowPromptGenerateResponse struct {
 
 // KTVWorkflowPromptUpdateRequest defines model for KTVWorkflowPromptUpdateRequest.
 type KTVWorkflowPromptUpdateRequest struct {
-	Prompt string `json:"prompt"`
+	Prompt           string  `json:"prompt"`
+	SimplifiedPrompt *string `json:"simplified_prompt,omitempty"`
 }
 
 // KTVWorkflowSeedRequest defines model for KTVWorkflowSeedRequest.
@@ -10500,6 +10516,11 @@ type SingletonKTVGenerationJobFinalizeResponse struct {
 // SingletonKTVGenerationJobsQueueListResponse defines model for SingletonKTVGenerationJobsQueueListResponse.
 type SingletonKTVGenerationJobsQueueListResponse struct {
 	Data KTVGenerationJobsQueueListResponse `json:"data"`
+}
+
+// SingletonKTVPromptTemplateResponse defines model for SingletonKTVPromptTemplateResponse.
+type SingletonKTVPromptTemplateResponse struct {
+	Data KTVPromptTemplateResponse `json:"data"`
 }
 
 // SingletonKTVSocialSheetConfigOptionsResponse defines model for SingletonKTVSocialSheetConfigOptionsResponse.
@@ -16365,6 +16386,9 @@ type PatchApiV3KtvJobsJobIdHeartbeatJSONRequestBody = KTVGenerationJobHeartbeatR
 
 // PatchApiV3KtvJobsJobIdStatusJSONRequestBody defines body for PatchApiV3KtvJobsJobIdStatus for application/json ContentType.
 type PatchApiV3KtvJobsJobIdStatusJSONRequestBody = KTVGenerationJobStatusUpdateRequest
+
+// PutApiV3KtvPromptTemplatesTemplateKeyJSONRequestBody defines body for PutApiV3KtvPromptTemplatesTemplateKey for application/json ContentType.
+type PutApiV3KtvPromptTemplatesTemplateKeyJSONRequestBody = KTVPromptTemplateUpdateRequest
 
 // PostApiV3KtvVariantsVariantIdProcessJSONRequestBody defines body for PostApiV3KtvVariantsVariantIdProcess for application/json ContentType.
 type PostApiV3KtvVariantsVariantIdProcessJSONRequestBody = KTVVariantProcessRequest

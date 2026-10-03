@@ -3428,6 +3428,17 @@ class KTVListMeta(FeedbackListMeta):
     pass
 
 
+class KTVPromptTemplateResponse(BaseModel):
+    default_template: str
+    is_default: bool
+    placeholders: list[str]
+    template: str
+
+
+class KTVPromptTemplateUpdateRequest(BaseModel):
+    template: str
+
+
 class KTVSocialSheetConfigRequest(BaseModel):
     spreadsheet_id: str | None = None
     worksheet: str | None = None
@@ -3556,6 +3567,7 @@ class KTVWorkflowPromptGenerateResponse(BaseModel):
 
 class KTVWorkflowPromptUpdateRequest(BaseModel):
     prompt: str
+    simplified_prompt: str | None = None
 
 
 class KTVWorkflowSeedRequest(BaseModel):
@@ -6749,6 +6761,10 @@ class SingletonKTVGenerationJobFinalizeResponse(BaseModel):
     data: KTVGenerationJobFinalizeResponse
 
 
+class SingletonKTVPromptTemplateResponse(BaseModel):
+    data: KTVPromptTemplateResponse
+
+
 class SingletonKTVTempDownloadCleanupResponse(BaseModel):
     data: KTVTempDownloadCleanupResponse
 
@@ -8559,6 +8575,7 @@ class AIModelFamily(BaseModel):
     daily_budget_usd: float | None = None
     error_rate: float
     family: str
+    has_eval_set: bool
     kill_switch_key: str | None = None
     label: str
     latency_p50_ms: int
@@ -8566,6 +8583,7 @@ class AIModelFamily(BaseModel):
     model: str
     models: list[AIModelPrice]
     paused: bool
+    paused_message: str | None = None
     quality: AIQuality
     retry_rate: float
     service: str
