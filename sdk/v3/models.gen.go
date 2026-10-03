@@ -13240,6 +13240,7 @@ type WebIngestPlanItem struct {
 	BrandId              *uuid.UUID `json:"brand_id,omitempty"`
 	BrandName            *string    `json:"brand_name,omitempty"`
 	DisplayName          string     `json:"display_name"`
+	InRotation           bool       `json:"in_rotation"`
 	IsActive             bool       `json:"is_active"`
 	LearningLanguageCode string     `json:"learning_language_code"`
 	MaxArticlesPerRun    *int       `json:"max_articles_per_run,omitempty"`
@@ -13296,6 +13297,7 @@ type WebIngestTarget struct {
 	CreatedBy               *uuid.UUID `json:"created_by,omitempty"`
 	DisplayName             string     `json:"display_name"`
 	HideContentWhenInactive bool       `json:"hide_content_when_inactive"`
+	InRotation              bool       `json:"in_rotation"`
 	IsActive                bool       `json:"is_active"`
 	LearningLanguageCode    string     `json:"learning_language_code"`
 	MaxArticlesPerRun       *int       `json:"max_articles_per_run,omitempty"`
@@ -13312,6 +13314,7 @@ type WebIngestTargetRequest struct {
 	BrandId                 *string `json:"brand_id,omitempty"`
 	DisplayName             string  `json:"display_name"`
 	HideContentWhenInactive *bool   `json:"hide_content_when_inactive,omitempty"`
+	InRotation              *bool   `json:"in_rotation,omitempty"`
 	IsActive                *bool   `json:"is_active,omitempty"`
 	LearningLanguageCode    string  `json:"learning_language_code"`
 	MaxArticlesPerRun       *int    `json:"max_articles_per_run,omitempty"`

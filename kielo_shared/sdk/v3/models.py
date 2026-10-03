@@ -8399,6 +8399,7 @@ class WebIngestPlanItem(BaseModel):
     brand_id: UUID_aliased | None = None
     brand_name: str | None = None
     display_name: str
+    in_rotation: bool
     is_active: bool
     learning_language_code: str
     max_articles_per_run: int | None = None
@@ -8431,6 +8432,7 @@ class WebIngestTarget(BaseModel):
     created_by: UUID_aliased | None = None
     display_name: str
     hide_content_when_inactive: bool
+    in_rotation: bool
     is_active: bool
     learning_language_code: str
     max_articles_per_run: int | None = None
@@ -8446,6 +8448,7 @@ class WebIngestTargetRequest(BaseModel):
     brand_id: str | None = None
     display_name: str
     hide_content_when_inactive: bool | None = None
+    in_rotation: bool | None = None
     is_active: bool | None = None
     learning_language_code: str
     max_articles_per_run: int | None = None
