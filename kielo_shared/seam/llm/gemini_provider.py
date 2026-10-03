@@ -11,7 +11,9 @@ from __future__ import annotations
 import time
 from typing import Any, AsyncIterator, Optional
 
-from kielo_shared.llm.spend_guard import admit_paid_call
+from kielo_shared import llmroute
+from kielo_shared.llm.pricing import estimate_usd
+from kielo_shared.llm.spend_guard import admit_paid_call, record_actual_usd
 from kielo_shared.seam.llm.types import (
     Error,
     ErrorClass,
@@ -36,10 +38,61 @@ class GeminiSDKProvider:
         *,
         client: Optional[Any] = None,
         default_model: str = _DEFAULT_MODEL,
+        family: str = "",
     ) -> None:
+        """``family`` (kielo_shared.llmroute) puts the provider under the AI-models
+        control plane: the model and thinking budget resolve through llmroute
+        (the request's model / default_model is the fail-open default), calls are
+        admitted under the family's budget and each one is rolled up as usage.
+        """
         self._api_key = api_key
         self._client = client
         self._default_model = default_model
+        self._family = family
+
+    def _route(self, request: Request) -> "llmroute.Route":
+        default = request.model or self._default_model
+        if not self._family:
+            return llmroute.Route(default)
+        return llmroute.resolve(self._family, default)
+
+    def _config(self, request: Request, thinking_budget: int) -> Any:
+        config = self._build_config(request)
+        if thinking_budget < 0:
+            return config
+        try:
+            from google.genai import types as _genai_types  # type: ignore[import-not-found]
+        except Exception as exc:
+            raise Error(ErrorClass.PROVIDER_ERROR, exc) from exc
+        if config is None:
+            config = _genai_types.GenerateContentConfig()
+        config.thinking_config = _genai_types.ThinkingConfig(
+            thinking_budget=thinking_budget
+        )
+        return config
+
+    def _record(self, model: str, usage: Any, started: float, failed: bool) -> None:
+        if not self._family:
+            return
+        try:
+            tin = int(getattr(usage, "prompt_token_count", 0) or 0)
+            tout = int(getattr(usage, "candidates_token_count", 0) or 0)
+            think = int(getattr(usage, "thoughts_token_count", 0) or 0)
+            usd = estimate_usd(model, tin, tout, think)
+            if not failed:
+                record_actual_usd(usd, family=self._family)
+            llmroute.record_call(
+                self._family,
+                model,
+                input_tokens=tin,
+                output_tokens=tout,
+                thinking_tokens=think,
+                usd=usd,
+                latency_ms=(time.perf_counter() - started) * 1000,
+                error=failed,
+            )
+        except Exception:
+            pass
 
     @property
     def provider_id(self) -> str:
@@ -90,10 +143,15 @@ class GeminiSDKProvider:
                 RuntimeError("empty prompt"),
             )
         client = self._resolve_client()
-        config = self._build_config(request)
-        model = request.model or self._default_model
+        route = self._route(request)
+        config = self._config(request, route.thinking_budget)
+        model = route.model
 
-        admit_paid_call(getattr(request, "task", ""), provider=self.provider_id)
+        admit_paid_call(
+            getattr(request, "task", ""),
+            provider=self.provider_id,
+            family=self._family,
+        )
         started = time.perf_counter()
         try:
             response = await client.aio.models.generate_content(
@@ -104,8 +162,10 @@ class GeminiSDKProvider:
         except Error:
             raise
         except Exception as exc:
+            self._record(model, None, started, True)
             raise Error(_classify_genai_exception(exc), exc) from exc
 
+        self._record(model, getattr(response, "usage_metadata", None), started, False)
         text = getattr(response, "text", None)
         if not text:
             raise Error(
@@ -130,10 +190,17 @@ class GeminiSDKProvider:
                 RuntimeError("empty prompt"),
             )
         client = self._resolve_client()
-        config = self._build_config(request)
-        model = request.model or self._default_model
+        route = self._route(request)
+        config = self._config(request, route.thinking_budget)
+        model = route.model
 
-        admit_paid_call(getattr(request, "task", ""), provider=self.provider_id)
+        admit_paid_call(
+            getattr(request, "task", ""),
+            provider=self.provider_id,
+            family=self._family,
+        )
+        started = time.perf_counter()
+        usage: Any = None
         try:
             async_stream = await client.aio.models.generate_content_stream(
                 model=model,
@@ -147,13 +214,16 @@ class GeminiSDKProvider:
 
         try:
             async for chunk in async_stream:
+                usage = getattr(chunk, "usage_metadata", None) or usage
                 text = getattr(chunk, "text", None)
                 if text:
                     yield str(text)
         except Error:
             raise
         except Exception as exc:
+            self._record(model, usage, started, True)
             raise Error(_classify_genai_exception(exc), exc) from exc
+        self._record(model, usage, started, False)
 
 
 def _classify_genai_exception(exc: BaseException) -> ErrorClass:
