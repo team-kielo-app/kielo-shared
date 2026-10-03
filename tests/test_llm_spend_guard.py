@@ -126,3 +126,13 @@ def test_provider_refuses_before_generator_runs(monkeypatch):
     with pytest.raises(sg.PaidLLMCallsDisabled):
         asyncio.run(provider.generate(req))
     assert calls == []
+
+
+def test_env_spelling_also_marks_production():
+    # The convo VM sets ENV=production, not ENVIRONMENT (2026-10-03).
+    from kielo_shared.llm.spend_guard import is_production
+
+    assert is_production({"ENV": "production"})
+    assert not is_production({"ENV": "development"})
+    assert not is_production({"ENVIRONMENT": "development", "ENV": "production"})
+

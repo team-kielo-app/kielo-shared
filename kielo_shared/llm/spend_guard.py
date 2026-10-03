@@ -5,7 +5,7 @@ caps spend with a rolling 24h USD budget and an hourly call cap counted in
 Redis. Refusals raise a typed `PaidLLMCallRefused` and log one loud line.
 
 Env (read at call time):
-  ENVIRONMENT               production|prod => prod; anything else => non-prod.
+  ENVIRONMENT (or ENV)      production|prod => prod; anything else => non-prod.
                             Unset on Cloud Run (K_SERVICE set) counts as prod.
   LLM_ALLOW_PAID_CALLS      non-prod only: must be "true" to call a paid model.
   LLM_DAILY_BUDGET_USD      rolling 24h cap. Default 2.00 non-prod, 0 (off) prod.
@@ -64,7 +64,9 @@ class LLMGuardUnavailable(PaidLLMCallRefused):
 
 def is_production(env: dict[str, str] | None = None) -> bool:
     e = env if env is not None else os.environ
-    name = (e.get("ENVIRONMENT") or "").strip().lower()
+    # ENV is the older spelling: the convo VM set only ENV=production and
+    # every paid call there was refused as non-prod (2026-10-03).
+    name = (e.get("ENVIRONMENT") or e.get("ENV") or "").strip().lower()
     if name:
         return name in _PROD_NAMES
     return bool(e.get("K_SERVICE"))
