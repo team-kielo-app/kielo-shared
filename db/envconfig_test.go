@@ -101,3 +101,22 @@ func TestEnvDuration(t *testing.T) {
 		})
 	}
 }
+
+func TestEnvNonNegInt32(t *testing.T) {
+	cases := []struct {
+		raw  string
+		want int32
+	}{
+		{"", 2},
+		{"0", 0},
+		{"3", 3},
+		{"-1", 2},
+		{"x", 2},
+	}
+	for _, tc := range cases {
+		t.Setenv("PGX_MIN_CONNS_TEST", tc.raw)
+		if got := EnvNonNegInt32("PGX_MIN_CONNS_TEST", 2); got != tc.want {
+			t.Errorf("raw %q: got %d want %d", tc.raw, got, tc.want)
+		}
+	}
+}

@@ -28,6 +28,24 @@ func EnvInt32(key string, fallback int32) int32 {
 	return int32(v)
 }
 
+// EnvNonNegInt32 is EnvInt32 for counts where zero is meaningful. A
+// connection pool's minimum is the case: PGX_MIN_CONNS=0 means "hold no
+// idle connections", and EnvInt32 silently turned it into the default (2
+// per instance) on six scale-to-zero services sharing a 50-connection
+// database.
+func EnvNonNegInt32(key string, fallback int32) int32 {
+	raw := os.Getenv(key)
+	if raw == "" {
+		return fallback
+	}
+	v, err := strconv.ParseInt(raw, 10, 32)
+	if err != nil || v < 0 {
+		log.Printf("WARN: invalid %s=%q, using default %d", key, raw, fallback)
+		return fallback
+	}
+	return int32(v)
+}
+
 // EnvString returns the trimmed value of an environment variable, or the
 // fallback when unset or empty-after-trim. Use for required-with-default
 // strings (database URLs, project IDs, log levels) so trailing whitespace
