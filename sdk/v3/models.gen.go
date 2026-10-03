@@ -1987,6 +1987,12 @@ type ChallengeTheme struct {
 	ThemeNameSupport *string   `json:"theme_name_support,omitempty"`
 }
 
+// ChangeEmailRequest defines model for ChangeEmailRequest.
+type ChangeEmailRequest struct {
+	CurrentEmail string `json:"current_email"`
+	NewEmail     string `json:"new_email"`
+}
+
 // CheckAndAwardRequest defines model for CheckAndAwardRequest.
 type CheckAndAwardRequest struct {
 	AchievementCode string  `json:"achievement_code"`
@@ -2219,6 +2225,71 @@ type CommsDLQAuditListResponse struct {
 type CommsDLQAuditResolveRequest struct {
 	OperatorNotes *string `json:"operator_notes,omitempty"`
 	ResolvedBy    string  `json:"resolved_by"`
+}
+
+// CommsEmailCopyPart defines model for CommsEmailCopyPart.
+type CommsEmailCopyPart struct {
+	Description          string   `json:"description"`
+	Key                  string   `json:"key"`
+	Name                 string   `json:"name"`
+	RequiredPlaceholders []string `json:"required_placeholders"`
+}
+
+// CommsEmailCopyPlaceholder defines model for CommsEmailCopyPlaceholder.
+type CommsEmailCopyPlaceholder struct {
+	Description string `json:"description"`
+	Name        string `json:"name"`
+	Sample      string `json:"sample"`
+}
+
+// CommsEmailCopyVariant defines model for CommsEmailCopyVariant.
+type CommsEmailCopyVariant struct {
+	Label string `json:"label"`
+	Name  string `json:"name"`
+}
+
+// CommsEmailPreview defines model for CommsEmailPreview.
+type CommsEmailPreview struct {
+	FellBackToEnglish  bool   `json:"fell_back_to_english"`
+	Html               string `json:"html"`
+	LanguageCode       string `json:"language_code"`
+	ServedLanguageCode string `json:"served_language_code"`
+	Subject            string `json:"subject"`
+	TemplateId         string `json:"template_id"`
+	Variant            string `json:"variant"`
+}
+
+// CommsEmailTemplate defines model for CommsEmailTemplate.
+type CommsEmailTemplate struct {
+	Description  string                      `json:"description"`
+	Id           string                      `json:"id"`
+	Label        string                      `json:"label"`
+	Parts        []CommsEmailCopyPart        `json:"parts"`
+	Placeholders []CommsEmailCopyPlaceholder `json:"placeholders"`
+	SenderName   string                      `json:"sender_name"`
+	Variants     []CommsEmailCopyVariant     `json:"variants"`
+}
+
+// CommsEmailTemplateList defines model for CommsEmailTemplateList.
+type CommsEmailTemplateList struct {
+	BuiltInLanguages []string             `json:"built_in_languages"`
+	Languages        []string             `json:"languages"`
+	Namespace        string               `json:"namespace"`
+	Templates        []CommsEmailTemplate `json:"templates"`
+}
+
+// CommsEmailTestSendRequest defines model for CommsEmailTestSendRequest.
+type CommsEmailTestSendRequest struct {
+	LanguageCode string  `json:"language_code"`
+	Recipient    *string `json:"recipient,omitempty"`
+	Variant      *string `json:"variant,omitempty"`
+}
+
+// CommsEmailTestSendResult defines model for CommsEmailTestSendResult.
+type CommsEmailTestSendResult struct {
+	Delivered bool   `json:"delivered"`
+	SentTo    string `json:"sent_to"`
+	Subject   string `json:"subject"`
 }
 
 // CommsNotificationJob defines model for CommsNotificationJob.
@@ -4535,6 +4606,113 @@ type EffectiveUserLimitsResponse struct {
 	EffectiveLimits []FeatureLimitWithUsage `json:"effective_limits"`
 	Tier            string                  `json:"tier"`
 	UserId          string                  `json:"user_id"`
+}
+
+// EmailChangeConfirmRequest defines model for EmailChangeConfirmRequest.
+type EmailChangeConfirmRequest struct {
+	Code        string  `json:"code"`
+	CurrentCode *string `json:"current_code,omitempty"`
+}
+
+// EmailChangePending defines model for EmailChangePending.
+type EmailChangePending struct {
+	ExpiresAt        string `json:"expires_at"`
+	NeedsCurrentCode bool   `json:"needs_current_code"`
+	NewEmail         string `json:"new_email"`
+}
+
+// EmailChangePendingAuthService defines model for EmailChangePendingAuthService.
+type EmailChangePendingAuthService struct {
+	ExpiresAt        time.Time `json:"expires_at"`
+	NeedsCurrentCode bool      `json:"needs_current_code"`
+	NewEmail         string    `json:"new_email"`
+}
+
+// EmailChangeStartRequest defines model for EmailChangeStartRequest.
+type EmailChangeStartRequest struct {
+	NewEmail string  `json:"new_email"`
+	Password *string `json:"password,omitempty"`
+}
+
+// EmailChangeStatus defines model for EmailChangeStatus.
+type EmailChangeStatus struct {
+	ChangeableFrom *string             `json:"changeable_from,omitempty"`
+	CurrentEmail   string              `json:"current_email"`
+	HasPassword    bool                `json:"has_password"`
+	Pending        *EmailChangePending `json:"pending,omitempty"`
+}
+
+// EmailChangeStatusAuthService defines model for EmailChangeStatusAuthService.
+type EmailChangeStatusAuthService struct {
+	ChangeableFrom *time.Time                     `json:"changeable_from,omitempty"`
+	CurrentEmail   string                         `json:"current_email"`
+	HasPassword    bool                           `json:"has_password"`
+	Pending        *EmailChangePendingAuthService `json:"pending,omitempty"`
+}
+
+// EmailCopyPartInfo defines model for EmailCopyPartInfo.
+type EmailCopyPartInfo struct {
+	Description          string   `json:"description"`
+	Key                  string   `json:"key"`
+	Name                 string   `json:"name"`
+	RequiredPlaceholders []string `json:"required_placeholders"`
+}
+
+// EmailCopyVarInfo defines model for EmailCopyVarInfo.
+type EmailCopyVarInfo struct {
+	Description string `json:"description"`
+	Name        string `json:"name"`
+	Sample      string `json:"sample"`
+}
+
+// EmailCopyVariantInfo defines model for EmailCopyVariantInfo.
+type EmailCopyVariantInfo struct {
+	Label string `json:"label"`
+	Name  string `json:"name"`
+}
+
+// EmailPreviewResponse defines model for EmailPreviewResponse.
+type EmailPreviewResponse struct {
+	FellBackToEnglish  bool   `json:"fell_back_to_english"`
+	Html               string `json:"html"`
+	LanguageCode       string `json:"language_code"`
+	ServedLanguageCode string `json:"served_language_code"`
+	Subject            string `json:"subject"`
+	TemplateId         string `json:"template_id"`
+	Variant            string `json:"variant"`
+}
+
+// EmailTemplateInfo defines model for EmailTemplateInfo.
+type EmailTemplateInfo struct {
+	Description  string                 `json:"description"`
+	Id           string                 `json:"id"`
+	Label        string                 `json:"label"`
+	Parts        []EmailCopyPartInfo    `json:"parts"`
+	Placeholders []EmailCopyVarInfo     `json:"placeholders"`
+	SenderName   string                 `json:"sender_name"`
+	Variants     []EmailCopyVariantInfo `json:"variants"`
+}
+
+// EmailTemplateListResponse defines model for EmailTemplateListResponse.
+type EmailTemplateListResponse struct {
+	BuiltInLanguages []string            `json:"built_in_languages"`
+	Languages        []string            `json:"languages"`
+	Namespace        string              `json:"namespace"`
+	Templates        []EmailTemplateInfo `json:"templates"`
+}
+
+// EmailTestSendRequest defines model for EmailTestSendRequest.
+type EmailTestSendRequest struct {
+	LanguageCode string  `json:"language_code"`
+	Recipient    *string `json:"recipient,omitempty"`
+	Variant      *string `json:"variant,omitempty"`
+}
+
+// EmailTestSendResponse defines model for EmailTestSendResponse.
+type EmailTestSendResponse struct {
+	Delivered bool   `json:"delivered"`
+	SentTo    string `json:"sent_to"`
+	Subject   string `json:"subject"`
 }
 
 // EndSessionResponse defines model for EndSessionResponse.
@@ -9968,6 +10146,21 @@ type SingletonCommsCommunicationLog struct {
 	Data CommsCommunicationLog `json:"data"`
 }
 
+// SingletonCommsEmailPreview defines model for SingletonCommsEmailPreview.
+type SingletonCommsEmailPreview struct {
+	Data CommsEmailPreview `json:"data"`
+}
+
+// SingletonCommsEmailTemplateList defines model for SingletonCommsEmailTemplateList.
+type SingletonCommsEmailTemplateList struct {
+	Data CommsEmailTemplateList `json:"data"`
+}
+
+// SingletonCommsEmailTestSendResult defines model for SingletonCommsEmailTestSendResult.
+type SingletonCommsEmailTestSendResult struct {
+	Data CommsEmailTestSendResult `json:"data"`
+}
+
 // SingletonCommsNotificationJob defines model for SingletonCommsNotificationJob.
 type SingletonCommsNotificationJob struct {
 	Data CommsNotificationJob `json:"data"`
@@ -10276,6 +10469,41 @@ type SingletonDynamicTranslation struct {
 // SingletonEffectiveUserLimitsResponse defines model for SingletonEffectiveUserLimitsResponse.
 type SingletonEffectiveUserLimitsResponse struct {
 	Data EffectiveUserLimitsResponse `json:"data"`
+}
+
+// SingletonEmailChangePending defines model for SingletonEmailChangePending.
+type SingletonEmailChangePending struct {
+	Data EmailChangePending `json:"data"`
+}
+
+// SingletonEmailChangePendingAuthService defines model for SingletonEmailChangePendingAuthService.
+type SingletonEmailChangePendingAuthService struct {
+	Data EmailChangePendingAuthService `json:"data"`
+}
+
+// SingletonEmailChangeStatus defines model for SingletonEmailChangeStatus.
+type SingletonEmailChangeStatus struct {
+	Data EmailChangeStatus `json:"data"`
+}
+
+// SingletonEmailChangeStatusAuthService defines model for SingletonEmailChangeStatusAuthService.
+type SingletonEmailChangeStatusAuthService struct {
+	Data EmailChangeStatusAuthService `json:"data"`
+}
+
+// SingletonEmailPreviewResponse defines model for SingletonEmailPreviewResponse.
+type SingletonEmailPreviewResponse struct {
+	Data EmailPreviewResponse `json:"data"`
+}
+
+// SingletonEmailTemplateListResponse defines model for SingletonEmailTemplateListResponse.
+type SingletonEmailTemplateListResponse struct {
+	Data EmailTemplateListResponse `json:"data"`
+}
+
+// SingletonEmailTestSendResponse defines model for SingletonEmailTestSendResponse.
+type SingletonEmailTestSendResponse struct {
+	Data EmailTestSendResponse `json:"data"`
 }
 
 // SingletonEndSessionResponse defines model for SingletonEndSessionResponse.
@@ -13299,6 +13527,7 @@ type WebIngestTarget struct {
 	HideContentWhenInactive bool       `json:"hide_content_when_inactive"`
 	InRotation              bool       `json:"in_rotation"`
 	IsActive                bool       `json:"is_active"`
+	LastArticleAt           *time.Time `json:"last_article_at,omitempty"`
 	LearningLanguageCode    string     `json:"learning_language_code"`
 	MaxArticlesPerRun       *int       `json:"max_articles_per_run,omitempty"`
 	Notes                   *string    `json:"notes,omitempty"`
@@ -13692,6 +13921,15 @@ type GetApiV3CommunicationsDlqAuditParams struct {
 
 	// Limit Max rows (default 50, max 200)
 	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// GetApiV3CommunicationsEmailTemplatesTemplateIdPreviewParams defines parameters for GetApiV3CommunicationsEmailTemplatesTemplateIdPreview.
+type GetApiV3CommunicationsEmailTemplatesTemplateIdPreviewParams struct {
+	// LanguageCode Support language to render in (default en)
+	LanguageCode *string `form:"language_code,omitempty" json:"language_code,omitempty"`
+
+	// Variant Sample variant (default: the first)
+	Variant *string `form:"variant,omitempty" json:"variant,omitempty"`
 }
 
 // GetApiV3CommunicationsHistoryParams defines parameters for GetApiV3CommunicationsHistory.
@@ -14151,6 +14389,15 @@ type GetApiV3DlqAuditParams struct {
 
 	// Limit Max rows (default 50, max 200)
 	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// GetApiV3EmailTemplatesTemplateIdPreviewParams defines parameters for GetApiV3EmailTemplatesTemplateIdPreview.
+type GetApiV3EmailTemplatesTemplateIdPreviewParams struct {
+	// LanguageCode Support language to render in (default en)
+	LanguageCode *string `form:"language_code,omitempty" json:"language_code,omitempty"`
+
+	// Variant Sample variant, e.g. current or new (default: the first)
+	Variant *string `form:"variant,omitempty" json:"variant,omitempty"`
 }
 
 // PostApiV3EventsEmailBounceParams defines parameters for PostApiV3EventsEmailBounce.
@@ -16207,6 +16454,9 @@ type PostApiV3CommunicationsEmailBatchJSONRequestBody = CommsBatchEmailRequest
 // PostApiV3CommunicationsEmailSendJSONRequestBody defines body for PostApiV3CommunicationsEmailSend for application/json ContentType.
 type PostApiV3CommunicationsEmailSendJSONRequestBody = CommsSendEmailRequest
 
+// PostApiV3CommunicationsEmailTemplatesTemplateIdTestJSONRequestBody defines body for PostApiV3CommunicationsEmailTemplatesTemplateIdTest for application/json ContentType.
+type PostApiV3CommunicationsEmailTemplatesTemplateIdTestJSONRequestBody = CommsEmailTestSendRequest
+
 // PostApiV3CommunicationsJobsJSONRequestBody defines body for PostApiV3CommunicationsJobs for application/json ContentType.
 type PostApiV3CommunicationsJobsJSONRequestBody = CommsCreateJobRequest
 
@@ -16308,6 +16558,9 @@ type PostApiV3EmailBatchJSONRequestBody = BatchEmailRequest
 
 // PostApiV3EmailSendJSONRequestBody defines body for PostApiV3EmailSend for application/json ContentType.
 type PostApiV3EmailSendJSONRequestBody = SendEmailRequest
+
+// PostApiV3EmailTemplatesTemplateIdTestJSONRequestBody defines body for PostApiV3EmailTemplatesTemplateIdTest for application/json ContentType.
+type PostApiV3EmailTemplatesTemplateIdTestJSONRequestBody = EmailTestSendRequest
 
 // PostApiV3EventsJSONRequestBody defines body for PostApiV3Events for application/json ContentType.
 type PostApiV3EventsJSONRequestBody = UserActionEnvelope
@@ -16497,6 +16750,12 @@ type PostApiV3MeArticlesReadJSONRequestBody = MarkArticleAsReadRequest
 
 // PatchApiV3MeDevicePreferencesJSONRequestBody defines body for PatchApiV3MeDevicePreferences for application/json ContentType.
 type PatchApiV3MeDevicePreferencesJSONRequestBody = UpdateDevicePreferencesRequest
+
+// PostApiV3MeEmailChangeJSONRequestBody defines body for PostApiV3MeEmailChange for application/json ContentType.
+type PostApiV3MeEmailChangeJSONRequestBody = EmailChangeStartRequest
+
+// PostApiV3MeEmailChangeConfirmJSONRequestBody defines body for PostApiV3MeEmailChangeConfirm for application/json ContentType.
+type PostApiV3MeEmailChangeConfirmJSONRequestBody = EmailChangeConfirmRequest
 
 // PostApiV3MeExerciseDecksJSONRequestBody defines body for PostApiV3MeExerciseDecks for application/json ContentType.
 type PostApiV3MeExerciseDecksJSONRequestBody = CreateExerciseDeckRequest
@@ -16791,6 +17050,9 @@ type PatchInternalApiV3UsersUserIdClaimJSONRequestBody = ClaimGuestRequest
 
 // PutInternalApiV3UsersUserIdConversationsInterestsJSONRequestBody defines body for PutInternalApiV3UsersUserIdConversationsInterests for application/json ContentType.
 type PutInternalApiV3UsersUserIdConversationsInterestsJSONRequestBody = UpdateConversationInterestsRequest
+
+// PatchInternalApiV3UsersUserIdEmailJSONRequestBody defines body for PatchInternalApiV3UsersUserIdEmail for application/json ContentType.
+type PatchInternalApiV3UsersUserIdEmailJSONRequestBody = ChangeEmailRequest
 
 // PostInternalApiV3UsersUserIdFeaturesFeatureCheckAndIncrementJSONRequestBody defines body for PostInternalApiV3UsersUserIdFeaturesFeatureCheckAndIncrement for application/json ContentType.
 type PostInternalApiV3UsersUserIdFeaturesFeatureCheckAndIncrementJSONRequestBody = CheckAndIncrementFeatureRequest

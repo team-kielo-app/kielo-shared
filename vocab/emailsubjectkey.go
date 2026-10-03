@@ -36,6 +36,8 @@ const (
 	EmailSubjectKeyBillingIssue               EmailSubjectKey = "ui.email.subject.billing_issue"
 	EmailSubjectKeyAccountDeleted             EmailSubjectKey = "ui.email.subject.account_deleted"
 	EmailSubjectKeyAchievementFirstPayingUser EmailSubjectKey = "ui.email.subject.achievement_first_paying_user"
+	EmailSubjectKeyEmailChangeCode            EmailSubjectKey = "ui.email.subject.email_change_code"
+	EmailSubjectKeyEmailChanged               EmailSubjectKey = "ui.email.subject.email_changed"
 )
 
 // AllEmailSubjectKeys is the iteration set for the email subject key
@@ -51,6 +53,8 @@ var AllEmailSubjectKeys = []EmailSubjectKey{
 	EmailSubjectKeyBillingIssue,
 	EmailSubjectKeyAccountDeleted,
 	EmailSubjectKeyAchievementFirstPayingUser,
+	EmailSubjectKeyEmailChangeCode,
+	EmailSubjectKeyEmailChanged,
 }
 
 // IsKnownEmailSubjectKey returns true when the given wire string matches a
