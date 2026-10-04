@@ -715,6 +715,11 @@ class ChallengeTheme(BaseModel):
     theme_name_support: str | None = Field("", title="Theme Name Support")
 
 
+class ChangeEmailRequest(BaseModel):
+    current_email: str
+    new_email: str
+
+
 class CheckAndAwardRequest(BaseModel):
     achievement_code: str
     event_id: str | None = None
@@ -865,6 +870,63 @@ class CommsDLQAuditListResponse(BaseModel):
 class CommsDLQAuditResolveRequest(BaseModel):
     operator_notes: str | None = None
     resolved_by: str
+
+
+class CommsEmailCopyPart(BaseModel):
+    description: str
+    key: str
+    name: str
+    required_placeholders: list[str]
+
+
+class CommsEmailCopyPlaceholder(BaseModel):
+    description: str
+    name: str
+    sample: str
+
+
+class CommsEmailCopyVariant(BaseModel):
+    label: str
+    name: str
+
+
+class CommsEmailPreview(BaseModel):
+    fell_back_to_english: bool
+    html: str
+    language_code: str
+    served_language_code: str
+    subject: str
+    template_id: str
+    variant: str
+
+
+class CommsEmailTemplate(BaseModel):
+    description: str
+    id: str
+    label: str
+    parts: list[CommsEmailCopyPart]
+    placeholders: list[CommsEmailCopyPlaceholder]
+    sender_name: str
+    variants: list[CommsEmailCopyVariant]
+
+
+class CommsEmailTemplateList(BaseModel):
+    built_in_languages: list[str]
+    languages: list[str]
+    namespace: str
+    templates: list[CommsEmailTemplate]
+
+
+class CommsEmailTestSendRequest(BaseModel):
+    language_code: str
+    recipient: str | None = None
+    variant: str | None = None
+
+
+class CommsEmailTestSendResult(BaseModel):
+    delivered: bool
+    sent_to: str
+    subject: str
 
 
 class CommsNotificationJob(BaseModel):
@@ -2363,6 +2425,83 @@ class DynamicTranslationLocalization(BaseModel):
     translated_text: str
     translator_source: str | None = None
     updated_at: AwareDatetime
+
+
+class EmailChangeConfirmRequest(BaseModel):
+    code: str
+    current_code: str | None = None
+
+
+class EmailChangePending(BaseModel):
+    expires_at: str
+    needs_current_code: bool
+    new_email: str
+
+
+class EmailChangePendingAuthService(BaseModel):
+    expires_at: AwareDatetime
+    needs_current_code: bool
+    new_email: str
+
+
+class EmailChangeStartRequest(BaseModel):
+    new_email: str
+    password: str | None = None
+
+
+class EmailChangeStatus(BaseModel):
+    changeable_from: str | None = None
+    current_email: str
+    has_password: bool
+    pending: EmailChangePending | None = None
+
+
+class EmailChangeStatusAuthService(BaseModel):
+    changeable_from: AwareDatetime | None = None
+    current_email: str
+    has_password: bool
+    pending: EmailChangePendingAuthService | None = None
+
+
+class EmailCopyPartInfo(CommsEmailCopyPart):
+    pass
+
+
+class EmailCopyVarInfo(CommsEmailCopyPlaceholder):
+    pass
+
+
+class EmailCopyVariantInfo(CommsEmailCopyVariant):
+    pass
+
+
+class EmailPreviewResponse(CommsEmailPreview):
+    pass
+
+
+class EmailTemplateInfo(BaseModel):
+    description: str
+    id: str
+    label: str
+    parts: list[EmailCopyPartInfo]
+    placeholders: list[EmailCopyVarInfo]
+    sender_name: str
+    variants: list[EmailCopyVariantInfo]
+
+
+class EmailTemplateListResponse(BaseModel):
+    built_in_languages: list[str]
+    languages: list[str]
+    namespace: str
+    templates: list[EmailTemplateInfo]
+
+
+class EmailTestSendRequest(CommsEmailTestSendRequest):
+    pass
+
+
+class EmailTestSendResponse(CommsEmailTestSendResult):
+    pass
 
 
 class EndSessionResponse(AppFeedbackUpdateStatusRequest):
@@ -6433,6 +6572,18 @@ class SingletonCommsCommunicationLog(BaseModel):
     data: CommsCommunicationLog
 
 
+class SingletonCommsEmailPreview(BaseModel):
+    data: CommsEmailPreview
+
+
+class SingletonCommsEmailTemplateList(BaseModel):
+    data: CommsEmailTemplateList
+
+
+class SingletonCommsEmailTestSendResult(BaseModel):
+    data: CommsEmailTestSendResult
+
+
 class SingletonCommsNotificationJob(BaseModel):
     data: CommsNotificationJob
 
@@ -6595,6 +6746,34 @@ class SingletonDeleteUserFeatureLimitResponse(BaseModel):
 
 class SingletonDynamicTranslation(BaseModel):
     data: DynamicTranslation
+
+
+class SingletonEmailChangePending(BaseModel):
+    data: EmailChangePending
+
+
+class SingletonEmailChangePendingAuthService(BaseModel):
+    data: EmailChangePendingAuthService
+
+
+class SingletonEmailChangeStatus(BaseModel):
+    data: EmailChangeStatus
+
+
+class SingletonEmailChangeStatusAuthService(BaseModel):
+    data: EmailChangeStatusAuthService
+
+
+class SingletonEmailPreviewResponse(BaseModel):
+    data: EmailPreviewResponse
+
+
+class SingletonEmailTemplateListResponse(BaseModel):
+    data: EmailTemplateListResponse
+
+
+class SingletonEmailTestSendResponse(BaseModel):
+    data: EmailTestSendResponse
 
 
 class SingletonEndSessionResponse(BaseModel):
@@ -8399,6 +8578,7 @@ class WebIngestPlanItem(BaseModel):
     brand_id: UUID_aliased | None = None
     brand_name: str | None = None
     display_name: str
+    in_rotation: bool
     is_active: bool
     learning_language_code: str
     max_articles_per_run: int | None = None
@@ -8431,7 +8611,9 @@ class WebIngestTarget(BaseModel):
     created_by: UUID_aliased | None = None
     display_name: str
     hide_content_when_inactive: bool
+    in_rotation: bool
     is_active: bool
+    last_article_at: AwareDatetime | None = None
     learning_language_code: str
     max_articles_per_run: int | None = None
     notes: str | None = None
@@ -8446,6 +8628,7 @@ class WebIngestTargetRequest(BaseModel):
     brand_id: str | None = None
     display_name: str
     hide_content_when_inactive: bool | None = None
+    in_rotation: bool | None = None
     is_active: bool | None = None
     learning_language_code: str
     max_articles_per_run: int | None = None

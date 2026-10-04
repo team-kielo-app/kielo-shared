@@ -278,6 +278,19 @@ const (
 	// (HandlePasswordResetEvent at pubsub_handler.go:549).
 	EventUserPasswordResetRequested PublishEventType = "user.password.reset.requested.v1"
 
+	// EventUserEmailChangeRequested carries a six-digit code to an address
+	// a signed-in learner asked to move their account to (and, for an
+	// account without a password, to the address it has now). Producer:
+	// kielo-auth-service StartEmailChange. Consumer: kielo-communications-
+	// service HandleEmailChangeEvent.
+	EventUserEmailChangeRequested PublishEventType = "user.email.change.requested.v1"
+
+	// EventUserEmailChanged tells the address an account just left that it
+	// left, so a change the owner did not make is noticed. Producer:
+	// kielo-auth-service ConfirmEmailChange. Consumer: kielo-communications-
+	// service HandleEmailChangeEvent.
+	EventUserEmailChanged PublishEventType = "user.email.changed.v1"
+
 	// Sweep ZJ-A.1 (2026-06-03): EventUserAccountDeleted RETIRED.
 	// The vestigial dead-emit declared on Sweep ZI-B.1 has been
 	// retired end-to-end:
@@ -575,6 +588,8 @@ var AllPublishEventTypes = []PublishEventType{
 	EventUserNotificationCreated,
 	EventUserNotificationRetracted,
 	EventUserPasswordResetRequested,
+	EventUserEmailChangeRequested,
+	EventUserEmailChanged,
 	// EventUserAccountDeleted retired Sweep ZJ-A.1
 	EventUserRegistrationConfirmed,
 	EventContentArticleSubmitted,
