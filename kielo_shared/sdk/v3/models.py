@@ -685,6 +685,34 @@ class Captions(BaseModel):
     video_id: UUID_aliased
 
 
+class CardCheckoutPlan(BaseModel):
+    amount_micros: int
+    currency: str
+    length: str
+    package_id: str
+    price: str
+    trial: str | None = None
+
+
+class CardCheckoutPlans(BaseModel):
+    checked_at: str
+    error: str | None = None
+    ok: bool
+    plans: list[CardCheckoutPlan]
+    purchase_link: str
+    sandbox: bool
+    unreachable: bool | None = None
+
+
+class CardCheckoutStatus(BaseModel):
+    checkout_page_url: str
+    last_webhook_payment_at: AwareDatetime | None = None
+    oldest_stuck_at: AwareDatetime | None = None
+    plans_check: CardCheckoutPlans | None = None
+    stuck_after_minutes: int
+    stuck_reports: int
+
+
 class CategoryProgress(BaseModel):
     category: str
     time_spent_minutes: int
@@ -890,6 +918,13 @@ class CommsEmailCopyVariant(BaseModel):
     name: str
 
 
+class CommsEmailPartCoverage(BaseModel):
+    key: str
+    part: str
+    problem: str | None = None
+    source: str
+
+
 class CommsEmailPreview(BaseModel):
     fell_back_to_english: bool
     html: str
@@ -929,6 +964,84 @@ class CommsEmailTestSendResult(BaseModel):
     subject: str
 
 
+class CommsGlobalRule(BaseModel):
+    default: dict[str, Any]
+    effective: dict[str, Any]
+    has_override: bool
+    note: str | None = None
+    override: dict[str, Any]
+    updated_at: AwareDatetime | None = None
+    updated_by: str | None = None
+
+
+class CommsLaneRule(BaseModel):
+    default: dict[str, Any]
+    effective: dict[str, Any]
+    has_override: bool
+    intent: str
+    kind: str
+    lane_key: str
+    name: str
+    note: str | None = None
+    override: dict[str, Any]
+    updated_at: AwareDatetime | None = None
+    updated_by: str | None = None
+    urgency: str
+
+
+class CommsLaneRuleAuditEntry(BaseModel):
+    action: str
+    after: dict[str, Any]
+    before: dict[str, Any]
+    changed_at: AwareDatetime
+    changed_by: str | None = None
+    id: int
+    lane_key: str | None = None
+    note: str
+    scope: str
+
+
+class CommsLaneRuleChange(AppFeedbackUpdateStatusRequest):
+    pass
+
+
+class CommsLaneRuleField(BaseModel):
+    help: str
+    key: str
+    kind: str
+    label: str
+    max: int | None = None
+    min: int | None = None
+    unit: str | None = None
+
+
+class CommsLaneRuleResetRequest(BaseModel):
+    note: str
+
+
+class CommsLaneRuleUpdateRequest(BaseModel):
+    note: str
+    values: dict[str, Any]
+
+
+class CommsLaneRules(BaseModel):
+    cache_seconds: int
+    global_: CommsGlobalRule = Field(..., alias="global")
+    global_fields: list[CommsLaneRuleField]
+    lane_fields: list[CommsLaneRuleField]
+    lanes: list[CommsLaneRule]
+
+
+class CommsNotificationBackoffReset(BaseModel):
+    operator_id: str
+    reason: str
+    reset_at: AwareDatetime
+
+
+class CommsNotificationBackoffResetRequest(BaseModel):
+    reason: str
+
+
 class CommsNotificationJob(BaseModel):
     body: str
     created_by: str | None = None
@@ -945,6 +1058,55 @@ class CommsNotificationJob(BaseModel):
     target_type: str
     title: str
     total_count: int
+
+
+class CommsNotificationLaneBackoff(BaseModel):
+    counted_sends: int
+    held: bool
+    label: str
+    lane: str
+    last_push_at: AwareDatetime | None = None
+    next_probe_at: AwareDatetime | None = None
+    probe_due: bool
+    status: str
+    status_text: str
+    unopened_streak: int
+    window: int
+
+
+class CommsNotificationLaneRecurrence(BaseModel):
+    breaches: list[str]
+    budget_duplicate_pct: float | None = None
+    budget_week_recurrence_users: int | None = None
+    duplicate_pct: float
+    open_pct: float
+    over_budget: bool
+    run_at: AwareDatetime
+    sends: int
+    users: int
+    week_recurrence_users: int
+    window_days: int
+
+
+class CommsNotificationPreferenceToggle(BaseModel):
+    enabled: bool
+    explicit: bool
+    key: str
+    label: str
+
+
+class CommsNotificationPreferencesView(BaseModel):
+    categories: list[CommsNotificationPreferenceToggle]
+    inbox_enabled: bool
+    push_devices: int
+    push_enabled: bool
+
+
+class CommsNotificationReasonCount(BaseModel):
+    code: str
+    count: int
+    outcome: str
+    text: str
 
 
 class CommsNotificationRule(BaseModel):
@@ -988,9 +1150,94 @@ class CommsNotificationSegmentList(BaseModel):
     data: list[CommsNotificationSegment]
 
 
+class CommsNotificationTimelineEntry(BaseModel):
+    body: str
+    created_at: AwareDatetime
+    id: str
+    lane: str
+    lane_label: str
+    notification_type: str
+    opened: bool
+    opened_at: AwareDatetime | None = None
+    outcome: str
+    outcome_label: str
+    reason_code: str
+    reason_text: str
+    template_variant_id: str
+    title: str
+
+
 class CommsOffsetMeta(BaseModel):
     limit: int
     offset: int
+
+
+class CommsPushFilterPreviewRequest(BaseModel):
+    disable_term_id: int | None = None
+    field: str | None = None
+    language: str | None = None
+    pattern: str | None = None
+
+
+class CommsPushFilterTerm(BaseModel):
+    created_at: AwareDatetime
+    created_by: str
+    enabled: bool
+    field: str
+    id: int
+    kind: str
+    language: str
+    note: str
+    pattern: str
+    updated_at: AwareDatetime
+
+
+class CommsPushFilterTermList(BaseModel):
+    terms: list[CommsPushFilterTerm]
+
+
+class CommsPushFilterTermPatch(BaseModel):
+    enabled: bool | None = None
+    note: str | None = None
+
+
+class CommsPushFilterTermRequest(BaseModel):
+    field: str | None = None
+    language: str | None = None
+    note: str | None = None
+    override: bool | None = None
+    pattern: str
+
+
+class CommsPushHeadline(BaseModel):
+    content_id: str
+    content_type: str
+    language_code: str
+    published_at: AwareDatetime
+    reason: str | None = None
+    term: str | None = None
+    term_id: int | None = None
+    title: str
+
+
+class CommsPushNeverEntry(BaseModel):
+    content_id: str
+    content_type: str
+    created_at: AwareDatetime
+    created_by: str
+    language_code: str
+    reason: str
+    title: str
+
+
+class CommsPushNeverList(BaseModel):
+    entries: list[CommsPushNeverEntry]
+
+
+class CommsPushNeverRequest(BaseModel):
+    content_id: str
+    content_type: str
+    reason: str
 
 
 class CommsRecommendationCampaign(BaseModel):
@@ -2467,6 +2714,20 @@ class EmailCopyPartInfo(CommsEmailCopyPart):
     pass
 
 
+class EmailCopyValidateRequest(BaseModel):
+    key: str
+    language: str
+    text: str
+
+
+class EmailCopyValidateResponse(BaseModel):
+    key: str
+    known: bool
+    message: str | None = None
+    part: str | None = None
+    valid: bool
+
+
 class EmailCopyVarInfo(CommsEmailCopyPlaceholder):
     pass
 
@@ -3029,6 +3290,35 @@ class GetUploadURLRequest(BaseModel):
 
 class GetUploadURLResponse(GenerateUploadURLResponse):
     pass
+
+
+class GlobalOverride(BaseModel):
+    activity_window_days: int | None = None
+    cross_lane_probe_days: int | None = None
+    cross_lane_window: int | None = None
+    daily_cap: int | None = None
+    disengagement_probe_days: int | None = None
+    disengagement_window: int | None = None
+    open_grace_hours: int | None = None
+    proactive_daily_limit: int | None = None
+    proactive_weekly_limit: int | None = None
+    quiet_hours_end_local: int | None = None
+    quiet_hours_start_local: int | None = None
+
+
+class GlobalRuleUpdateRequest(BaseModel):
+    note: str
+    values: GlobalOverride
+
+
+class GlobalRuleView(BaseModel):
+    default: dict[str, Any]
+    effective: dict[str, Any]
+    has_override: bool
+    note: str | None = None
+    override: dict[str, Any]
+    updated_at: AwareDatetime | None = None
+    updated_by: UUID_aliased | None = None
 
 
 class GlossaryTerm(BaseModel):
@@ -3970,6 +4260,63 @@ class LLMUsageRow(BaseModel):
     usd: float
 
 
+class LaneOverride(BaseModel):
+    apply_frequency_cap: bool | None = None
+    apply_quiet_hours: bool | None = None
+    cross_lane_ceiling_exempt: bool | None = None
+    daily_exclusive_with: list[str] | None = None
+    max_per_day: int | None = None
+    personalize_send_time: bool | None = None
+    suppress_repeated_copy: bool | None = None
+    suppress_when_disengaged: bool | None = None
+    ttl_hours: int | None = None
+    unknown_timezone_inbox_only: bool | None = None
+
+
+class LaneRuleAuditEntry(BaseModel):
+    action: str
+    after: dict[str, Any]
+    before: dict[str, Any]
+    changed_at: AwareDatetime
+    changed_by: UUID_aliased | None = None
+    id: int
+    lane_key: str | None = None
+    note: str
+    scope: str
+
+
+class LaneRuleAuditResponse(BaseModel):
+    entries: list[LaneRuleAuditEntry]
+
+
+class LaneRuleChangeResponse(AppFeedbackUpdateStatusRequest):
+    pass
+
+
+class LaneRuleResetRequest(CommsLaneRuleResetRequest):
+    pass
+
+
+class LaneRuleUpdateRequest(BaseModel):
+    note: str
+    values: LaneOverride
+
+
+class LaneRuleView(BaseModel):
+    default: dict[str, Any]
+    effective: dict[str, Any]
+    has_override: bool
+    intent: str
+    kind: str
+    lane_key: str
+    name: str
+    note: str | None = None
+    override: dict[str, Any]
+    updated_at: AwareDatetime | None = None
+    updated_by: UUID_aliased | None = None
+    urgency: str
+
+
 class Language(BaseModel):
     code: str
     created_at: AwareDatetime
@@ -4833,6 +5180,14 @@ class SourceKind(StrEnum):
     conversation = "conversation"
 
 
+class NotificationBackoffReset(CommsNotificationBackoffReset):
+    pass
+
+
+class NotificationBackoffResetRequest(CommsNotificationBackoffResetRequest):
+    pass
+
+
 class NotificationDedupeClaimRequest(BaseModel):
     claim_id: UUID_aliased
     consumer: str
@@ -4880,6 +5235,25 @@ class NotificationJob(BaseModel):
     updated_at: AwareDatetime
 
 
+class NotificationLaneBackoff(CommsNotificationLaneBackoff):
+    pass
+
+
+class NotificationLaneRecurrence(CommsNotificationLaneRecurrence):
+    pass
+
+
+class NotificationPreferenceToggle(CommsNotificationPreferenceToggle):
+    pass
+
+
+class NotificationPreferencesView(BaseModel):
+    categories: list[NotificationPreferenceToggle]
+    inbox_enabled: bool
+    push_devices: int
+    push_enabled: bool
+
+
 class NotificationPushPreferences(BaseModel):
     achievements: bool
     conversation_notifications: bool
@@ -4890,6 +5264,10 @@ class NotificationPushPreferences(BaseModel):
     new_content: bool
     recommendations: bool
     system_updates: bool
+
+
+class NotificationReasonCount(CommsNotificationReasonCount):
+    pass
 
 
 class NotificationRule(BaseModel):
@@ -4918,6 +5296,10 @@ class NotificationSegment(CommsNotificationSegment):
 
 class NotificationSegmentList(BaseModel):
     data: list[NotificationSegment]
+
+
+class NotificationTimelineEntry(CommsNotificationTimelineEntry):
+    pass
 
 
 class NotifyUploadCompleteResponse(CancelSubscriptionResponse):
@@ -5037,6 +5419,10 @@ class ParagraphTranslationRequest(BaseModel):
 
 class ParagraphTranslationResponse(BaseModel):
     translations: list[ParagraphTranslationItem]
+
+
+class PartCoverage(CommsEmailPartCoverage):
+    pass
 
 
 class PaymentHistory(BaseModel):
@@ -5337,6 +5723,38 @@ class PurchaseHistoryUserService(BaseModel):
     purchase_date: AwareDatetime
     status: str
     transaction_id: str
+
+
+class PushFilterPreviewRequest(CommsPushFilterPreviewRequest):
+    pass
+
+
+class PushFilterTermPatch(CommsPushFilterTermPatch):
+    pass
+
+
+class PushFilterTermRequest(CommsPushFilterTermRequest):
+    pass
+
+
+class PushFilterTermResponse(CommsPushFilterTerm):
+    pass
+
+
+class PushHeadline(CommsPushHeadline):
+    pass
+
+
+class PushNeverEntry(CommsPushNeverEntry):
+    pass
+
+
+class PushNeverListResponse(BaseModel):
+    entries: list[PushNeverEntry]
+
+
+class PushNeverRequest(CommsPushNeverRequest):
+    pass
 
 
 class PushTokensResponse(BaseModel):
@@ -6556,6 +6974,10 @@ class SingletonCaptions(BaseModel):
     data: Captions
 
 
+class SingletonCardCheckoutStatus(BaseModel):
+    data: CardCheckoutStatus
+
+
 class SingletonCheckAndAwardResponse(BaseModel):
     data: CheckAndAwardResponse
 
@@ -6582,6 +7004,14 @@ class SingletonCommsEmailTemplateList(BaseModel):
 
 class SingletonCommsEmailTestSendResult(BaseModel):
     data: CommsEmailTestSendResult
+
+
+class SingletonCommsLaneRuleChange(BaseModel):
+    data: CommsLaneRuleChange
+
+
+class SingletonCommsLaneRules(BaseModel):
+    data: CommsLaneRules
 
 
 class SingletonCommsNotificationJob(BaseModel):
@@ -6994,6 +7424,14 @@ class SingletonKieloTVMindmap(BaseModel):
 
 class SingletonKieloTVToolboxJobState(BaseModel):
     data: KieloTVToolboxJobState
+
+
+class SingletonLaneRuleAuditResponse(BaseModel):
+    data: LaneRuleAuditResponse
+
+
+class SingletonLaneRuleChangeResponse(BaseModel):
+    data: LaneRuleChangeResponse
 
 
 class SingletonLanguage(BaseModel):
@@ -8074,6 +8512,10 @@ class TranslationStateResponse(AppFeedbackUpdateStatusRequest):
     pass
 
 
+class TunableField(CommsLaneRuleField):
+    pass
+
+
 class UnreadNotificationCountResponse(BaseModel):
     unread_count: int
 
@@ -9012,9 +9454,87 @@ class CommsCommunicationHistoryListResponse(BaseModel):
     meta: CommsOffsetMeta
 
 
+class CommsEmailLanguageCoverage(BaseModel):
+    language_code: str
+    parts: list[CommsEmailPartCoverage]
+    status: str
+
+
+class CommsEmailTemplateCoverage(BaseModel):
+    id: str
+    label: str
+    languages: list[CommsEmailLanguageCoverage]
+
+
+class CommsLaneRuleAudit(BaseModel):
+    entries: list[CommsLaneRuleAuditEntry]
+
+
+class CommsNotificationBackoffState(BaseModel):
+    cross_lane: CommsNotificationLaneBackoff
+    held_lanes: int
+    lanes: list[CommsNotificationLaneBackoff]
+    last_active_at: AwareDatetime | None = None
+    last_reset: CommsNotificationBackoffReset | None = None
+    preferences: CommsNotificationPreferencesView
+    proactive_held: bool
+    recently_active: bool
+    timezone_offset_minutes: int | None = None
+    user_id: str
+
+
 class CommsNotificationJobListResponse(BaseModel):
     data: list[CommsNotificationJob]
     meta: CommsOffsetMeta
+
+
+class CommsNotificationLanePeriod(BaseModel):
+    attempts: int
+    delivered: int
+    failed: int
+    inbox_only: int
+    learners: int
+    open_rate: float | None = None
+    opened: int
+    suppressed: int
+    suppressed_by_reason: list[CommsNotificationReasonCount]
+
+
+class CommsNotificationLaneStats(BaseModel):
+    label: str
+    lane: str
+    last_30_days: CommsNotificationLanePeriod
+    last_7_days: CommsNotificationLanePeriod
+    recurrence: CommsNotificationLaneRecurrence | None = None
+
+
+class CommsNotificationLaneStatsResponse(BaseModel):
+    generated_at: AwareDatetime
+    lanes: list[CommsNotificationLaneStats]
+
+
+class CommsNotificationTimeline(BaseModel):
+    entries: list[CommsNotificationTimelineEntry]
+    limit: int
+    timezone_offset_minutes: int | None = None
+    user_id: str
+
+
+class CommsPushFilterBlocked(BaseModel):
+    days: int
+    headlines: list[CommsPushHeadline]
+
+
+class CommsPushFilterPreview(BaseModel):
+    days: int
+    match_ratio: float
+    matches: int
+    too_broad: bool
+    total_pushable: int
+    would_block: list[CommsPushHeadline]
+    would_block_count: int
+    would_unblock: list[CommsPushHeadline]
+    would_unblock_count: int
 
 
 class CommsStatsChartResponse(BaseModel):
@@ -9700,6 +10220,20 @@ class LLMUsageListResponse(BaseModel):
     total: int
 
 
+class LaneRulesResponse(BaseModel):
+    cache_seconds: int
+    global_: GlobalRuleView = Field(..., alias="global")
+    global_fields: list[TunableField]
+    lane_fields: list[TunableField]
+    lanes: list[LaneRuleView]
+
+
+class LanguageCoverageCommunicationsService(BaseModel):
+    language_code: str
+    parts: list[PartCoverage]
+    status: str
+
+
 class LearnerAchievementSummary(BaseModel):
     earned: int
     points: int
@@ -9816,14 +10350,59 @@ class NextStepsResponseV3(BaseModel):
     source_kind: str
 
 
+class NotificationBackoffState(BaseModel):
+    cross_lane: NotificationLaneBackoff
+    held_lanes: int
+    lanes: list[NotificationLaneBackoff]
+    last_active_at: AwareDatetime | None = None
+    last_reset: NotificationBackoffReset | None = None
+    preferences: NotificationPreferencesView
+    proactive_held: bool
+    recently_active: bool
+    timezone_offset_minutes: int | None = None
+    user_id: str
+
+
 class NotificationJobListResponse(BaseModel):
     data: list[NotificationJob]
     meta: OffsetMeta
 
 
+class NotificationLanePeriod(BaseModel):
+    attempts: int
+    delivered: int
+    failed: int
+    inbox_only: int
+    learners: int
+    open_rate: float | None = None
+    opened: int
+    suppressed: int
+    suppressed_by_reason: list[NotificationReasonCount]
+
+
+class NotificationLaneStats(BaseModel):
+    label: str
+    lane: str
+    last_30_days: NotificationLanePeriod
+    last_7_days: NotificationLanePeriod
+    recurrence: NotificationLaneRecurrence | None = None
+
+
+class NotificationLaneStatsResponse(BaseModel):
+    generated_at: AwareDatetime
+    lanes: list[NotificationLaneStats]
+
+
 class NotificationPreferences(BaseModel):
     inbox: NotificationInboxPreferences
     push: NotificationPushPreferences
+
+
+class NotificationTimeline(BaseModel):
+    entries: list[NotificationTimelineEntry]
+    limit: int
+    timezone_offset_minutes: int | None = None
+    user_id: str
 
 
 class OmorfiAnalysisCandidate(BaseModel):
@@ -9912,6 +10491,27 @@ class PromoCampaignDetail(BaseModel):
     first_gift_ends_at: AwareDatetime | None = None
     on_plus_now: int
     paid_after_gift: int
+
+
+class PushFilterBlockedResponse(BaseModel):
+    days: int
+    headlines: list[PushHeadline]
+
+
+class PushFilterPreviewResult(BaseModel):
+    days: int
+    match_ratio: float
+    matches: int
+    too_broad: bool
+    total_pushable: int
+    would_block: list[PushHeadline]
+    would_block_count: int
+    would_unblock: list[PushHeadline]
+    would_unblock_count: int
+
+
+class PushFilterTermListResponse(BaseModel):
+    terms: list[PushFilterTermResponse]
 
 
 class RelatedVersionsResponse(BaseModel):
@@ -10124,6 +10724,22 @@ class SingletonCommsCampaignPreviewResult(BaseModel):
     data: CommsCampaignPreviewResult
 
 
+class SingletonCommsLaneRuleAudit(BaseModel):
+    data: CommsLaneRuleAudit
+
+
+class SingletonCommsNotificationBackoffState(BaseModel):
+    data: CommsNotificationBackoffState
+
+
+class SingletonCommsNotificationLaneStatsResponse(BaseModel):
+    data: CommsNotificationLaneStatsResponse
+
+
+class SingletonCommsNotificationTimeline(BaseModel):
+    data: CommsNotificationTimeline
+
+
 class SingletonConceptHubCore(BaseModel):
     data: ConceptHubCore
 
@@ -10214,6 +10830,10 @@ class SingletonKieloTVVideo(BaseModel):
 
 class SingletonKieloTVVideoList(BaseModel):
     data: list[KieloTVVideo]
+
+
+class SingletonLaneRulesResponse(BaseModel):
+    data: LaneRulesResponse
 
 
 class SingletonLearnerBilling(BaseModel):
@@ -10928,6 +11548,10 @@ class ChallengeSection(BaseModel):
     xp_multiplier: conint(ge=1, le=3) | None = Field(1, title="Xp Multiplier")
 
 
+class CommsEmailCoverage(BaseModel):
+    templates: list[CommsEmailTemplateCoverage]
+
+
 class ConceptHub(BaseModel):
     category: str | None = None
     cefr_level: str | None = None
@@ -11135,6 +11759,12 @@ class DictionaryLookupResponseContentService(BaseModel):
     word: str
 
 
+class EmailTemplateCoverage(BaseModel):
+    id: str
+    label: str
+    languages: list[LanguageCoverageCommunicationsService]
+
+
 class HubStatusResponse(BaseModel):
     concept_id: UUID_aliased = Field(..., title="Concept Id")
     enrichment_job_id: UUID_aliased | None = Field(None, title="Enrichment Job Id")
@@ -11263,6 +11893,10 @@ class SessionReconcileResponse(BaseModel):
 class SessionReconcileResponseV3(BaseModel):
     results: list[SessionReconcileItemResultV3]
     session: LearningSessionV3
+
+
+class SingletonCommsEmailCoverage(BaseModel):
+    data: CommsEmailCoverage
 
 
 class SingletonConceptHub(BaseModel):
@@ -11468,9 +12102,17 @@ class CursorPageArticleVersion(BaseModel):
     next_page_key: str | None = None
 
 
+class EmailCoverageResponse(BaseModel):
+    templates: list[EmailTemplateCoverage]
+
+
 class SingletonArticleVersion(BaseModel):
     data: ArticleVersion
 
 
 class SingletonArticleVersionContentService(BaseModel):
     data: ArticleVersionContentService
+
+
+class SingletonEmailCoverageResponse(BaseModel):
+    data: EmailCoverageResponse

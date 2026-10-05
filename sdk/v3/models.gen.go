@@ -1938,6 +1938,37 @@ type Captions struct {
 	VideoId              uuid.UUID   `json:"video_id"`
 }
 
+// CardCheckoutPlan defines model for CardCheckoutPlan.
+type CardCheckoutPlan struct {
+	AmountMicros int     `json:"amount_micros"`
+	Currency     string  `json:"currency"`
+	Length       string  `json:"length"`
+	PackageId    string  `json:"package_id"`
+	Price        string  `json:"price"`
+	Trial        *string `json:"trial,omitempty"`
+}
+
+// CardCheckoutPlans defines model for CardCheckoutPlans.
+type CardCheckoutPlans struct {
+	CheckedAt    string             `json:"checked_at"`
+	Error        *string            `json:"error,omitempty"`
+	Ok           bool               `json:"ok"`
+	Plans        []CardCheckoutPlan `json:"plans"`
+	PurchaseLink string             `json:"purchase_link"`
+	Sandbox      bool               `json:"sandbox"`
+	Unreachable  *bool              `json:"unreachable,omitempty"`
+}
+
+// CardCheckoutStatus defines model for CardCheckoutStatus.
+type CardCheckoutStatus struct {
+	CheckoutPageUrl      string             `json:"checkout_page_url"`
+	LastWebhookPaymentAt *time.Time         `json:"last_webhook_payment_at,omitempty"`
+	OldestStuckAt        *time.Time         `json:"oldest_stuck_at,omitempty"`
+	PlansCheck           *CardCheckoutPlans `json:"plans_check,omitempty"`
+	StuckAfterMinutes    int                `json:"stuck_after_minutes"`
+	StuckReports         int                `json:"stuck_reports"`
+}
+
 // CategoryProgress defines model for CategoryProgress.
 type CategoryProgress struct {
 	Category         string `json:"category"`
@@ -2248,6 +2279,26 @@ type CommsEmailCopyVariant struct {
 	Name  string `json:"name"`
 }
 
+// CommsEmailCoverage defines model for CommsEmailCoverage.
+type CommsEmailCoverage struct {
+	Templates []CommsEmailTemplateCoverage `json:"templates"`
+}
+
+// CommsEmailLanguageCoverage defines model for CommsEmailLanguageCoverage.
+type CommsEmailLanguageCoverage struct {
+	LanguageCode string                   `json:"language_code"`
+	Parts        []CommsEmailPartCoverage `json:"parts"`
+	Status       string                   `json:"status"`
+}
+
+// CommsEmailPartCoverage defines model for CommsEmailPartCoverage.
+type CommsEmailPartCoverage struct {
+	Key     string  `json:"key"`
+	Part    string  `json:"part"`
+	Problem *string `json:"problem,omitempty"`
+	Source  string  `json:"source"`
+}
+
 // CommsEmailPreview defines model for CommsEmailPreview.
 type CommsEmailPreview struct {
 	FellBackToEnglish  bool   `json:"fell_back_to_english"`
@@ -2270,6 +2321,13 @@ type CommsEmailTemplate struct {
 	Variants     []CommsEmailCopyVariant     `json:"variants"`
 }
 
+// CommsEmailTemplateCoverage defines model for CommsEmailTemplateCoverage.
+type CommsEmailTemplateCoverage struct {
+	Id        string                       `json:"id"`
+	Label     string                       `json:"label"`
+	Languages []CommsEmailLanguageCoverage `json:"languages"`
+}
+
 // CommsEmailTemplateList defines model for CommsEmailTemplateList.
 type CommsEmailTemplateList struct {
 	BuiltInLanguages []string             `json:"built_in_languages"`
@@ -2290,6 +2348,113 @@ type CommsEmailTestSendResult struct {
 	Delivered bool   `json:"delivered"`
 	SentTo    string `json:"sent_to"`
 	Subject   string `json:"subject"`
+}
+
+// CommsGlobalRule defines model for CommsGlobalRule.
+type CommsGlobalRule struct {
+	Default     map[string]interface{} `json:"default"`
+	Effective   map[string]interface{} `json:"effective"`
+	HasOverride bool                   `json:"has_override"`
+	Note        *string                `json:"note,omitempty"`
+	Override    map[string]interface{} `json:"override"`
+	UpdatedAt   *time.Time             `json:"updated_at,omitempty"`
+	UpdatedBy   *string                `json:"updated_by,omitempty"`
+}
+
+// CommsLaneRule defines model for CommsLaneRule.
+type CommsLaneRule struct {
+	Default     map[string]interface{} `json:"default"`
+	Effective   map[string]interface{} `json:"effective"`
+	HasOverride bool                   `json:"has_override"`
+	Intent      string                 `json:"intent"`
+	Kind        string                 `json:"kind"`
+	LaneKey     string                 `json:"lane_key"`
+	Name        string                 `json:"name"`
+	Note        *string                `json:"note,omitempty"`
+	Override    map[string]interface{} `json:"override"`
+	UpdatedAt   *time.Time             `json:"updated_at,omitempty"`
+	UpdatedBy   *string                `json:"updated_by,omitempty"`
+	Urgency     string                 `json:"urgency"`
+}
+
+// CommsLaneRuleAudit defines model for CommsLaneRuleAudit.
+type CommsLaneRuleAudit struct {
+	Entries []CommsLaneRuleAuditEntry `json:"entries"`
+}
+
+// CommsLaneRuleAuditEntry defines model for CommsLaneRuleAuditEntry.
+type CommsLaneRuleAuditEntry struct {
+	Action    string                 `json:"action"`
+	After     map[string]interface{} `json:"after"`
+	Before    map[string]interface{} `json:"before"`
+	ChangedAt time.Time              `json:"changed_at"`
+	ChangedBy *string                `json:"changed_by,omitempty"`
+	Id        int                    `json:"id"`
+	LaneKey   *string                `json:"lane_key,omitempty"`
+	Note      string                 `json:"note"`
+	Scope     string                 `json:"scope"`
+}
+
+// CommsLaneRuleChange defines model for CommsLaneRuleChange.
+type CommsLaneRuleChange struct {
+	Status string `json:"status"`
+}
+
+// CommsLaneRuleField defines model for CommsLaneRuleField.
+type CommsLaneRuleField struct {
+	Help  string  `json:"help"`
+	Key   string  `json:"key"`
+	Kind  string  `json:"kind"`
+	Label string  `json:"label"`
+	Max   *int    `json:"max,omitempty"`
+	Min   *int    `json:"min,omitempty"`
+	Unit  *string `json:"unit,omitempty"`
+}
+
+// CommsLaneRuleResetRequest defines model for CommsLaneRuleResetRequest.
+type CommsLaneRuleResetRequest struct {
+	Note string `json:"note"`
+}
+
+// CommsLaneRuleUpdateRequest defines model for CommsLaneRuleUpdateRequest.
+type CommsLaneRuleUpdateRequest struct {
+	Note   string                 `json:"note"`
+	Values map[string]interface{} `json:"values"`
+}
+
+// CommsLaneRules defines model for CommsLaneRules.
+type CommsLaneRules struct {
+	CacheSeconds int                  `json:"cache_seconds"`
+	Global       CommsGlobalRule      `json:"global"`
+	GlobalFields []CommsLaneRuleField `json:"global_fields"`
+	LaneFields   []CommsLaneRuleField `json:"lane_fields"`
+	Lanes        []CommsLaneRule      `json:"lanes"`
+}
+
+// CommsNotificationBackoffReset defines model for CommsNotificationBackoffReset.
+type CommsNotificationBackoffReset struct {
+	OperatorId string    `json:"operator_id"`
+	Reason     string    `json:"reason"`
+	ResetAt    time.Time `json:"reset_at"`
+}
+
+// CommsNotificationBackoffResetRequest defines model for CommsNotificationBackoffResetRequest.
+type CommsNotificationBackoffResetRequest struct {
+	Reason string `json:"reason"`
+}
+
+// CommsNotificationBackoffState defines model for CommsNotificationBackoffState.
+type CommsNotificationBackoffState struct {
+	CrossLane             CommsNotificationLaneBackoff     `json:"cross_lane"`
+	HeldLanes             int                              `json:"held_lanes"`
+	Lanes                 []CommsNotificationLaneBackoff   `json:"lanes"`
+	LastActiveAt          *time.Time                       `json:"last_active_at,omitempty"`
+	LastReset             *CommsNotificationBackoffReset   `json:"last_reset,omitempty"`
+	Preferences           CommsNotificationPreferencesView `json:"preferences"`
+	ProactiveHeld         bool                             `json:"proactive_held"`
+	RecentlyActive        bool                             `json:"recently_active"`
+	TimezoneOffsetMinutes *int                             `json:"timezone_offset_minutes,omitempty"`
+	UserId                string                           `json:"user_id"`
 }
 
 // CommsNotificationJob defines model for CommsNotificationJob.
@@ -2315,6 +2480,88 @@ type CommsNotificationJob struct {
 type CommsNotificationJobListResponse struct {
 	Data []CommsNotificationJob `json:"data"`
 	Meta CommsOffsetMeta        `json:"meta"`
+}
+
+// CommsNotificationLaneBackoff defines model for CommsNotificationLaneBackoff.
+type CommsNotificationLaneBackoff struct {
+	CountedSends   int        `json:"counted_sends"`
+	Held           bool       `json:"held"`
+	Label          string     `json:"label"`
+	Lane           string     `json:"lane"`
+	LastPushAt     *time.Time `json:"last_push_at,omitempty"`
+	NextProbeAt    *time.Time `json:"next_probe_at,omitempty"`
+	ProbeDue       bool       `json:"probe_due"`
+	Status         string     `json:"status"`
+	StatusText     string     `json:"status_text"`
+	UnopenedStreak int        `json:"unopened_streak"`
+	Window         int        `json:"window"`
+}
+
+// CommsNotificationLanePeriod defines model for CommsNotificationLanePeriod.
+type CommsNotificationLanePeriod struct {
+	Attempts           int                            `json:"attempts"`
+	Delivered          int                            `json:"delivered"`
+	Failed             int                            `json:"failed"`
+	InboxOnly          int                            `json:"inbox_only"`
+	Learners           int                            `json:"learners"`
+	OpenRate           *float32                       `json:"open_rate,omitempty"`
+	Opened             int                            `json:"opened"`
+	Suppressed         int                            `json:"suppressed"`
+	SuppressedByReason []CommsNotificationReasonCount `json:"suppressed_by_reason"`
+}
+
+// CommsNotificationLaneRecurrence defines model for CommsNotificationLaneRecurrence.
+type CommsNotificationLaneRecurrence struct {
+	Breaches                  []string  `json:"breaches"`
+	BudgetDuplicatePct        *float32  `json:"budget_duplicate_pct,omitempty"`
+	BudgetWeekRecurrenceUsers *int      `json:"budget_week_recurrence_users,omitempty"`
+	DuplicatePct              float32   `json:"duplicate_pct"`
+	OpenPct                   float32   `json:"open_pct"`
+	OverBudget                bool      `json:"over_budget"`
+	RunAt                     time.Time `json:"run_at"`
+	Sends                     int       `json:"sends"`
+	Users                     int       `json:"users"`
+	WeekRecurrenceUsers       int       `json:"week_recurrence_users"`
+	WindowDays                int       `json:"window_days"`
+}
+
+// CommsNotificationLaneStats defines model for CommsNotificationLaneStats.
+type CommsNotificationLaneStats struct {
+	Label      string                           `json:"label"`
+	Lane       string                           `json:"lane"`
+	Last30Days CommsNotificationLanePeriod      `json:"last_30_days"`
+	Last7Days  CommsNotificationLanePeriod      `json:"last_7_days"`
+	Recurrence *CommsNotificationLaneRecurrence `json:"recurrence,omitempty"`
+}
+
+// CommsNotificationLaneStatsResponse defines model for CommsNotificationLaneStatsResponse.
+type CommsNotificationLaneStatsResponse struct {
+	GeneratedAt time.Time                    `json:"generated_at"`
+	Lanes       []CommsNotificationLaneStats `json:"lanes"`
+}
+
+// CommsNotificationPreferenceToggle defines model for CommsNotificationPreferenceToggle.
+type CommsNotificationPreferenceToggle struct {
+	Enabled  bool   `json:"enabled"`
+	Explicit bool   `json:"explicit"`
+	Key      string `json:"key"`
+	Label    string `json:"label"`
+}
+
+// CommsNotificationPreferencesView defines model for CommsNotificationPreferencesView.
+type CommsNotificationPreferencesView struct {
+	Categories   []CommsNotificationPreferenceToggle `json:"categories"`
+	InboxEnabled bool                                `json:"inbox_enabled"`
+	PushDevices  int                                 `json:"push_devices"`
+	PushEnabled  bool                                `json:"push_enabled"`
+}
+
+// CommsNotificationReasonCount defines model for CommsNotificationReasonCount.
+type CommsNotificationReasonCount struct {
+	Code    string `json:"code"`
+	Count   int    `json:"count"`
+	Outcome string `json:"outcome"`
+	Text    string `json:"text"`
 }
 
 // CommsNotificationRule defines model for CommsNotificationRule.
@@ -2363,10 +2610,132 @@ type CommsNotificationSegmentList struct {
 	Data []CommsNotificationSegment `json:"data"`
 }
 
+// CommsNotificationTimeline defines model for CommsNotificationTimeline.
+type CommsNotificationTimeline struct {
+	Entries               []CommsNotificationTimelineEntry `json:"entries"`
+	Limit                 int                              `json:"limit"`
+	TimezoneOffsetMinutes *int                             `json:"timezone_offset_minutes,omitempty"`
+	UserId                string                           `json:"user_id"`
+}
+
+// CommsNotificationTimelineEntry defines model for CommsNotificationTimelineEntry.
+type CommsNotificationTimelineEntry struct {
+	Body              string     `json:"body"`
+	CreatedAt         time.Time  `json:"created_at"`
+	Id                string     `json:"id"`
+	Lane              string     `json:"lane"`
+	LaneLabel         string     `json:"lane_label"`
+	NotificationType  string     `json:"notification_type"`
+	Opened            bool       `json:"opened"`
+	OpenedAt          *time.Time `json:"opened_at,omitempty"`
+	Outcome           string     `json:"outcome"`
+	OutcomeLabel      string     `json:"outcome_label"`
+	ReasonCode        string     `json:"reason_code"`
+	ReasonText        string     `json:"reason_text"`
+	TemplateVariantId string     `json:"template_variant_id"`
+	Title             string     `json:"title"`
+}
+
 // CommsOffsetMeta defines model for CommsOffsetMeta.
 type CommsOffsetMeta struct {
 	Limit  int `json:"limit"`
 	Offset int `json:"offset"`
+}
+
+// CommsPushFilterBlocked defines model for CommsPushFilterBlocked.
+type CommsPushFilterBlocked struct {
+	Days      int                 `json:"days"`
+	Headlines []CommsPushHeadline `json:"headlines"`
+}
+
+// CommsPushFilterPreview defines model for CommsPushFilterPreview.
+type CommsPushFilterPreview struct {
+	Days              int                 `json:"days"`
+	MatchRatio        float32             `json:"match_ratio"`
+	Matches           int                 `json:"matches"`
+	TooBroad          bool                `json:"too_broad"`
+	TotalPushable     int                 `json:"total_pushable"`
+	WouldBlock        []CommsPushHeadline `json:"would_block"`
+	WouldBlockCount   int                 `json:"would_block_count"`
+	WouldUnblock      []CommsPushHeadline `json:"would_unblock"`
+	WouldUnblockCount int                 `json:"would_unblock_count"`
+}
+
+// CommsPushFilterPreviewRequest defines model for CommsPushFilterPreviewRequest.
+type CommsPushFilterPreviewRequest struct {
+	DisableTermId *int    `json:"disable_term_id,omitempty"`
+	Field         *string `json:"field,omitempty"`
+	Language      *string `json:"language,omitempty"`
+	Pattern       *string `json:"pattern,omitempty"`
+}
+
+// CommsPushFilterTerm defines model for CommsPushFilterTerm.
+type CommsPushFilterTerm struct {
+	CreatedAt time.Time `json:"created_at"`
+	CreatedBy string    `json:"created_by"`
+	Enabled   bool      `json:"enabled"`
+	Field     string    `json:"field"`
+	Id        int       `json:"id"`
+	Kind      string    `json:"kind"`
+	Language  string    `json:"language"`
+	Note      string    `json:"note"`
+	Pattern   string    `json:"pattern"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// CommsPushFilterTermList defines model for CommsPushFilterTermList.
+type CommsPushFilterTermList struct {
+	Terms []CommsPushFilterTerm `json:"terms"`
+}
+
+// CommsPushFilterTermPatch defines model for CommsPushFilterTermPatch.
+type CommsPushFilterTermPatch struct {
+	Enabled *bool   `json:"enabled,omitempty"`
+	Note    *string `json:"note,omitempty"`
+}
+
+// CommsPushFilterTermRequest defines model for CommsPushFilterTermRequest.
+type CommsPushFilterTermRequest struct {
+	Field    *string `json:"field,omitempty"`
+	Language *string `json:"language,omitempty"`
+	Note     *string `json:"note,omitempty"`
+	Override *bool   `json:"override,omitempty"`
+	Pattern  string  `json:"pattern"`
+}
+
+// CommsPushHeadline defines model for CommsPushHeadline.
+type CommsPushHeadline struct {
+	ContentId    string    `json:"content_id"`
+	ContentType  string    `json:"content_type"`
+	LanguageCode string    `json:"language_code"`
+	PublishedAt  time.Time `json:"published_at"`
+	Reason       *string   `json:"reason,omitempty"`
+	Term         *string   `json:"term,omitempty"`
+	TermId       *int      `json:"term_id,omitempty"`
+	Title        string    `json:"title"`
+}
+
+// CommsPushNeverEntry defines model for CommsPushNeverEntry.
+type CommsPushNeverEntry struct {
+	ContentId    string    `json:"content_id"`
+	ContentType  string    `json:"content_type"`
+	CreatedAt    time.Time `json:"created_at"`
+	CreatedBy    string    `json:"created_by"`
+	LanguageCode string    `json:"language_code"`
+	Reason       string    `json:"reason"`
+	Title        string    `json:"title"`
+}
+
+// CommsPushNeverList defines model for CommsPushNeverList.
+type CommsPushNeverList struct {
+	Entries []CommsPushNeverEntry `json:"entries"`
+}
+
+// CommsPushNeverRequest defines model for CommsPushNeverRequest.
+type CommsPushNeverRequest struct {
+	ContentId   string `json:"content_id"`
+	ContentType string `json:"content_type"`
+	Reason      string `json:"reason"`
 }
 
 // CommsRecommendationCampaign defines model for CommsRecommendationCampaign.
@@ -4658,6 +5027,22 @@ type EmailCopyPartInfo struct {
 	RequiredPlaceholders []string `json:"required_placeholders"`
 }
 
+// EmailCopyValidateRequest defines model for EmailCopyValidateRequest.
+type EmailCopyValidateRequest struct {
+	Key      string `json:"key"`
+	Language string `json:"language"`
+	Text     string `json:"text"`
+}
+
+// EmailCopyValidateResponse defines model for EmailCopyValidateResponse.
+type EmailCopyValidateResponse struct {
+	Key     string  `json:"key"`
+	Known   bool    `json:"known"`
+	Message *string `json:"message,omitempty"`
+	Part    *string `json:"part,omitempty"`
+	Valid   bool    `json:"valid"`
+}
+
 // EmailCopyVarInfo defines model for EmailCopyVarInfo.
 type EmailCopyVarInfo struct {
 	Description string `json:"description"`
@@ -4671,6 +5056,11 @@ type EmailCopyVariantInfo struct {
 	Name  string `json:"name"`
 }
 
+// EmailCoverageResponse defines model for EmailCoverageResponse.
+type EmailCoverageResponse struct {
+	Templates []EmailTemplateCoverage `json:"templates"`
+}
+
 // EmailPreviewResponse defines model for EmailPreviewResponse.
 type EmailPreviewResponse struct {
 	FellBackToEnglish  bool   `json:"fell_back_to_english"`
@@ -4680,6 +5070,13 @@ type EmailPreviewResponse struct {
 	Subject            string `json:"subject"`
 	TemplateId         string `json:"template_id"`
 	Variant            string `json:"variant"`
+}
+
+// EmailTemplateCoverage defines model for EmailTemplateCoverage.
+type EmailTemplateCoverage struct {
+	Id        string                                  `json:"id"`
+	Label     string                                  `json:"label"`
+	Languages []LanguageCoverageCommunicationsService `json:"languages"`
 }
 
 // EmailTemplateInfo defines model for EmailTemplateInfo.
@@ -5417,6 +5814,38 @@ type GetUploadURLRequest struct {
 type GetUploadURLResponse struct {
 	MediaId   string `json:"media_id"`
 	UploadUrl string `json:"upload_url"`
+}
+
+// GlobalOverride defines model for GlobalOverride.
+type GlobalOverride struct {
+	ActivityWindowDays     *int `json:"activity_window_days,omitempty"`
+	CrossLaneProbeDays     *int `json:"cross_lane_probe_days,omitempty"`
+	CrossLaneWindow        *int `json:"cross_lane_window,omitempty"`
+	DailyCap               *int `json:"daily_cap,omitempty"`
+	DisengagementProbeDays *int `json:"disengagement_probe_days,omitempty"`
+	DisengagementWindow    *int `json:"disengagement_window,omitempty"`
+	OpenGraceHours         *int `json:"open_grace_hours,omitempty"`
+	ProactiveDailyLimit    *int `json:"proactive_daily_limit,omitempty"`
+	ProactiveWeeklyLimit   *int `json:"proactive_weekly_limit,omitempty"`
+	QuietHoursEndLocal     *int `json:"quiet_hours_end_local,omitempty"`
+	QuietHoursStartLocal   *int `json:"quiet_hours_start_local,omitempty"`
+}
+
+// GlobalRuleUpdateRequest defines model for GlobalRuleUpdateRequest.
+type GlobalRuleUpdateRequest struct {
+	Note   string         `json:"note"`
+	Values GlobalOverride `json:"values"`
+}
+
+// GlobalRuleView defines model for GlobalRuleView.
+type GlobalRuleView struct {
+	Default     map[string]interface{} `json:"default"`
+	Effective   map[string]interface{} `json:"effective"`
+	HasOverride bool                   `json:"has_override"`
+	Note        *string                `json:"note,omitempty"`
+	Override    map[string]interface{} `json:"override"`
+	UpdatedAt   *time.Time             `json:"updated_at,omitempty"`
+	UpdatedBy   *uuid.UUID             `json:"updated_by,omitempty"`
 }
 
 // GlossaryListResponse defines model for GlossaryListResponse.
@@ -6670,6 +7099,79 @@ type LLMUsageRow struct {
 	Usd            float32   `json:"usd"`
 }
 
+// LaneOverride defines model for LaneOverride.
+type LaneOverride struct {
+	ApplyFrequencyCap        *bool     `json:"apply_frequency_cap,omitempty"`
+	ApplyQuietHours          *bool     `json:"apply_quiet_hours,omitempty"`
+	CrossLaneCeilingExempt   *bool     `json:"cross_lane_ceiling_exempt,omitempty"`
+	DailyExclusiveWith       *[]string `json:"daily_exclusive_with,omitempty"`
+	MaxPerDay                *int      `json:"max_per_day,omitempty"`
+	PersonalizeSendTime      *bool     `json:"personalize_send_time,omitempty"`
+	SuppressRepeatedCopy     *bool     `json:"suppress_repeated_copy,omitempty"`
+	SuppressWhenDisengaged   *bool     `json:"suppress_when_disengaged,omitempty"`
+	TtlHours                 *int      `json:"ttl_hours,omitempty"`
+	UnknownTimezoneInboxOnly *bool     `json:"unknown_timezone_inbox_only,omitempty"`
+}
+
+// LaneRuleAuditEntry defines model for LaneRuleAuditEntry.
+type LaneRuleAuditEntry struct {
+	Action    string                 `json:"action"`
+	After     map[string]interface{} `json:"after"`
+	Before    map[string]interface{} `json:"before"`
+	ChangedAt time.Time              `json:"changed_at"`
+	ChangedBy *uuid.UUID             `json:"changed_by,omitempty"`
+	Id        int                    `json:"id"`
+	LaneKey   *string                `json:"lane_key,omitempty"`
+	Note      string                 `json:"note"`
+	Scope     string                 `json:"scope"`
+}
+
+// LaneRuleAuditResponse defines model for LaneRuleAuditResponse.
+type LaneRuleAuditResponse struct {
+	Entries []LaneRuleAuditEntry `json:"entries"`
+}
+
+// LaneRuleChangeResponse defines model for LaneRuleChangeResponse.
+type LaneRuleChangeResponse struct {
+	Status string `json:"status"`
+}
+
+// LaneRuleResetRequest defines model for LaneRuleResetRequest.
+type LaneRuleResetRequest struct {
+	Note string `json:"note"`
+}
+
+// LaneRuleUpdateRequest defines model for LaneRuleUpdateRequest.
+type LaneRuleUpdateRequest struct {
+	Note   string       `json:"note"`
+	Values LaneOverride `json:"values"`
+}
+
+// LaneRuleView defines model for LaneRuleView.
+type LaneRuleView struct {
+	Default     map[string]interface{} `json:"default"`
+	Effective   map[string]interface{} `json:"effective"`
+	HasOverride bool                   `json:"has_override"`
+	Intent      string                 `json:"intent"`
+	Kind        string                 `json:"kind"`
+	LaneKey     string                 `json:"lane_key"`
+	Name        string                 `json:"name"`
+	Note        *string                `json:"note,omitempty"`
+	Override    map[string]interface{} `json:"override"`
+	UpdatedAt   *time.Time             `json:"updated_at,omitempty"`
+	UpdatedBy   *uuid.UUID             `json:"updated_by,omitempty"`
+	Urgency     string                 `json:"urgency"`
+}
+
+// LaneRulesResponse defines model for LaneRulesResponse.
+type LaneRulesResponse struct {
+	CacheSeconds int            `json:"cache_seconds"`
+	Global       GlobalRuleView `json:"global"`
+	GlobalFields []TunableField `json:"global_fields"`
+	LaneFields   []TunableField `json:"lane_fields"`
+	Lanes        []LaneRuleView `json:"lanes"`
+}
+
 // Language defines model for Language.
 type Language struct {
 	Code       string    `json:"code"`
@@ -6693,6 +7195,13 @@ type LanguageCoverage struct {
 	LanguageName    string  `json:"language_name"`
 	TotalKeys       int     `json:"total_keys"`
 	TranslatedKeys  int     `json:"translated_keys"`
+}
+
+// LanguageCoverageCommunicationsService defines model for LanguageCoverageCommunicationsService.
+type LanguageCoverageCommunicationsService struct {
+	LanguageCode string         `json:"language_code"`
+	Parts        []PartCoverage `json:"parts"`
+	Status       string         `json:"status"`
 }
 
 // LanguageCreateRequest defines model for LanguageCreateRequest.
@@ -7785,6 +8294,32 @@ type NextStepsResponseV3 struct {
 	SourceKind string                     `json:"source_kind"`
 }
 
+// NotificationBackoffReset defines model for NotificationBackoffReset.
+type NotificationBackoffReset struct {
+	OperatorId string    `json:"operator_id"`
+	Reason     string    `json:"reason"`
+	ResetAt    time.Time `json:"reset_at"`
+}
+
+// NotificationBackoffResetRequest defines model for NotificationBackoffResetRequest.
+type NotificationBackoffResetRequest struct {
+	Reason string `json:"reason"`
+}
+
+// NotificationBackoffState defines model for NotificationBackoffState.
+type NotificationBackoffState struct {
+	CrossLane             NotificationLaneBackoff     `json:"cross_lane"`
+	HeldLanes             int                         `json:"held_lanes"`
+	Lanes                 []NotificationLaneBackoff   `json:"lanes"`
+	LastActiveAt          *time.Time                  `json:"last_active_at,omitempty"`
+	LastReset             *NotificationBackoffReset   `json:"last_reset,omitempty"`
+	Preferences           NotificationPreferencesView `json:"preferences"`
+	ProactiveHeld         bool                        `json:"proactive_held"`
+	RecentlyActive        bool                        `json:"recently_active"`
+	TimezoneOffsetMinutes *int                        `json:"timezone_offset_minutes,omitempty"`
+	UserId                string                      `json:"user_id"`
+}
+
 // NotificationDedupeClaimRequest defines model for NotificationDedupeClaimRequest.
 type NotificationDedupeClaimRequest struct {
 	ClaimId  uuid.UUID `json:"claim_id"`
@@ -7844,10 +8379,84 @@ type NotificationJobListResponse struct {
 	Meta OffsetMeta        `json:"meta"`
 }
 
+// NotificationLaneBackoff defines model for NotificationLaneBackoff.
+type NotificationLaneBackoff struct {
+	CountedSends   int        `json:"counted_sends"`
+	Held           bool       `json:"held"`
+	Label          string     `json:"label"`
+	Lane           string     `json:"lane"`
+	LastPushAt     *time.Time `json:"last_push_at,omitempty"`
+	NextProbeAt    *time.Time `json:"next_probe_at,omitempty"`
+	ProbeDue       bool       `json:"probe_due"`
+	Status         string     `json:"status"`
+	StatusText     string     `json:"status_text"`
+	UnopenedStreak int        `json:"unopened_streak"`
+	Window         int        `json:"window"`
+}
+
+// NotificationLanePeriod defines model for NotificationLanePeriod.
+type NotificationLanePeriod struct {
+	Attempts           int                       `json:"attempts"`
+	Delivered          int                       `json:"delivered"`
+	Failed             int                       `json:"failed"`
+	InboxOnly          int                       `json:"inbox_only"`
+	Learners           int                       `json:"learners"`
+	OpenRate           *float32                  `json:"open_rate,omitempty"`
+	Opened             int                       `json:"opened"`
+	Suppressed         int                       `json:"suppressed"`
+	SuppressedByReason []NotificationReasonCount `json:"suppressed_by_reason"`
+}
+
+// NotificationLaneRecurrence defines model for NotificationLaneRecurrence.
+type NotificationLaneRecurrence struct {
+	Breaches                  []string  `json:"breaches"`
+	BudgetDuplicatePct        *float32  `json:"budget_duplicate_pct,omitempty"`
+	BudgetWeekRecurrenceUsers *int      `json:"budget_week_recurrence_users,omitempty"`
+	DuplicatePct              float32   `json:"duplicate_pct"`
+	OpenPct                   float32   `json:"open_pct"`
+	OverBudget                bool      `json:"over_budget"`
+	RunAt                     time.Time `json:"run_at"`
+	Sends                     int       `json:"sends"`
+	Users                     int       `json:"users"`
+	WeekRecurrenceUsers       int       `json:"week_recurrence_users"`
+	WindowDays                int       `json:"window_days"`
+}
+
+// NotificationLaneStats defines model for NotificationLaneStats.
+type NotificationLaneStats struct {
+	Label      string                      `json:"label"`
+	Lane       string                      `json:"lane"`
+	Last30Days NotificationLanePeriod      `json:"last_30_days"`
+	Last7Days  NotificationLanePeriod      `json:"last_7_days"`
+	Recurrence *NotificationLaneRecurrence `json:"recurrence,omitempty"`
+}
+
+// NotificationLaneStatsResponse defines model for NotificationLaneStatsResponse.
+type NotificationLaneStatsResponse struct {
+	GeneratedAt time.Time               `json:"generated_at"`
+	Lanes       []NotificationLaneStats `json:"lanes"`
+}
+
+// NotificationPreferenceToggle defines model for NotificationPreferenceToggle.
+type NotificationPreferenceToggle struct {
+	Enabled  bool   `json:"enabled"`
+	Explicit bool   `json:"explicit"`
+	Key      string `json:"key"`
+	Label    string `json:"label"`
+}
+
 // NotificationPreferences defines model for NotificationPreferences.
 type NotificationPreferences struct {
 	Inbox NotificationInboxPreferences `json:"inbox"`
 	Push  NotificationPushPreferences  `json:"push"`
+}
+
+// NotificationPreferencesView defines model for NotificationPreferencesView.
+type NotificationPreferencesView struct {
+	Categories   []NotificationPreferenceToggle `json:"categories"`
+	InboxEnabled bool                           `json:"inbox_enabled"`
+	PushDevices  int                            `json:"push_devices"`
+	PushEnabled  bool                           `json:"push_enabled"`
 }
 
 // NotificationPushPreferences defines model for NotificationPushPreferences.
@@ -7861,6 +8470,14 @@ type NotificationPushPreferences struct {
 	NewContent                bool `json:"new_content"`
 	Recommendations           bool `json:"recommendations"`
 	SystemUpdates             bool `json:"system_updates"`
+}
+
+// NotificationReasonCount defines model for NotificationReasonCount.
+type NotificationReasonCount struct {
+	Code    string `json:"code"`
+	Count   int    `json:"count"`
+	Outcome string `json:"outcome"`
+	Text    string `json:"text"`
 }
 
 // NotificationRule defines model for NotificationRule.
@@ -7895,6 +8512,32 @@ type NotificationSegment struct {
 // NotificationSegmentList defines model for NotificationSegmentList.
 type NotificationSegmentList struct {
 	Data []NotificationSegment `json:"data"`
+}
+
+// NotificationTimeline defines model for NotificationTimeline.
+type NotificationTimeline struct {
+	Entries               []NotificationTimelineEntry `json:"entries"`
+	Limit                 int                         `json:"limit"`
+	TimezoneOffsetMinutes *int                        `json:"timezone_offset_minutes,omitempty"`
+	UserId                string                      `json:"user_id"`
+}
+
+// NotificationTimelineEntry defines model for NotificationTimelineEntry.
+type NotificationTimelineEntry struct {
+	Body              string     `json:"body"`
+	CreatedAt         time.Time  `json:"created_at"`
+	Id                string     `json:"id"`
+	Lane              string     `json:"lane"`
+	LaneLabel         string     `json:"lane_label"`
+	NotificationType  string     `json:"notification_type"`
+	Opened            bool       `json:"opened"`
+	OpenedAt          *time.Time `json:"opened_at,omitempty"`
+	Outcome           string     `json:"outcome"`
+	OutcomeLabel      string     `json:"outcome_label"`
+	ReasonCode        string     `json:"reason_code"`
+	ReasonText        string     `json:"reason_text"`
+	TemplateVariantId string     `json:"template_variant_id"`
+	Title             string     `json:"title"`
 }
 
 // NotifyUploadCompleteResponse defines model for NotifyUploadCompleteResponse.
@@ -8101,6 +8744,14 @@ type ParagraphTranslationRequest struct {
 // ParagraphTranslationResponse defines model for ParagraphTranslationResponse.
 type ParagraphTranslationResponse struct {
 	Translations []ParagraphTranslationItem `json:"translations"`
+}
+
+// PartCoverage defines model for PartCoverage.
+type PartCoverage struct {
+	Key     string  `json:"key"`
+	Part    string  `json:"part"`
+	Problem *string `json:"problem,omitempty"`
+	Source  string  `json:"source"`
 }
 
 // PaymentHistory defines model for PaymentHistory.
@@ -8464,6 +9115,102 @@ type PurchaseHistoryUserService struct {
 	PurchaseDate  time.Time `json:"purchase_date"`
 	Status        string    `json:"status"`
 	TransactionId string    `json:"transaction_id"`
+}
+
+// PushFilterBlockedResponse defines model for PushFilterBlockedResponse.
+type PushFilterBlockedResponse struct {
+	Days      int            `json:"days"`
+	Headlines []PushHeadline `json:"headlines"`
+}
+
+// PushFilterPreviewRequest defines model for PushFilterPreviewRequest.
+type PushFilterPreviewRequest struct {
+	DisableTermId *int    `json:"disable_term_id,omitempty"`
+	Field         *string `json:"field,omitempty"`
+	Language      *string `json:"language,omitempty"`
+	Pattern       *string `json:"pattern,omitempty"`
+}
+
+// PushFilterPreviewResult defines model for PushFilterPreviewResult.
+type PushFilterPreviewResult struct {
+	Days              int            `json:"days"`
+	MatchRatio        float32        `json:"match_ratio"`
+	Matches           int            `json:"matches"`
+	TooBroad          bool           `json:"too_broad"`
+	TotalPushable     int            `json:"total_pushable"`
+	WouldBlock        []PushHeadline `json:"would_block"`
+	WouldBlockCount   int            `json:"would_block_count"`
+	WouldUnblock      []PushHeadline `json:"would_unblock"`
+	WouldUnblockCount int            `json:"would_unblock_count"`
+}
+
+// PushFilterTermListResponse defines model for PushFilterTermListResponse.
+type PushFilterTermListResponse struct {
+	Terms []PushFilterTermResponse `json:"terms"`
+}
+
+// PushFilterTermPatch defines model for PushFilterTermPatch.
+type PushFilterTermPatch struct {
+	Enabled *bool   `json:"enabled,omitempty"`
+	Note    *string `json:"note,omitempty"`
+}
+
+// PushFilterTermRequest defines model for PushFilterTermRequest.
+type PushFilterTermRequest struct {
+	Field    *string `json:"field,omitempty"`
+	Language *string `json:"language,omitempty"`
+	Note     *string `json:"note,omitempty"`
+	Override *bool   `json:"override,omitempty"`
+	Pattern  string  `json:"pattern"`
+}
+
+// PushFilterTermResponse defines model for PushFilterTermResponse.
+type PushFilterTermResponse struct {
+	CreatedAt time.Time `json:"created_at"`
+	CreatedBy string    `json:"created_by"`
+	Enabled   bool      `json:"enabled"`
+	Field     string    `json:"field"`
+	Id        int       `json:"id"`
+	Kind      string    `json:"kind"`
+	Language  string    `json:"language"`
+	Note      string    `json:"note"`
+	Pattern   string    `json:"pattern"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// PushHeadline defines model for PushHeadline.
+type PushHeadline struct {
+	ContentId    string    `json:"content_id"`
+	ContentType  string    `json:"content_type"`
+	LanguageCode string    `json:"language_code"`
+	PublishedAt  time.Time `json:"published_at"`
+	Reason       *string   `json:"reason,omitempty"`
+	Term         *string   `json:"term,omitempty"`
+	TermId       *int      `json:"term_id,omitempty"`
+	Title        string    `json:"title"`
+}
+
+// PushNeverEntry defines model for PushNeverEntry.
+type PushNeverEntry struct {
+	ContentId    string    `json:"content_id"`
+	ContentType  string    `json:"content_type"`
+	CreatedAt    time.Time `json:"created_at"`
+	CreatedBy    string    `json:"created_by"`
+	LanguageCode string    `json:"language_code"`
+	Reason       string    `json:"reason"`
+	Title        string    `json:"title"`
+}
+
+// PushNeverListResponse defines model for PushNeverListResponse.
+type PushNeverListResponse struct {
+	Entries []PushNeverEntry `json:"entries"`
+}
+
+// PushNeverRequest defines model for PushNeverRequest.
+type PushNeverRequest struct {
+	ContentId   string `json:"content_id"`
+	ContentType string `json:"content_type"`
+	Reason      string `json:"reason"`
 }
 
 // PushTokensResponse defines model for PushTokensResponse.
@@ -10111,6 +10858,11 @@ type SingletonCaptions struct {
 	Data Captions `json:"data"`
 }
 
+// SingletonCardCheckoutStatus defines model for SingletonCardCheckoutStatus.
+type SingletonCardCheckoutStatus struct {
+	Data CardCheckoutStatus `json:"data"`
+}
+
 // SingletonCheckAndAwardResponse defines model for SingletonCheckAndAwardResponse.
 type SingletonCheckAndAwardResponse struct {
 	Data CheckAndAwardResponse `json:"data"`
@@ -10146,6 +10898,11 @@ type SingletonCommsCommunicationLog struct {
 	Data CommsCommunicationLog `json:"data"`
 }
 
+// SingletonCommsEmailCoverage defines model for SingletonCommsEmailCoverage.
+type SingletonCommsEmailCoverage struct {
+	Data CommsEmailCoverage `json:"data"`
+}
+
 // SingletonCommsEmailPreview defines model for SingletonCommsEmailPreview.
 type SingletonCommsEmailPreview struct {
 	Data CommsEmailPreview `json:"data"`
@@ -10161,14 +10918,44 @@ type SingletonCommsEmailTestSendResult struct {
 	Data CommsEmailTestSendResult `json:"data"`
 }
 
+// SingletonCommsLaneRuleAudit defines model for SingletonCommsLaneRuleAudit.
+type SingletonCommsLaneRuleAudit struct {
+	Data CommsLaneRuleAudit `json:"data"`
+}
+
+// SingletonCommsLaneRuleChange defines model for SingletonCommsLaneRuleChange.
+type SingletonCommsLaneRuleChange struct {
+	Data CommsLaneRuleChange `json:"data"`
+}
+
+// SingletonCommsLaneRules defines model for SingletonCommsLaneRules.
+type SingletonCommsLaneRules struct {
+	Data CommsLaneRules `json:"data"`
+}
+
+// SingletonCommsNotificationBackoffState defines model for SingletonCommsNotificationBackoffState.
+type SingletonCommsNotificationBackoffState struct {
+	Data CommsNotificationBackoffState `json:"data"`
+}
+
 // SingletonCommsNotificationJob defines model for SingletonCommsNotificationJob.
 type SingletonCommsNotificationJob struct {
 	Data CommsNotificationJob `json:"data"`
 }
 
+// SingletonCommsNotificationLaneStatsResponse defines model for SingletonCommsNotificationLaneStatsResponse.
+type SingletonCommsNotificationLaneStatsResponse struct {
+	Data CommsNotificationLaneStatsResponse `json:"data"`
+}
+
 // SingletonCommsNotificationRule defines model for SingletonCommsNotificationRule.
 type SingletonCommsNotificationRule struct {
 	Data CommsNotificationRule `json:"data"`
+}
+
+// SingletonCommsNotificationTimeline defines model for SingletonCommsNotificationTimeline.
+type SingletonCommsNotificationTimeline struct {
+	Data CommsNotificationTimeline `json:"data"`
 }
 
 // SingletonCommsRecommendationCampaign defines model for SingletonCommsRecommendationCampaign.
@@ -10489,6 +11276,11 @@ type SingletonEmailChangeStatus struct {
 // SingletonEmailChangeStatusAuthService defines model for SingletonEmailChangeStatusAuthService.
 type SingletonEmailChangeStatusAuthService struct {
 	Data EmailChangeStatusAuthService `json:"data"`
+}
+
+// SingletonEmailCoverageResponse defines model for SingletonEmailCoverageResponse.
+type SingletonEmailCoverageResponse struct {
+	Data EmailCoverageResponse `json:"data"`
 }
 
 // SingletonEmailPreviewResponse defines model for SingletonEmailPreviewResponse.
@@ -10844,6 +11636,21 @@ type SingletonKieloTVVideo struct {
 // SingletonKieloTVVideoList defines model for SingletonKieloTVVideoList.
 type SingletonKieloTVVideoList struct {
 	Data []KieloTVVideo `json:"data"`
+}
+
+// SingletonLaneRuleAuditResponse defines model for SingletonLaneRuleAuditResponse.
+type SingletonLaneRuleAuditResponse struct {
+	Data LaneRuleAuditResponse `json:"data"`
+}
+
+// SingletonLaneRuleChangeResponse defines model for SingletonLaneRuleChangeResponse.
+type SingletonLaneRuleChangeResponse struct {
+	Data LaneRuleChangeResponse `json:"data"`
+}
+
+// SingletonLaneRulesResponse defines model for SingletonLaneRulesResponse.
+type SingletonLaneRulesResponse struct {
+	Data LaneRulesResponse `json:"data"`
 }
 
 // SingletonLanguage defines model for SingletonLanguage.
@@ -12797,6 +13604,17 @@ type TranslationStateResponse struct {
 	Status string `json:"status"`
 }
 
+// TunableField defines model for TunableField.
+type TunableField struct {
+	Help  string  `json:"help"`
+	Key   string  `json:"key"`
+	Kind  string  `json:"kind"`
+	Label string  `json:"label"`
+	Max   *int    `json:"max,omitempty"`
+	Min   *int    `json:"min,omitempty"`
+	Unit  *string `json:"unit,omitempty"`
+}
+
 // UnreadNotificationCountResponse defines model for UnreadNotificationCountResponse.
 type UnreadNotificationCountResponse struct {
 	UnreadCount int `json:"unread_count"`
@@ -13968,6 +14786,24 @@ type GetApiV3CommunicationsJobsParams struct {
 	TargetType *string `form:"target_type,omitempty" json:"target_type,omitempty"`
 }
 
+// GetApiV3CommunicationsLaneRulesAuditParams defines parameters for GetApiV3CommunicationsLaneRulesAudit.
+type GetApiV3CommunicationsLaneRulesAuditParams struct {
+	// LaneKey Only changes to this lane
+	LaneKey *string `form:"lane_key,omitempty" json:"lane_key,omitempty"`
+
+	// Scope lane or global
+	Scope *string `form:"scope,omitempty" json:"scope,omitempty"`
+
+	// Limit 1-200, default 50
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// GetApiV3CommunicationsNotificationInsightsUsersUserIdTimelineParams defines parameters for GetApiV3CommunicationsNotificationInsightsUsersUserIdTimeline.
+type GetApiV3CommunicationsNotificationInsightsUsersUserIdTimelineParams struct {
+	// Limit Max attempts (default 50, max 100)
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
 // GetApiV3CommunicationsNotificationRulesParams defines parameters for GetApiV3CommunicationsNotificationRules.
 type GetApiV3CommunicationsNotificationRulesParams struct {
 	// EventType Filter by event type
@@ -13984,6 +14820,21 @@ type PostApiV3CommunicationsNotificationsParams struct {
 type PostApiV3CommunicationsNotificationsBroadcastParams struct {
 	// IdempotencyKey Stable semantic key reused when retrying the same operator action.
 	IdempotencyKey string `json:"Idempotency-Key"`
+}
+
+// GetApiV3CommunicationsPushFilterNeverPushParams defines parameters for GetApiV3CommunicationsPushFilterNeverPush.
+type GetApiV3CommunicationsPushFilterNeverPushParams struct {
+	// ContentType article, video or conversation
+	ContentType *string `form:"content_type,omitempty" json:"content_type,omitempty"`
+
+	// ContentId External id or content entry id
+	ContentId *string `form:"content_id,omitempty" json:"content_id,omitempty"`
+}
+
+// GetApiV3CommunicationsPushFilterRecentlyBlockedParams defines parameters for GetApiV3CommunicationsPushFilterRecentlyBlocked.
+type GetApiV3CommunicationsPushFilterRecentlyBlockedParams struct {
+	// Days Look-back window, 1 to 30 (default 7)
+	Days *int `form:"days,omitempty" json:"days,omitempty"`
 }
 
 // GetApiV3CommunicationsRecommendationCampaignsParams defines parameters for GetApiV3CommunicationsRecommendationCampaigns.
@@ -14739,6 +15590,18 @@ type GetApiV3KtvWorkflowsWorkflowIdSocialSheetConfigOptionsParams struct {
 	Spreadsheet string `form:"spreadsheet" json:"spreadsheet"`
 }
 
+// GetApiV3LaneRulesAuditParams defines parameters for GetApiV3LaneRulesAudit.
+type GetApiV3LaneRulesAuditParams struct {
+	// LaneKey Only changes to this lane
+	LaneKey *string `form:"lane_key,omitempty" json:"lane_key,omitempty"`
+
+	// Scope lane or global
+	Scope *string `form:"scope,omitempty" json:"scope,omitempty"`
+
+	// Limit 1-200, default 50
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
 // PatchApiV3LexiconBaseWordsBaseWordIdParams defines parameters for PatchApiV3LexiconBaseWordsBaseWordId.
 type PatchApiV3LexiconBaseWordsBaseWordIdParams struct {
 	// LearningLanguageCode Workspace language (fi, sv)
@@ -15141,6 +16004,12 @@ type GetApiV3NewsArticlesArticleIdRelatedVersionsParams struct {
 	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
 }
 
+// GetApiV3NotificationInsightsUsersUserIdTimelineParams defines parameters for GetApiV3NotificationInsightsUsersUserIdTimeline.
+type GetApiV3NotificationInsightsUsersUserIdTimelineParams struct {
+	// Limit Max attempts (default 50, max 100)
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
 // GetApiV3NotificationRulesParams defines parameters for GetApiV3NotificationRules.
 type GetApiV3NotificationRulesParams struct {
 	// EventType Filter by event type
@@ -15169,6 +16038,21 @@ type GetApiV3PlacementItemsParams struct {
 
 	// LearningLanguageCode Two-letter ISO 639-1 code for the language being learned (per ADR-006 §3.83).
 	LearningLanguageCode *string `form:"learning_language_code,omitempty" json:"learning_language_code,omitempty"`
+}
+
+// GetApiV3PushFilterNeverPushParams defines parameters for GetApiV3PushFilterNeverPush.
+type GetApiV3PushFilterNeverPushParams struct {
+	// ContentType article, video or conversation
+	ContentType *string `form:"content_type,omitempty" json:"content_type,omitempty"`
+
+	// ContentId External id or content entry id
+	ContentId *string `form:"content_id,omitempty" json:"content_id,omitempty"`
+}
+
+// GetApiV3PushFilterRecentlyBlockedParams defines parameters for GetApiV3PushFilterRecentlyBlocked.
+type GetApiV3PushFilterRecentlyBlockedParams struct {
+	// Days Look-back window, 1 to 30 (default 7)
+	Days *int `form:"days,omitempty" json:"days,omitempty"`
 }
 
 // GetApiV3RecommendationCampaignsParams defines parameters for GetApiV3RecommendationCampaigns.
@@ -16460,6 +17344,21 @@ type PostApiV3CommunicationsEmailTemplatesTemplateIdTestJSONRequestBody = CommsE
 // PostApiV3CommunicationsJobsJSONRequestBody defines body for PostApiV3CommunicationsJobs for application/json ContentType.
 type PostApiV3CommunicationsJobsJSONRequestBody = CommsCreateJobRequest
 
+// PutApiV3CommunicationsLaneRulesGlobalJSONRequestBody defines body for PutApiV3CommunicationsLaneRulesGlobal for application/json ContentType.
+type PutApiV3CommunicationsLaneRulesGlobalJSONRequestBody = CommsLaneRuleUpdateRequest
+
+// PostApiV3CommunicationsLaneRulesGlobalResetJSONRequestBody defines body for PostApiV3CommunicationsLaneRulesGlobalReset for application/json ContentType.
+type PostApiV3CommunicationsLaneRulesGlobalResetJSONRequestBody = CommsLaneRuleResetRequest
+
+// PutApiV3CommunicationsLaneRulesLanesLaneKeyJSONRequestBody defines body for PutApiV3CommunicationsLaneRulesLanesLaneKey for application/json ContentType.
+type PutApiV3CommunicationsLaneRulesLanesLaneKeyJSONRequestBody = CommsLaneRuleUpdateRequest
+
+// PostApiV3CommunicationsLaneRulesLanesLaneKeyResetJSONRequestBody defines body for PostApiV3CommunicationsLaneRulesLanesLaneKeyReset for application/json ContentType.
+type PostApiV3CommunicationsLaneRulesLanesLaneKeyResetJSONRequestBody = CommsLaneRuleResetRequest
+
+// PostApiV3CommunicationsNotificationInsightsUsersUserIdResetBackoffJSONRequestBody defines body for PostApiV3CommunicationsNotificationInsightsUsersUserIdResetBackoff for application/json ContentType.
+type PostApiV3CommunicationsNotificationInsightsUsersUserIdResetBackoffJSONRequestBody = CommsNotificationBackoffResetRequest
+
 // PostApiV3CommunicationsNotificationRulesJSONRequestBody defines body for PostApiV3CommunicationsNotificationRules for application/json ContentType.
 type PostApiV3CommunicationsNotificationRulesJSONRequestBody = CommsNotificationRuleRequest
 
@@ -16474,6 +17373,18 @@ type PostApiV3CommunicationsNotificationsAdminBroadcastJSONRequestBody = CommsAd
 
 // PostApiV3CommunicationsNotificationsBroadcastJSONRequestBody defines body for PostApiV3CommunicationsNotificationsBroadcast for application/json ContentType.
 type PostApiV3CommunicationsNotificationsBroadcastJSONRequestBody = CommsSendNotificationRequest
+
+// PostApiV3CommunicationsPushFilterNeverPushJSONRequestBody defines body for PostApiV3CommunicationsPushFilterNeverPush for application/json ContentType.
+type PostApiV3CommunicationsPushFilterNeverPushJSONRequestBody = CommsPushNeverRequest
+
+// PostApiV3CommunicationsPushFilterPreviewJSONRequestBody defines body for PostApiV3CommunicationsPushFilterPreview for application/json ContentType.
+type PostApiV3CommunicationsPushFilterPreviewJSONRequestBody = CommsPushFilterPreviewRequest
+
+// PostApiV3CommunicationsPushFilterTermsJSONRequestBody defines body for PostApiV3CommunicationsPushFilterTerms for application/json ContentType.
+type PostApiV3CommunicationsPushFilterTermsJSONRequestBody = CommsPushFilterTermRequest
+
+// PatchApiV3CommunicationsPushFilterTermsTermIdJSONRequestBody defines body for PatchApiV3CommunicationsPushFilterTermsTermId for application/json ContentType.
+type PatchApiV3CommunicationsPushFilterTermsTermIdJSONRequestBody = CommsPushFilterTermPatch
 
 // PostApiV3CommunicationsRecommendationCampaignsJSONRequestBody defines body for PostApiV3CommunicationsRecommendationCampaigns for application/json ContentType.
 type PostApiV3CommunicationsRecommendationCampaignsJSONRequestBody = CommsRecommendationCampaignRequest
@@ -16697,6 +17608,18 @@ type PostApiV3KtvWorkflowsWorkflowIdSubmitJSONRequestBody = KTVWorkflowSubmitReq
 // PostApiV3KtvWorkflowsWorkflowIdVariantsJSONRequestBody defines body for PostApiV3KtvWorkflowsWorkflowIdVariants for application/json ContentType.
 type PostApiV3KtvWorkflowsWorkflowIdVariantsJSONRequestBody = KTVVariantCreateRequest
 
+// PutApiV3LaneRulesGlobalJSONRequestBody defines body for PutApiV3LaneRulesGlobal for application/json ContentType.
+type PutApiV3LaneRulesGlobalJSONRequestBody = GlobalRuleUpdateRequest
+
+// PostApiV3LaneRulesGlobalResetJSONRequestBody defines body for PostApiV3LaneRulesGlobalReset for application/json ContentType.
+type PostApiV3LaneRulesGlobalResetJSONRequestBody = LaneRuleResetRequest
+
+// PutApiV3LaneRulesLanesLaneKeyJSONRequestBody defines body for PutApiV3LaneRulesLanesLaneKey for application/json ContentType.
+type PutApiV3LaneRulesLanesLaneKeyJSONRequestBody = LaneRuleUpdateRequest
+
+// PostApiV3LaneRulesLanesLaneKeyResetJSONRequestBody defines body for PostApiV3LaneRulesLanesLaneKeyReset for application/json ContentType.
+type PostApiV3LaneRulesLanesLaneKeyResetJSONRequestBody = LaneRuleResetRequest
+
 // PatchApiV3LexiconBaseWordsBaseWordIdJSONRequestBody defines body for PatchApiV3LexiconBaseWordsBaseWordId for application/json ContentType.
 type PatchApiV3LexiconBaseWordsBaseWordIdJSONRequestBody = ReviewBaseWordRequest
 
@@ -16826,6 +17749,9 @@ type PostApiV3MediaUploadUrlJSONRequestBody = GenerateUploadURLRequest
 // PostApiV3NewsArticlesArticleIdParagraphTranslationsJSONRequestBody defines body for PostApiV3NewsArticlesArticleIdParagraphTranslations for application/json ContentType.
 type PostApiV3NewsArticlesArticleIdParagraphTranslationsJSONRequestBody = ArticleParagraphTranslationsRequest
 
+// PostApiV3NotificationInsightsUsersUserIdResetBackoffJSONRequestBody defines body for PostApiV3NotificationInsightsUsersUserIdResetBackoff for application/json ContentType.
+type PostApiV3NotificationInsightsUsersUserIdResetBackoffJSONRequestBody = NotificationBackoffResetRequest
+
 // PostApiV3NotificationRulesJSONRequestBody defines body for PostApiV3NotificationRules for application/json ContentType.
 type PostApiV3NotificationRulesJSONRequestBody = NotificationRule
 
@@ -16846,6 +17772,18 @@ type PostApiV3NotificationsIdEngagementJSONRequestBody = NotificationEngagementR
 
 // PostApiV3PromoCodesRedeemJSONRequestBody defines body for PostApiV3PromoCodesRedeem for application/json ContentType.
 type PostApiV3PromoCodesRedeemJSONRequestBody = RedeemPromoCodeRequest
+
+// PostApiV3PushFilterNeverPushJSONRequestBody defines body for PostApiV3PushFilterNeverPush for application/json ContentType.
+type PostApiV3PushFilterNeverPushJSONRequestBody = PushNeverRequest
+
+// PostApiV3PushFilterPreviewJSONRequestBody defines body for PostApiV3PushFilterPreview for application/json ContentType.
+type PostApiV3PushFilterPreviewJSONRequestBody = PushFilterPreviewRequest
+
+// PostApiV3PushFilterTermsJSONRequestBody defines body for PostApiV3PushFilterTerms for application/json ContentType.
+type PostApiV3PushFilterTermsJSONRequestBody = PushFilterTermRequest
+
+// PatchApiV3PushFilterTermsTermIdJSONRequestBody defines body for PatchApiV3PushFilterTermsTermId for application/json ContentType.
+type PatchApiV3PushFilterTermsTermIdJSONRequestBody = PushFilterTermPatch
 
 // PostApiV3RecommendationCampaignsJSONRequestBody defines body for PostApiV3RecommendationCampaigns for application/json ContentType.
 type PostApiV3RecommendationCampaignsJSONRequestBody = RecommendationCampaign
@@ -17104,6 +18042,9 @@ type PostInternalContentVersionsVersionIdClaimForProcessingJSONRequestBody = Cla
 
 // EnrichDictionaryByIdsInternalDictionaryEnrichByIdsPostJSONRequestBody defines body for EnrichDictionaryByIdsInternalDictionaryEnrichByIdsPost for application/json ContentType.
 type EnrichDictionaryByIdsInternalDictionaryEnrichByIdsPostJSONRequestBody = EnrichDictionaryByIdsInternalDictionaryEnrichByIdsPostJSONBody
+
+// PostInternalEmailValidateCopyJSONRequestBody defines body for PostInternalEmailValidateCopy for application/json ContentType.
+type PostInternalEmailValidateCopyJSONRequestBody = EmailCopyValidateRequest
 
 // EnrichWordsByIdsInternalEnrichWordsByIdsPostJSONRequestBody defines body for EnrichWordsByIdsInternalEnrichWordsByIdsPost for application/json ContentType.
 type EnrichWordsByIdsInternalEnrichWordsByIdsPostJSONRequestBody = EnrichWordsByIdsInternalEnrichWordsByIdsPostJSONBody
