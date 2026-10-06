@@ -3152,6 +3152,7 @@ class FirstSceneLine(BaseModel):
     id: str
     lemmas: list[str]
     scene_lemmas: list[str] | None = None
+    senses: dict[str, str] | None = None
     sentence: str
 
 
