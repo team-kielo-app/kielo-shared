@@ -8093,6 +8093,102 @@ class SurfacesResponseContentService(BaseModel):
     next_page_key: str | None = None
 
 
+class TTSAdminBucket(BaseModel):
+    chars: int = Field(..., title="Chars")
+    clips: int = Field(..., title="Clips")
+    job_type: str = Field(..., title="Job Type")
+    language: str = Field(..., title="Language")
+    provider: str = Field(..., title="Provider")
+    status: str = Field(..., title="Status")
+
+
+class TTSAdminClip(BaseModel):
+    audio_url: str | None = Field(None, title="Audio Url")
+    entity_id: UUID_aliased = Field(..., title="Entity Id")
+    job_id: UUID_aliased = Field(..., title="Job Id")
+    job_type: str = Field(..., title="Job Type")
+    language: str = Field(..., title="Language")
+    model: str | None = Field(None, title="Model")
+    provider: str = Field(..., title="Provider")
+    speed: float | None = Field(None, title="Speed")
+    status: str = Field(..., title="Status")
+    text: str = Field(..., title="Text")
+    updated_at: AwareDatetime = Field(..., title="Updated At")
+    voice: str | None = Field(None, title="Voice")
+
+
+class TTSAdminClipsResponse(BaseModel):
+    items: list[TTSAdminClip] = Field(..., title="Items")
+    next_cursor: str | None = Field(None, title="Next Cursor")
+
+
+class TTSAdminElevenLabsBalance(BaseModel):
+    error: str | None = Field(None, title="Error")
+    remaining: int | None = Field(None, title="Remaining")
+    total: int | None = Field(None, title="Total")
+
+
+class TTSAdminFailure(BaseModel):
+    at: AwareDatetime = Field(..., title="At")
+    error: str | None = Field(None, title="Error")
+    job_id: UUID_aliased = Field(..., title="Job Id")
+    job_type: str = Field(..., title="Job Type")
+    language: str = Field(..., title="Language")
+
+
+class TTSAdminPreviewRequest(BaseModel):
+    language: str = Field(..., title="Language")
+    model: str | None = Field(None, title="Model")
+    provider: str | None = Field(None, title="Provider")
+    similarity_boost: float | None = Field(None, title="Similarity Boost")
+    speed: float | None = Field(None, title="Speed")
+    stability: float | None = Field(None, title="Stability")
+    surface: str = Field(..., title="Surface")
+    text: str = Field(..., title="Text")
+    voice_id: str | None = Field(None, title="Voice Id")
+
+
+class TTSAdminPrewarmRun(BaseModel):
+    budget_exhausted: bool = Field(..., title="Budget Exhausted")
+    cached: int = Field(..., title="Cached")
+    duration_ms: int = Field(..., title="Duration Ms")
+    error: str | None = Field(None, title="Error")
+    failed: int = Field(..., title="Failed")
+    finished_at: AwareDatetime = Field(..., title="Finished At")
+    generated: int = Field(..., title="Generated")
+    in_flight: int = Field(..., title="In Flight")
+    scanned: int = Field(..., title="Scanned")
+    skipped: int = Field(..., title="Skipped")
+    started_at: AwareDatetime = Field(..., title="Started At")
+
+
+class TTSAdminPrewarmRunsResponse(BaseModel):
+    runs: list[TTSAdminPrewarmRun] = Field(..., title="Runs")
+
+
+class TTSAdminRegenerateRequest(BaseModel):
+    dry_run: bool | None = Field(False, title="Dry Run")
+    entity_ids: list[UUID_aliased] | None = Field(None, title="Entity Ids")
+    job_type: str | None = Field(None, title="Job Type")
+    language: str | None = Field(None, title="Language")
+    only_mismatched: bool | None = Field(True, title="Only Mismatched")
+
+
+class TTSAdminSupersededBaseWord(BaseModel):
+    entity_id: UUID_aliased = Field(..., title="Entity Id")
+    language: str = Field(..., title="Language")
+    media_id: UUID_aliased = Field(..., title="Media Id")
+
+
+class TTSAdminThroughputHour(BaseModel):
+    chars: int = Field(..., title="Chars")
+    generated: int = Field(..., title="Generated")
+    hour: AwareDatetime = Field(..., title="Hour")
+    p50_ms: int | None = Field(None, title="P50 Ms")
+    p95_ms: int | None = Field(None, title="P95 Ms")
+    provider: str = Field(..., title="Provider")
+
+
 class TTSBaseWordStreamSession(BaseModel):
     cache_hit: bool | None = None
     expires_at: str
@@ -8107,6 +8203,49 @@ class TTSBaseWordStreamSessionResponse(BaseModel):
     job_id: UUID_aliased | None = Field(None, title="Job Id")
     session_id: UUID_aliased = Field(..., title="Session Id")
     token: str = Field(..., title="Token")
+
+
+class TTSBucket(BaseModel):
+    chars: int
+    clips: int
+    job_type: str
+    language: str
+    provider: str
+    status: str
+
+
+class TTSClip(BaseModel):
+    audio_url: str | None = None
+    entity_id: str
+    job_id: str
+    job_type: str
+    language: str
+    model: str | None = None
+    provider: str
+    speed: float | None = None
+    status: str
+    text: str
+    updated_at: AwareDatetime
+    voice: str | None = None
+
+
+class TTSClipsResponse(BaseModel):
+    items: list[TTSClip]
+    next_page_key: str | None = None
+
+
+class TTSElevenLabsBalance(BaseModel):
+    error: str | None = None
+    remaining: int | None = None
+    total: int | None = None
+
+
+class TTSFailure(BaseModel):
+    at: AwareDatetime
+    error: str | None = None
+    job_id: str
+    job_type: str
+    language: str
 
 
 class TTSGenerateRequest(BaseModel):
@@ -8158,6 +8297,105 @@ class TTSParagraphGenerateResponse(BaseModel):
     paragraph_id: UUID_aliased = Field(..., title="Paragraph Id")
     stage: str | None = Field(None, title="Stage")
     status: Status8 = Field(..., title="Status")
+
+
+class TTSPreviewRequest(BaseModel):
+    language: str
+    model: str | None = None
+    provider: str | None = None
+    similarity_boost: float | None = None
+    speed: float | None = None
+    stability: float | None = None
+    surface: str
+    text: str
+    voice_id: str | None = None
+
+
+class TTSPrewarmRun(BaseModel):
+    budget_exhausted: bool
+    cached: int
+    duration_ms: int
+    error: str | None = None
+    failed: int
+    finished_at: AwareDatetime
+    generated: int
+    in_flight: int
+    scanned: int
+    skipped: int
+    started_at: AwareDatetime
+
+
+class TTSPrewarmRunsResponse(BaseModel):
+    runs: list[TTSPrewarmRun]
+
+
+class TTSRegenerateRequest(BaseModel):
+    dry_run: bool
+    entity_ids: list[str] | None = None
+    job_type: str | None = None
+    language: str | None = None
+    only_mismatched: bool | None = None
+
+
+class TTSRegenerateResponse(BaseModel):
+    base_word_urls_cleared: int
+    matched: int
+    superseded: int
+
+
+class TTSRoute(BaseModel):
+    enabled: bool
+    language_code: str
+    model: str
+    note: str
+    provider: str
+    similarity_boost: float | None = None
+    speed: float
+    stability: float | None = None
+    surface: str
+    updated_at: AwareDatetime
+    updated_by: str
+    voice_id: str
+
+
+class TTSRouteListResponse(BaseModel):
+    routes: list[TTSRoute]
+
+
+class TTSRouteRequest(BaseModel):
+    enabled: bool | None = None
+    model: str
+    note: str
+    provider: str
+    similarity_boost: float | None = None
+    speed: float
+    stability: float | None = None
+    voice_id: str
+
+
+class TTSRouteRequestLocalization(BaseModel):
+    enabled: bool | None = None
+    model: str
+    note: str
+    provider: str
+    similarity_boost: float | None = None
+    speed: float
+    stability: float | None = None
+    updated_by: str
+    voice_id: str
+
+
+class TTSRoutesResponse(TTSRouteListResponse):
+    pass
+
+
+class TTSThroughputHour(BaseModel):
+    chars: int
+    generated: int
+    hour: AwareDatetime
+    p50_ms: int | None = None
+    p95_ms: int | None = None
+    provider: str
 
 
 class TTSWordTiming(BaseModel):
@@ -11207,6 +11445,36 @@ class SubscriptionInfoUserService(BaseModel):
     subscription_type: str | None = None
     tier: str
     trial_ends_at: AwareDatetime | None = None
+
+
+class TTSAdminOverviewResponse(BaseModel):
+    by_bucket: list[TTSAdminBucket] = Field(..., title="By Bucket")
+    elevenlabs_balance: TTSAdminElevenLabsBalance
+    failed_24h: int = Field(..., title="Failed 24H")
+    in_flight: int = Field(..., title="In Flight")
+    pending_regeneration: int = Field(..., title="Pending Regeneration")
+    recent_failures: list[TTSAdminFailure] = Field(..., title="Recent Failures")
+    throughput: list[TTSAdminThroughputHour] = Field(..., title="Throughput")
+
+
+class TTSAdminRegenerateResponse(BaseModel):
+    matched: int = Field(..., title="Matched")
+    superseded: int = Field(..., title="Superseded")
+    superseded_base_words: list[TTSAdminSupersededBaseWord] | None = Field(
+        None,
+        description="Word clips superseded by this call; the caller clears cms_<language>.base_words.audio_pronunciation_url where it points at media_id.",
+        title="Superseded Base Words",
+    )
+
+
+class TTSOverview(BaseModel):
+    by_bucket: list[TTSBucket]
+    elevenlabs_balance: TTSElevenLabsBalance
+    failed_24h: int
+    in_flight: int
+    pending_regeneration: int
+    recent_failures: list[TTSFailure]
+    throughput: list[TTSThroughputHour]
 
 
 class TTSParagraphJobStatus(BaseModel):

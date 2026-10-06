@@ -12957,6 +12957,133 @@ type SurfacesResponseContentService struct {
 	NextPageKey *string                          `json:"next_page_key,omitempty"`
 }
 
+// TTSAdminBucket defines model for TTSAdminBucket.
+type TTSAdminBucket struct {
+	Chars    int    `json:"chars"`
+	Clips    int    `json:"clips"`
+	JobType  string `json:"job_type"`
+	Language string `json:"language"`
+	Provider string `json:"provider"`
+	Status   string `json:"status"`
+}
+
+// TTSAdminClip defines model for TTSAdminClip.
+type TTSAdminClip struct {
+	AudioUrl  *string   `json:"audio_url"`
+	EntityId  uuid.UUID `json:"entity_id"`
+	JobId     uuid.UUID `json:"job_id"`
+	JobType   string    `json:"job_type"`
+	Language  string    `json:"language"`
+	Model     *string   `json:"model"`
+	Provider  string    `json:"provider"`
+	Speed     *float32  `json:"speed"`
+	Status    string    `json:"status"`
+	Text      string    `json:"text"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Voice     *string   `json:"voice"`
+}
+
+// TTSAdminClipsResponse defines model for TTSAdminClipsResponse.
+type TTSAdminClipsResponse struct {
+	Items      []TTSAdminClip `json:"items"`
+	NextCursor *string        `json:"next_cursor"`
+}
+
+// TTSAdminElevenLabsBalance defines model for TTSAdminElevenLabsBalance.
+type TTSAdminElevenLabsBalance struct {
+	Error     *string `json:"error"`
+	Remaining *int    `json:"remaining"`
+	Total     *int    `json:"total"`
+}
+
+// TTSAdminFailure defines model for TTSAdminFailure.
+type TTSAdminFailure struct {
+	At       time.Time `json:"at"`
+	Error    *string   `json:"error"`
+	JobId    uuid.UUID `json:"job_id"`
+	JobType  string    `json:"job_type"`
+	Language string    `json:"language"`
+}
+
+// TTSAdminOverviewResponse defines model for TTSAdminOverviewResponse.
+type TTSAdminOverviewResponse struct {
+	ByBucket            []TTSAdminBucket          `json:"by_bucket"`
+	ElevenlabsBalance   TTSAdminElevenLabsBalance `json:"elevenlabs_balance"`
+	Failed24h           int                       `json:"failed_24h"`
+	InFlight            int                       `json:"in_flight"`
+	PendingRegeneration int                       `json:"pending_regeneration"`
+	RecentFailures      []TTSAdminFailure         `json:"recent_failures"`
+	Throughput          []TTSAdminThroughputHour  `json:"throughput"`
+}
+
+// TTSAdminPreviewRequest defines model for TTSAdminPreviewRequest.
+type TTSAdminPreviewRequest struct {
+	Language        string   `json:"language"`
+	Model           *string  `json:"model"`
+	Provider        *string  `json:"provider"`
+	SimilarityBoost *float32 `json:"similarity_boost"`
+	Speed           *float32 `json:"speed"`
+	Stability       *float32 `json:"stability"`
+	Surface         string   `json:"surface"`
+	Text            string   `json:"text"`
+	VoiceId         *string  `json:"voice_id"`
+}
+
+// TTSAdminPrewarmRun defines model for TTSAdminPrewarmRun.
+type TTSAdminPrewarmRun struct {
+	BudgetExhausted bool      `json:"budget_exhausted"`
+	Cached          int       `json:"cached"`
+	DurationMs      int       `json:"duration_ms"`
+	Error           *string   `json:"error"`
+	Failed          int       `json:"failed"`
+	FinishedAt      time.Time `json:"finished_at"`
+	Generated       int       `json:"generated"`
+	InFlight        int       `json:"in_flight"`
+	Scanned         int       `json:"scanned"`
+	Skipped         int       `json:"skipped"`
+	StartedAt       time.Time `json:"started_at"`
+}
+
+// TTSAdminPrewarmRunsResponse defines model for TTSAdminPrewarmRunsResponse.
+type TTSAdminPrewarmRunsResponse struct {
+	Runs []TTSAdminPrewarmRun `json:"runs"`
+}
+
+// TTSAdminRegenerateRequest defines model for TTSAdminRegenerateRequest.
+type TTSAdminRegenerateRequest struct {
+	DryRun         *bool        `json:"dry_run,omitempty"`
+	EntityIds      *[]uuid.UUID `json:"entity_ids"`
+	JobType        *string      `json:"job_type"`
+	Language       *string      `json:"language"`
+	OnlyMismatched *bool        `json:"only_mismatched,omitempty"`
+}
+
+// TTSAdminRegenerateResponse defines model for TTSAdminRegenerateResponse.
+type TTSAdminRegenerateResponse struct {
+	Matched    int `json:"matched"`
+	Superseded int `json:"superseded"`
+
+	// SupersededBaseWords Word clips superseded by this call; the caller clears cms_<language>.base_words.audio_pronunciation_url where it points at media_id.
+	SupersededBaseWords *[]TTSAdminSupersededBaseWord `json:"superseded_base_words,omitempty"`
+}
+
+// TTSAdminSupersededBaseWord defines model for TTSAdminSupersededBaseWord.
+type TTSAdminSupersededBaseWord struct {
+	EntityId uuid.UUID `json:"entity_id"`
+	Language string    `json:"language"`
+	MediaId  uuid.UUID `json:"media_id"`
+}
+
+// TTSAdminThroughputHour defines model for TTSAdminThroughputHour.
+type TTSAdminThroughputHour struct {
+	Chars     int       `json:"chars"`
+	Generated int       `json:"generated"`
+	Hour      time.Time `json:"hour"`
+	P50Ms     *int      `json:"p50_ms"`
+	P95Ms     *int      `json:"p95_ms"`
+	Provider  string    `json:"provider"`
+}
+
 // TTSBaseWordStreamSession defines model for TTSBaseWordStreamSession.
 type TTSBaseWordStreamSession struct {
 	CacheHit  *bool   `json:"cache_hit,omitempty"`
@@ -12973,6 +13100,54 @@ type TTSBaseWordStreamSessionResponse struct {
 	JobId     *uuid.UUID `json:"job_id"`
 	SessionId uuid.UUID  `json:"session_id"`
 	Token     string     `json:"token"`
+}
+
+// TTSBucket defines model for TTSBucket.
+type TTSBucket struct {
+	Chars    int    `json:"chars"`
+	Clips    int    `json:"clips"`
+	JobType  string `json:"job_type"`
+	Language string `json:"language"`
+	Provider string `json:"provider"`
+	Status   string `json:"status"`
+}
+
+// TTSClip defines model for TTSClip.
+type TTSClip struct {
+	AudioUrl  *string   `json:"audio_url,omitempty"`
+	EntityId  string    `json:"entity_id"`
+	JobId     string    `json:"job_id"`
+	JobType   string    `json:"job_type"`
+	Language  string    `json:"language"`
+	Model     *string   `json:"model,omitempty"`
+	Provider  string    `json:"provider"`
+	Speed     *float32  `json:"speed,omitempty"`
+	Status    string    `json:"status"`
+	Text      string    `json:"text"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Voice     *string   `json:"voice,omitempty"`
+}
+
+// TTSClipsResponse defines model for TTSClipsResponse.
+type TTSClipsResponse struct {
+	Items       []TTSClip `json:"items"`
+	NextPageKey *string   `json:"next_page_key,omitempty"`
+}
+
+// TTSElevenLabsBalance defines model for TTSElevenLabsBalance.
+type TTSElevenLabsBalance struct {
+	Error     *string `json:"error,omitempty"`
+	Remaining *int    `json:"remaining,omitempty"`
+	Total     *int    `json:"total,omitempty"`
+}
+
+// TTSFailure defines model for TTSFailure.
+type TTSFailure struct {
+	At       time.Time `json:"at"`
+	Error    *string   `json:"error,omitempty"`
+	JobId    string    `json:"job_id"`
+	JobType  string    `json:"job_type"`
+	Language string    `json:"language"`
 }
 
 // TTSGenerateRequest defines model for TTSGenerateRequest.
@@ -13013,6 +13188,17 @@ type TTSJobStatusResponse struct {
 
 // TTSJobStatusResponseStatus defines model for TTSJobStatusResponse.Status.
 type TTSJobStatusResponseStatus string
+
+// TTSOverview defines model for TTSOverview.
+type TTSOverview struct {
+	ByBucket            []TTSBucket          `json:"by_bucket"`
+	ElevenlabsBalance   TTSElevenLabsBalance `json:"elevenlabs_balance"`
+	Failed24h           int                  `json:"failed_24h"`
+	InFlight            int                  `json:"in_flight"`
+	PendingRegeneration int                  `json:"pending_regeneration"`
+	RecentFailures      []TTSFailure         `json:"recent_failures"`
+	Throughput          []TTSThroughputHour  `json:"throughput"`
+}
 
 // TTSParagraphGenerateRequest defines model for TTSParagraphGenerateRequest.
 type TTSParagraphGenerateRequest struct {
@@ -13077,6 +13263,106 @@ type TTSParagraphStreamSessionResponse struct {
 	WordTimings *[]TTSWordTimingKielolearnEngine `json:"word_timings"`
 }
 
+// TTSPreviewRequest defines model for TTSPreviewRequest.
+type TTSPreviewRequest struct {
+	Language        string   `json:"language"`
+	Model           *string  `json:"model,omitempty"`
+	Provider        *string  `json:"provider,omitempty"`
+	SimilarityBoost *float32 `json:"similarity_boost,omitempty"`
+	Speed           *float32 `json:"speed,omitempty"`
+	Stability       *float32 `json:"stability,omitempty"`
+	Surface         string   `json:"surface"`
+	Text            string   `json:"text"`
+	VoiceId         *string  `json:"voice_id,omitempty"`
+}
+
+// TTSPrewarmRun defines model for TTSPrewarmRun.
+type TTSPrewarmRun struct {
+	BudgetExhausted bool      `json:"budget_exhausted"`
+	Cached          int       `json:"cached"`
+	DurationMs      int       `json:"duration_ms"`
+	Error           *string   `json:"error,omitempty"`
+	Failed          int       `json:"failed"`
+	FinishedAt      time.Time `json:"finished_at"`
+	Generated       int       `json:"generated"`
+	InFlight        int       `json:"in_flight"`
+	Scanned         int       `json:"scanned"`
+	Skipped         int       `json:"skipped"`
+	StartedAt       time.Time `json:"started_at"`
+}
+
+// TTSPrewarmRunsResponse defines model for TTSPrewarmRunsResponse.
+type TTSPrewarmRunsResponse struct {
+	Runs []TTSPrewarmRun `json:"runs"`
+}
+
+// TTSRegenerateRequest defines model for TTSRegenerateRequest.
+type TTSRegenerateRequest struct {
+	DryRun         bool      `json:"dry_run"`
+	EntityIds      *[]string `json:"entity_ids,omitempty"`
+	JobType        *string   `json:"job_type,omitempty"`
+	Language       *string   `json:"language,omitempty"`
+	OnlyMismatched *bool     `json:"only_mismatched,omitempty"`
+}
+
+// TTSRegenerateResponse defines model for TTSRegenerateResponse.
+type TTSRegenerateResponse struct {
+	BaseWordUrlsCleared int `json:"base_word_urls_cleared"`
+	Matched             int `json:"matched"`
+	Superseded          int `json:"superseded"`
+}
+
+// TTSRoute defines model for TTSRoute.
+type TTSRoute struct {
+	Enabled         bool      `json:"enabled"`
+	LanguageCode    string    `json:"language_code"`
+	Model           string    `json:"model"`
+	Note            string    `json:"note"`
+	Provider        string    `json:"provider"`
+	SimilarityBoost *float32  `json:"similarity_boost,omitempty"`
+	Speed           float32   `json:"speed"`
+	Stability       *float32  `json:"stability,omitempty"`
+	Surface         string    `json:"surface"`
+	UpdatedAt       time.Time `json:"updated_at"`
+	UpdatedBy       string    `json:"updated_by"`
+	VoiceId         string    `json:"voice_id"`
+}
+
+// TTSRouteListResponse defines model for TTSRouteListResponse.
+type TTSRouteListResponse struct {
+	Routes []TTSRoute `json:"routes"`
+}
+
+// TTSRouteRequest defines model for TTSRouteRequest.
+type TTSRouteRequest struct {
+	Enabled         *bool    `json:"enabled,omitempty"`
+	Model           string   `json:"model"`
+	Note            string   `json:"note"`
+	Provider        string   `json:"provider"`
+	SimilarityBoost *float32 `json:"similarity_boost,omitempty"`
+	Speed           float32  `json:"speed"`
+	Stability       *float32 `json:"stability,omitempty"`
+	VoiceId         string   `json:"voice_id"`
+}
+
+// TTSRouteRequestLocalization defines model for TTSRouteRequestLocalization.
+type TTSRouteRequestLocalization struct {
+	Enabled         *bool    `json:"enabled,omitempty"`
+	Model           string   `json:"model"`
+	Note            string   `json:"note"`
+	Provider        string   `json:"provider"`
+	SimilarityBoost *float32 `json:"similarity_boost,omitempty"`
+	Speed           float32  `json:"speed"`
+	Stability       *float32 `json:"stability,omitempty"`
+	UpdatedBy       string   `json:"updated_by"`
+	VoiceId         string   `json:"voice_id"`
+}
+
+// TTSRoutesResponse defines model for TTSRoutesResponse.
+type TTSRoutesResponse struct {
+	Routes []TTSRoute `json:"routes"`
+}
+
 // TTSStreamSession defines model for TTSStreamSession.
 type TTSStreamSession struct {
 	CacheHit    *bool            `json:"cache_hit,omitempty"`
@@ -13085,6 +13371,16 @@ type TTSStreamSession struct {
 	SessionId   string           `json:"session_id"`
 	Token       string           `json:"token"`
 	WordTimings *[]TTSWordTiming `json:"word_timings,omitempty"`
+}
+
+// TTSThroughputHour defines model for TTSThroughputHour.
+type TTSThroughputHour struct {
+	Chars     int       `json:"chars"`
+	Generated int       `json:"generated"`
+	Hour      time.Time `json:"hour"`
+	P50Ms     *int      `json:"p50_ms,omitempty"`
+	P95Ms     *int      `json:"p95_ms,omitempty"`
+	Provider  string    `json:"provider"`
 }
 
 // TTSWordTiming defines model for TTSWordTiming.
@@ -14646,6 +14942,42 @@ type DeleteApiV3AdminOperatorSwitchesParams struct {
 
 	// ScopeValue Language code or platform
 	ScopeValue string `form:"scope_value" json:"scope_value"`
+}
+
+// GetApiV3AdminTtsClipsParams defines parameters for GetApiV3AdminTtsClips.
+type GetApiV3AdminTtsClipsParams struct {
+	// JobType tts_roadmap_step, tts_paragraph, tts_base_word or tts_session_exercise
+	JobType *string `form:"job_type,omitempty" json:"job_type,omitempty"`
+
+	// Language Language code
+	Language *string `form:"language,omitempty" json:"language,omitempty"`
+
+	// Provider elevenlabs or openai
+	Provider *string `form:"provider,omitempty" json:"provider,omitempty"`
+
+	// Status Latest job status (published, superseded, failed, queued, ...)
+	Status *string `form:"status,omitempty" json:"status,omitempty"`
+
+	// Q Text contains
+	Q *string `form:"q,omitempty" json:"q,omitempty"`
+
+	// PageSize Clips per page, 1-200 (default 50)
+	PageSize *int `form:"page_size,omitempty" json:"page_size,omitempty"`
+
+	// NextPageKey next_page_key from the previous page
+	NextPageKey *string `form:"next_page_key,omitempty" json:"next_page_key,omitempty"`
+}
+
+// GetApiV3AdminTtsOverviewParams defines parameters for GetApiV3AdminTtsOverview.
+type GetApiV3AdminTtsOverviewParams struct {
+	// Hours Throughput window, 1-168 (default 24)
+	Hours *int `form:"hours,omitempty" json:"hours,omitempty"`
+}
+
+// GetApiV3AdminTtsPrewarmRunsParams defines parameters for GetApiV3AdminTtsPrewarmRuns.
+type GetApiV3AdminTtsPrewarmRunsParams struct {
+	// PageSize Runs to return, 1-200 (default 20)
+	PageSize *int `form:"page_size,omitempty" json:"page_size,omitempty"`
 }
 
 // GetApiV3ArticlesParams defines parameters for GetApiV3Articles.
@@ -16915,6 +17247,27 @@ type GetInternalSearchSemanticParams struct {
 	LearningLanguageCode *string `form:"learning_language_code,omitempty" json:"learning_language_code,omitempty"`
 }
 
+// GetTtsClipsInternalTtsAdminClipsGetParams defines parameters for GetTtsClipsInternalTtsAdminClipsGet.
+type GetTtsClipsInternalTtsAdminClipsGetParams struct {
+	JobType  *string `form:"job_type,omitempty" json:"job_type,omitempty"`
+	Language *string `form:"language,omitempty" json:"language,omitempty"`
+	Provider *string `form:"provider,omitempty" json:"provider,omitempty"`
+	Status   *string `form:"status,omitempty" json:"status,omitempty"`
+	Q        *string `form:"q,omitempty" json:"q,omitempty"`
+	Limit    *int    `form:"limit,omitempty" json:"limit,omitempty"`
+	Cursor   *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
+// GetTtsOverviewInternalTtsAdminOverviewGetParams defines parameters for GetTtsOverviewInternalTtsAdminOverviewGet.
+type GetTtsOverviewInternalTtsAdminOverviewGetParams struct {
+	Hours *int `form:"hours,omitempty" json:"hours,omitempty"`
+}
+
+// GetTtsPrewarmRunsInternalTtsAdminPrewarmRunsGetParams defines parameters for GetTtsPrewarmRunsInternalTtsAdminPrewarmRunsGet.
+type GetTtsPrewarmRunsInternalTtsAdminPrewarmRunsGetParams struct {
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
 // StreamBaseWordTtsStreamSessionInternalTtsBaseWordsStreamSessionsSessionIdGetParams defines parameters for StreamBaseWordTtsStreamSessionInternalTtsBaseWordsStreamSessionsSessionIdGet.
 type StreamBaseWordTtsStreamSessionInternalTtsBaseWordsStreamSessionsSessionIdGetParams struct {
 	Token string `form:"token" json:"token"`
@@ -17289,6 +17642,15 @@ type PatchApiV3AdminLearnersUserIdClassJSONRequestBody = SetLearnerClassRequest
 
 // PutApiV3AdminOperatorSwitchesJSONRequestBody defines body for PutApiV3AdminOperatorSwitches for application/json ContentType.
 type PutApiV3AdminOperatorSwitchesJSONRequestBody = OperatorSwitchRequest
+
+// PostApiV3AdminTtsPreviewJSONRequestBody defines body for PostApiV3AdminTtsPreview for application/json ContentType.
+type PostApiV3AdminTtsPreviewJSONRequestBody = TTSPreviewRequest
+
+// PostApiV3AdminTtsRegenerateJSONRequestBody defines body for PostApiV3AdminTtsRegenerate for application/json ContentType.
+type PostApiV3AdminTtsRegenerateJSONRequestBody = TTSRegenerateRequest
+
+// PutApiV3AdminTtsRoutesLanguageCodeSurfaceJSONRequestBody defines body for PutApiV3AdminTtsRoutesLanguageCodeSurface for application/json ContentType.
+type PutApiV3AdminTtsRoutesLanguageCodeSurfaceJSONRequestBody = TTSRouteRequest
 
 // PostApiV3ApiKeysJSONRequestBody defines body for PostApiV3ApiKeys for application/json ContentType.
 type PostApiV3ApiKeysJSONRequestBody = APIKeyCreateRequest
@@ -17974,6 +18336,9 @@ type PostInternalApiV3LocalizationTranslationsBulkJSONRequestBody = BulkUpsertTr
 // PatchInternalApiV3LocalizationTranslationsTranslationIdStatusJSONRequestBody defines body for PatchInternalApiV3LocalizationTranslationsTranslationIdStatus for application/json ContentType.
 type PatchInternalApiV3LocalizationTranslationsTranslationIdStatusJSONRequestBody = SetTranslationStatusRequest
 
+// PutInternalApiV3LocalizationTtsRoutesLanguageCodeSurfaceJSONRequestBody defines body for PutInternalApiV3LocalizationTtsRoutesLanguageCodeSurface for application/json ContentType.
+type PutInternalApiV3LocalizationTtsRoutesLanguageCodeSurfaceJSONRequestBody = TTSRouteRequestLocalization
+
 // PostInternalApiV3NotificationDedupeClaimsJSONRequestBody defines body for PostInternalApiV3NotificationDedupeClaims for application/json ContentType.
 type PostInternalApiV3NotificationDedupeClaimsJSONRequestBody = NotificationDedupeClaimRequest
 
@@ -18097,6 +18462,12 @@ type PostInternalMediaUploadUrlJSONRequestBody = MediaUploadRequest
 // TranslateBatchLlmInternalTranslateBatchPostJSONRequestBody defines body for TranslateBatchLlmInternalTranslateBatchPost for application/json ContentType.
 type TranslateBatchLlmInternalTranslateBatchPostJSONRequestBody = TranslateBatchRequest
 
+// PostTtsPreviewInternalTtsAdminPreviewPostJSONRequestBody defines body for PostTtsPreviewInternalTtsAdminPreviewPost for application/json ContentType.
+type PostTtsPreviewInternalTtsAdminPreviewPostJSONRequestBody = TTSAdminPreviewRequest
+
+// PostTtsRegenerateInternalTtsAdminRegeneratePostJSONRequestBody defines body for PostTtsRegenerateInternalTtsAdminRegeneratePost for application/json ContentType.
+type PostTtsRegenerateInternalTtsAdminRegeneratePostJSONRequestBody = TTSAdminRegenerateRequest
+
 // GenerateBaseWordTtsInternalTtsBaseWordsPostJSONRequestBody defines body for GenerateBaseWordTtsInternalTtsBaseWordsPost for application/json ContentType.
 type GenerateBaseWordTtsInternalTtsBaseWordsPostJSONRequestBody = TTSGenerateRequest
 
@@ -18114,6 +18485,9 @@ type StreamParagraphTtsInternalTtsParagraphsStreamPostJSONRequestBody = TTSParag
 
 // CreateParagraphTtsStreamSessionInternalTtsParagraphsStreamSessionsPostJSONRequestBody defines body for CreateParagraphTtsStreamSessionInternalTtsParagraphsStreamSessionsPost for application/json ContentType.
 type CreateParagraphTtsStreamSessionInternalTtsParagraphsStreamSessionsPostJSONRequestBody = TTSParagraphGenerateRequest
+
+// HandleAnswerKeyRevalidationTickInternalWorkerHandleAnswerKeyRevalidationTickPostJSONRequestBody defines body for HandleAnswerKeyRevalidationTickInternalWorkerHandleAnswerKeyRevalidationTickPost for application/json ContentType.
+type HandleAnswerKeyRevalidationTickInternalWorkerHandleAnswerKeyRevalidationTickPostJSONRequestBody = PubSubMessage
 
 // HandleBehavioralEventInternalWorkerHandleBehavioralEventPostJSONRequestBody defines body for HandleBehavioralEventInternalWorkerHandleBehavioralEventPost for application/json ContentType.
 type HandleBehavioralEventInternalWorkerHandleBehavioralEventPostJSONRequestBody = PubSubMessage
@@ -18133,6 +18507,12 @@ type HandleDataQualitySweepInternalWorkerHandleDataQualitySweepPostJSONRequestBo
 // HandleExerciseRevalidationInternalWorkerHandleExerciseRevalidationPostJSONRequestBody defines body for HandleExerciseRevalidationInternalWorkerHandleExerciseRevalidationPost for application/json ContentType.
 type HandleExerciseRevalidationInternalWorkerHandleExerciseRevalidationPostJSONRequestBody = PubSubMessage
 
+// HandleGenerationJobReaperTickInternalWorkerHandleGenerationJobReaperTickPostJSONRequestBody defines body for HandleGenerationJobReaperTickInternalWorkerHandleGenerationJobReaperTickPost for application/json ContentType.
+type HandleGenerationJobReaperTickInternalWorkerHandleGenerationJobReaperTickPostJSONRequestBody = PubSubMessage
+
+// HandleGeneratorSloTickInternalWorkerHandleGeneratorSloTickPostJSONRequestBody defines body for HandleGeneratorSloTickInternalWorkerHandleGeneratorSloTickPost for application/json ContentType.
+type HandleGeneratorSloTickInternalWorkerHandleGeneratorSloTickPostJSONRequestBody = PubSubMessage
+
 // HandleGrammarExampleEnrichmentInternalWorkerHandleGrammarExampleEnrichmentPostJSONRequestBody defines body for HandleGrammarExampleEnrichmentInternalWorkerHandleGrammarExampleEnrichmentPost for application/json ContentType.
 type HandleGrammarExampleEnrichmentInternalWorkerHandleGrammarExampleEnrichmentPostJSONRequestBody = PubSubMessage
 
@@ -18147,6 +18527,9 @@ type HandleNotificationScanInternalWorkerHandleNotificationScanPostJSONRequestBo
 
 // HandleTopicListGenerationInternalWorkerHandleTopicListGenerationPostJSONRequestBody defines body for HandleTopicListGenerationInternalWorkerHandleTopicListGenerationPost for application/json ContentType.
 type HandleTopicListGenerationInternalWorkerHandleTopicListGenerationPostJSONRequestBody = PubSubMessage
+
+// HandleTtsPrewarmTickInternalWorkerHandleTtsPrewarmTickPostJSONRequestBody defines body for HandleTtsPrewarmTickInternalWorkerHandleTtsPrewarmTickPost for application/json ContentType.
+type HandleTtsPrewarmTickInternalWorkerHandleTtsPrewarmTickPostJSONRequestBody = PubSubMessage
 
 // HandleUserActionInternalWorkerHandleUserActionPostJSONRequestBody defines body for HandleUserActionInternalWorkerHandleUserActionPost for application/json ContentType.
 type HandleUserActionInternalWorkerHandleUserActionPostJSONRequestBody = PubSubMessage
