@@ -17,10 +17,11 @@ Instead this module provides the same override-aware behaviour via a
      contextvar synchronously before falling through to the in-memory
      seed registry.
 
-Cost: one SQL query per request returning O(N_keys) rows for the
-locale. The dict lookup at each `_l10n` call is O(1). The cache is
-implicit — a request is the natural cache scope, and admins editing
-overrides see the change on the next request.
+Cost: one SQL query per locale per process every
+`PREFETCH_CACHE_TTL_SECONDS` (it was one per request: a transaction, ~6
+round trips through the prod pooler, on every non-English request, 2026-10-06).
+The dict lookup at each `_l10n` call is O(1). Admins editing overrides see the
+change within the TTL.
 
 Source-version validation: each prefetched row carries the
 `source_version` it was authored against (sha256 of the English seed
@@ -57,6 +58,7 @@ from __future__ import annotations
 import contextvars
 import hashlib
 import logging
+import time
 from typing import Optional, Protocol
 
 from kielo_shared.resource_types import UI_STRING
@@ -70,6 +72,13 @@ logger = logging.getLogger(__name__)
 # `notifications.body`), they should use a separate prefetch + context
 # rather than mixing namespaces into the same dict.
 _OVERRIDES_RESOURCE_TYPE = UI_STRING
+
+PREFETCH_CACHE_TTL_SECONDS = 60.0
+_prefetch_cache: dict[tuple[str, str], tuple[float, dict[str, tuple[str, str]]]] = {}
+
+
+def clear_prefetch_cache() -> None:
+    _prefetch_cache.clear()
 
 
 # The contextvar stores `(locale, {english_source: (source_version, override_text)})`.
@@ -138,6 +147,11 @@ async def prefetch_overrides_for_locale(
     if not locale or locale == "en":
         return {}
 
+    cache_key = (resource_type, locale)
+    cached = _prefetch_cache.get(cache_key)
+    if cached is not None and time.monotonic() - cached[0] < PREFETCH_CACHE_TTL_SECONDS:
+        return cached[1]
+
     # Lazy import — sqlalchemy is heavy and not every consumer of this
     # module will have it on PYTHONPATH (the Go side of kielo-shared
     # certainly doesn't, but neither do offline tooling scripts that
@@ -163,7 +177,13 @@ async def prefetch_overrides_for_locale(
         )
         return {}
 
-    return {row.resource_id: (row.source_version, row.translated_text) for row in rows}
+    overrides = {
+        row.resource_id: (row.source_version, row.translated_text) for row in rows
+    }
+    # Only a successful read is cached: a failure falls through to seeds now
+    # and is retried on the next request.
+    _prefetch_cache[cache_key] = (time.monotonic(), overrides)
+    return overrides
 
 
 def set_overrides_for_request(

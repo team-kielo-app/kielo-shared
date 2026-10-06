@@ -14,8 +14,10 @@ from typing import Any
 
 import pytest
 
+from kielo_shared.localization import support_locale_overrides as overrides_module
 from kielo_shared.localization.support_locale_overrides import (
     clear_overrides,
+    clear_prefetch_cache,
     consume_missing,
     get_override,
     prefetch_overrides_for_locale,
@@ -32,8 +34,10 @@ def _sv(english: str) -> str:
 @pytest.fixture(autouse=True)
 def _reset_overrides_between_tests():
     clear_overrides()
+    clear_prefetch_cache()
     yield
     clear_overrides()
+    clear_prefetch_cache()
 
 
 # ---------------------------------------------------------------------------
@@ -244,6 +248,46 @@ async def test_prefetch_accepts_custom_resource_type():
         "resource_type": "notifications.body",
         "language_code": "vi",
     }
+
+
+class _CountingSession(_StubSession):
+    def __init__(self, rows, **kw) -> None:
+        super().__init__(rows, **kw)
+        self.calls = 0
+
+    async def execute(self, statement, params=None):
+        self.calls += 1
+        return await super().execute(statement, params)
+
+
+@pytest.mark.asyncio
+async def test_prefetch_is_cached_per_locale_within_the_ttl(monkeypatch):
+    # One query per request was a transaction (~6 pooler round trips) on
+    # every non-English request (2026-10-06).
+    now = [1000.0]
+    monkeypatch.setattr(overrides_module.time, "monotonic", lambda: now[0])
+    session = _CountingSession(rows=[("Learn", _sv("Learn"), "Học")])
+    factory = _factory_for(session)
+
+    first = await prefetch_overrides_for_locale(factory, "vi")
+    second = await prefetch_overrides_for_locale(factory, "vi")
+    assert first == second and session.calls == 1
+
+    await prefetch_overrides_for_locale(factory, "ru")
+    assert session.calls == 2  # another locale is its own entry
+
+    now[0] += overrides_module.PREFETCH_CACHE_TTL_SECONDS + 1
+    await prefetch_overrides_for_locale(factory, "vi")
+    assert session.calls == 3  # expired: read again
+
+
+@pytest.mark.asyncio
+async def test_a_failed_prefetch_is_not_cached():
+    failing = _CountingSession(rows=[], raise_on_execute=True)
+    assert await prefetch_overrides_for_locale(_factory_for(failing), "vi") == {}
+    healthy = _CountingSession(rows=[("Learn", _sv("Learn"), "Học")])
+    got = await prefetch_overrides_for_locale(_factory_for(healthy), "vi")
+    assert got == {"Learn": (_sv("Learn"), "Học")} and healthy.calls == 1
 
 
 # ---------------------------------------------------------------------------
