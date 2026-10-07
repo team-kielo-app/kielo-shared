@@ -116,9 +116,7 @@ def test_get_override_supports_slug_key_with_distinct_english_source():
     slug_key = "ui.email.subject.password_reset"
     english = "Reset Your Password"
     set_overrides_for_request("vi", {slug_key: (_sv(english), "Đặt lại mật khẩu")})
-    assert (
-        get_override(slug_key, english, "vi") == "Đặt lại mật khẩu"
-    )
+    assert get_override(slug_key, english, "vi") == "Đặt lại mật khẩu"
 
 
 def test_clear_overrides_resets_to_empty():
@@ -130,9 +128,7 @@ def test_clear_overrides_resets_to_empty():
 
 def test_clear_overrides_with_token_restores_previous_state():
     set_overrides_for_request("vi", {_key("Learn"): (_sv("Learn"), "outer")})
-    token = set_overrides_for_request(
-        "vi", {_key("Learn"): (_sv("Learn"), "inner")}
-    )
+    token = set_overrides_for_request("vi", {_key("Learn"): (_sv("Learn"), "inner")})
     assert get_override(_key("Learn"), "Learn", "vi") == "inner"
     clear_overrides(token)
     # Token-reset restores the outer context, not the empty state.
@@ -161,7 +157,9 @@ class _StubResult:
 
 
 class _StubSession:
-    def __init__(self, rows: list[tuple[str, str, str]], *, raise_on_execute: bool = False) -> None:
+    def __init__(
+        self, rows: list[tuple[str, str, str]], *, raise_on_execute: bool = False
+    ) -> None:
         self._rows = rows
         self.raise_on_execute = raise_on_execute
         self.captured_params: dict[str, Any] | None = None
@@ -177,6 +175,7 @@ def _factory_for(session: _StubSession):
     @asynccontextmanager
     async def factory():
         yield session
+
     return factory
 
 
@@ -385,3 +384,16 @@ def test_consume_missing_returns_mutable_set():
     # Callers can mutate without surprising the next request's state.
     got.add((_key("Other"), "Other", "vi"))
     assert consume_missing() == set()
+
+
+@pytest.mark.asyncio
+async def test_rows_read_through_one_database_are_not_served_for_another():
+    # A test's fake pool filled the cache and every later test in the process
+    # read its Vietnamese rows (make unit-test, 2026-10-07).
+    first = _CountingSession(rows=[("Learn", _sv("Learn"), "Học")])
+    other = _CountingSession(rows=[])
+    first_factory, other_factory = _factory_for(first), _factory_for(other)
+
+    assert await prefetch_overrides_for_locale(first_factory, "vi")
+    assert await prefetch_overrides_for_locale(other_factory, "vi") == {}
+    assert other.calls == 1

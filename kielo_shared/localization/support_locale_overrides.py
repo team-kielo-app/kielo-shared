@@ -74,7 +74,12 @@ logger = logging.getLogger(__name__)
 _OVERRIDES_RESOURCE_TYPE = UI_STRING
 
 PREFETCH_CACHE_TTL_SECONDS = 60.0
-_prefetch_cache: dict[tuple[str, str], tuple[float, dict[str, tuple[str, str]]]] = {}
+# Keyed by the session factory too: rows read through one database are never
+# served for another (a test's fake pool leaked its rows into later tests of
+# the same process, make unit-test 2026-10-07).
+_prefetch_cache: dict[
+    tuple[int, str, str], tuple[float, dict[str, tuple[str, str]]]
+] = {}
 
 
 def clear_prefetch_cache() -> None:
@@ -147,7 +152,7 @@ async def prefetch_overrides_for_locale(
     if not locale or locale == "en":
         return {}
 
-    cache_key = (resource_type, locale)
+    cache_key = (id(session_factory), resource_type, locale)
     cached = _prefetch_cache.get(cache_key)
     if cached is not None and time.monotonic() - cached[0] < PREFETCH_CACHE_TTL_SECONDS:
         return cached[1]
