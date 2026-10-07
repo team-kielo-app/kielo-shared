@@ -5602,10 +5602,11 @@ type FirstScene struct {
 
 // FirstSceneLine defines model for FirstSceneLine.
 type FirstSceneLine struct {
-	Id          string    `json:"id"`
-	Lemmas      []string  `json:"lemmas"`
-	SceneLemmas *[]string `json:"scene_lemmas,omitempty"`
-	Sentence    string    `json:"sentence"`
+	Id          string             `json:"id"`
+	Lemmas      []string           `json:"lemmas"`
+	SceneLemmas *[]string          `json:"scene_lemmas,omitempty"`
+	Senses      *map[string]string `json:"senses,omitempty"`
+	Sentence    string             `json:"sentence"`
 }
 
 // FirstSentenceSpeechResponse defines model for FirstSentenceSpeechResponse.
