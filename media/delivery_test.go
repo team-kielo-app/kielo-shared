@@ -99,6 +99,14 @@ func TestDeliveryContextualizesTheDevCDNEmulator(t *testing.T) {
 	assert.Equal(t, "http://192.168.1.20:8097/pub/a.webp", d.ObjectURL("192.168.1.20", "pub", "a.webp"), "a device on the LAN")
 	assert.Equal(t, "http://kielo-cdn-emulator:8080/pub/a.webp", d.ObjectURL("kielo-cms", "pub", "a.webp"), "a container")
 
+	// A URL minted for a container (user-service hydrating a support thread
+	// through /internal/media/refs) reaches a device through the BFF.
+	minted := d.ObjectURL("kielo-user-service", "pub", "a.webp?Signature=x")
+	assert.Equal(t, "http://192.168.1.20:8097/pub/a.webp?Signature=x", d.ContextualizeURL("192.168.1.20:8084", minted))
+	assert.Equal(t, "http://localhost:8097/pub/a.webp?Signature=x", d.ContextualizeURL("localhost", minted))
+	assert.Equal(t, minted, d.ContextualizeURL("kielo-mobile-bff", minted))
+	assert.Equal(t, "http://kielo-cdn-emulator:80801/a", d.ContextualizeURL("192.168.1.20", "http://kielo-cdn-emulator:80801/a"))
+
 	prod := NewDelivery(DeliveryConfig{CDNBaseURL: "https://media.kielo.app/{bucket}", PublicBucket: "pub"})
 	assert.Equal(t, "https://media.kielo.app/pub/a.webp", prod.ObjectURL("kielo-cms", "pub", "a.webp"))
 }
