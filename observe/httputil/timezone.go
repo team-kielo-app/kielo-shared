@@ -44,6 +44,7 @@ func ApplyTimezoneOffsetHeader(req *http.Request) {
 	if req == nil {
 		return
 	}
+	applyTimezoneNameHeader(req)
 	if strings.TrimSpace(req.Header.Get(TimezoneOffsetHeader)) != "" {
 		return
 	}
@@ -60,4 +61,16 @@ func ApplyTimezoneOffsetHeader(req *http.Request) {
 		return
 	}
 	req.Header.Set(TimezoneOffsetHeader, strconv.Itoa(offset))
+}
+
+// applyTimezoneNameHeader forwards the learner's IANA zone (X-Timezone) the
+// same way, so the service that persists it (user-service) receives it
+// through the BFF. An explicit header on the outbound request wins.
+func applyTimezoneNameHeader(req *http.Request) {
+	if strings.TrimSpace(req.Header.Get(timeutil.TimezoneHeader)) != "" {
+		return
+	}
+	if zone, ok := timeutil.TimezoneNameFromContext(req.Context()); ok {
+		req.Header.Set(timeutil.TimezoneHeader, zone)
+	}
 }

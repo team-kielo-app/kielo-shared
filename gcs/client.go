@@ -377,6 +377,48 @@ func (c *Client) CopyPrefix(ctx context.Context, bucket, srcPrefix, dstPrefix st
 	return nil
 }
 
+// CopyPrefixTo copies every object under srcPrefix in srcBucket to the same
+// relative name under dstPrefix in dstBucket (server-side), returning how
+// many objects it copied. Used to move an asset between storage classes.
+func (c *Client) CopyPrefixTo(ctx context.Context, srcBucket, srcPrefix, dstBucket, dstPrefix string) (int, error) {
+	copied := 0
+	err := c.ListObjects(ctx, srcBucket, srcPrefix, func(obj ObjectInfo) error {
+		dst := dstPrefix + strings.TrimPrefix(obj.Name, srcPrefix)
+		if err := c.CopyBlob(ctx, srcBucket, obj.Name, dstBucket, dst); err != nil {
+			return fmt.Errorf("copy gs://%s/%s to gs://%s/%s: %w", srcBucket, obj.Name, dstBucket, dst, err)
+		}
+		copied++
+		return nil
+	})
+	return copied, err
+}
+
+// ObjectInfo is one object in a listing.
+type ObjectInfo struct {
+	Name        string
+	Size        int64
+	ContentType string
+	Updated     time.Time
+}
+
+// ListObjects streams every object under prefix to fn, stopping at the first
+// error fn returns.
+func (c *Client) ListObjects(ctx context.Context, bucket, prefix string, fn func(ObjectInfo) error) error {
+	it := c.Client.Bucket(bucket).Objects(ctx, &storage.Query{Prefix: prefix})
+	for {
+		attrs, err := it.Next()
+		if err == iterator.Done {
+			return nil
+		}
+		if err != nil {
+			return fmt.Errorf("list gs://%s/%s: %w", bucket, prefix, err)
+		}
+		if err := fn(ObjectInfo{Name: attrs.Name, Size: attrs.Size, ContentType: attrs.ContentType, Updated: attrs.Updated}); err != nil {
+			return err
+		}
+	}
+}
+
 // DeletePrefix deletes all objects with a given prefix
 func (c *Client) DeletePrefix(ctx context.Context, bucket, prefix string) error {
 	l := c.logger.With("operation", "DeletePrefix", "bucket", bucket, "prefix", prefix)

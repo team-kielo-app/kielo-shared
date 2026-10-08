@@ -93,6 +93,7 @@ type Registry struct {
 	missTTL       time.Duration
 	resType       string
 	keyPrefx      string
+	approvedOnly  bool
 
 	// translator is the Round 10D autotranslate-on-miss hook. Default
 	// NoopTranslator (set in newWithProbe) preserves pre-Round-10D
@@ -140,10 +141,10 @@ func New(seed supportregistry.Registry, pool *pgxpool.Pool, cache Cache, opts ..
 	r := newWithProbe(seed, cache, opts...)
 	if pool != nil {
 		r.probe = func(ctx context.Context, rt, rid, sv, loc string) (string, bool, error) {
-			return queryPool(ctx, pool, rt, rid, sv, loc)
+			return queryPool(ctx, pool, rt, rid, sv, loc, r.approvedOnly)
 		}
 		r.coverageProbe = func(ctx context.Context, rt string) (map[coverageKey]int, error) {
-			return queryCoverage(ctx, pool, rt)
+			return queryCoverage(ctx, pool, rt, r.approvedOnly)
 		}
 	}
 	return r
@@ -166,11 +167,21 @@ func newWithProbe(seed supportregistry.Registry, cache Cache, opts ...Option) *R
 	for _, opt := range opts {
 		opt(r)
 	}
+	if r.approvedOnly {
+		r.keyPrefx += "approved:"
+		r.translator = NoopTranslator{}
+	}
 	return r
 }
 
 // Option mutates a Registry at construction time.
 type Option func(*Registry)
+
+// WithApprovedOnly excludes machine copy, isolates cached values, and disables
+// autotranslation even when WithTranslator is also supplied.
+func WithApprovedOnly() Option {
+	return func(r *Registry) { r.approvedOnly = true }
+}
 
 // WithHitTTL sets the positive-cache TTL. Default 5 minutes.
 func WithHitTTL(ttl time.Duration) Option {
@@ -460,6 +471,7 @@ const dbLookupQuery = `
 	   AND source_version  = $3
 	   AND language_code   = $4
 	   AND status         IN ('machine', 'override', 'approved')
+	   AND (NOT $5::boolean OR status IN ('override', 'approved'))
 	 ORDER BY CASE status WHEN 'override' THEN 0 WHEN 'approved' THEN 1 ELSE 2 END
 	 LIMIT 1
 `
@@ -482,8 +494,9 @@ func queryPool(
 	ctx context.Context,
 	pool *pgxpool.Pool,
 	resourceType, resourceID, sourceVersion, locale string,
+	approvedOnly bool,
 ) (value string, found bool, err error) {
-	err = pool.QueryRow(ctx, dbLookupQuery, resourceType, resourceID, sourceVersion, locale).Scan(&value)
+	err = pool.QueryRow(ctx, dbLookupQuery, resourceType, resourceID, sourceVersion, locale, approvedOnly).Scan(&value)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return "", false, nil
@@ -502,6 +515,7 @@ const dbCoverageQuery = `
 	  FROM localization.dynamic_translations
 	 WHERE resource_type = $1
 	   AND status        IN ('machine', 'override', 'approved')
+	   AND (NOT $2::boolean OR status IN ('override', 'approved'))
 	 GROUP BY resource_id, language_code
 `
 
@@ -512,8 +526,9 @@ func queryCoverage(
 	ctx context.Context,
 	pool *pgxpool.Pool,
 	resourceType string,
+	approvedOnly bool,
 ) (map[coverageKey]int, error) {
-	rows, err := pool.Query(ctx, dbCoverageQuery, resourceType)
+	rows, err := pool.Query(ctx, dbCoverageQuery, resourceType, approvedOnly)
 	if err != nil {
 		return nil, err
 	}

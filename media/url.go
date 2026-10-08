@@ -57,47 +57,48 @@ func ServeBaseURLWithCDN(storageBucket, storagePathPrefix, cdnBaseURL string) st
 	return gcs.BuildServeBaseURL(storageBucket, storagePathPrefix, cdnBaseURL)
 }
 
-// ServeBaseURLForRequest returns a serve-base URL contextualized for the
-// calling client's Host header. Internal Docker callers (single-label
-// hostnames) get the raw internal URL; external callers (loopback, LAN
-// IP, or FQDN) get an HOST_IP-rewritten URL in dev and an unchanged
-// real GCS URL in prod.
+// ServeBaseURLForRequest returns the directory URL a client joins variant
+// paths onto, for the calling client's host. It comes from DefaultDelivery:
+// a public asset gets its CDN base (or the storage URL without a CDN); a
+// signed or private asset gets "" — a signed URL cannot be extended with a
+// path, so those callers must use PreferredVariantURLForRequest.
 //
 // Use this at the API boundary (public/mobile BFF endpoints) so clients
-// receive URLs they can actually reach, eliminating the need for a
-// response-rewriting middleware.
+// receive URLs they can actually reach.
 func ServeBaseURLForRequest(requestHost, storageBucket, storagePathPrefix string) string {
-	base := ServeBaseURL(storageBucket, storagePathPrefix)
-	if base == "" {
-		return ""
-	}
-	return gcs.ContextualizeStorageURL(requestHost, base)
+	return DefaultDelivery().ServeBaseURL(requestHost, storageBucket, storagePathPrefix)
 }
 
-// PreferredVariantURLForRequest is the caller-aware variant of
-// PreferredVariantURL. It builds the serve-base URL for the calling
-// client and then composes the variant URL. Preferred for any URL that
-// will be returned in an HTTP response body — internal-to-internal
-// service calls should keep using PreferredVariantURL + ServeBaseURL.
+// PreferredVariantURLForRequest is the URL of the first variant in
+// keyPriority that has a path, minted by DefaultDelivery for the caller's
+// host: an unsigned CDN URL for public media, a signed one for signed media,
+// "" for private media. Use it for any URL returned in an HTTP response body.
 func PreferredVariantURLForRequest(
 	requestHost, storageBucket, storagePathPrefix string,
 	variants map[string]Variant,
 	keyPriority ...string,
 ) string {
-	base := ServeBaseURLForRequest(requestHost, storageBucket, storagePathPrefix)
-	if base == "" {
-		return ""
+	d := DefaultDelivery()
+	for _, key := range keyPriority {
+		v, ok := variants[key]
+		if !ok || strings.TrimSpace(v.Path) == "" {
+			continue
+		}
+		if u := d.ObjectURL(requestHost, storageBucket, joinObjectPath(storagePathPrefix, v.Path)); u != "" {
+			return u
+		}
 	}
-	return PreferredVariantURL(base, variants, keyPriority...)
+	return ""
 }
 
 // StreamingVariantURLForRequest returns a PATH-STYLE, request-contextualized
 // URL for a streaming-manifest variant (HLS master playlist). Streaming
 // manifests reference their segments with relative URIs, which players
-// resolve against the manifest URL — so unlike PreferredVariantURLForRequest
-// this never emits the emulator's JSON-API (?alt=media, escaped-object) form.
-// Returns "" when the variant is absent so callers can fall through to the
-// progressive-mp4 priority chain.
+// resolve against the manifest URL — so this never emits the emulator's
+// JSON-API (?alt=media, escaped-object) form. Only public media streams this
+// way: a per-URL signature does not travel to relative segment requests.
+// Returns "" when the variant is absent (or not public) so callers can fall
+// through to the progressive-mp4 priority chain.
 func StreamingVariantURLForRequest(
 	requestHost, storageBucket, storagePathPrefix string,
 	variants map[string]Variant,
@@ -107,6 +108,14 @@ func StreamingVariantURLForRequest(
 	if !ok || strings.TrimSpace(v.Path) == "" {
 		return ""
 	}
+	d := DefaultDelivery()
+	class, known := d.ClassOf(storageBucket)
+	if known && class != AccessPublic {
+		return ""
+	}
+	if known && d.CDNBaseURL(storageBucket) != "" {
+		return d.ObjectURL(requestHost, storageBucket, joinObjectPath(storagePathPrefix, v.Path))
+	}
 	// Host contextualization only understands storage-API-shaped URLs, so
 	// build the standard base, rewrite the host, THEN normalize to path-style.
 	base := ServeBaseURL(storageBucket, storagePathPrefix)
@@ -115,6 +124,15 @@ func StreamingVariantURLForRequest(
 	}
 	base = gcs.PathStyleFromServeBase(gcs.ContextualizeStorageURL(requestHost, base))
 	return strings.TrimRight(base, "/") + "/" + strings.TrimLeft(v.Path, "/")
+}
+
+func joinObjectPath(prefix, path string) string {
+	prefix = strings.Trim(strings.TrimSpace(prefix), "/")
+	path = strings.TrimLeft(strings.TrimSpace(path), "/")
+	if prefix == "" {
+		return path
+	}
+	return prefix + "/" + path
 }
 
 // PreferredVariantURL returns the URL of the first matching variant in

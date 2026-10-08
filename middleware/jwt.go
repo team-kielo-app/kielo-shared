@@ -329,6 +329,7 @@ func FlexibleAuthWithOptions(jwtSecret string, userChecker UserExistenceChecker,
 		return func(c echo.Context) error {
 			// Try gateway headers first (preferred for internal calls)
 			if userIDStr := c.Request().Header.Get("X-User-ID"); userIDStr != "" && hasValidInternalAPIKey(c.Request()) {
+				MarkServiceCaller(c)
 				userID, err := uuid.Parse(userIDStr)
 				if err != nil {
 					// Sweep ZZZZ: typed code; the gateway sent a non-UUID
@@ -418,6 +419,24 @@ func RequireAdminRole() echo.MiddlewareFunc {
 				"You need to be signed in to continue.")
 		}
 	}
+}
+
+// serviceCallerKey marks a request authenticated as another Kielo service
+// (internal API key + X-User-ID) rather than by the end user's own token.
+const serviceCallerKey = "kielo_service_caller"
+
+// IsServiceCaller reports whether FlexibleAuth authenticated this request as a
+// Kielo service acting for X-User-ID, not as the end user themselves. Handlers
+// that must not let an end user choose what they may only do for themselves
+// (e.g. media ownership) branch on it.
+func IsServiceCaller(c echo.Context) bool {
+	trusted, _ := c.Get(serviceCallerKey).(bool)
+	return trusted
+}
+
+// MarkServiceCaller records that the request was authenticated as a service.
+func MarkServiceCaller(c echo.Context) {
+	c.Set(serviceCallerKey, true)
 }
 
 func hasValidInternalAPIKey(r *http.Request) bool {
