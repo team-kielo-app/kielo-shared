@@ -89,6 +89,7 @@ var DefaultCORSAllowHeaders = []string{
 	"X-Request-Id",
 	observe.HeaderTraceparent,
 	"X-Timezone-Offset-Minutes",
+	"X-Timezone",
 	"X-Idempotency-Key",
 	"Idempotency-Key",
 	"X-User-ID",

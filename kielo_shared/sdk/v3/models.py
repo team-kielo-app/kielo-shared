@@ -1762,11 +1762,13 @@ class ConvoCreateScenarioRequest(BaseModel):
     status: str
     tags: list[str]
     text_mode: str
+    thumbnail_media_id: str | None = None
     thumbnail_url: str
     title: str
 
 
 class ConvoCreateVoiceAgentRequest(BaseModel):
+    avatar_media_id: str | None = None
     avatar_url: str | None = None
     description: str | None = None
     gender: str | None = None
@@ -1816,6 +1818,7 @@ class ConvoScenario(BaseModel):
 
 
 class ConvoScenarioListItem(BaseModel):
+    agent_avatar_media_id: str | None = None
     agent_avatar_url: str | None = None
     category: str | None = None
     cefr_level: str | None = None
@@ -1828,10 +1831,12 @@ class ConvoScenarioListItem(BaseModel):
     localized_descriptions: dict[str, str] | None = None
     localized_titles: dict[str, str] | None = None
     scenario_content: dict[str, Any] | None = None
+    scene_image_media_id: str | None = None
     scene_image_url: str | None = None
     slug: str
     support_language_code: str | None = None
     tags: list[str] | None = None
+    thumbnail_media_id: str | None = None
     thumbnail_url: str | None = None
     title: str
 
@@ -1850,12 +1855,14 @@ class ConvoUpdateScenarioRequest(BaseModel):
     status: str | None = None
     tags: list[str] | None = None
     text_mode: str | None = None
+    thumbnail_media_id: str | None = None
     thumbnail_url: str | None = None
     title: str | None = None
     voice_agent_id: str | None = None
 
 
 class ConvoUpdateVoiceAgentRequest(BaseModel):
+    avatar_media_id: str | None = None
     avatar_url: str | None = None
     description: str | None = None
     gender: str | None = None
@@ -1867,6 +1874,7 @@ class ConvoUpdateVoiceAgentRequest(BaseModel):
 
 
 class ConvoVoiceAgent(BaseModel):
+    avatar_media_id: str | None = None
     avatar_url: str | None = None
     created_at: str
     description: str | None = None
@@ -2186,6 +2194,7 @@ class CurriculumChapterResponse(BaseModel):
     level_id: UUID_aliased
     order_index: int
     status: str
+    thumbnail_media_id: str | None = None
     thumbnail_url: str | None = None
     title: str
     updated_at: AwareDatetime
@@ -2216,6 +2225,7 @@ class CurriculumChapterUpsertRequest(BaseModel):
     level_id: UUID_aliased
     order_index: int
     status: str
+    thumbnail_media_id: str | None = None
     thumbnail_url: str | None = None
     title: str
 
@@ -2243,6 +2253,7 @@ class CurriculumLevelResponse(BaseModel):
     id: UUID_aliased
     order_index: int
     status: str
+    thumbnail_media_id: str | None = None
     thumbnail_url: str | None = None
     title: str
     track_id: UUID_aliased
@@ -2273,6 +2284,7 @@ class CurriculumLevelUpsertRequest(BaseModel):
     icon_emoji: str | None = None
     order_index: int
     status: str
+    thumbnail_media_id: str | None = None
     thumbnail_url: str | None = None
     title: str
     track_id: UUID_aliased
@@ -2329,6 +2341,7 @@ class CurriculumTrackResponse(BaseModel):
     order_index: int
     slug: str
     status: str
+    thumbnail_media_id: str | None = None
     thumbnail_url: str | None = None
     title: str
     track_type: str
@@ -2362,6 +2375,7 @@ class CurriculumTrackUpsertRequest(BaseModel):
     order_index: int
     slug: str
     status: str
+    thumbnail_media_id: str | None = None
     thumbnail_url: str | None = None
     title: str
     track_type: str
@@ -3888,6 +3902,28 @@ class KTVSpeechFixRequest(BaseModel):
     prompt: str | None = None
 
 
+class KTVStudioClass(BaseModel):
+    blocked_step: str | None = None
+    bucket: str
+    format: str
+    priority: int
+    sort_time: AwareDatetime
+
+
+class KTVStudioCounts(BaseModel):
+    formats: dict[str, int]
+    views: dict[str, int]
+
+
+class KTVStudioWorkflow(BaseModel):
+    created_at: AwareDatetime
+    locale: str
+    status: str
+    term: str
+    updated_at: AwareDatetime
+    workflow_id: UUID_aliased
+
+
 class KTVTempDownloadCleanupRequest(BaseModel):
     before: str
 
@@ -4259,6 +4295,20 @@ class LLMUsageRow(BaseModel):
     service: str
     thinking_tokens: int
     usd: float
+
+
+class Landing(BaseModel):
+    blog_intro: str
+    hero_line: str
+    meta_description: str
+    meta_title: str
+    video_urls: list[str]
+
+
+class LandingResponse(BaseModel):
+    learning_language_code: str
+    settings: Landing
+    updated_at: AwareDatetime | None = None
 
 
 class LaneOverride(BaseModel):
@@ -4922,6 +4972,7 @@ class MarkArticleAsReadRequest(BaseModel):
 
 
 class MediaAsset(BaseModel):
+    access_class: str | None = None
     created_at: AwareDatetime
     file_hash_sha256: str
     filename: str
@@ -4942,6 +4993,7 @@ class MediaAsset(BaseModel):
     uploader_user_id: UUID_aliased
     usage_count: int
     used_by: list[str] | None = None
+    variant_urls: dict[str, str] | None = None
     variants: dict[str, Any] | None = None
 
 
@@ -4955,6 +5007,111 @@ class MediaAssetResponse(BaseModel):
     temporary_url: str | None = None
     updated_at: AwareDatetime
     variants: Any | None = None
+
+
+class MediaAssetResponseContentService(BaseModel):
+    created_at: AwareDatetime
+    media_id: UUID_aliased
+    media_type: str
+    metadata: Any | None = None
+    processing_status: str
+    serve_base_url: str | None = None
+    temporary_url: str | None = None
+    updated_at: AwareDatetime
+    variant_urls: dict[str, str] | None = None
+    variants: Any | None = None
+
+
+class MediaFieldRow(BaseModel):
+    language: str | None = None
+    media_id: str | None = None
+    owner_id: str
+    url: str
+
+
+class MediaFieldRowKielolearnEngine(BaseModel):
+    language: str = Field(..., title="Language")
+    media_id: str | None = Field("", title="Media Id")
+    owner_id: str = Field(..., title="Owner Id")
+    url: str = Field(..., title="Url")
+
+
+class MediaFieldRowsPage(BaseModel):
+    next: str | None = None
+    rows: list[MediaFieldRow]
+
+
+class MediaFieldRowsPageKielolearnEngine(BaseModel):
+    next: str | None = Field("", title="Next")
+    rows: list[MediaFieldRowKielolearnEngine] = Field(..., title="Rows")
+
+
+class MediaFieldSummary(BaseModel):
+    empty: int
+    field: str
+    label: str
+    linked: int
+    owner_type: str
+    profile: str
+    rows: int
+    url_only: int
+
+
+class MediaFieldSummaryKielolearnEngine(BaseModel):
+    empty: int = Field(..., title="Empty")
+    field: str = Field(..., title="Field")
+    label: str = Field(..., title="Label")
+    linked: int = Field(..., title="Linked")
+    owner_type: str = Field(..., title="Owner Type")
+    profile: str = Field(..., title="Profile")
+    rows: int = Field(..., title="Rows")
+    url_only: int = Field(..., title="Url Only")
+
+
+class MediaFieldUpdate(BaseModel):
+    expected_url: str
+    language: str | None = None
+    media_id: str
+    owner_id: str
+    url: str
+
+
+class MediaFieldUpdateKielolearnEngine(BaseModel):
+    expected_url: str = Field(..., title="Expected Url")
+    language: str = Field(..., title="Language")
+    media_id: str = Field(..., title="Media Id")
+    owner_id: str = Field(..., title="Owner Id")
+    url: str = Field(..., title="Url")
+
+
+class MediaFieldUpdateRequest(BaseModel):
+    updates: list[MediaFieldUpdate]
+
+
+class MediaFieldUpdateRequestKielolearnEngine(BaseModel):
+    updates: list[MediaFieldUpdateKielolearnEngine] = Field(
+        ..., max_length=200, min_length=1, title="Updates"
+    )
+
+
+class MediaFieldUpdateResult(BaseModel):
+    changed: list[str]
+    updated: int
+
+
+class MediaFieldUpdateResultKielolearnEngine(BaseModel):
+    changed: list[str] = Field(..., title="Changed")
+    updated: int = Field(..., title="Updated")
+
+
+class MediaFieldsSummary(BaseModel):
+    fields: list[MediaFieldSummary]
+    owner: str
+
+
+class MediaFieldsSummaryKielolearnEngine(BaseModel):
+    fields: list[MediaFieldSummaryKielolearnEngine] = Field(..., title="Fields")
+    owner: str = Field(..., title="Owner")
 
 
 class MediaLifecycleSummary(BaseModel):
@@ -4979,6 +5136,7 @@ class MediaUploadRequest(BaseModel):
     file_hash_sha256: str
     filename: str
     mime_type: str
+    profile: str | None = None
     related_entity_id: str
     related_entity_type: str
     size: int | None = None
@@ -5394,6 +5552,12 @@ class OverrideDynamicTranslationRequest(BaseModel):
     translated_text: str
 
 
+class OwnerSummary(BaseModel):
+    error: str | None = None
+    fields: list[MediaFieldSummary]
+    owner: str
+
+
 class ParadigmRow(DictionaryParadigmRow):
     pass
 
@@ -5556,6 +5720,37 @@ class PlacementTestItemsResponse(BaseModel):
 class PlacementTestItemsResponseKielolearnEngine(BaseModel):
     grammar_items: list[ItemSummary] = Field(..., title="Grammar Items")
     vocabulary_items: list[ItemSummary] = Field(..., title="Vocabulary Items")
+
+
+class Post(BaseModel):
+    body_markdown: str
+    category: str
+    created_at: AwareDatetime
+    description: str
+    hero_image_alt: str
+    hero_image_url: str
+    learning_language_code: str
+    level: str
+    post_id: UUID_aliased
+    published_at: AwareDatetime | None = None
+    slug: str
+    tags: list[str]
+    title: str
+    updated_at: AwareDatetime
+
+
+class PostSummary(BaseModel):
+    category: str
+    description: str
+    hero_image_alt: str
+    hero_image_url: str
+    level: str
+    post_id: UUID_aliased
+    published_at: AwareDatetime | None = None
+    slug: str
+    tags: list[str]
+    title: str
+    updated_at: AwareDatetime
 
 
 class PracticeContext(BaseModel):
@@ -6179,6 +6374,7 @@ class RoadmapAdminLessonResponse(BaseModel):
     lesson_content: dict[str, Any]
     lesson_id: UUID_aliased
     order_index: int
+    thumbnail_media_id: str | None = None
     thumbnail_url: str | None = None
     title: str
     updated_at: AwareDatetime
@@ -6294,6 +6490,7 @@ class RoadmapLessonUpsertRequest(BaseModel):
     is_published: bool
     lesson_content: dict[str, Any]
     order_index: int
+    thumbnail_media_id: str | None = None
     thumbnail_url: str | None = None
     title: str
 
@@ -7524,7 +7721,7 @@ class SingletonMediaAssetList(BaseModel):
 
 
 class SingletonMediaAssetResponse(BaseModel):
-    data: MediaAssetResponse
+    data: MediaAssetResponseContentService
 
 
 class SingletonMediaLifecycleSummary(BaseModel):
@@ -7799,6 +7996,72 @@ class SingletonstringList(BaseModel):
     data: list[str]
 
 
+class SiteLandingSettings(Landing):
+    pass
+
+
+class SiteLandingSettingsResponse(BaseModel):
+    learning_language_code: str
+    settings: SiteLandingSettings
+    updated_at: AwareDatetime | None = None
+
+
+class SitePost(BaseModel):
+    body_markdown: str
+    category: str
+    created_at: AwareDatetime
+    description: str
+    hero_image_alt: str
+    hero_image_url: str
+    learning_language_code: str
+    level: str
+    post_id: UUID_aliased
+    published_at: AwareDatetime | None = None
+    slug: str
+    source: str
+    status: str
+    tags: list[str]
+    title: str
+    updated_at: AwareDatetime
+
+
+class SitePostCounts(BaseModel):
+    archived: int
+    draft: int
+    published: int
+
+
+class SitePostRequest(BaseModel):
+    body_markdown: str | None = None
+    category: str | None = None
+    description: str | None = None
+    hero_image_alt: str | None = None
+    hero_image_url: str | None = None
+    level: str | None = None
+    published_at: AwareDatetime | None = None
+    slug: str | None = None
+    source: str | None = None
+    status: str | None = None
+    tags: list[str] | None = None
+    title: str | None = None
+
+
+class SitePostSummary(BaseModel):
+    category: str
+    description: str
+    hero_image_alt: str
+    hero_image_url: str
+    level: str
+    post_id: UUID_aliased
+    published_at: AwareDatetime | None = None
+    slug: str
+    source: str
+    status: str
+    tags: list[str]
+    title: str
+    updated_at: AwareDatetime
+
+
 class SpeechReferenceAudioRequest(BaseModel):
     language: str
     text: str
@@ -7896,6 +8159,107 @@ class StatusResponse(AppFeedbackUpdateStatusRequest):
 
 class StatusResult(AppFeedbackUpdateStatusRequest):
     pass
+
+
+class StorageAdoptRequest(BaseModel):
+    bucket: str | None = None
+    media_id: str | None = None
+    object: str | None = None
+    owner_id: str | None = None
+    owner_type: str | None = None
+    profile: str
+    slot: str | None = None
+    url: str | None = None
+
+
+class StorageAdoptResult(BaseModel):
+    media_id: str
+    outcome: str
+
+
+class StorageClassMoveRequest(BaseModel):
+    limit: int | None = None
+    profile: str | None = None
+
+
+class StorageDeleteObjectsRequest(BaseModel):
+    bucket: str
+    objects: list[str]
+
+
+class StorageDeleteObjectsResult(BaseModel):
+    outcome: dict[str, str]
+
+
+class StorageFinalizeRequest(BaseModel):
+    limit: int | None = None
+
+
+class StorageFinalizeResult(BaseModel):
+    deleted: int
+    failed: int
+    kept_still_referenced: int
+
+
+class StorageInventoryRow(BaseModel):
+    access_class: str
+    bucket: str
+    bytes: int
+    objects: int
+    top_prefix: str
+    tracked_bytes: int
+    tracked_objects: int
+
+
+class StorageMoveOutcome(BaseModel):
+    error: str | None = None
+    from_bucket: str
+    media_id: str
+    objects: int
+    outcome: str
+    profile: str
+    to_bucket: str
+
+
+class StorageMovePlanRow(BaseModel):
+    access_class: str
+    assets: int
+    bytes: int
+    from_bucket: str
+    profile: str
+    to_bucket: str
+
+
+class StorageObject(BaseModel):
+    bucket: str
+    content_type: str | None = None
+    object_name: str
+    size_bytes: int
+    updated_at: AwareDatetime | None = None
+
+
+class StorageOperation(BaseModel):
+    actor: str
+    error: str | None = None
+    finished_at: AwareDatetime | None = None
+    kind: str
+    operation_id: str
+    params: Any
+    result: Any
+    started_at: AwareDatetime
+    status: str
+
+
+class StorageUnmanagedRow(BaseModel):
+    assets: int
+    bucket: str
+    profile: str
+
+
+class StorageUntrackedPage(BaseModel):
+    objects: list[StorageObject]
+    run_id: str
+    total: int
 
 
 class StreakInfo(BaseModel):
@@ -8092,6 +8456,33 @@ class SurfacesResponse(BaseModel):
 class SurfacesResponseContentService(BaseModel):
     items: list[SurfaceReferenceContentService]
     next_page_key: str | None = None
+
+
+class SyncFailure(BaseModel):
+    error: str
+    language: str | None = None
+    owner_id: str
+    url: str
+
+
+class SyncRequest(BaseModel):
+    after: str | None = None
+    limit: int | None = None
+    state: str
+
+
+class SyncResult(BaseModel):
+    adopted: int
+    changed: list[str]
+    failed: list[SyncFailure]
+    field: str
+    next: str | None = None
+    owner: str
+    pending: int
+    refreshed: int
+    rows: int
+    state: str
+    unchanged: int
 
 
 class TTSAdminBucket(BaseModel):
@@ -9219,6 +9610,7 @@ class VideoListPage(BaseModel):
 
 
 class VoiceAgent(BaseModel):
+    avatar_media_id: UUID_aliased | None = None
     avatar_url: str | None = None
     created_at: AwareDatetime
     description: str | None = None
@@ -9511,7 +9903,7 @@ class ArticleVersionSnippetContentService(BaseModel):
     source_url: str | None = None
     support_language_code: str | None = None
     tags: list[str] | None = None
-    thumbnail: MediaAssetResponse | None = None
+    thumbnail: MediaAssetResponseContentService | None = None
     title: str
     title_support_language_code: str | None = None
     title_translation_fallback: bool | None = None
@@ -9972,6 +10364,7 @@ class CurriculumTreeChapter(BaseModel):
     lessons: list[CurriculumTreeLesson]
     order_index: int
     status: str
+    thumbnail_media_id: str | None = None
     thumbnail_url: str | None = None
     title: str
 
@@ -10000,6 +10393,7 @@ class CurriculumTreeLevel(BaseModel):
     id: UUID_aliased
     order_index: int
     status: str
+    thumbnail_media_id: str | None = None
     thumbnail_url: str | None = None
     title: str
 
@@ -10029,6 +10423,7 @@ class CurriculumTreeTrack(BaseModel):
     order_index: int
     slug: str
     status: str
+    thumbnail_media_id: str | None = None
     thumbnail_url: str | None = None
     title: str
     track_type: str
@@ -10525,6 +10920,10 @@ class ListScenariosResponse(BaseModel):
     items: list[ScenarioListItem]
 
 
+class MediaFieldsOverview(BaseModel):
+    owners: list[OwnerSummary]
+
+
 class MediaMetadata(BaseModel):
     created_at: str
     media_id: str
@@ -10686,6 +11085,11 @@ class Paradigm(BaseModel):
     rows: list[ParadigmRow]
     source: str | None = None
     type: str
+
+
+class PostList(BaseModel):
+    posts: list[PostSummary]
+    total: int
 
 
 class ProgressSummary(BaseModel):
@@ -11083,6 +11487,10 @@ class SingletonLearningSession(BaseModel):
     data: LearningSession
 
 
+class SingletonMediaFieldsOverview(BaseModel):
+    data: MediaFieldsOverview
+
+
 class SingletonMediaMetadata(BaseModel):
     data: MediaMetadata
 
@@ -11123,6 +11531,14 @@ class SingletonSemanticSearchResponse(BaseModel):
     data: SemanticSearchResponse
 
 
+class SingletonSiteLandingSettingsResponse(BaseModel):
+    data: SiteLandingSettingsResponse
+
+
+class SingletonSitePost(BaseModel):
+    data: SitePost
+
+
 class SingletonSpeechTranscriptionResponse(BaseModel):
     data: SpeechTranscriptionResponse
 
@@ -11141,6 +11557,22 @@ class SingletonStatsBreakdown(BaseModel):
 
 class SingletonStatusResult(BaseModel):
     data: StatusResult
+
+
+class SingletonStorageAdoptResult(BaseModel):
+    data: StorageAdoptResult
+
+
+class SingletonStorageDeleteObjectsResult(BaseModel):
+    data: StorageDeleteObjectsResult
+
+
+class SingletonStorageFinalizeResult(BaseModel):
+    data: StorageFinalizeResult
+
+
+class SingletonStorageUntrackedPage(BaseModel):
+    data: StorageUntrackedPage
 
 
 class SingletonStudyList(BaseModel):
@@ -11173,6 +11605,10 @@ class SingletonSurfacesResponse(BaseModel):
 
 class SingletonSurfacesResponseContentService(BaseModel):
     data: SurfacesResponseContentService
+
+
+class SingletonSyncResult(BaseModel):
+    data: SyncResult
 
 
 class SingletonTTSBaseWordStreamSession(BaseModel):
@@ -11367,9 +11803,39 @@ class SingletonWebIngestTargetList(BaseModel):
     data: list[WebIngestTarget]
 
 
+class SitePostList(BaseModel):
+    counts: SitePostCounts
+    posts: list[SitePostSummary]
+    total: int
+
+
 class StatsChartResponse(BaseModel):
     data: list[TimeSeriesPoint]
     days: int
+
+
+class StorageClassMoveResult(BaseModel):
+    outcomes: list[StorageMoveOutcome]
+
+
+class StorageInventoryResult(BaseModel):
+    bytes: int
+    groups: list[StorageInventoryRow]
+    objects: int
+    run_id: str
+    untracked_bytes: int
+    untracked_list_truncated: bool
+    untracked_objects: int
+
+
+class StorageOverview(BaseModel):
+    class_moves: list[StorageMovePlanRow]
+    inventory: StorageOperation | None = None
+    inventory_groups: list[StorageInventoryRow]
+    moves_awaiting_cleanup: int
+    operations: list[StorageOperation]
+    targets: dict[str, str]
+    unmanaged_assets: list[StorageUnmanagedRow]
 
 
 class SubmissionResult(BaseModel):
@@ -12048,6 +12514,21 @@ class HubStatusResponse(BaseModel):
     status: Status3 = Field(..., title="Status")
 
 
+class KTVStudioRow(BaseModel):
+    class_: KTVStudioClass = Field(..., alias="class")
+    id: str
+    kind: str
+    video: KieloTVVideo | None = None
+    workflow: KTVStudioWorkflow | None = None
+
+
+class KTVStudioSection(BaseModel):
+    key: str
+    offset: int
+    rows: list[KTVStudioRow]
+    total: int
+
+
 class LearnerOverview(BaseModel):
     achievements: LearnerSectionLearnerAchievementSummary
     billing: LearnerSectionLearnerOverviewBilling
@@ -12220,6 +12701,22 @@ class SingletonSessionReconcileResponseV3(BaseModel):
     data: SessionReconcileResponseV3
 
 
+class SingletonSitePostList(BaseModel):
+    data: SitePostList
+
+
+class SingletonStorageClassMoveResult(BaseModel):
+    data: StorageClassMoveResult
+
+
+class SingletonStorageInventoryResult(BaseModel):
+    data: StorageInventoryResult
+
+
+class SingletonStorageOverview(BaseModel):
+    data: StorageOverview
+
+
 class SingletonSubmitAnswerResponseV3(BaseModel):
     data: SubmitAnswerResponseV3
 
@@ -12344,7 +12841,7 @@ class ArticleVersionContentService(BaseModel):
     source_url: str | None = None
     support_language_code: str | None = None
     tags: list[str] | None = None
-    thumbnail: MediaAssetResponse | None = None
+    thumbnail: MediaAssetResponseContentService | None = None
     title: str
     title_support_language_code: str | None = None
     title_translation_fallback: bool | None = None
@@ -12375,6 +12872,12 @@ class EmailCoverageResponse(BaseModel):
     templates: list[EmailTemplateCoverage]
 
 
+class KTVStudioLibrary(BaseModel):
+    counts: KTVStudioCounts
+    sections: list[KTVStudioSection]
+    view: str
+
+
 class SingletonArticleVersion(BaseModel):
     data: ArticleVersion
 
@@ -12385,3 +12888,7 @@ class SingletonArticleVersionContentService(BaseModel):
 
 class SingletonEmailCoverageResponse(BaseModel):
     data: EmailCoverageResponse
+
+
+class SingletonKTVStudioLibrary(BaseModel):
+    data: KTVStudioLibrary

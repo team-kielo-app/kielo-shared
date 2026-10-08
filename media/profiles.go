@@ -16,13 +16,20 @@ import "time"
 // set by Terraform, so ops can retune retention without a logic redeploy —
 // the override layer is applied by the consuming service, not here.
 
-// AccessClass controls how a profile's served objects are exposed.
+// AccessClass is a storage target: it decides which bucket a profile's
+// assets live in, and so how they can be read (Delivery mints the URLs).
+// See docs/architecture/media-platform-access-and-storage.md.
 type AccessClass string
 
 const (
-	AccessPublic    AccessClass = "public"     // allUsers reader (public bucket/prefix)
-	AccessSignedCDN AccessClass = "signed_cdn" // served via Cloud CDN signed URLs
-	AccessPrivate   AccessClass = "private"    // service-account only, no public read
+	// AccessPublic: the public media bucket, served unsigned by the CDN.
+	// Content the app shows to anyone (and, by decision 2026-10-08, avatars).
+	AccessPublic AccessClass = "public"
+	// AccessSignedCDN: a private bucket the CDN serves only for a request
+	// signed with the CDN key. Only for media whose URLs the server builds.
+	AccessSignedCDN AccessClass = "signed_cdn"
+	// AccessPrivate: a private bucket with no CDN; services read it.
+	AccessPrivate AccessClass = "private"
 )
 
 // VariantSpec declares one rendition the processor should produce. The set is
@@ -129,7 +136,7 @@ var profiles = map[string]MediaProfile{
 			{Name: "main", MaxWidth: 256, Format: "webp"},
 			{Name: "preview", MaxWidth: 96, Format: "webp"},
 		},
-		Access:    AccessSignedCDN,
+		Access:    AccessPublic,
 		Retention: RetentionPolicy{DeleteOnOwnerDelete: true, OrphanGrace: 7 * day},
 		GDPR:      GDPRClass{ContainsPII: true, SubjectFrom: "owner", ErasureSLA: 30 * day, DedupAcrossSubjects: false},
 	},
@@ -142,7 +149,7 @@ var profiles = map[string]MediaProfile{
 			{Name: "main", MaxWidth: 1200, Format: "webp"},
 			{Name: "preview", MaxWidth: 300, Format: "webp"},
 		},
-		Access: AccessSignedCDN,
+		Access: AccessPublic,
 		// Articles are re-scraped daily — media is ephemeral. 30d TTL (reaped by
 		// the reconciler, replacing the old blind GCS articles/ age-delete).
 		Retention: RetentionPolicy{TTL: 30 * day, DeleteOnOwnerDelete: true, OrphanGrace: 7 * day},
@@ -156,7 +163,7 @@ var profiles = map[string]MediaProfile{
 			{Name: "main", MaxWidth: 1200, Format: "webp"},
 			{Name: "preview", MaxWidth: 300, Format: "webp"},
 		},
-		Access: AccessSignedCDN,
+		Access: AccessPublic,
 		// Ephemeral (daily re-scrape): 30d TTL, reconciler-reaped.
 		Retention: RetentionPolicy{TTL: 30 * day, DeleteOnOwnerDelete: true, OrphanGrace: 7 * day},
 		GDPR:      GDPRClass{SubjectFrom: "none", DedupAcrossSubjects: true},
@@ -180,7 +187,7 @@ var profiles = map[string]MediaProfile{
 			{Name: "preview", MaxWidth: 300, Format: "webp"},
 			{Name: "hls", Format: "hls"},
 		},
-		Access:    AccessSignedCDN,
+		Access:    AccessPublic,
 		Retention: RetentionPolicy{DeleteOnOwnerDelete: true, OrphanGrace: 14 * day},
 		GDPR:      GDPRClass{SubjectFrom: "none", DedupAcrossSubjects: true},
 	},
@@ -192,7 +199,7 @@ var profiles = map[string]MediaProfile{
 			{Name: "main", MaxWidth: 1200, Format: "webp"},
 			{Name: "preview", MaxWidth: 300, Format: "webp"},
 		},
-		Access:    AccessSignedCDN,
+		Access:    AccessPublic,
 		Retention: RetentionPolicy{DeleteOnOwnerDelete: true, OrphanGrace: 14 * day},
 		GDPR:      GDPRClass{SubjectFrom: "none", DedupAcrossSubjects: true},
 	},
@@ -204,7 +211,7 @@ var profiles = map[string]MediaProfile{
 			{Name: "main", MaxWidth: 1200, Format: "webp"},
 			{Name: "preview", MaxWidth: 300, Format: "webp"},
 		},
-		Access:    AccessSignedCDN,
+		Access:    AccessPublic,
 		Retention: RetentionPolicy{DeleteOnOwnerDelete: true, OrphanGrace: 14 * day},
 		GDPR:      GDPRClass{SubjectFrom: "none", DedupAcrossSubjects: true},
 	},
@@ -221,7 +228,7 @@ var profiles = map[string]MediaProfile{
 			{Name: "preview", MaxWidth: 300, Format: "webp"},
 			{Name: "hls", Format: "hls"},
 		},
-		Access:    AccessSignedCDN,
+		Access:    AccessPublic,
 		Retention: RetentionPolicy{DeleteOnOwnerDelete: true, OrphanGrace: 14 * day},
 		GDPR:      GDPRClass{SubjectFrom: "none", DedupAcrossSubjects: true},
 	},
@@ -241,7 +248,7 @@ var profiles = map[string]MediaProfile{
 			{Name: "preview", MaxWidth: 300, Format: "webp"},
 			{Name: "hls", Format: "hls"},
 		},
-		Access: AccessSignedCDN,
+		Access: AccessPublic,
 		// Keep indefinitely; never orphan-reap — app assets are referenced by
 		// shipped clients via slug, not by DB links the reconciler can see.
 		Retention: RetentionPolicy{},
@@ -251,7 +258,7 @@ var profiles = map[string]MediaProfile{
 		Key: "kielotv-audio", EntityType: EntityTypeKieloTVAudio,
 		PathPrefix: "kielotv", IncludeEntityID: true,
 		MaxUploadBytes: 200 * mib,
-		Access:         AccessSignedCDN,
+		Access:         AccessPublic,
 		Retention:      RetentionPolicy{DeleteOnOwnerDelete: true, OrphanGrace: 14 * day},
 		GDPR:           GDPRClass{SubjectFrom: "none", DedupAcrossSubjects: true},
 	},
@@ -259,7 +266,7 @@ var profiles = map[string]MediaProfile{
 		Key: "base-word-audio", EntityType: EntityTypeBaseWordAudio,
 		PathPrefix: "tts/base-words", IncludeEntityID: true,
 		MaxUploadBytes: 100 * mib,
-		Access:         AccessSignedCDN,
+		Access:         AccessPublic,
 		Retention:      RetentionPolicy{DeleteOnOwnerDelete: true, OrphanGrace: 14 * day},
 		GDPR:           GDPRClass{SubjectFrom: "none", DedupAcrossSubjects: true},
 	},
@@ -267,7 +274,7 @@ var profiles = map[string]MediaProfile{
 		Key: "paragraph-audio", EntityType: EntityTypeParagraphAudio,
 		PathPrefix: "tts/paragraphs", IncludeEntityID: true,
 		MaxUploadBytes: 100 * mib,
-		Access:         AccessSignedCDN,
+		Access:         AccessPublic,
 		// tts/paragraphs already COLDLINE-tiers at 30d via GCS (cost only).
 		Retention: RetentionPolicy{ColdlineAfter: 30 * day, DeleteOnOwnerDelete: true, OrphanGrace: 14 * day},
 		GDPR:      GDPRClass{SubjectFrom: "none", DedupAcrossSubjects: true},
@@ -276,14 +283,13 @@ var profiles = map[string]MediaProfile{
 		Key: "roadmap-step-audio", EntityType: EntityTypeRoadmapLessonStepAudio,
 		PathPrefix: "tts/roadmap-steps", IncludeEntityID: true,
 		MaxUploadBytes: 100 * mib,
-		Access:         AccessSignedCDN,
+		Access:         AccessPublic,
 		Retention:      RetentionPolicy{DeleteOnOwnerDelete: true, OrphanGrace: 14 * day},
 		GDPR:           GDPRClass{SubjectFrom: "none", DedupAcrossSubjects: true},
 	},
 	"voice-agent-avatar": {
 		Key: "voice-agent-avatar",
-		// New use-case (no legacy EntityType): voice-agent avatars currently
-		// stored as raw external URLs — migration target.
+		// convo.voice_agents.avatar_media_id; avatar_url is the display copy.
 		PathPrefix: "voice-agents", IncludeEntityID: true,
 		AllowedMimes:   []string{"image/jpeg", "image/png", "image/webp"},
 		MaxUploadBytes: 10 * mib,
@@ -291,14 +297,32 @@ var profiles = map[string]MediaProfile{
 			{Name: "main", MaxWidth: 512, Format: "webp"},
 			{Name: "preview", MaxWidth: 128, Format: "webp"},
 		},
-		Access:    AccessSignedCDN,
-		Retention: RetentionPolicy{DeleteOnOwnerDelete: true, OrphanGrace: 14 * day},
-		GDPR:      GDPRClass{SubjectFrom: "none", DedupAcrossSubjects: true},
+		AttachmentRole: "avatar",
+		Access:         AccessPublic,
+		Retention:      RetentionPolicy{DeleteOnOwnerDelete: true, OrphanGrace: 14 * day},
+		GDPR:           GDPRClass{SubjectFrom: "none", DedupAcrossSubjects: true},
+	},
+	"convo-scenario-image": {
+		Key: "convo-scenario-image",
+		// Juka scene art: a scenario's thumbnail (and its setting's scene
+		// image / agent avatar override), formerly raw assets/juka-thumbnails
+		// URLs in convo.scenarios.
+		PathPrefix: "convo-scenarios", IncludeEntityID: true,
+		AllowedMimes:   []string{"image/jpeg", "image/png", "image/webp"},
+		MaxUploadBytes: 25 * mib,
+		Variants: []VariantSpec{
+			{Name: "main", MaxWidth: 1024, Format: "webp"},
+			{Name: "preview", MaxWidth: 300, Format: "webp"},
+		},
+		AttachmentRole: "thumbnail",
+		Access:         AccessPublic,
+		Retention:      RetentionPolicy{DeleteOnOwnerDelete: true, OrphanGrace: 14 * day},
+		GDPR:           GDPRClass{SubjectFrom: "none", DedupAcrossSubjects: true},
 	},
 	"curriculum-thumbnail": {
 		Key: "curriculum-thumbnail",
-		// New use-case: track/level/chapter/lesson thumbnails currently raw
-		// String(500) URLs in kielolearn-engine — primary migration target.
+		// klearn_<lang> tracks/levels/chapters/roadmap lessons
+		// thumbnail_media_id; thumbnail_url is the display copy.
 		PathPrefix: "curriculum", IncludeEntityID: true,
 		AllowedMimes:   []string{"image/jpeg", "image/png", "image/webp"},
 		MaxUploadBytes: 25 * mib,
@@ -306,9 +330,10 @@ var profiles = map[string]MediaProfile{
 			{Name: "main", MaxWidth: 1200, Format: "webp"},
 			{Name: "preview", MaxWidth: 300, Format: "webp"},
 		},
-		Access:    AccessSignedCDN,
-		Retention: RetentionPolicy{DeleteOnOwnerDelete: true, OrphanGrace: 14 * day},
-		GDPR:      GDPRClass{SubjectFrom: "none", DedupAcrossSubjects: true},
+		AttachmentRole: "thumbnail",
+		Access:         AccessPublic,
+		Retention:      RetentionPolicy{DeleteOnOwnerDelete: true, OrphanGrace: 14 * day},
+		GDPR:           GDPRClass{SubjectFrom: "none", DedupAcrossSubjects: true},
 	},
 	"support-attachment": {
 		Key: "support-attachment",
