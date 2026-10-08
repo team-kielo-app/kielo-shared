@@ -260,36 +260,55 @@ func (d *Delivery) ContextualizeURL(requestHost, rawURL string) string {
 // contextualize points a dev CDN-emulator URL at a host the caller can
 // reach. Production CDN URLs (no internal base configured) pass through.
 func (d *Delivery) contextualize(requestHost, rawURL string) string {
-	if d.cdnInternal == "" || d.cdnBase == "" {
+	canonical, internalOrigin, rest, ok := d.devCDNPath(rawURL)
+	if !ok {
 		return rawURL
 	}
 	host := strings.TrimSpace(strings.ToLower(requestHost))
 	if h, _, err := net.SplitHostPort(host); err == nil {
 		host = h
 	}
-	canonical, err := url.Parse(strings.ReplaceAll(d.cdnBase, "{bucket}", "x"))
-	if err != nil || canonical.Host == "" {
-		return rawURL
-	}
-	origin := canonical.Scheme + "://" + canonical.Host
-	if !strings.HasPrefix(rawURL, origin) {
-		return rawURL
-	}
 	switch {
 	case host != "" && !gcs.IsLoopbackHostname(host) && !strings.Contains(host, "."):
 		// A Docker-internal caller (single-label hostname).
-		internal, err := url.Parse(strings.ReplaceAll(d.cdnInternal, "{bucket}", "x"))
-		if err != nil || internal.Host == "" {
-			return rawURL
-		}
-		return internal.Scheme + "://" + internal.Host + strings.TrimPrefix(rawURL, origin)
+		return internalOrigin + rest
 	case host != "" && !gcs.IsLoopbackHostname(host) && gcs.IsLoopbackHostname(canonical.Hostname()):
 		// A device on the LAN reached us via this host; the emulator's port
 		// is published there too.
-		return canonical.Scheme + "://" + net.JoinHostPort(host, canonical.Port()) + strings.TrimPrefix(rawURL, origin)
+		return canonical.Scheme + "://" + net.JoinHostPort(host, canonical.Port()) + rest
 	default:
-		return rawURL
+		return canonical.Scheme + "://" + canonical.Host + rest
 	}
+}
+
+// devCDNPath splits a dev CDN-emulator URL minted under either origin — the
+// one devices use or the one containers use (a service hydrating media refs
+// passes those on to devices through the BFF) — into the canonical base, the
+// container origin and the path after the origin.
+func (d *Delivery) devCDNPath(rawURL string) (canonical *url.URL, internalOrigin, rest string, ok bool) {
+	if d.cdnInternal == "" || d.cdnBase == "" {
+		return nil, "", "", false
+	}
+	canonical, err := url.Parse(strings.ReplaceAll(d.cdnBase, "{bucket}", "x"))
+	if err != nil || canonical.Host == "" {
+		return nil, "", "", false
+	}
+	internal, err := url.Parse(strings.ReplaceAll(d.cdnInternal, "{bucket}", "x"))
+	if err != nil || internal.Host == "" {
+		return nil, "", "", false
+	}
+	internalOrigin = internal.Scheme + "://" + internal.Host
+	for _, origin := range []string{canonical.Scheme + "://" + canonical.Host, internalOrigin} {
+		if hasOriginPrefix(rawURL, origin) {
+			return canonical, internalOrigin, strings.TrimPrefix(rawURL, origin), true
+		}
+	}
+	return nil, "", "", false
+}
+
+func hasOriginPrefix(rawURL, origin string) bool {
+	rest, ok := strings.CutPrefix(rawURL, origin)
+	return ok && (rest == "" || rest[0] == '/' || rest[0] == '?')
 }
 
 func storageObjectURL(requestHost, bucket, objectPath string) string {
