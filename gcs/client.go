@@ -331,10 +331,27 @@ func (c *Client) CopyBlob(ctx context.Context, srcBucket, srcObject, dstBucket, 
 	src := c.Client.Bucket(srcBucket).Object(srcObject)
 	dst := c.Client.Bucket(dstBucket).Object(dstObject)
 
+	// Setting any attribute on the copier replaces the destination's whole
+	// metadata, so carry the source's content headers across: without them
+	// the copies served as application/octet-stream (2026-10-08: 105 support
+	// attachments moved to the signed bucket, 1,146 relocated KTV files).
+	srcAttrs, err := src.Attrs(copyCtx)
+	if err != nil {
+		if errors.Is(err, storage.ErrObjectNotExist) {
+			l.Error("Source object not found for copy", "error", err)
+			return fmt.Errorf("source object not found: gs://%s/%s", srcBucket, srcObject)
+		}
+		return fmt.Errorf("attrs of gs://%s/%s: %w", srcBucket, srcObject, err)
+	}
 	copier := dst.CopierFrom(src)
+	copier.ContentType = srcAttrs.ContentType
+	copier.ContentEncoding = srcAttrs.ContentEncoding
+	copier.ContentDisposition = srcAttrs.ContentDisposition
+	copier.ContentLanguage = srcAttrs.ContentLanguage
+	copier.Metadata = srcAttrs.Metadata
 	copier.CacheControl = "public, max-age=31536000"
 
-	_, err := copier.Run(copyCtx)
+	_, err = copier.Run(copyCtx)
 	if err != nil {
 		if errors.Is(err, storage.ErrObjectNotExist) {
 			l.Error("Source object not found for copy", "error", err)
