@@ -60,9 +60,12 @@ import (
 // concern; the reaper's job is "flag stale, not delete unknown").
 type CurrentSourceVersionFunc func(ctx context.Context, resourceType, resourceID string) (sourceVersion string, known bool)
 
-// Reaper flips stale localization.dynamic_translations rows to
-// status='pending_review' so they surface in the admin audit queue.
-// See package doc for design rationale.
+// Reaper handles stale localization.dynamic_translations rows: a stale
+// machine translation is deleted (nothing of value is lost, and the seam
+// translates the current source on the next read), while a stale approved
+// or override row is flipped to status='pending_review' so the person's
+// work surfaces in the admin audit queue. Flagging machine rows too filled
+// that queue with ~7,600 rows nobody could act on (2026-10-09).
 type Reaper struct {
 	pool    *pgxpool.Pool
 	current CurrentSourceVersionFunc
@@ -156,8 +159,11 @@ type ReapStats struct {
 	Scanned int
 	// Stale is the count of rows whose source_version did NOT match
 	// the current value AND whose status was not already
-	// 'pending_review'. These were flipped.
+	// 'pending_review'. Deleted of them were machine rows and were
+	// removed; the rest were flipped to pending_review.
 	Stale int
+	// Deleted is the count of stale machine rows removed.
+	Deleted int
 	// Unknown is the count of rows the CurrentSourceVersionFunc
 	// declined to resolve (returned ok=false). These were skipped.
 	Unknown int
@@ -224,14 +230,15 @@ func (r *Reaper) Reap(ctx context.Context) (ReapStats, error) {
 		}
 
 		if len(staleIDs) > 0 {
-			flipped, err := r.flipBatch(ctx, staleIDs)
+			deleted, flipped, err := r.flipBatch(ctx, staleIDs)
 			if err != nil {
 				log.Printf(
 					"WARN: overridepgx.Reaper flip-batch failed (continuing scan): %v", err,
 				)
 				continue
 			}
-			stats.Stale += flipped
+			stats.Stale += deleted + flipped
+			stats.Deleted += deleted
 			for _, row := range staleIDs {
 				stats.PerLocale[row.LanguageCode]++
 				stats.PerResourceType[row.ResourceType]++
@@ -338,8 +345,8 @@ func (r *Reaper) scanBatch(ctx context.Context, cursor scanCursor) ([]scanRow, e
 	return batch, nil
 }
 
-// flipBatch updates the listed rows to status='pending_review' in one
-// statement. Idempotent at the row level: the WHERE clause excludes
+// flipBatch deletes the listed rows that are machine translations and
+// updates the rest to status='pending_review'. Idempotent at the row level: the WHERE clause excludes
 // rows already at 'pending_review' so a concurrent flip is harmless.
 //
 // Returns the count of rows actually flipped (UPDATE row count).
@@ -351,9 +358,9 @@ const flipQuery = `
 	   AND (resource_type, resource_id, source_version, language_code) = ANY($1)
 `
 
-func (r *Reaper) flipBatch(ctx context.Context, rows []scanRow) (int, error) {
+func (r *Reaper) flipBatch(ctx context.Context, rows []scanRow) (deleted, flipped int, err error) {
 	if len(rows) == 0 {
-		return 0, nil
+		return 0, 0, nil
 	}
 	// Build a TEXT[][] tuple array compatible with the
 	// `(...) = ANY($1)` clause. pgx encodes [][]string as a 2D
@@ -375,6 +382,21 @@ func (r *Reaper) flipBatch(ctx context.Context, rows []scanRow) (int, error) {
 	// scanBatchSize (default 500) so the per-statement parameter
 	// count stays well under Postgres's 32767 limit.
 	values, args := buildTupleValues(tuples)
+	deleteQuery := fmt.Sprintf(`
+		DELETE FROM localization.dynamic_translations dt
+		 USING (VALUES %s) AS stale(rt, rid, sv, lc)
+		 WHERE dt.status          = 'machine'
+		   AND dt.resource_type   = stale.rt
+		   AND dt.resource_id     = stale.rid
+		   AND dt.source_version  = stale.sv
+		   AND dt.language_code   = stale.lc
+	`, values)
+	tag, err := sharedDB.ExecWithRetry(ctx, r.pool, deleteQuery, args...)
+	if err != nil {
+		return 0, 0, err
+	}
+	deleted = int(tag.RowsAffected())
+
 	query := fmt.Sprintf(`
 		UPDATE localization.dynamic_translations dt
 		   SET status     = 'pending_review',
@@ -388,11 +410,11 @@ func (r *Reaper) flipBatch(ctx context.Context, rows []scanRow) (int, error) {
 	`, values)
 	_ = flipQuery // retained for documentation; the ANY shape is unused
 
-	tag, err := sharedDB.ExecWithRetry(ctx, r.pool, query, args...)
+	tag, err = sharedDB.ExecWithRetry(ctx, r.pool, query, args...)
 	if err != nil {
-		return 0, err
+		return deleted, 0, err
 	}
-	return int(tag.RowsAffected()), nil
+	return deleted, int(tag.RowsAffected()), nil
 }
 
 // buildTupleValues turns N row-tuples into a VALUES (...), (...), ...

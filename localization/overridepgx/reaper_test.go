@@ -101,7 +101,7 @@ func staticCurrentSourceVersion(known map[string]string) CurrentSourceVersionFun
 }
 
 // TestReaper_FlipsStaleRowsToPendingReview is the headline behavior
-// pin: one stale row + one fresh row + one already-pending row →
+// pin: one stale approved row + one fresh row + one already-pending row →
 // only the stale one gets flipped.
 func TestReaper_FlipsStaleRowsToPendingReview(t *testing.T) {
 	pool := newPool(t)
@@ -111,7 +111,7 @@ func TestReaper_FlipsStaleRowsToPendingReview(t *testing.T) {
 	pendingRID := "test-pending-" + uuid.NewString()
 
 	// Stale: stored source_version "old-v1" but current is "new-v2".
-	seedReaperRow(t, pool, namespace, staleRID, "old-v1", "vi", "machine")
+	seedReaperRow(t, pool, namespace, staleRID, "old-v1", "vi", "approved")
 	// Fresh: stored source_version matches current.
 	seedReaperRow(t, pool, namespace, freshRID, "current-v1", "vi", "machine")
 	// Already-pending: stale source_version but status='pending_review'
@@ -174,7 +174,7 @@ func TestReaper_UnknownResourcesAreSkipped(t *testing.T) {
 	knownRID := "test-known-" + uuid.NewString()
 	unknownRID := "test-unknown-" + uuid.NewString()
 
-	seedReaperRow(t, pool, namespace, knownRID, "old", "vi", "machine")
+	seedReaperRow(t, pool, namespace, knownRID, "old", "vi", "approved")
 	seedReaperRow(t, pool, namespace, unknownRID, "old", "vi", "machine")
 
 	current := staticCurrentSourceVersion(map[string]string{
@@ -208,7 +208,7 @@ func TestReaper_IsIdempotent(t *testing.T) {
 	pool := newPool(t)
 	namespace := "ui.string"
 	rid := "test-idem-" + uuid.NewString()
-	seedReaperRow(t, pool, namespace, rid, "old", "vi", "machine")
+	seedReaperRow(t, pool, namespace, rid, "old", "vi", "approved")
 
 	current := staticCurrentSourceVersion(map[string]string{rid: "new"})
 	reaper := NewReaper(pool, current, WithResourceTypeFilter(namespace), WithResourceIDPrefix("test-"))
@@ -244,8 +244,8 @@ func TestReaper_RespectsResourceTypeFilter(t *testing.T) {
 	// row must NOT be touched.
 	namespace1 := "ui.string"
 	namespace2 := "scenario.description"
-	seedReaperRow(t, pool, namespace1, rid, "old", "vi", "machine")
-	seedReaperRow(t, pool, namespace2, rid, "old", "vi", "machine")
+	seedReaperRow(t, pool, namespace1, rid, "old", "vi", "approved")
+	seedReaperRow(t, pool, namespace2, rid, "old", "vi", "approved")
 
 	current := staticCurrentSourceVersion(map[string]string{rid: "new"})
 	reaper := NewReaper(pool, current, WithResourceTypeFilter(namespace1), WithResourceIDPrefix("test-"))
@@ -259,8 +259,8 @@ func TestReaper_RespectsResourceTypeFilter(t *testing.T) {
 	}
 
 	ns2Rows := reaperRowStates(t, pool, namespace2, rid)
-	if len(ns2Rows) != 1 || ns2Rows[0].status != "machine" {
-		t.Errorf("namespace2 row state = %+v, want status=machine (out of filter)", ns2Rows)
+	if len(ns2Rows) != 1 || ns2Rows[0].status != "approved" {
+		t.Errorf("namespace2 row state = %+v, want status=approved (out of filter)", ns2Rows)
 	}
 }
 
@@ -289,5 +289,36 @@ func TestReaper_NilCurrentFuncErrors(t *testing.T) {
 	_, err := reaper.Reap(context.Background())
 	if err == nil {
 		t.Fatal("Reap with nil CurrentSourceVersionFunc: want error, got nil")
+	}
+}
+
+// TestReaper_DeletesStaleMachineRows pins: a stale machine translation is
+// removed instead of flagged — nobody can act on it, and the seam
+// translates the current source on the next read.
+func TestReaper_DeletesStaleMachineRows(t *testing.T) {
+	pool := newPool(t)
+	namespace := "ui.string"
+	machineRID := "test-machine-" + uuid.NewString()
+	overrideRID := "test-override-" + uuid.NewString()
+	seedReaperRow(t, pool, namespace, machineRID, "old", "vi", "machine")
+	seedReaperRow(t, pool, namespace, machineRID, "new", "vi", "machine")
+	seedReaperRow(t, pool, namespace, overrideRID, "old", "vi", "override")
+
+	current := staticCurrentSourceVersion(map[string]string{machineRID: "new", overrideRID: "new"})
+	reaper := NewReaper(pool, current, WithResourceTypeFilter(namespace), WithResourceIDPrefix("test-"))
+	stats, err := reaper.Reap(context.Background())
+	if err != nil {
+		t.Fatalf("Reap: %v", err)
+	}
+	if stats.Stale != 2 || stats.Deleted != 1 {
+		t.Errorf("Stale = %d, Deleted = %d, want 2 and 1", stats.Stale, stats.Deleted)
+	}
+	machineRows := reaperRowStates(t, pool, namespace, machineRID)
+	if len(machineRows) != 1 || machineRows[0].sourceVersion != "new" || machineRows[0].status != "machine" {
+		t.Errorf("machine rows = %+v, want only the current row left", machineRows)
+	}
+	overrideRows := reaperRowStates(t, pool, namespace, overrideRID)
+	if len(overrideRows) != 1 || overrideRows[0].status != "pending_review" {
+		t.Errorf("override rows = %+v, want flagged pending_review", overrideRows)
 	}
 }
