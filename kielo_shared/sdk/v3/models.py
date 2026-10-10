@@ -895,6 +895,17 @@ class CommsDLQAuditListResponse(BaseModel):
     next_page_key: str | None = None
 
 
+class CommsDLQAuditReplayRequest(BaseModel):
+    force: bool | None = None
+    operator_notes: str | None = None
+    resolved_by: str | None = None
+
+
+class CommsDLQAuditReplayResponse(BaseModel):
+    message_id: str
+    source_topic: str
+
+
 class CommsDLQAuditResolveRequest(BaseModel):
     operator_notes: str | None = None
     resolved_by: str
@@ -2450,9 +2461,8 @@ class DLQAuditReplayRequest(BaseModel):
     resolved_by: str
 
 
-class DLQAuditReplayResponse(BaseModel):
-    message_id: str
-    source_topic: str
+class DLQAuditReplayResponse(CommsDLQAuditReplayResponse):
+    pass
 
 
 class DLQAuditResolveRequest(CommsDLQAuditResolveRequest):
@@ -4983,6 +4993,7 @@ class MediaAsset(BaseModel):
     original_storage_path: str
     processing_error: str | None = None
     processing_status: str | None = None
+    profile: str | None = None
     related_entity_id: str | None = None
     related_entity_type: str
     serve_base_url: str | None = None
@@ -6909,6 +6920,12 @@ class SessionCompletionSummary(BaseModel):
     summary: str | None = Field(None, title="Summary")
 
 
+class SessionEvaluationRequest(BaseModel):
+    claim_id: str | None = None
+    evaluation: dict[str, Any]
+    source: str
+
+
 class SessionOrigin(BaseModel):
     entry_point: str | None = Field(None, title="Entry Point")
     source_session_id: UUID_aliased | None = Field(None, title="Source Session Id")
@@ -6929,6 +6946,7 @@ class Status6(StrEnum):
     duplicate = "duplicate"
     skipped = "skipped"
     missing = "missing"
+    conflict = "conflict"
 
 
 class SessionReconcileRequestKielolearnEngine(BaseModel):
@@ -9174,6 +9192,7 @@ class UpdateConversationInterestsRequest(BaseModel):
 
 
 class UpdateConversationSessionEvaluationRequest(BaseModel):
+    claim_id: UUID_aliased | None = None
     evaluation: dict[str, Any]
     source: str
 

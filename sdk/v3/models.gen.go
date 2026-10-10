@@ -531,10 +531,11 @@ const (
 
 // Defines values for SessionReconcileItemResultStatus.
 const (
-	Applied   SessionReconcileItemResultStatus = "applied"
-	Duplicate SessionReconcileItemResultStatus = "duplicate"
-	Missing   SessionReconcileItemResultStatus = "missing"
-	Skipped   SessionReconcileItemResultStatus = "skipped"
+	SessionReconcileItemResultStatusApplied   SessionReconcileItemResultStatus = "applied"
+	SessionReconcileItemResultStatusConflict  SessionReconcileItemResultStatus = "conflict"
+	SessionReconcileItemResultStatusDuplicate SessionReconcileItemResultStatus = "duplicate"
+	SessionReconcileItemResultStatusMissing   SessionReconcileItemResultStatus = "missing"
+	SessionReconcileItemResultStatusSkipped   SessionReconcileItemResultStatus = "skipped"
 )
 
 // Defines values for SessionResumeStateStatus.
@@ -2250,6 +2251,19 @@ type CommsDLQAuditListItem struct {
 type CommsDLQAuditListResponse struct {
 	Items       []CommsDLQAuditListItem `json:"items"`
 	NextPageKey *string                 `json:"next_page_key,omitempty"`
+}
+
+// CommsDLQAuditReplayRequest defines model for CommsDLQAuditReplayRequest.
+type CommsDLQAuditReplayRequest struct {
+	Force         *bool   `json:"force,omitempty"`
+	OperatorNotes *string `json:"operator_notes,omitempty"`
+	ResolvedBy    *string `json:"resolved_by,omitempty"`
+}
+
+// CommsDLQAuditReplayResponse defines model for CommsDLQAuditReplayResponse.
+type CommsDLQAuditReplayResponse struct {
+	MessageId   string `json:"message_id"`
+	SourceTopic string `json:"source_topic"`
 }
 
 // CommsDLQAuditResolveRequest defines model for CommsDLQAuditResolveRequest.
@@ -8057,6 +8071,7 @@ type MediaAsset struct {
 	OriginalStoragePath   string                  `json:"original_storage_path"`
 	ProcessingError       *string                 `json:"processing_error,omitempty"`
 	ProcessingStatus      *string                 `json:"processing_status,omitempty"`
+	Profile               *string                 `json:"profile,omitempty"`
 	RelatedEntityId       *string                 `json:"related_entity_id,omitempty"`
 	RelatedEntityType     string                  `json:"related_entity_type"`
 	ServeBaseUrl          *string                 `json:"serve_base_url,omitempty"`
@@ -10721,6 +10736,13 @@ type SessionCompletionSummary struct {
 	NextFocus  *string   `json:"next_focus"`
 	Reinforced *[]string `json:"reinforced,omitempty"`
 	Summary    *string   `json:"summary"`
+}
+
+// SessionEvaluationRequest defines model for SessionEvaluationRequest.
+type SessionEvaluationRequest struct {
+	ClaimId    *string                `json:"claim_id,omitempty"`
+	Evaluation map[string]interface{} `json:"evaluation"`
+	Source     string                 `json:"source"`
 }
 
 // SessionOrigin defines model for SessionOrigin.
@@ -14523,6 +14545,7 @@ type UpdateConversationInterestsRequest struct {
 
 // UpdateConversationSessionEvaluationRequest defines model for UpdateConversationSessionEvaluationRequest.
 type UpdateConversationSessionEvaluationRequest struct {
+	ClaimId    *uuid.UUID             `json:"claim_id,omitempty"`
 	Evaluation map[string]interface{} `json:"evaluation"`
 	Source     string                 `json:"source"`
 }
@@ -18402,6 +18425,9 @@ type PostApiV3AuthTransferJSONRequestBody = TransferRedeemRequest
 // PostApiV3AuthVerifyResetTokenJSONRequestBody defines body for PostApiV3AuthVerifyResetToken for application/json ContentType.
 type PostApiV3AuthVerifyResetTokenJSONRequestBody = VerifyResetTokenRequest
 
+// PostApiV3CommunicationsDlqAuditIdReplayJSONRequestBody defines body for PostApiV3CommunicationsDlqAuditIdReplay for application/json ContentType.
+type PostApiV3CommunicationsDlqAuditIdReplayJSONRequestBody = CommsDLQAuditReplayRequest
+
 // PatchApiV3CommunicationsDlqAuditIdResolveJSONRequestBody defines body for PatchApiV3CommunicationsDlqAuditIdResolve for application/json ContentType.
 type PatchApiV3CommunicationsDlqAuditIdResolveJSONRequestBody = CommsDLQAuditResolveRequest
 
@@ -19382,6 +19408,9 @@ type AddTopicListItemKlearnApiV3TopicListsTopicListIdItemsPostJSONRequestBody = 
 
 // UpdateUserPersonalizationProfileKlearnApiV3UserUserIdProfilePersonalizationPutJSONRequestBody defines body for UpdateUserPersonalizationProfileKlearnApiV3UserUserIdProfilePersonalizationPut for application/json ContentType.
 type UpdateUserPersonalizationProfileKlearnApiV3UserUserIdProfilePersonalizationPutJSONRequestBody = UserProfilePersonalizationUpdate
+
+// PostSessionsSessionIdEvaluationJSONRequestBody defines body for PostSessionsSessionIdEvaluation for application/json ContentType.
+type PostSessionsSessionIdEvaluationJSONRequestBody = SessionEvaluationRequest
 
 // PostSignInLinkRedeemJSONRequestBody defines body for PostSignInLinkRedeem for application/json ContentType.
 type PostSignInLinkRedeemJSONRequestBody = SignInLinkRedeemRequest
