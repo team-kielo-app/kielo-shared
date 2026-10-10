@@ -9836,6 +9836,174 @@ class FieldTranslateBatchResponse(BaseModel):
     translations: list[str] | None = Field(None, title="Translations")
 
 
+class ImageChecksums(BaseModel):
+    md5: str
+    sha256: str
+
+
+class ScreenshotTarget(BaseModel):
+    height: int
+    id: str
+    label: str
+    max_count: int
+    min_count: int
+    required: bool
+    store: str
+    store_slot: str
+    width: int
+
+
+class StoreLocaleMapping(BaseModel):
+    app_store: list[str]
+    google_play: list[str]
+    locale: str
+
+
+class StoreScreenshotAsset(BaseModel):
+    asset_id: UUID_aliased
+    bytes: int
+    checksums: ImageChecksums
+    created_at: AwareDatetime
+    file_name: str | None = None
+    format: str
+    height: int
+    kind: str
+    locale: str | None = None
+    set_id: UUID_aliased
+    slot: int | None = None
+    snapshot: int | None = None
+    target_id: str | None = None
+    url: str | None = None
+    width: int
+
+
+class StoreScreenshotDraft(BaseModel):
+    document: Any
+    draft_revision: int
+    set_id: UUID_aliased
+    updated_at: AwareDatetime
+
+
+class StoreScreenshotDraftSaveRequest(BaseModel):
+    document: Any
+    draft_revision: int
+
+
+class StoreScreenshotExportListResponse(BaseModel):
+    items: list[StoreScreenshotAsset]
+    set_id: UUID_aliased
+    snapshot: int
+
+
+class StoreScreenshotLocaleListResponse(BaseModel):
+    items: list[StoreLocaleMapping]
+
+
+class StoreScreenshotPublishItem(BaseModel):
+    action: str
+    error: str | None = None
+    locale: str
+    slot: int
+    status: str
+    store: str
+    store_locale: str
+    target_id: str
+
+
+class StoreScreenshotPublishRun(BaseModel):
+    created_at: AwareDatetime
+    created_by: UUID_aliased | None = None
+    dry_run: bool
+    finished_at: AwareDatetime | None = None
+    items: list[StoreScreenshotPublishItem]
+    locales: list[str]
+    run_id: UUID_aliased
+    set_id: UUID_aliased
+    snapshot: int
+    status: str
+    stores: list[str]
+
+
+class StoreScreenshotPublishRunCreateRequest(BaseModel):
+    dry_run: bool | None = None
+    locales: list[str]
+    snapshot: int
+    stores: list[str]
+
+
+class StoreScreenshotSet(BaseModel):
+    archived_at: AwareDatetime | None = None
+    created_at: AwareDatetime
+    created_by: UUID_aliased | None = None
+    draft_revision: int
+    latest_snapshot: int | None = None
+    name: str
+    set_id: UUID_aliased
+    slug: str
+    targets: list[str]
+    updated_at: AwareDatetime
+
+
+class StoreScreenshotSetCreateRequest(BaseModel):
+    name: str
+    slug: str
+    targets: list[str]
+
+
+class StoreScreenshotSetListResponse(BaseModel):
+    items: list[StoreScreenshotSet]
+
+
+class StoreScreenshotSetUpdateRequest(BaseModel):
+    name: str | None = None
+    targets: list[str] | None = None
+
+
+class StoreScreenshotSnapshot(BaseModel):
+    created_at: AwareDatetime
+    created_by: UUID_aliased | None = None
+    document: Any
+    set_id: UUID_aliased
+    version: int
+
+
+class StoreScreenshotSnapshotCreateRequest(BaseModel):
+    draft_revision: int
+
+
+class StoreScreenshotSnapshotListResponse(BaseModel):
+    items: list[StoreScreenshotSnapshot]
+
+
+class StoreScreenshotStringsResponse(BaseModel):
+    locale: str
+    missing: list[str]
+    set_id: UUID_aliased
+    strings: dict[str, str]
+
+
+class StoreScreenshotTargetListResponse(BaseModel):
+    items: list[ScreenshotTarget]
+
+
+class StoreScreenshotValidationResponse(BaseModel):
+    bytes: int
+    checksums: ImageChecksums
+    format: str
+    height: int
+    normalized: bool
+    target_id: str
+    width: int
+
+
+class StoreScreenshotAssetListResponse(BaseModel):
+    items: list[StoreScreenshotAsset]
+
+
+class SingletonStoreScreenshotAssetListResponse(BaseModel):
+    data: StoreScreenshotAssetListResponse
+
+
 class AIConversation(BaseModel):
     description: str | None = None
     id: str
@@ -12197,6 +12365,54 @@ class WebIngestRun(BaseModel):
 
 class BundledHintResponse(HintResponse):
     pass
+
+
+class SingletonStoreScreenshotAsset(BaseModel):
+    data: StoreScreenshotAsset
+
+
+class SingletonStoreScreenshotDraft(BaseModel):
+    data: StoreScreenshotDraft
+
+
+class SingletonStoreScreenshotExportListResponse(BaseModel):
+    data: StoreScreenshotExportListResponse
+
+
+class SingletonStoreScreenshotLocaleListResponse(BaseModel):
+    data: StoreScreenshotLocaleListResponse
+
+
+class SingletonStoreScreenshotPublishRun(BaseModel):
+    data: StoreScreenshotPublishRun
+
+
+class SingletonStoreScreenshotSet(BaseModel):
+    data: StoreScreenshotSet
+
+
+class SingletonStoreScreenshotSetListResponse(BaseModel):
+    data: StoreScreenshotSetListResponse
+
+
+class SingletonStoreScreenshotSnapshot(BaseModel):
+    data: StoreScreenshotSnapshot
+
+
+class SingletonStoreScreenshotSnapshotListResponse(BaseModel):
+    data: StoreScreenshotSnapshotListResponse
+
+
+class SingletonStoreScreenshotStringsResponse(BaseModel):
+    data: StoreScreenshotStringsResponse
+
+
+class SingletonStoreScreenshotTargetListResponse(BaseModel):
+    data: StoreScreenshotTargetListResponse
+
+
+class SingletonStoreScreenshotValidationResponse(BaseModel):
+    data: StoreScreenshotValidationResponse
 
 
 class AiConversationContent(BaseModel):

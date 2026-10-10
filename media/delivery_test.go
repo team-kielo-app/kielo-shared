@@ -119,6 +119,9 @@ func TestProfileAccessClasses(t *testing.T) {
 		"support-attachment": AccessSignedCDN,
 		"convo-transcript":   AccessPrivate,
 		"convo-review":       AccessPrivate,
+		// Unreleased store listing material (#325).
+		"store-listing-source": AccessPrivate,
+		"store-listing-export": AccessPrivate,
 	}
 	for key, p := range profiles {
 		expected, ok := want[key]

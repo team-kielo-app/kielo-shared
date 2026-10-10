@@ -106,11 +106,15 @@ type MediaProfile struct {
 	// location. Use it for assets that are relocated into an owner-specific
 	// path after upload; a shared media_id cannot be relocated for both owners.
 	DisableHashDedup bool
-	Access           AccessClass
-	Retention        RetentionPolicy
-	GDPR             GDPRClass
-	Alerts           AlertPolicy
-	LegalHoldable    bool
+	// PassThrough keeps the upload's exact bytes: the processor archives the
+	// original and renders nothing, whatever the MIME type. For media whose
+	// checksum is part of a contract (store listing images).
+	PassThrough   bool
+	Access        AccessClass
+	Retention     RetentionPolicy
+	GDPR          GDPRClass
+	Alerts        AlertPolicy
+	LegalHoldable bool
 }
 
 const (
@@ -380,6 +384,36 @@ var profiles = map[string]MediaProfile{
 		GDPR:           GDPRClass{ContainsPII: true, SubjectFrom: "owner", ErasureSLA: 30 * day, DedupAcrossSubjects: false},
 		Alerts:         AlertPolicy{Enabled: true, LookaheadDays: 7, Channels: []string{"slack:ops"}},
 		LegalHoldable:  true,
+	},
+	// Store screenshot builder (#325). Owner = cms.store_screenshot_sets; the CMS
+	// uploads with no owner and attaches only after its own row commits, so an
+	// upload whose row never lands, or an export a re-upload replaced, is an
+	// orphan the reconciler reaps. Pass-through: the stores' checksums (ASC MD5,
+	// Play sha256) must match the bytes the CMS validated. Unreleased marketing
+	// material, hence private.
+	"store-listing-source": {
+		Key:              "store-listing-source",
+		PathPrefix:       "store-listing/sources",
+		AllowedMimes:     []string{"image/png", "image/jpeg", "font/woff2", "font/woff", "font/ttf", "font/otf"},
+		MaxUploadBytes:   20 * mib,
+		AttachmentRole:   "source",
+		PassThrough:      true,
+		DisableHashDedup: true,
+		Access:           AccessPrivate,
+		Retention:        RetentionPolicy{DeleteOnOwnerDelete: true, OrphanGrace: day},
+		GDPR:             GDPRClass{SubjectFrom: "none"},
+	},
+	"store-listing-export": {
+		Key:              "store-listing-export",
+		PathPrefix:       "store-listing/exports",
+		AllowedMimes:     []string{"image/png", "image/jpeg"},
+		MaxUploadBytes:   20 * mib,
+		AttachmentRole:   "export",
+		PassThrough:      true,
+		DisableHashDedup: true,
+		Access:           AccessPrivate,
+		Retention:        RetentionPolicy{DeleteOnOwnerDelete: true, OrphanGrace: day},
+		GDPR:             GDPRClass{SubjectFrom: "none"},
 	},
 }
 
