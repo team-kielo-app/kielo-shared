@@ -6100,6 +6100,12 @@ type IdentifyConceptExerciseItemTypeFk string
 // IdentifyConceptExerciseSourceType defines model for IdentifyConceptExercise.SourceType.
 type IdentifyConceptExerciseSourceType string
 
+// ImageChecksums defines model for ImageChecksums.
+type ImageChecksums struct {
+	Md5    string `json:"md5"`
+	Sha256 string `json:"sha256"`
+}
+
 // InAppNudge defines model for InAppNudge.
 type InAppNudge struct {
 	AnchorTarget        string                  `json:"anchor_target"`
@@ -10584,6 +10590,19 @@ type ScheduledCommunicationListResponse struct {
 	Meta OffsetMeta               `json:"meta"`
 }
 
+// ScreenshotTarget defines model for ScreenshotTarget.
+type ScreenshotTarget struct {
+	Height    int    `json:"height"`
+	Id        string `json:"id"`
+	Label     string `json:"label"`
+	MaxCount  int    `json:"max_count"`
+	MinCount  int    `json:"min_count"`
+	Required  bool   `json:"required"`
+	Store     string `json:"store"`
+	StoreSlot string `json:"store_slot"`
+	Width     int    `json:"width"`
+}
+
 // SearchExcerpt defines model for SearchExcerpt.
 type SearchExcerpt struct {
 	Path string `json:"path"`
@@ -12522,6 +12541,71 @@ type SingletonStorageUntrackedPage struct {
 	Data StorageUntrackedPage `json:"data"`
 }
 
+// SingletonStoreScreenshotAsset defines model for SingletonStoreScreenshotAsset.
+type SingletonStoreScreenshotAsset struct {
+	Data StoreScreenshotAsset `json:"data"`
+}
+
+// SingletonStoreScreenshotAssetListResponse defines model for SingletonStoreScreenshotAssetListResponse.
+type SingletonStoreScreenshotAssetListResponse struct {
+	Data StoreScreenshotAssetListResponse `json:"data"`
+}
+
+// SingletonStoreScreenshotDraft defines model for SingletonStoreScreenshotDraft.
+type SingletonStoreScreenshotDraft struct {
+	Data StoreScreenshotDraft `json:"data"`
+}
+
+// SingletonStoreScreenshotExportListResponse defines model for SingletonStoreScreenshotExportListResponse.
+type SingletonStoreScreenshotExportListResponse struct {
+	Data StoreScreenshotExportListResponse `json:"data"`
+}
+
+// SingletonStoreScreenshotLocaleListResponse defines model for SingletonStoreScreenshotLocaleListResponse.
+type SingletonStoreScreenshotLocaleListResponse struct {
+	Data StoreScreenshotLocaleListResponse `json:"data"`
+}
+
+// SingletonStoreScreenshotPublishRun defines model for SingletonStoreScreenshotPublishRun.
+type SingletonStoreScreenshotPublishRun struct {
+	Data StoreScreenshotPublishRun `json:"data"`
+}
+
+// SingletonStoreScreenshotSet defines model for SingletonStoreScreenshotSet.
+type SingletonStoreScreenshotSet struct {
+	Data StoreScreenshotSet `json:"data"`
+}
+
+// SingletonStoreScreenshotSetListResponse defines model for SingletonStoreScreenshotSetListResponse.
+type SingletonStoreScreenshotSetListResponse struct {
+	Data StoreScreenshotSetListResponse `json:"data"`
+}
+
+// SingletonStoreScreenshotSnapshot defines model for SingletonStoreScreenshotSnapshot.
+type SingletonStoreScreenshotSnapshot struct {
+	Data StoreScreenshotSnapshot `json:"data"`
+}
+
+// SingletonStoreScreenshotSnapshotListResponse defines model for SingletonStoreScreenshotSnapshotListResponse.
+type SingletonStoreScreenshotSnapshotListResponse struct {
+	Data StoreScreenshotSnapshotListResponse `json:"data"`
+}
+
+// SingletonStoreScreenshotStringsResponse defines model for SingletonStoreScreenshotStringsResponse.
+type SingletonStoreScreenshotStringsResponse struct {
+	Data StoreScreenshotStringsResponse `json:"data"`
+}
+
+// SingletonStoreScreenshotTargetListResponse defines model for SingletonStoreScreenshotTargetListResponse.
+type SingletonStoreScreenshotTargetListResponse struct {
+	Data StoreScreenshotTargetListResponse `json:"data"`
+}
+
+// SingletonStoreScreenshotValidationResponse defines model for SingletonStoreScreenshotValidationResponse.
+type SingletonStoreScreenshotValidationResponse struct {
+	Data StoreScreenshotValidationResponse `json:"data"`
+}
+
 // SingletonStudyList defines model for SingletonStudyList.
 type SingletonStudyList struct {
 	Data StudyList `json:"data"`
@@ -13235,6 +13319,173 @@ type StorageUntrackedPage struct {
 	Objects []StorageObject `json:"objects"`
 	RunId   string          `json:"run_id"`
 	Total   int             `json:"total"`
+}
+
+// StoreLocaleMapping defines model for StoreLocaleMapping.
+type StoreLocaleMapping struct {
+	AppStore   []string `json:"app_store"`
+	GooglePlay []string `json:"google_play"`
+	Locale     string   `json:"locale"`
+}
+
+// StoreScreenshotAsset defines model for StoreScreenshotAsset.
+type StoreScreenshotAsset struct {
+	AssetId   uuid.UUID      `json:"asset_id"`
+	Bytes     int            `json:"bytes"`
+	Checksums ImageChecksums `json:"checksums"`
+	CreatedAt time.Time      `json:"created_at"`
+	FileName  *string        `json:"file_name,omitempty"`
+	Format    string         `json:"format"`
+	Height    int            `json:"height"`
+	Kind      string         `json:"kind"`
+	Locale    *string        `json:"locale,omitempty"`
+	SetId     uuid.UUID      `json:"set_id"`
+	Slot      *int           `json:"slot,omitempty"`
+	Snapshot  *int           `json:"snapshot,omitempty"`
+	TargetId  *string        `json:"target_id,omitempty"`
+	Url       *string        `json:"url,omitempty"`
+	Width     int            `json:"width"`
+}
+
+// StoreScreenshotAssetListResponse defines model for StoreScreenshotAssetListResponse.
+type StoreScreenshotAssetListResponse struct {
+	Items []StoreScreenshotAsset `json:"items"`
+}
+
+// StoreScreenshotDraft defines model for StoreScreenshotDraft.
+type StoreScreenshotDraft struct {
+	Document      interface{} `json:"document"`
+	DraftRevision int         `json:"draft_revision"`
+	SetId         uuid.UUID   `json:"set_id"`
+	UpdatedAt     time.Time   `json:"updated_at"`
+}
+
+// StoreScreenshotDraftSaveRequest defines model for StoreScreenshotDraftSaveRequest.
+type StoreScreenshotDraftSaveRequest struct {
+	Document      interface{} `json:"document"`
+	DraftRevision int         `json:"draft_revision"`
+}
+
+// StoreScreenshotExportListResponse defines model for StoreScreenshotExportListResponse.
+type StoreScreenshotExportListResponse struct {
+	Items    []StoreScreenshotAsset `json:"items"`
+	SetId    uuid.UUID              `json:"set_id"`
+	Snapshot int                    `json:"snapshot"`
+}
+
+// StoreScreenshotLocaleListResponse defines model for StoreScreenshotLocaleListResponse.
+type StoreScreenshotLocaleListResponse struct {
+	Items []StoreLocaleMapping `json:"items"`
+}
+
+// StoreScreenshotPublishItem defines model for StoreScreenshotPublishItem.
+type StoreScreenshotPublishItem struct {
+	Action      string  `json:"action"`
+	Error       *string `json:"error,omitempty"`
+	Locale      string  `json:"locale"`
+	Slot        int     `json:"slot"`
+	Status      string  `json:"status"`
+	Store       string  `json:"store"`
+	StoreLocale string  `json:"store_locale"`
+	TargetId    string  `json:"target_id"`
+}
+
+// StoreScreenshotPublishRun defines model for StoreScreenshotPublishRun.
+type StoreScreenshotPublishRun struct {
+	CreatedAt  time.Time                    `json:"created_at"`
+	CreatedBy  *uuid.UUID                   `json:"created_by,omitempty"`
+	DryRun     bool                         `json:"dry_run"`
+	FinishedAt *time.Time                   `json:"finished_at,omitempty"`
+	Items      []StoreScreenshotPublishItem `json:"items"`
+	Locales    []string                     `json:"locales"`
+	RunId      uuid.UUID                    `json:"run_id"`
+	SetId      uuid.UUID                    `json:"set_id"`
+	Snapshot   int                          `json:"snapshot"`
+	Status     string                       `json:"status"`
+	Stores     []string                     `json:"stores"`
+}
+
+// StoreScreenshotPublishRunCreateRequest defines model for StoreScreenshotPublishRunCreateRequest.
+type StoreScreenshotPublishRunCreateRequest struct {
+	DryRun   *bool    `json:"dry_run,omitempty"`
+	Locales  []string `json:"locales"`
+	Snapshot int      `json:"snapshot"`
+	Stores   []string `json:"stores"`
+}
+
+// StoreScreenshotSet defines model for StoreScreenshotSet.
+type StoreScreenshotSet struct {
+	ArchivedAt     *time.Time `json:"archived_at,omitempty"`
+	CreatedAt      time.Time  `json:"created_at"`
+	CreatedBy      *uuid.UUID `json:"created_by,omitempty"`
+	DraftRevision  int        `json:"draft_revision"`
+	LatestSnapshot *int       `json:"latest_snapshot,omitempty"`
+	Name           string     `json:"name"`
+	SetId          uuid.UUID  `json:"set_id"`
+	Slug           string     `json:"slug"`
+	Targets        []string   `json:"targets"`
+	UpdatedAt      time.Time  `json:"updated_at"`
+}
+
+// StoreScreenshotSetCreateRequest defines model for StoreScreenshotSetCreateRequest.
+type StoreScreenshotSetCreateRequest struct {
+	Name    string   `json:"name"`
+	Slug    string   `json:"slug"`
+	Targets []string `json:"targets"`
+}
+
+// StoreScreenshotSetListResponse defines model for StoreScreenshotSetListResponse.
+type StoreScreenshotSetListResponse struct {
+	Items []StoreScreenshotSet `json:"items"`
+}
+
+// StoreScreenshotSetUpdateRequest defines model for StoreScreenshotSetUpdateRequest.
+type StoreScreenshotSetUpdateRequest struct {
+	Name    *string   `json:"name,omitempty"`
+	Targets *[]string `json:"targets,omitempty"`
+}
+
+// StoreScreenshotSnapshot defines model for StoreScreenshotSnapshot.
+type StoreScreenshotSnapshot struct {
+	CreatedAt time.Time   `json:"created_at"`
+	CreatedBy *uuid.UUID  `json:"created_by,omitempty"`
+	Document  interface{} `json:"document"`
+	SetId     uuid.UUID   `json:"set_id"`
+	Version   int         `json:"version"`
+}
+
+// StoreScreenshotSnapshotCreateRequest defines model for StoreScreenshotSnapshotCreateRequest.
+type StoreScreenshotSnapshotCreateRequest struct {
+	DraftRevision int `json:"draft_revision"`
+}
+
+// StoreScreenshotSnapshotListResponse defines model for StoreScreenshotSnapshotListResponse.
+type StoreScreenshotSnapshotListResponse struct {
+	Items []StoreScreenshotSnapshot `json:"items"`
+}
+
+// StoreScreenshotStringsResponse defines model for StoreScreenshotStringsResponse.
+type StoreScreenshotStringsResponse struct {
+	Locale  string            `json:"locale"`
+	Missing []string          `json:"missing"`
+	SetId   uuid.UUID         `json:"set_id"`
+	Strings map[string]string `json:"strings"`
+}
+
+// StoreScreenshotTargetListResponse defines model for StoreScreenshotTargetListResponse.
+type StoreScreenshotTargetListResponse struct {
+	Items []ScreenshotTarget `json:"items"`
+}
+
+// StoreScreenshotValidationResponse defines model for StoreScreenshotValidationResponse.
+type StoreScreenshotValidationResponse struct {
+	Bytes      int            `json:"bytes"`
+	Checksums  ImageChecksums `json:"checksums"`
+	Format     string         `json:"format"`
+	Height     int            `json:"height"`
+	Normalized bool           `json:"normalized"`
+	TargetId   string         `json:"target_id"`
+	Width      int            `json:"width"`
 }
 
 // StreakInfo defines model for StreakInfo.
@@ -17198,6 +17449,24 @@ type GetApiV3StatsChartParams struct {
 	Days *int `form:"days,omitempty" json:"days,omitempty"`
 }
 
+// PostApiV3StoreScreenshotsSetsSetIdAssetsParams defines parameters for PostApiV3StoreScreenshotsSetsSetIdAssets.
+type PostApiV3StoreScreenshotsSetsSetIdAssetsParams struct {
+	// Kind source, image or font
+	Kind string `form:"kind" json:"kind"`
+
+	// FileName Original file name, for display
+	FileName *string `form:"file_name,omitempty" json:"file_name,omitempty"`
+}
+
+// GetApiV3StoreScreenshotsSetsSetIdStringsParams defines parameters for GetApiV3StoreScreenshotsSetsSetIdStrings.
+type GetApiV3StoreScreenshotsSetsSetIdStringsParams struct {
+	// Locale Kielo base locale code
+	Locale string `form:"locale" json:"locale"`
+
+	// IncludeDrafts Also use draft translations, for preview
+	IncludeDrafts *bool `form:"include_drafts,omitempty" json:"include_drafts,omitempty"`
+}
+
 // GetApiV3SubscriptionsOptionsParams defines parameters for GetApiV3SubscriptionsOptions.
 type GetApiV3SubscriptionsOptionsParams struct {
 	// Platform ios, android or web
@@ -18913,6 +19182,21 @@ type PostApiV3SitePostsJSONRequestBody = SitePostRequest
 
 // PatchApiV3SitePostsPostIdJSONRequestBody defines body for PatchApiV3SitePostsPostId for application/json ContentType.
 type PatchApiV3SitePostsPostIdJSONRequestBody = SitePostRequest
+
+// PostApiV3StoreScreenshotsSetsJSONRequestBody defines body for PostApiV3StoreScreenshotsSets for application/json ContentType.
+type PostApiV3StoreScreenshotsSetsJSONRequestBody = StoreScreenshotSetCreateRequest
+
+// PatchApiV3StoreScreenshotsSetsSetIdJSONRequestBody defines body for PatchApiV3StoreScreenshotsSetsSetId for application/json ContentType.
+type PatchApiV3StoreScreenshotsSetsSetIdJSONRequestBody = StoreScreenshotSetUpdateRequest
+
+// PutApiV3StoreScreenshotsSetsSetIdDraftJSONRequestBody defines body for PutApiV3StoreScreenshotsSetsSetIdDraft for application/json ContentType.
+type PutApiV3StoreScreenshotsSetsSetIdDraftJSONRequestBody = StoreScreenshotDraftSaveRequest
+
+// PostApiV3StoreScreenshotsSetsSetIdPublishRunsJSONRequestBody defines body for PostApiV3StoreScreenshotsSetsSetIdPublishRuns for application/json ContentType.
+type PostApiV3StoreScreenshotsSetsSetIdPublishRunsJSONRequestBody = StoreScreenshotPublishRunCreateRequest
+
+// PostApiV3StoreScreenshotsSetsSetIdSnapshotsJSONRequestBody defines body for PostApiV3StoreScreenshotsSetsSetIdSnapshots for application/json ContentType.
+type PostApiV3StoreScreenshotsSetsSetIdSnapshotsJSONRequestBody = StoreScreenshotSnapshotCreateRequest
 
 // PostApiV3SubscriptionsCancelJSONRequestBody defines body for PostApiV3SubscriptionsCancel for application/json ContentType.
 type PostApiV3SubscriptionsCancelJSONRequestBody = CancelSubscriptionRequest
