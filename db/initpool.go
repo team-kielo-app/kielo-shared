@@ -44,6 +44,9 @@ const (
 //     for compatibility with PgBouncer transaction pooling and Neon's
 //     poolers, which reject prepared statement caching across pooled
 //     connections ("prepared statement is already in use" errors).
+//   - A 5 s connect timeout (unless the DSN sets connect_timeout), TCP
+//     keepalives and TCP_USER_TIMEOUT (dial.go), so a stalled network path
+//     fails queries in seconds instead of holding requests for minutes.
 //   - AfterConnect hook applying opts.SearchPath via pgxsearchpath
 //     (only when SearchPath is non-empty). Per-language scoping is
 //     applied per-transaction via SET LOCAL search_path on top.
@@ -72,6 +75,11 @@ func InitPool(ctx context.Context, dataSourceName string, opts PoolOptions) (*pg
 	cfg.MinConns = EnvNonNegInt32("PGX_MIN_CONNS", minFallback)
 
 	cfg.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
+
+	if cfg.ConnConfig.ConnectTimeout == 0 {
+		cfg.ConnConfig.ConnectTimeout = connectTimeout
+	}
+	cfg.ConnConfig.DialFunc = newDialer().DialContext
 
 	if opts.SearchPath != "" {
 		cleaned, err := SanitizeSearchPath(opts.SearchPath)
