@@ -24,6 +24,39 @@ from typing import Any, Optional, Protocol
 
 logger = logging.getLogger(__name__)
 
+_TRANSIENT_ASYNCPG_NAMES = frozenset(
+    {
+        "PostgresConnectionError",
+        "ConnectionDoesNotExistError",
+        "ConnectionFailureError",
+        "CannotConnectNowError",
+        "TooManyConnectionsError",
+    }
+)
+
+
+def _is_transient_connection_error(exc: BaseException) -> bool:
+    """A connect timeout / dropped connection: expected, and the caller falls back.
+
+    asyncpg is a soft dependency, so its errors are matched by class name.
+    """
+    if isinstance(exc, (TimeoutError, ConnectionError)):
+        return True
+    return any(c.__name__ in _TRANSIENT_ASYNCPG_NAMES for c in type(exc).__mro__)
+
+
+def _log_pool_failure(message: str, exc: Exception, extra: dict[str, Any]) -> None:
+    if _is_transient_connection_error(exc):
+        logger.warning(
+            "%s (transient connection error, falling back): %s: %s",
+            message,
+            type(exc).__name__,
+            exc or "no detail",
+            extra=extra,
+        )
+        return
+    logger.exception(message, extra=extra)
+
 
 # A minimal Protocol matching the parts of asyncpg.Pool that PgxOverrideStore
 # uses. Lets tests inject a fake pool without spinning up real asyncpg.
@@ -92,10 +125,11 @@ class PgxOverrideStore:
                 source_version,
                 target_locale,
             )
-        except Exception:
-            logger.exception(
+        except Exception as exc:
+            _log_pool_failure(
                 "PgxOverrideStore.lookup failed",
-                extra={
+                exc,
+                {
                     "namespace": namespace,
                     "source_id": source_id,
                     "target_locale": target_locale,
@@ -167,13 +201,11 @@ class PgxOverrideStore:
 
         try:
             records = await self._pool.fetch(query, *args)
-        except Exception:
-            logger.exception(
+        except Exception as exc:
+            _log_pool_failure(
                 "PgxOverrideStore.batch_lookup failed",
-                extra={
-                    "target_locale": target_locale,
-                    "batch_size": len(refs),
-                },
+                exc,
+                {"target_locale": target_locale, "batch_size": len(refs)},
             )
             return out
 

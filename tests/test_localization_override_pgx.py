@@ -11,6 +11,8 @@ Two test classes:
 
 from __future__ import annotations
 
+import asyncio
+import logging
 import os
 import uuid
 from typing import Any, AsyncIterator
@@ -48,6 +50,82 @@ async def test_pool_error_returns_none_not_raises() -> None:
     store = PgxOverrideStore(_RaisingPool())
     got = await store.lookup("article.title", "id", "v1", "vi")
     assert got is None
+
+
+class _FailingPool:
+    def __init__(self, exc: BaseException) -> None:
+        self._exc = exc
+
+    async def fetchval(self, query: str, *args: Any) -> Any:
+        raise self._exc
+
+    async def fetch(self, query: str, *args: Any) -> list[Any]:
+        raise self._exc
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "exc", [TimeoutError(), asyncio.TimeoutError(), ConnectionResetError("reset")]
+)
+async def test_transient_connect_error_logs_one_warning_without_traceback(
+    exc: BaseException, caplog: pytest.LogCaptureFixture
+) -> None:
+    store = PgxOverrideStore(_FailingPool(exc))
+    with caplog.at_level(
+        logging.DEBUG, logger="kielo_shared.localization.override_pgx"
+    ):
+        assert await store.lookup("article.title", "id", "v1", "vi") is None
+    records = [
+        r for r in caplog.records if "PgxOverrideStore.lookup failed" in r.getMessage()
+    ]
+    assert len(records) == 1
+    assert records[0].levelno == logging.WARNING
+    assert records[0].exc_info is None
+    assert not [r for r in caplog.records if r.levelno >= logging.ERROR]
+
+
+@pytest.mark.asyncio
+async def test_transient_asyncpg_error_is_a_warning_by_class_name(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    class ConnectionDoesNotExistError(Exception):
+        pass
+
+    store = PgxOverrideStore(_FailingPool(ConnectionDoesNotExistError("gone")))
+    with caplog.at_level(
+        logging.DEBUG, logger="kielo_shared.localization.override_pgx"
+    ):
+        assert await store.lookup("ns", "id", "v1", "vi") is None
+    assert [r.levelno for r in caplog.records] == [logging.WARNING]
+    assert caplog.records[0].exc_info is None
+
+
+@pytest.mark.asyncio
+async def test_unexpected_error_still_logs_error_with_traceback(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    store = PgxOverrideStore(_FailingPool(RuntimeError("boom")))
+    with caplog.at_level(
+        logging.DEBUG, logger="kielo_shared.localization.override_pgx"
+    ):
+        assert await store.lookup("ns", "id", "v1", "vi") is None
+    assert [r.levelno for r in caplog.records] == [logging.ERROR]
+    assert caplog.records[0].exc_info is not None
+
+
+@pytest.mark.asyncio
+async def test_batch_lookup_timeout_is_a_traceback_free_warning(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    from kielo_shared.localization import OverrideRef
+
+    store = PgxOverrideStore(_FailingPool(TimeoutError()))
+    with caplog.at_level(
+        logging.DEBUG, logger="kielo_shared.localization.override_pgx"
+    ):
+        assert await store.batch_lookup([OverrideRef("ns", "s1", "v1")], "vi") == {}
+    assert [r.levelno for r in caplog.records] == [logging.WARNING]
+    assert caplog.records[0].exc_info is None
 
 
 class _CannedPool:
@@ -99,7 +177,9 @@ async def real_pool() -> AsyncIterator[Any]:
         await pool.close()
 
 
-async def _seed(pool: Any, *, namespace: str, version: str, locale: str, value: str, status: str) -> str:
+async def _seed(
+    pool: Any, *, namespace: str, version: str, locale: str, value: str, status: str
+) -> str:
     resource_id = f"test-{uuid.uuid4()}"
     await pool.execute(
         """
@@ -108,7 +188,12 @@ async def _seed(pool: Any, *, namespace: str, version: str, locale: str, value: 
              translated_text, status, source_locale, translator_source)
         VALUES ($1, $2, $3, $4, $5, $6, 'en', 'test')
         """,
-        namespace, resource_id, version, locale, value, status,
+        namespace,
+        resource_id,
+        version,
+        locale,
+        value,
+        status,
     )
     return resource_id
 
@@ -117,15 +202,21 @@ async def _cleanup(pool: Any, namespace: str, resource_id: str) -> None:
     await pool.execute(
         "DELETE FROM localization.dynamic_translations "
         "WHERE resource_type=$1 AND resource_id=$2",
-        namespace, resource_id,
+        namespace,
+        resource_id,
     )
 
 
 @pytest.mark.asyncio
 async def test_approved_row_hit(real_pool: Any) -> None:
-    rid = await _seed(real_pool,
-                      namespace="article.title", version="v1", locale="vi",
-                      value="Đặt cà phê", status="approved")
+    rid = await _seed(
+        real_pool,
+        namespace="article.title",
+        version="v1",
+        locale="vi",
+        value="Đặt cà phê",
+        status="approved",
+    )
     try:
         store = PgxOverrideStore(real_pool)
         got = await store.lookup("article.title", rid, "v1", "vi")
@@ -151,7 +242,10 @@ async def test_override_beats_approved(real_pool: Any) -> None:
                      translated_text, status, source_locale, translator_source)
                 VALUES ('article.title', $1, $2, 'vi', $3, $4, 'en', 'test')
                 """,
-                rid, version, value, status,
+                rid,
+                version,
+                value,
+                status,
             )
 
         store = PgxOverrideStore(real_pool)
@@ -166,9 +260,14 @@ async def test_override_beats_approved(real_pool: Any) -> None:
 @pytest.mark.asyncio
 @pytest.mark.parametrize("status", ["pending_review", "machine"])
 async def test_non_serving_statuses_are_misses(real_pool: Any, status: str) -> None:
-    rid = await _seed(real_pool,
-                      namespace="article.title", version="v1", locale="vi",
-                      value="placeholder", status=status)
+    rid = await _seed(
+        real_pool,
+        namespace="article.title",
+        version="v1",
+        locale="vi",
+        value="placeholder",
+        status=status,
+    )
     try:
         store = PgxOverrideStore(real_pool)
         got = await store.lookup("article.title", rid, "v1", "vi")
@@ -179,9 +278,14 @@ async def test_non_serving_statuses_are_misses(real_pool: Any, status: str) -> N
 
 @pytest.mark.asyncio
 async def test_stale_source_version_is_miss(real_pool: Any) -> None:
-    rid = await _seed(real_pool,
-                      namespace="article.title", version="v1", locale="vi",
-                      value="v1-era text", status="approved")
+    rid = await _seed(
+        real_pool,
+        namespace="article.title",
+        version="v1",
+        locale="vi",
+        value="v1-era text",
+        status="approved",
+    )
     try:
         store = PgxOverrideStore(real_pool)
         # Row exists with v1; request asks for v2 — must miss.
@@ -193,16 +297,31 @@ async def test_stale_source_version_is_miss(real_pool: Any) -> None:
 
 @pytest.mark.asyncio
 async def test_different_namespaces_isolated(real_pool: Any) -> None:
-    rid_article = await _seed(real_pool,
-                              namespace="article.title", version="v1", locale="vi",
-                              value="Đặt cà phê", status="approved")
-    rid_scenario = await _seed(real_pool,
-                               namespace="scenario.title", version="v1", locale="vi",
-                               value="Tình huống cà phê", status="approved")
+    rid_article = await _seed(
+        real_pool,
+        namespace="article.title",
+        version="v1",
+        locale="vi",
+        value="Đặt cà phê",
+        status="approved",
+    )
+    rid_scenario = await _seed(
+        real_pool,
+        namespace="scenario.title",
+        version="v1",
+        locale="vi",
+        value="Tình huống cà phê",
+        status="approved",
+    )
     try:
         store = PgxOverrideStore(real_pool)
-        assert await store.lookup("article.title", rid_article, "v1", "vi") == "Đặt cà phê"
-        assert await store.lookup("scenario.title", rid_scenario, "v1", "vi") == "Tình huống cà phê"
+        assert (
+            await store.lookup("article.title", rid_article, "v1", "vi") == "Đặt cà phê"
+        )
+        assert (
+            await store.lookup("scenario.title", rid_scenario, "v1", "vi")
+            == "Tình huống cà phê"
+        )
         # Cross-namespace lookup must miss.
         assert await store.lookup("scenario.title", rid_article, "v1", "vi") is None
         assert await store.lookup("article.title", rid_scenario, "v1", "vi") is None
