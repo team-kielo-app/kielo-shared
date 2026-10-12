@@ -237,24 +237,16 @@ func TestIssueRaw_ValidatesPath(t *testing.T) {
 
 func TestWithFallbackCallsite_RoundTrip(t *testing.T) {
 	ctx := context.Background()
-	if got := FallbackCallsiteFromContext(ctx); got != "" {
+	if got := FallbackTagFromContext(ctx).Callsite; got != "" {
 		t.Errorf("empty ctx should not have a callsite; got %q", got)
 	}
 	ctx = WithFallbackCallsite(ctx, "kielotv.list_brands")
-	if got := FallbackCallsiteFromContext(ctx); got != "kielotv.list_brands" {
-		t.Errorf("FallbackCallsiteFromContext = %q, want %q", got, "kielotv.list_brands")
+	if got := FallbackTagFromContext(ctx).Callsite; got != "kielotv.list_brands" {
+		t.Errorf("FallbackTagFromContext.Callsite = %q, want %q", got, "kielotv.list_brands")
 	}
 	// Empty callsite is a no-op (returns the same ctx).
 	if WithFallbackCallsite(ctx, "") != ctx {
 		t.Error("WithFallbackCallsite(ctx, \"\") should return ctx unchanged")
-	}
-}
-
-func TestFallbackCallsiteFromContext_NilSafe(t *testing.T) {
-	// Defensive: callers may pass a nil ctx in tests. Don't panic.
-	//nolint:staticcheck // intentionally testing nil-safety
-	if got := FallbackCallsiteFromContext(nil); got != "" {
-		t.Errorf("nil ctx should yield \"\"; got %q", got)
 	}
 }
 
@@ -328,10 +320,6 @@ func TestWithExpectedFallback_RoundTrip(t *testing.T) {
 	}
 	if !tag.Expected {
 		t.Error("WithExpectedFallback must set Expected=true")
-	}
-	// Back-compat: FallbackCallsiteFromContext still works.
-	if got := FallbackCallsiteFromContext(ctx); got != "pgxsearchpath.list_active_languages" {
-		t.Errorf("FallbackCallsiteFromContext = %q, want %q", got, "pgxsearchpath.list_active_languages")
 	}
 	// Empty callsite is a no-op.
 	if WithExpectedFallback(ctx, "") != ctx {

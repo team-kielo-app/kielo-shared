@@ -165,7 +165,7 @@ func callerOutsideThisPackage() string {
 //     documented contract.
 //
 // callsite is the per-repo tag (default "" → "unknown" — see
-// kielo-shared/db.FallbackCallsiteFromContext). service is read from
+// kielo-shared/db.FallbackTagFromContext). service is read from
 // the process-global pin set by SetServiceName.
 func PerLanguageSearchPathFallbackEmit(callsite string, expectedFallback bool) {
 	service := ServiceName()
