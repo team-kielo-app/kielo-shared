@@ -9,6 +9,7 @@
 package testbaseline
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -215,13 +216,21 @@ func TableDDL(t testing.TB, table string, fkTargets ...string) []string {
 	if !ok {
 		t.Fatalf("TableDDL wants schema.table, got %q", table)
 	}
-	onTable := regexp.MustCompile(`\bON (?:ONLY )?` + regexp.QuoteMeta(table) + `[ (;]`)
 	pre := parseBlocks(Text(t, "10_schema_pre.sql"))
 	post := parseBlocks(Text(t, "30_schema_post.sql"))
 
-	var stmts []string
-	found := false
-	var seqs []string
+	stmts, seqs, found := tableAndDefaults(pre, schema, name)
+	if !found {
+		t.Fatalf("core baseline has no table %s", table)
+	}
+	stmts = append(sequenceStatements(pre, schema, seqs), stmts...)
+	stmts = append(stmts, postTableStatements(post, schema, name, table, fkTargets)...)
+	return splitStatements(stmts)
+}
+
+// tableAndDefaults returns the CREATE TABLE and column-default blocks of
+// schema.name and the sequences those defaults draw from.
+func tableAndDefaults(pre []ddlBlock, schema, name string) (stmts, seqs []string, found bool) {
 	for _, b := range pre {
 		if b.schema != schema {
 			continue
@@ -237,19 +246,27 @@ func TableDDL(t testing.TB, table string, fkTargets ...string) []string {
 			}
 		}
 	}
-	if !found {
-		t.Fatalf("core baseline has no table %s", table)
-	}
-	var seqStmts []string
+	return stmts, seqs, found
+}
+
+func sequenceStatements(pre []ddlBlock, schema string, seqs []string) []string {
+	var out []string
 	for _, seq := range seqs {
 		sname := seq[strings.Index(seq, ".")+1:]
 		for _, b := range pre {
 			if b.kind == "SEQUENCE" && b.schema == schema && b.name == sname {
-				seqStmts = append(seqStmts, b.body)
+				out = append(out, b.body)
 			}
 		}
 	}
-	stmts = append(seqStmts, stmts...)
+	return out
+}
+
+// postTableStatements returns the constraints and indexes of schema.name, and
+// its foreign keys that reference one of fkTargets.
+func postTableStatements(post []ddlBlock, schema, name, table string, fkTargets []string) []string {
+	onTable := regexp.MustCompile(`\bON (?:ONLY )?` + regexp.QuoteMeta(table) + `[ (;]`)
+	var out []string
 	for _, b := range post {
 		if b.schema != schema {
 			continue
@@ -257,26 +274,24 @@ func TableDDL(t testing.TB, table string, fkTargets ...string) []string {
 		switch b.kind {
 		case "CONSTRAINT":
 			if strings.HasPrefix(b.name, name+" ") {
-				stmts = append(stmts, b.body)
+				out = append(out, b.body)
 			}
 		case "INDEX":
 			if onTable.MatchString(b.body) {
-				stmts = append(stmts, b.body)
+				out = append(out, b.body)
 			}
 		case "FK CONSTRAINT":
-			if !strings.HasPrefix(b.name, name+" ") {
-				continue
-			}
-			if m := referencesR.FindStringSubmatch(b.body); m != nil {
-				for _, target := range fkTargets {
-					if target == m[1] {
-						stmts = append(stmts, b.body)
-					}
-				}
+			if strings.HasPrefix(b.name, name+" ") && referencesOneOf(b.body, fkTargets) {
+				out = append(out, b.body)
 			}
 		}
 	}
-	return splitStatements(stmts)
+	return out
+}
+
+func referencesOneOf(body string, targets []string) bool {
+	m := referencesR.FindStringSubmatch(body)
+	return len(m) > 1 && slices.Contains(targets, m[1])
 }
 
 // TablesDDL returns the statements for several tables, with every foreign key
@@ -350,7 +365,8 @@ func Load(connString string) error {
 	for _, name := range []string{"00_header.sql", "10_schema_pre.sql", "20_seed.sql", "30_schema_post.sql"} {
 		args = append(args, "-f", filepath.Join(dir, name))
 	}
-	if out, err := exec.Command(psql, args...).CombinedOutput(); err != nil { //nolint:gosec // fixed psql args and repo files
+	cmd := exec.CommandContext(context.Background(), psql, args...) //nolint:gosec // fixed psql args and repo files
+	if out, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("load core baseline: %w\n%s", err, out)
 	}
 	return nil
