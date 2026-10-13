@@ -89,6 +89,12 @@ const (
 	// Surfaces the comprehensible-input gap. Anchor: tab-quick-feature.
 	// Contexts: home_idle, conversation_session.
 	InAppNudgeTypeConvoUserTryReading InAppNudgeType = "convo_user_try_reading"
+
+	// InAppNudgeTypeSavedWordsWaiting — learners with ≥3 saved words or
+	// grammar items not viewed or reviewed since saving. The in-app side of
+	// the weekly saved-items push (push-enabled learners only). Anchor:
+	// tab-exercises. Contexts: home_idle, reading_session, video_session.
+	InAppNudgeTypeSavedWordsWaiting InAppNudgeType = "saved_words_waiting"
 )
 
 // AllInAppNudgeTypes is the canonical iteration order. Used by:
@@ -108,6 +114,7 @@ var AllInAppNudgeTypes = []InAppNudgeType{
 	InAppNudgeTypeRoadmapCompletionistExplore,
 	InAppNudgeTypeTryScenariosFirstTime,
 	InAppNudgeTypeConvoUserTryReading,
+	InAppNudgeTypeSavedWordsWaiting,
 }
 
 // IsValidInAppNudgeType reports whether the given value is a known
@@ -127,7 +134,8 @@ func IsValidInAppNudgeType(t InAppNudgeType) bool {
 	case InAppNudgeTypeTryScenariosFirstTime,
 		InAppNudgeTypeReviewBacklogIdle,
 		InAppNudgeTypeRoadmapCompletionistExplore,
-		InAppNudgeTypeConvoUserTryReading:
+		InAppNudgeTypeConvoUserTryReading,
+		InAppNudgeTypeSavedWordsWaiting:
 		return true
 	}
 	return false

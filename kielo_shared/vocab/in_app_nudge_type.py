@@ -82,6 +82,11 @@ IN_APP_NUDGE_TYPE_CONVO_USER_TRY_READING: Final[InAppNudgeType] = (
 """Scenario-engaged learners (>=2 conversations) with 0 article reads.
 Loop F transfer entry."""
 
+IN_APP_NUDGE_TYPE_SAVED_WORDS_WAITING: Final[InAppNudgeType] = "saved_words_waiting"
+"""Learners with >=3 saved words or grammar items not viewed or reviewed
+since they were saved, while reading, watching or on Home. The in-app side
+of the weekly saved-items push, which only reaches push-enabled learners."""
+
 # ----------------------------------------------------------------------
 # Iteration containers
 # ----------------------------------------------------------------------
@@ -92,6 +97,7 @@ ALL_IN_APP_NUDGE_TYPES: Final[FrozenSet[InAppNudgeType]] = frozenset(
         IN_APP_NUDGE_TYPE_REVIEW_BACKLOG_IDLE,
         IN_APP_NUDGE_TYPE_ROADMAP_COMPLETIONIST_EXPLORE,
         IN_APP_NUDGE_TYPE_CONVO_USER_TRY_READING,
+        IN_APP_NUDGE_TYPE_SAVED_WORDS_WAITING,
     }
 )
 """All canonical InAppNudgeType wire values. FrozenSet for membership
@@ -100,6 +106,7 @@ checks; the cross-language parity contract test asserts equality with
 
 IN_APP_NUDGE_TYPE_PRIORITY_ORDER: Final[Tuple[InAppNudgeType, ...]] = (
     IN_APP_NUDGE_TYPE_REVIEW_BACKLOG_IDLE,
+    IN_APP_NUDGE_TYPE_SAVED_WORDS_WAITING,
     IN_APP_NUDGE_TYPE_ROADMAP_COMPLETIONIST_EXPLORE,
     IN_APP_NUDGE_TYPE_TRY_SCENARIOS_FIRST_TIME,
     IN_APP_NUDGE_TYPE_CONVO_USER_TRY_READING,
@@ -110,9 +117,10 @@ for the same (user, context).
 
 Priority rationale (highest leverage first):
   1. review_backlog_idle — actionable retention pressure
-  2. roadmap_completionist_explore — clear 'what next' moment
-  3. try_scenarios_first_time — exploratory; Loop C entry
-  4. convo_user_try_reading — long-tail (lowest population coverage)
+  2. saved_words_waiting — words the learner chose, not yet practised
+  3. roadmap_completionist_explore — clear 'what next' moment
+  4. try_scenarios_first_time — exploratory; Loop C entry
+  5. convo_user_try_reading — long-tail (lowest population coverage)
 """
 
 # ----------------------------------------------------------------------

@@ -19,19 +19,20 @@ from kielo_shared.vocab import (
 
 
 # ----------------------------------------------------------------------
-# InAppNudgeType (4 values)
+# InAppNudgeType (5 values)
 # ----------------------------------------------------------------------
 
 
-def test_in_app_nudge_type_cardinality_pinned_at_4():
-    """V117 CHECK constraint pins 4 values; SoT must match exactly."""
-    assert len(type_mod.ALL_IN_APP_NUDGE_TYPES) == 4
+def test_in_app_nudge_type_cardinality_pinned_at_5():
+    """The nudge_type CHECK (V117, extended by V403 for saved_words_waiting)
+    pins 5 values; SoT must match exactly."""
+    assert len(type_mod.ALL_IN_APP_NUDGE_TYPES) == 5
 
 
 def test_in_app_nudge_type_priority_order_covers_all_types():
     """The priority-ordered tuple is the canonical iteration for the
     engine InAppNudgeService — every type must appear exactly once."""
-    assert len(type_mod.IN_APP_NUDGE_TYPE_PRIORITY_ORDER) == 4
+    assert len(type_mod.IN_APP_NUDGE_TYPE_PRIORITY_ORDER) == 5
     assert set(type_mod.IN_APP_NUDGE_TYPE_PRIORITY_ORDER) == type_mod.ALL_IN_APP_NUDGE_TYPES
 
 
