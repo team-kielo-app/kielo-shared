@@ -95,6 +95,13 @@ const (
 	// the weekly saved-items push (push-enabled learners only). Anchor:
 	// tab-exercises. Contexts: home_idle, reading_session, video_session.
 	InAppNudgeTypeSavedWordsWaiting InAppNudgeType = "saved_words_waiting"
+
+	// InAppNudgeTypeDailyChallengeWaiting — learners who did Päivä on one
+	// of the last six days and have not finished today's, in their
+	// afternoon or evening. Päivä is free and carries the due reviews, so it
+	// runs ahead of review_backlog_idle. Anchor: tab-exercises. Contexts:
+	// reading_session, video_session, discovery_browse.
+	InAppNudgeTypeDailyChallengeWaiting InAppNudgeType = "daily_challenge_waiting"
 )
 
 // AllInAppNudgeTypes is the canonical iteration order. Used by:
@@ -115,6 +122,7 @@ var AllInAppNudgeTypes = []InAppNudgeType{
 	InAppNudgeTypeTryScenariosFirstTime,
 	InAppNudgeTypeConvoUserTryReading,
 	InAppNudgeTypeSavedWordsWaiting,
+	InAppNudgeTypeDailyChallengeWaiting,
 }
 
 // IsValidInAppNudgeType reports whether the given value is a known
@@ -135,7 +143,8 @@ func IsValidInAppNudgeType(t InAppNudgeType) bool {
 		InAppNudgeTypeReviewBacklogIdle,
 		InAppNudgeTypeRoadmapCompletionistExplore,
 		InAppNudgeTypeConvoUserTryReading,
-		InAppNudgeTypeSavedWordsWaiting:
+		InAppNudgeTypeSavedWordsWaiting,
+		InAppNudgeTypeDailyChallengeWaiting:
 		return true
 	}
 	return false

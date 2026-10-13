@@ -87,6 +87,14 @@ IN_APP_NUDGE_TYPE_SAVED_WORDS_WAITING: Final[InAppNudgeType] = "saved_words_wait
 since they were saved, while reading, watching or on Home. The in-app side
 of the weekly saved-items push, which only reaches push-enabled learners."""
 
+IN_APP_NUDGE_TYPE_DAILY_CHALLENGE_WAITING: Final[InAppNudgeType] = (
+    "daily_challenge_waiting"
+)
+"""Learners who did Päivä on one of the last six days and have not finished
+today's, in their afternoon or evening, while reading, watching or
+browsing. Päivä is free, so this is the review a free learner can always
+take; it runs ahead of review_backlog_idle."""
+
 # ----------------------------------------------------------------------
 # Iteration containers
 # ----------------------------------------------------------------------
@@ -98,6 +106,7 @@ ALL_IN_APP_NUDGE_TYPES: Final[FrozenSet[InAppNudgeType]] = frozenset(
         IN_APP_NUDGE_TYPE_ROADMAP_COMPLETIONIST_EXPLORE,
         IN_APP_NUDGE_TYPE_CONVO_USER_TRY_READING,
         IN_APP_NUDGE_TYPE_SAVED_WORDS_WAITING,
+        IN_APP_NUDGE_TYPE_DAILY_CHALLENGE_WAITING,
     }
 )
 """All canonical InAppNudgeType wire values. FrozenSet for membership
@@ -105,6 +114,7 @@ checks; the cross-language parity contract test asserts equality with
 ``AllInAppNudgeTypes`` from the Go SoT."""
 
 IN_APP_NUDGE_TYPE_PRIORITY_ORDER: Final[Tuple[InAppNudgeType, ...]] = (
+    IN_APP_NUDGE_TYPE_DAILY_CHALLENGE_WAITING,
     IN_APP_NUDGE_TYPE_REVIEW_BACKLOG_IDLE,
     IN_APP_NUDGE_TYPE_SAVED_WORDS_WAITING,
     IN_APP_NUDGE_TYPE_ROADMAP_COMPLETIONIST_EXPLORE,
@@ -116,11 +126,13 @@ Higher priority (left) renders first when multiple nudges are eligible
 for the same (user, context).
 
 Priority rationale (highest leverage first):
-  1. review_backlog_idle — actionable retention pressure
-  2. saved_words_waiting — words the learner chose, not yet practised
-  3. roadmap_completionist_explore — clear 'what next' moment
-  4. try_scenarios_first_time — exploratory; Loop C entry
-  5. convo_user_try_reading — long-tail (lowest population coverage)
+  1. daily_challenge_waiting — today's Päivä, which carries the due reviews
+     and is free
+  2. review_backlog_idle — actionable retention pressure
+  3. saved_words_waiting — words the learner chose, not yet practised
+  4. roadmap_completionist_explore — clear 'what next' moment
+  5. try_scenarios_first_time — exploratory; Loop C entry
+  6. convo_user_try_reading — long-tail (lowest population coverage)
 """
 
 # ----------------------------------------------------------------------
@@ -147,6 +159,8 @@ __all__ = [
     "IN_APP_NUDGE_TYPE_REVIEW_BACKLOG_IDLE",
     "IN_APP_NUDGE_TYPE_ROADMAP_COMPLETIONIST_EXPLORE",
     "IN_APP_NUDGE_TYPE_CONVO_USER_TRY_READING",
+    "IN_APP_NUDGE_TYPE_SAVED_WORDS_WAITING",
+    "IN_APP_NUDGE_TYPE_DAILY_CHALLENGE_WAITING",
     "ALL_IN_APP_NUDGE_TYPES",
     "IN_APP_NUDGE_TYPE_PRIORITY_ORDER",
     "is_valid_in_app_nudge_type",
