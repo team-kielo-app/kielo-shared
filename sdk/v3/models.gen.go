@@ -354,6 +354,7 @@ const (
 	OpenArticle          NextStepRecommendationCtaId = "open_article"
 	OpenConceptHub       NextStepRecommendationCtaId = "open_concept_hub"
 	OpenTopic            NextStepRecommendationCtaId = "open_topic"
+	StartArticlePack     NextStepRecommendationCtaId = "start_article_pack"
 	StartClusterPractice NextStepRecommendationCtaId = "start_cluster_practice"
 	StartConversation    NextStepRecommendationCtaId = "start_conversation"
 	StartQuickCheck      NextStepRecommendationCtaId = "start_quick_check"
@@ -382,6 +383,7 @@ const (
 // Defines values for NextStepRecommendationType.
 const (
 	NextStepRecommendationTypeArticle         NextStepRecommendationType = "article"
+	NextStepRecommendationTypeArticlePack     NextStepRecommendationType = "article_pack"
 	NextStepRecommendationTypeConceptHub      NextStepRecommendationType = "concept_hub"
 	NextStepRecommendationTypeConversation    NextStepRecommendationType = "conversation"
 	NextStepRecommendationTypeCustomDeck      NextStepRecommendationType = "custom_deck"
@@ -3368,6 +3370,7 @@ type ConversationDiscoveryCardUserService struct {
 type ConversationDiscoveryResponse struct {
 	Cards             []ConversationDiscoveryCard  `json:"cards"`
 	InterestOptions   []ConversationInterestOption `json:"interest_options"`
+	LastCall          *ConversationLastCall        `json:"last_call,omitempty"`
 	NextPageKey       *string                      `json:"next_page_key,omitempty"`
 	SelectedInterests []string                     `json:"selected_interests"`
 	UserLevel         ConversationUserLevel        `json:"user_level"`
@@ -3377,6 +3380,7 @@ type ConversationDiscoveryResponse struct {
 type ConversationDiscoveryResponseUserService struct {
 	Cards           []ConversationDiscoveryCardUserService `json:"cards"`
 	InterestOptions []ConversationInterestOption           `json:"interest_options"`
+	LastCall        *ConversationLastCallUserService       `json:"last_call,omitempty"`
 	// Deprecated:
 	NextCursor        *string               `json:"next_cursor,omitempty"`
 	NextPageKey       *string               `json:"next_page_key,omitempty"`
@@ -3476,6 +3480,24 @@ type ConversationInterestResponse struct {
 	SelectedInterests []string                     `json:"selected_interests"`
 }
 
+// ConversationLastCall defines model for ConversationLastCall.
+type ConversationLastCall struct {
+	CorrectionsCount int     `json:"corrections_count"`
+	EndedAt          string  `json:"ended_at"`
+	ScenarioId       *string `json:"scenario_id,omitempty"`
+	ScenarioTitle    *string `json:"scenario_title,omitempty"`
+	SessionId        string  `json:"session_id"`
+}
+
+// ConversationLastCallUserService defines model for ConversationLastCallUserService.
+type ConversationLastCallUserService struct {
+	CorrectionsCount int       `json:"corrections_count"`
+	EndedAt          time.Time `json:"ended_at"`
+	ScenarioId       *string   `json:"scenario_id,omitempty"`
+	ScenarioTitle    *string   `json:"scenario_title,omitempty"`
+	SessionId        uuid.UUID `json:"session_id"`
+}
+
 // ConversationPersona defines model for ConversationPersona.
 type ConversationPersona struct {
 	Role  string `json:"role"`
@@ -3498,6 +3520,7 @@ type ConversationScenario struct {
 	EstimatedDuration    int                 `json:"estimated_duration"`
 	Id                   string              `json:"id"`
 	IsFeatured           bool                `json:"is_featured"`
+	LastPlayedAt         *string             `json:"last_played_at,omitempty"`
 	LearningLanguageCode *string             `json:"learning_language_code,omitempty"`
 	LearningObjective    *string             `json:"learning_objective,omitempty"`
 	Localization         *LocalizationStatus `json:"localization,omitempty"`
@@ -6291,6 +6314,7 @@ type ItemStanding struct {
 	ItemId          uuid.UUID            `json:"item_id"`
 	ItemType        ItemStandingItemType `json:"item_type"`
 	MasteryScore    float32              `json:"mastery_score"`
+	NextReviewAt    *time.Time           `json:"next_review_at"`
 	Proficiency     float32              `json:"proficiency"`
 	TransferReady   *bool                `json:"transfer_ready,omitempty"`
 }
@@ -6304,6 +6328,7 @@ type ItemStandingV3 struct {
 	ItemId          string  `json:"item_id"`
 	ItemType        string  `json:"item_type"`
 	MasteryScore    float32 `json:"mastery_score"`
+	NextReviewAt    *string `json:"next_review_at,omitempty"`
 	Proficiency     float32 `json:"proficiency"`
 	TransferReady   bool    `json:"transfer_ready"`
 }
@@ -6497,6 +6522,60 @@ type KTVCaptionGenerateResponse struct {
 	Description string       `json:"description"`
 	Title       string       `json:"title"`
 	Workflow    *KTVWorkflow `json:"workflow,omitempty"`
+}
+
+// KTVEditCanvas defines model for KTVEditCanvas.
+type KTVEditCanvas struct {
+	Fps    int `json:"fps"`
+	Height int `json:"height"`
+	Width  int `json:"width"`
+}
+
+// KTVEditCaptions defines model for KTVEditCaptions.
+type KTVEditCaptions struct {
+	Style string `json:"style"`
+}
+
+// KTVEditClip defines model for KTVEditClip.
+type KTVEditClip struct {
+	Id           string  `json:"id"`
+	In           float32 `json:"in"`
+	MediaAssetId string  `json:"media_asset_id"`
+	Out          float32 `json:"out"`
+	Speed        float32 `json:"speed"`
+	VideoId      *string `json:"video_id,omitempty"`
+	Volume       float32 `json:"volume"`
+}
+
+// KTVEditDocument defines model for KTVEditDocument.
+type KTVEditDocument struct {
+	Canvas   KTVEditCanvas    `json:"canvas"`
+	Captions *KTVEditCaptions `json:"captions,omitempty"`
+	Clips    []KTVEditClip    `json:"clips"`
+	Export   KTVEditExport    `json:"export"`
+	Music    *KTVEditMusic    `json:"music,omitempty"`
+	Outro    *KTVEditOutro    `json:"outro,omitempty"`
+	Version  int              `json:"version"`
+}
+
+// KTVEditExport defines model for KTVEditExport.
+type KTVEditExport struct {
+	Fps          int  `json:"fps"`
+	SmoothMotion bool `json:"smooth_motion"`
+}
+
+// KTVEditMusic defines model for KTVEditMusic.
+type KTVEditMusic struct {
+	Duck    bool    `json:"duck"`
+	FadeIn  float32 `json:"fade_in"`
+	FadeOut float32 `json:"fade_out"`
+	TrackId string  `json:"track_id"`
+	Volume  float32 `json:"volume"`
+}
+
+// KTVEditOutro defines model for KTVEditOutro.
+type KTVEditOutro struct {
+	PresetId string `json:"preset_id"`
 }
 
 // KTVGeneratedVariant defines model for KTVGeneratedVariant.
@@ -6755,6 +6834,23 @@ type KTVTempDownloadListResponse struct {
 	Meta  map[string]int        `json:"meta"`
 }
 
+// KTVUseClipRequest defines model for KTVUseClipRequest.
+type KTVUseClipRequest struct {
+	FileName             *string    `json:"file_name,omitempty"`
+	LearningLanguageCode *string    `json:"learning_language_code,omitempty"`
+	MediaAssetId         *uuid.UUID `json:"media_asset_id,omitempty"`
+	VariantId            *uuid.UUID `json:"variant_id,omitempty"`
+}
+
+// KTVUseClipResponse defines model for KTVUseClipResponse.
+type KTVUseClipResponse struct {
+	Created   bool         `json:"created"`
+	EntryId   uuid.UUID    `json:"entry_id"`
+	VariantId uuid.UUID    `json:"variant_id"`
+	Warnings  *[]string    `json:"warnings,omitempty"`
+	Workflow  *KTVWorkflow `json:"workflow,omitempty"`
+}
+
 // KTVVariantCreateRequest defines model for KTVVariantCreateRequest.
 type KTVVariantCreateRequest struct {
 	JobId      *uuid.UUID              `json:"job_id,omitempty"`
@@ -6954,6 +7050,127 @@ type KieloTVCaptions struct {
 	TranslationStatus    interface{} `json:"translation_status"`
 	UpdatedAt            time.Time   `json:"updated_at"`
 	VideoId              uuid.UUID   `json:"video_id"`
+}
+
+// KieloTVEditBlockers defines model for KieloTVEditBlockers.
+type KieloTVEditBlockers struct {
+	Publish *string `json:"publish,omitempty"`
+	Social  *string `json:"social,omitempty"`
+}
+
+// KieloTVEditCue defines model for KieloTVEditCue.
+type KieloTVEditCue struct {
+	End         float32 `json:"end"`
+	Index       int     `json:"index"`
+	Start       float32 `json:"start"`
+	SupportText string  `json:"support_text"`
+	TextPrimary string  `json:"text_primary"`
+}
+
+// KieloTVEditPeaks defines model for KieloTVEditPeaks.
+type KieloTVEditPeaks struct {
+	Rate   int   `json:"rate"`
+	Values []int `json:"values"`
+}
+
+// KieloTVEditPreset defines model for KieloTVEditPreset.
+type KieloTVEditPreset struct {
+	Duration float32 `json:"duration"`
+	Id       string  `json:"id"`
+	Title    string  `json:"title"`
+	Url      string  `json:"url"`
+}
+
+// KieloTVEditPresetsResponse defines model for KieloTVEditPresetsResponse.
+type KieloTVEditPresetsResponse struct {
+	Music  []KieloTVEditPreset `json:"music"`
+	Outros []KieloTVEditPreset `json:"outros"`
+}
+
+// KieloTVEditProxy defines model for KieloTVEditProxy.
+type KieloTVEditProxy struct {
+	Error  string `json:"error"`
+	Status string `json:"status"`
+}
+
+// KieloTVEditPublished defines model for KieloTVEditPublished.
+type KieloTVEditPublished struct {
+	PublishedAt        string `json:"published_at"`
+	SourceMediaAssetId string `json:"source_media_asset_id"`
+}
+
+// KieloTVEditRender defines model for KieloTVEditRender.
+type KieloTVEditRender struct {
+	DocHash          string `json:"doc_hash"`
+	Error            string `json:"error"`
+	OutputMediaId    string `json:"output_media_id"`
+	OutputProcessing bool   `json:"output_processing"`
+	OutputUrl        string `json:"output_url"`
+	Progress         int    `json:"progress"`
+	Stale            bool   `json:"stale"`
+	Status           string `json:"status"`
+	UpdatedAt        string `json:"updated_at"`
+}
+
+// KieloTVEditRenderRequest defines model for KieloTVEditRenderRequest.
+type KieloTVEditRenderRequest struct {
+	Target string `json:"target"`
+}
+
+// KieloTVEditRenders defines model for KieloTVEditRenders.
+type KieloTVEditRenders struct {
+	App    *KieloTVEditRender `json:"app,omitempty"`
+	Social *KieloTVEditRender `json:"social,omitempty"`
+}
+
+// KieloTVEditSocialExport defines model for KieloTVEditSocialExport.
+type KieloTVEditSocialExport struct {
+	DocHash       string `json:"doc_hash"`
+	ExportedAt    string `json:"exported_at"`
+	PublishedUrl  string `json:"published_url"`
+	RowIndex      int    `json:"row_index"`
+	SpreadsheetId string `json:"spreadsheet_id"`
+	Worksheet     string `json:"worksheet"`
+}
+
+// KieloTVEditSource defines model for KieloTVEditSource.
+type KieloTVEditSource struct {
+	Duration    float32            `json:"duration"`
+	OriginalUrl string             `json:"original_url"`
+	Peaks       *KieloTVEditPeaks  `json:"peaks,omitempty"`
+	ProxyUrl    string             `json:"proxy_url"`
+	Sprite      *KieloTVEditSprite `json:"sprite,omitempty"`
+	SpriteUrl   string             `json:"sprite_url"`
+	Title       string             `json:"title"`
+	VideoId     *string            `json:"video_id,omitempty"`
+}
+
+// KieloTVEditSprite defines model for KieloTVEditSprite.
+type KieloTVEditSprite struct {
+	Columns     int     `json:"columns"`
+	Count       int     `json:"count"`
+	FrameHeight int     `json:"frame_height"`
+	FrameWidth  int     `json:"frame_width"`
+	Interval    float32 `json:"interval"`
+}
+
+// KieloTVEditStateResponse defines model for KieloTVEditStateResponse.
+type KieloTVEditStateResponse struct {
+	Blockers        KieloTVEditBlockers          `json:"blockers"`
+	CaptionsByVideo map[string][]KieloTVEditCue  `json:"captions_by_video"`
+	DocHash         string                       `json:"doc_hash"`
+	Document        KTVEditDocument              `json:"document"`
+	Proxies         map[string]KieloTVEditProxy  `json:"proxies"`
+	Published       *KieloTVEditPublished        `json:"published,omitempty"`
+	Renders         KieloTVEditRenders           `json:"renders"`
+	SocialExport    *KieloTVEditSocialExport     `json:"social_export,omitempty"`
+	Sources         map[string]KieloTVEditSource `json:"sources"`
+	VideoId         string                       `json:"video_id"`
+}
+
+// KieloTVEditUpdateRequest defines model for KieloTVEditUpdateRequest.
+type KieloTVEditUpdateRequest struct {
+	Document KTVEditDocument `json:"document"`
 }
 
 // KieloTVLocaleSupport defines model for KieloTVLocaleSupport.
@@ -8320,6 +8537,14 @@ type MessageResponse struct {
 	Message string  `json:"message"`
 }
 
+// MeteringSettings defines model for MeteringSettings.
+type MeteringSettings struct {
+	RefillMode  string    `json:"refill_mode"`
+	UpdatedAt   time.Time `json:"updated_at"`
+	UpdatedBy   *string   `json:"updated_by,omitempty"`
+	WindowHours int       `json:"window_hours"`
+}
+
 // MicroDrill defines model for MicroDrill.
 type MicroDrill struct {
 	Id    string      `json:"id"`
@@ -9517,6 +9742,11 @@ type QuickAddToStudyListRequest struct {
 	BaseWordId string `json:"base_word_id"`
 }
 
+// ReadArticleIDs defines model for ReadArticleIDs.
+type ReadArticleIDs struct {
+	Ids []string `json:"ids"`
+}
+
 // ReadinessResponse defines model for ReadinessResponse.
 type ReadinessResponse struct {
 	Models string `json:"models"`
@@ -9655,6 +9885,7 @@ type RedeemPromoCodeResponse struct {
 	GrantDays         int     `json:"grant_days"`
 	PreviousExpiresAt *string `json:"previous_expires_at,omitempty"`
 	RedemptionId      string  `json:"redemption_id"`
+	StartsAt          *string `json:"starts_at,omitempty"`
 	Status            string  `json:"status"`
 }
 
@@ -9666,7 +9897,22 @@ type RedeemPromoCodeResponseUserService struct {
 	GrantDays         int        `json:"grant_days"`
 	PreviousExpiresAt *time.Time `json:"previous_expires_at,omitempty"`
 	RedemptionId      uuid.UUID  `json:"redemption_id"`
+	StartsAt          *time.Time `json:"starts_at,omitempty"`
 	Status            string     `json:"status"`
+}
+
+// RefillSettings defines model for RefillSettings.
+type RefillSettings struct {
+	RefillMode  string    `json:"refill_mode"`
+	UpdatedAt   time.Time `json:"updated_at"`
+	UpdatedBy   *string   `json:"updated_by,omitempty"`
+	WindowHours int       `json:"window_hours"`
+}
+
+// RefillSettingsRequest defines model for RefillSettingsRequest.
+type RefillSettingsRequest struct {
+	RefillMode  string `json:"refill_mode"`
+	WindowHours int    `json:"window_hours"`
 }
 
 // RefreshTokenRequest defines model for RefreshTokenRequest.
@@ -9901,6 +10147,7 @@ type RestoreSubscriptionResponse struct {
 
 // ResultMetadata defines model for ResultMetadata.
 type ResultMetadata struct {
+	ArticleType        *string `json:"article_type,omitempty"`
 	CefrLevel          *string `json:"cefr_level,omitempty"`
 	DurationSeconds    *int    `json:"duration_seconds,omitempty"`
 	IsSaved            *bool   `json:"is_saved,omitempty"`
@@ -10543,6 +10790,7 @@ type ScenarioListItem struct {
 	EstimatedDurationMinutes *int                    `json:"estimated_duration_minutes,omitempty"`
 	Id                       uuid.UUID               `json:"id"`
 	IsFeatured               bool                    `json:"is_featured"`
+	LastPlayedAt             *time.Time              `json:"last_played_at,omitempty"`
 	LearningLanguageCode     *string                 `json:"learning_language_code,omitempty"`
 	LocalizedDescriptions    *map[string]string      `json:"localized_descriptions,omitempty"`
 	ScenarioContent          *map[string]interface{} `json:"scenario_content,omitempty"`
@@ -10592,15 +10840,16 @@ type ScheduledCommunicationListResponse struct {
 
 // ScreenshotTarget defines model for ScreenshotTarget.
 type ScreenshotTarget struct {
-	Height    int    `json:"height"`
-	Id        string `json:"id"`
-	Label     string `json:"label"`
-	MaxCount  int    `json:"max_count"`
-	MinCount  int    `json:"min_count"`
-	Required  bool   `json:"required"`
-	Store     string `json:"store"`
-	StoreSlot string `json:"store_slot"`
-	Width     int    `json:"width"`
+	AlternativeTo *string `json:"alternative_to,omitempty"`
+	Height        int     `json:"height"`
+	Id            string  `json:"id"`
+	Label         string  `json:"label"`
+	MaxCount      int     `json:"max_count"`
+	MinCount      int     `json:"min_count"`
+	Required      bool    `json:"required"`
+	Store         string  `json:"store"`
+	StoreSlot     string  `json:"store_slot"`
+	Width         int     `json:"width"`
 }
 
 // SearchExcerpt defines model for SearchExcerpt.
@@ -11876,6 +12125,11 @@ type SingletonKTVTempDownloadListResponse struct {
 	Data KTVTempDownloadListResponse `json:"data"`
 }
 
+// SingletonKTVUseClipResponse defines model for SingletonKTVUseClipResponse.
+type SingletonKTVUseClipResponse struct {
+	Data KTVUseClipResponse `json:"data"`
+}
+
 // SingletonKTVVariantProcessResponse defines model for SingletonKTVVariantProcessResponse.
 type SingletonKTVVariantProcessResponse struct {
 	Data KTVVariantProcessResponse `json:"data"`
@@ -11914,6 +12168,16 @@ type SingletonKTVWorkflowSubmitResponse struct {
 // SingletonKieloTVCaptions defines model for SingletonKieloTVCaptions.
 type SingletonKieloTVCaptions struct {
 	Data KieloTVCaptions `json:"data"`
+}
+
+// SingletonKieloTVEditPresetsResponse defines model for SingletonKieloTVEditPresetsResponse.
+type SingletonKieloTVEditPresetsResponse struct {
+	Data KieloTVEditPresetsResponse `json:"data"`
+}
+
+// SingletonKieloTVEditStateResponse defines model for SingletonKieloTVEditStateResponse.
+type SingletonKieloTVEditStateResponse struct {
+	Data KieloTVEditStateResponse `json:"data"`
 }
 
 // SingletonKieloTVLocaleSupport defines model for SingletonKieloTVLocaleSupport.
@@ -12116,6 +12380,11 @@ type SingletonMessageResponse struct {
 	Data MessageResponse `json:"data"`
 }
 
+// SingletonMeteringSettings defines model for SingletonMeteringSettings.
+type SingletonMeteringSettings struct {
+	Data MeteringSettings `json:"data"`
+}
+
 // SingletonMicroDrill defines model for SingletonMicroDrill.
 type SingletonMicroDrill struct {
 	Data MicroDrill `json:"data"`
@@ -12256,6 +12525,11 @@ type SingletonQueueStatus struct {
 	Data QueueStatus `json:"data"`
 }
 
+// SingletonReadArticleIDs defines model for SingletonReadArticleIDs.
+type SingletonReadArticleIDs struct {
+	Data ReadArticleIDs `json:"data"`
+}
+
 // SingletonRecentArticleReadIDsResponse defines model for SingletonRecentArticleReadIDsResponse.
 type SingletonRecentArticleReadIDsResponse struct {
 	Data RecentArticleReadIDsResponse `json:"data"`
@@ -12279,6 +12553,11 @@ type SingletonRedeemPromoCodeResponse struct {
 // SingletonRedeemPromoCodeResponseUserService defines model for SingletonRedeemPromoCodeResponseUserService.
 type SingletonRedeemPromoCodeResponseUserService struct {
 	Data RedeemPromoCodeResponseUserService `json:"data"`
+}
+
+// SingletonRefillSettings defines model for SingletonRefillSettings.
+type SingletonRefillSettings struct {
+	Data RefillSettings `json:"data"`
 }
 
 // SingletonRefreshTokenResponse defines model for SingletonRefreshTokenResponse.
@@ -13746,6 +14025,7 @@ type SurfaceReference struct {
 
 // SurfaceReferenceContentService defines model for SurfaceReferenceContentService.
 type SurfaceReferenceContentService struct {
+	ArticleType             *string                   `json:"article_type,omitempty"`
 	CaptionIndex            *int                      `json:"caption_index,omitempty"`
 	InflectedFormDetailsRaw *string                   `json:"inflected_form_details_raw,omitempty"`
 	LanguageCode            string                    `json:"language_code"`
@@ -14932,6 +15212,13 @@ type UpdatePromoCampaignRequest struct {
 	Note            *string    `json:"note,omitempty"`
 	StartsAt        *time.Time `json:"starts_at,omitempty"`
 	Status          *string    `json:"status,omitempty"`
+}
+
+// UpdateRefillSettingsRequest defines model for UpdateRefillSettingsRequest.
+type UpdateRefillSettingsRequest struct {
+	RefillMode  string  `json:"refill_mode"`
+	UpdatedBy   *string `json:"updated_by,omitempty"`
+	WindowHours int     `json:"window_hours"`
 }
 
 // UpdateScenarioResponse defines model for UpdateScenarioResponse.
@@ -16678,6 +16965,54 @@ type GetApiV3KielotvVideosVideoIdMindmapParams struct {
 	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
 }
 
+// DeleteApiV3KielotvVideoIdEditParams defines parameters for DeleteApiV3KielotvVideoIdEdit.
+type DeleteApiV3KielotvVideoIdEditParams struct {
+	// LearningLanguageCode Two-letter ISO 639-1 code for the language being learned (per ADR-006 §3.83).
+	LearningLanguageCode *string `form:"learning_language_code,omitempty" json:"learning_language_code,omitempty"`
+}
+
+// GetApiV3KielotvVideoIdEditParams defines parameters for GetApiV3KielotvVideoIdEdit.
+type GetApiV3KielotvVideoIdEditParams struct {
+	// LearningLanguageCode Two-letter ISO 639-1 code for the language being learned (per ADR-006 §3.83).
+	LearningLanguageCode *string `form:"learning_language_code,omitempty" json:"learning_language_code,omitempty"`
+}
+
+// PutApiV3KielotvVideoIdEditParams defines parameters for PutApiV3KielotvVideoIdEdit.
+type PutApiV3KielotvVideoIdEditParams struct {
+	// LearningLanguageCode Two-letter ISO 639-1 code for the language being learned (per ADR-006 §3.83).
+	LearningLanguageCode *string `form:"learning_language_code,omitempty" json:"learning_language_code,omitempty"`
+}
+
+// PostApiV3KielotvVideoIdEditExportSocialParams defines parameters for PostApiV3KielotvVideoIdEditExportSocial.
+type PostApiV3KielotvVideoIdEditExportSocialParams struct {
+	// LearningLanguageCode Two-letter ISO 639-1 code for the language being learned (per ADR-006 §3.83).
+	LearningLanguageCode *string `form:"learning_language_code,omitempty" json:"learning_language_code,omitempty"`
+}
+
+// PostApiV3KielotvVideoIdEditPublishParams defines parameters for PostApiV3KielotvVideoIdEditPublish.
+type PostApiV3KielotvVideoIdEditPublishParams struct {
+	// LearningLanguageCode Two-letter ISO 639-1 code for the language being learned (per ADR-006 §3.83).
+	LearningLanguageCode *string `form:"learning_language_code,omitempty" json:"learning_language_code,omitempty"`
+}
+
+// PostApiV3KielotvVideoIdEditRenderParams defines parameters for PostApiV3KielotvVideoIdEditRender.
+type PostApiV3KielotvVideoIdEditRenderParams struct {
+	// LearningLanguageCode Two-letter ISO 639-1 code for the language being learned (per ADR-006 §3.83).
+	LearningLanguageCode *string `form:"learning_language_code,omitempty" json:"learning_language_code,omitempty"`
+}
+
+// PostApiV3KielotvVideoIdEditRestoreParams defines parameters for PostApiV3KielotvVideoIdEditRestore.
+type PostApiV3KielotvVideoIdEditRestoreParams struct {
+	// LearningLanguageCode Two-letter ISO 639-1 code for the language being learned (per ADR-006 §3.83).
+	LearningLanguageCode *string `form:"learning_language_code,omitempty" json:"learning_language_code,omitempty"`
+}
+
+// PostApiV3KielotvVideoIdEditSyncParams defines parameters for PostApiV3KielotvVideoIdEditSync.
+type PostApiV3KielotvVideoIdEditSyncParams struct {
+	// LearningLanguageCode Two-letter ISO 639-1 code for the language being learned (per ADR-006 §3.83).
+	LearningLanguageCode *string `form:"learning_language_code,omitempty" json:"learning_language_code,omitempty"`
+}
+
 // GetApiV3KlearnConceptHubsByConceptGrammarConceptIdParams defines parameters for GetApiV3KlearnConceptHubsByConceptGrammarConceptId.
 type GetApiV3KlearnConceptHubsByConceptGrammarConceptIdParams struct {
 	// Include Sweep CCCCC-A: comma-separated opt-in fields. `core_content` triggers eager localization.
@@ -17009,6 +17344,9 @@ type GetApiV3MeNextStepsParams struct {
 
 	// SourceId Content entry id (article, video) or scenario id
 	SourceId string `form:"source_id" json:"source_id"`
+
+	// Supports Comma list of card kinds this client can launch, e.g. article_pack. Omitted: only the original kinds.
+	Supports *string `form:"supports,omitempty" json:"supports,omitempty"`
 
 	// SupportLanguageCode Two-letter ISO 639-1 code for translated UI strings (per ADR-006 §3.83).
 	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
@@ -18406,6 +18744,9 @@ type GetSurfaceNextStepsKlearnApiV3NextStepsGetParams struct {
 
 	// SourceId Content entry id (article, video) or scenario id
 	SourceId string `form:"source_id" json:"source_id"`
+
+	// Supports Comma list of card kinds the client can launch, e.g. article_pack
+	Supports *string `form:"supports,omitempty" json:"supports,omitempty"`
 }
 
 // GetSurfaceNextStepsKlearnApiV3NextStepsGetParamsSourceKind defines parameters for GetSurfaceNextStepsKlearnApiV3NextStepsGet.
@@ -18591,6 +18932,9 @@ type GetSignInLinkPreviewParams struct {
 
 // PutAdminApiV3AppLinkRulesJSONRequestBody defines body for PutAdminApiV3AppLinkRules for application/json ContentType.
 type PutAdminApiV3AppLinkRulesJSONRequestBody = AppLinkRuleList
+
+// PutAdminApiV3FeatureLimitsRefillJSONRequestBody defines body for PutAdminApiV3FeatureLimitsRefill for application/json ContentType.
+type PutAdminApiV3FeatureLimitsRefillJSONRequestBody = UpdateRefillSettingsRequest
 
 // PostAdminApiV3FeatureLimitsTierJSONRequestBody defines body for PostAdminApiV3FeatureLimitsTier for application/json ContentType.
 type PostAdminApiV3FeatureLimitsTierJSONRequestBody = UpsertTierLimitRequest
@@ -18856,6 +19200,9 @@ type PostApiV3EventsInboxLocalizeJSONRequestBody = InboxLocalizeRequest
 // PostApiV3FeatureLimitsJSONRequestBody defines body for PostApiV3FeatureLimits for application/json ContentType.
 type PostApiV3FeatureLimitsJSONRequestBody = CreateTierLimitRequest
 
+// PutApiV3FeatureLimitsRefillJSONRequestBody defines body for PutApiV3FeatureLimitsRefill for application/json ContentType.
+type PutApiV3FeatureLimitsRefillJSONRequestBody = RefillSettingsRequest
+
 // PutApiV3FeatureLimitsUsersUserIdFeatureJSONRequestBody defines body for PutApiV3FeatureLimitsUsersUserIdFeature for application/json ContentType.
 type PutApiV3FeatureLimitsUsersUserIdFeatureJSONRequestBody = SetUserOverrideRequest
 
@@ -18885,6 +19232,12 @@ type PatchApiV3KielotvVideoIdJSONRequestBody = KieloTVVideoUpsertRequest
 
 // PutApiV3KielotvVideoIdCaptionsJSONRequestBody defines body for PutApiV3KielotvVideoIdCaptions for application/json ContentType.
 type PutApiV3KielotvVideoIdCaptionsJSONRequestBody = KieloTVCaptions
+
+// PutApiV3KielotvVideoIdEditJSONRequestBody defines body for PutApiV3KielotvVideoIdEdit for application/json ContentType.
+type PutApiV3KielotvVideoIdEditJSONRequestBody = KieloTVEditUpdateRequest
+
+// PostApiV3KielotvVideoIdEditRenderJSONRequestBody defines body for PostApiV3KielotvVideoIdEditRender for application/json ContentType.
+type PostApiV3KielotvVideoIdEditRenderJSONRequestBody = KieloTVEditRenderRequest
 
 // PutApiV3KielotvVideoIdMindmapJSONRequestBody defines body for PutApiV3KielotvVideoIdMindmap for application/json ContentType.
 type PutApiV3KielotvVideoIdMindmapJSONRequestBody = KieloTVMindmapUpsertRequest
@@ -18972,6 +19325,9 @@ type PatchApiV3KtvWorkflowsWorkflowIdStatusJSONRequestBody = KTVWorkflowStatusUp
 
 // PostApiV3KtvWorkflowsWorkflowIdSubmitJSONRequestBody defines body for PostApiV3KtvWorkflowsWorkflowIdSubmit for application/json ContentType.
 type PostApiV3KtvWorkflowsWorkflowIdSubmitJSONRequestBody = KTVWorkflowSubmitRequest
+
+// PostApiV3KtvWorkflowsWorkflowIdUseClipJSONRequestBody defines body for PostApiV3KtvWorkflowsWorkflowIdUseClip for application/json ContentType.
+type PostApiV3KtvWorkflowsWorkflowIdUseClipJSONRequestBody = KTVUseClipRequest
 
 // PostApiV3KtvWorkflowsWorkflowIdVariantsJSONRequestBody defines body for PostApiV3KtvWorkflowsWorkflowIdVariants for application/json ContentType.
 type PostApiV3KtvWorkflowsWorkflowIdVariantsJSONRequestBody = KTVVariantCreateRequest
@@ -19566,9 +19922,6 @@ type HandleGeneratorSloTickInternalWorkerHandleGeneratorSloTickPostJSONRequestBo
 
 // HandleGrammarExampleEnrichmentInternalWorkerHandleGrammarExampleEnrichmentPostJSONRequestBody defines body for HandleGrammarExampleEnrichmentInternalWorkerHandleGrammarExampleEnrichmentPost for application/json ContentType.
 type HandleGrammarExampleEnrichmentInternalWorkerHandleGrammarExampleEnrichmentPostJSONRequestBody = PubSubMessage
-
-// HandleLessonGenerationInternalWorkerHandleLessonGenerationPostJSONRequestBody defines body for HandleLessonGenerationInternalWorkerHandleLessonGenerationPost for application/json ContentType.
-type HandleLessonGenerationInternalWorkerHandleLessonGenerationPostJSONRequestBody = PubSubMessage
 
 // HandleMediaReadyInternalWorkerHandleMediaReadyPostJSONRequestBody defines body for HandleMediaReadyInternalWorkerHandleMediaReadyPost for application/json ContentType.
 type HandleMediaReadyInternalWorkerHandleMediaReadyPostJSONRequestBody = PubSubMessage
