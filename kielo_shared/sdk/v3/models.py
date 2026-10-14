@@ -1717,6 +1717,22 @@ class ConversationInterestResponse(BaseModel):
     selected_interests: list[str]
 
 
+class ConversationLastCall(BaseModel):
+    corrections_count: int
+    ended_at: str
+    scenario_id: str | None = None
+    scenario_title: str | None = None
+    session_id: str
+
+
+class ConversationLastCallUserService(BaseModel):
+    corrections_count: int
+    ended_at: AwareDatetime
+    scenario_id: str | None = None
+    scenario_title: str | None = None
+    session_id: UUID_aliased
+
+
 class ConversationPersona(BaseModel):
     role: str
     style: str
@@ -3523,6 +3539,11 @@ class IdentifyConceptExercise(BaseModel):
     validation_signature: str | None = Field(None, title="Validation Signature")
 
 
+class ImageChecksums(BaseModel):
+    md5: str
+    sha256: str
+
+
 class InAppNudge(BaseModel):
     anchor_target: str
     context: str
@@ -3680,6 +3701,7 @@ class ItemStanding(BaseModel):
     item_id: UUID_aliased = Field(..., title="Item Id")
     item_type: ItemTypeFk = Field(..., title="Item Type")
     mastery_score: confloat(ge=0.0, le=1.0) = Field(..., title="Mastery Score")
+    next_review_at: AwareDatetime | None = Field(None, title="Next Review At")
     proficiency: confloat(ge=0.0, le=1.0) = Field(..., title="Proficiency")
     transfer_ready: bool | None = Field(False, title="Transfer Ready")
 
@@ -3689,6 +3711,7 @@ class ItemStandingV3(BaseModel):
     item_id: str
     item_type: str
     mastery_score: float
+    next_review_at: str | None = None
     proficiency: float
     transfer_ready: bool
 
@@ -3799,6 +3822,43 @@ class KTVCapabilitiesResponse(BaseModel):
 
 class KTVCaptionGenerateRequest(BaseModel):
     speech_script: str | None = None
+
+
+class KTVEditCanvas(BaseModel):
+    fps: int
+    height: int
+    width: int
+
+
+class KTVEditCaptions(BaseModel):
+    style: str
+
+
+class KTVEditClip(BaseModel):
+    id: str
+    in_: float = Field(..., alias="in")
+    media_asset_id: str
+    out: float
+    speed: float
+    video_id: str | None = None
+    volume: float
+
+
+class KTVEditExport(BaseModel):
+    fps: int
+    smooth_motion: bool
+
+
+class KTVEditMusic(BaseModel):
+    duck: bool
+    fade_in: float
+    fade_out: float
+    track_id: str
+    volume: float
+
+
+class KTVEditOutro(BaseModel):
+    preset_id: str
 
 
 class KTVGeneratedVariant(BaseModel):
@@ -3954,6 +4014,13 @@ class KTVTempDownloadFile(BaseModel):
 class KTVTempDownloadListResponse(BaseModel):
     files: list[KTVTempDownloadFile]
     meta: dict[str, int]
+
+
+class KTVUseClipRequest(BaseModel):
+    file_name: str | None = None
+    learning_language_code: str | None = None
+    media_asset_id: UUID_aliased | None = None
+    variant_id: UUID_aliased | None = None
 
 
 class KTVVariantCreateRequest(BaseModel):
@@ -4135,6 +4202,84 @@ class KieloTVCaptions(BaseModel):
     translation_status: Any
     updated_at: AwareDatetime
     video_id: UUID_aliased
+
+
+class KieloTVEditBlockers(BaseModel):
+    publish: str | None = None
+    social: str | None = None
+
+
+class KieloTVEditCue(BaseModel):
+    end: float
+    index: int
+    start: float
+    support_text: str
+    text_primary: str
+
+
+class KieloTVEditPeaks(BaseModel):
+    rate: int
+    values: list[int]
+
+
+class KieloTVEditPreset(BaseModel):
+    duration: float
+    id: str
+    title: str
+    url: str
+
+
+class KieloTVEditPresetsResponse(BaseModel):
+    music: list[KieloTVEditPreset]
+    outros: list[KieloTVEditPreset]
+
+
+class KieloTVEditProxy(BaseModel):
+    error: str
+    status: str
+
+
+class KieloTVEditPublished(BaseModel):
+    published_at: str
+    source_media_asset_id: str
+
+
+class KieloTVEditRender(BaseModel):
+    doc_hash: str
+    error: str
+    output_media_id: str
+    output_processing: bool
+    output_url: str
+    progress: int
+    stale: bool
+    status: str
+    updated_at: str
+
+
+class KieloTVEditRenderRequest(BaseModel):
+    target: str
+
+
+class KieloTVEditRenders(BaseModel):
+    app: KieloTVEditRender | None = None
+    social: KieloTVEditRender | None = None
+
+
+class KieloTVEditSocialExport(BaseModel):
+    doc_hash: str
+    exported_at: str
+    published_url: str
+    row_index: int
+    spreadsheet_id: str
+    worksheet: str
+
+
+class KieloTVEditSprite(BaseModel):
+    columns: int
+    count: int
+    frame_height: int
+    frame_width: int
+    interval: float
 
 
 class KieloTVLocaleSupport(AvailableLocales):
@@ -5183,6 +5328,13 @@ class MessageResponse(ForgotPasswordResponse):
     pass
 
 
+class MeteringSettings(BaseModel):
+    refill_mode: str
+    updated_at: AwareDatetime
+    updated_by: str | None = None
+    window_hours: int
+
+
 class MicroDrill(BaseModel):
     id: str
     items: list[DrillItem]
@@ -5319,6 +5471,7 @@ class CtaId(StrEnum):
     start_conversation = "start_conversation"
     study_collection = "study_collection"
     watch_video = "watch_video"
+    start_article_pack = "start_article_pack"
 
 
 class Intent1(StrEnum):
@@ -5342,6 +5495,7 @@ class Type(StrEnum):
     conversation = "conversation"
     saved_collection = "saved_collection"
     ktv_video = "ktv_video"
+    article_pack = "article_pack"
 
 
 class SourceKind(StrEnum):
@@ -5987,13 +6141,17 @@ class QuickAddToStudyListRequest(AddTopicListItemRequest):
     pass
 
 
+class ReadArticleIDs(BaseModel):
+    ids: list[str]
+
+
 class ReadinessResponse(BaseModel):
     models: str = Field(..., title="Models")
     status: str = Field(..., title="Status")
 
 
-class RecentArticleReadIDsResponse(BaseModel):
-    ids: list[str]
+class RecentArticleReadIDsResponse(ReadArticleIDs):
+    pass
 
 
 class RecommendationCampaign(BaseModel):
@@ -6107,6 +6265,7 @@ class RedeemPromoCodeResponse(BaseModel):
     grant_days: int
     previous_expires_at: str | None = None
     redemption_id: str
+    starts_at: str | None = None
     status: str
 
 
@@ -6117,7 +6276,17 @@ class RedeemPromoCodeResponseUserService(BaseModel):
     grant_days: int
     previous_expires_at: AwareDatetime | None = None
     redemption_id: UUID_aliased
+    starts_at: AwareDatetime | None = None
     status: str
+
+
+class RefillSettings(MeteringSettings):
+    pass
+
+
+class RefillSettingsRequest(BaseModel):
+    refill_mode: str
+    window_hours: int
 
 
 class RefreshTokenRequest(BaseModel):
@@ -6298,6 +6467,7 @@ class RestoreSubscriptionResponse(BaseModel):
 
 
 class ResultMetadata(BaseModel):
+    article_type: str | None = None
     cefr_level: str | None = None
     duration_seconds: int | None = None
     is_saved: bool | None = None
@@ -6792,6 +6962,7 @@ class ScenarioListItem(BaseModel):
     estimated_duration_minutes: int | None = None
     id: UUID_aliased
     is_featured: bool
+    last_played_at: AwareDatetime | None = None
     learning_language_code: str | None = None
     localized_descriptions: dict[str, str] | None = None
     scenario_content: dict[str, Any] | None = None
@@ -6833,6 +7004,19 @@ class ScheduledCommunication(BaseModel):
 class ScheduledCommunicationListResponse(BaseModel):
     data: list[ScheduledCommunication]
     meta: OffsetMeta
+
+
+class ScreenshotTarget(BaseModel):
+    alternative_to: str | None = None
+    height: int
+    id: str
+    label: str
+    max_count: int
+    min_count: int
+    required: bool
+    store: str
+    store_slot: str
+    width: int
 
 
 class SearchExcerpt(BaseModel):
@@ -7630,6 +7814,10 @@ class SingletonKieloTVCaptions(BaseModel):
     data: KieloTVCaptions
 
 
+class SingletonKieloTVEditPresetsResponse(BaseModel):
+    data: KieloTVEditPresetsResponse
+
+
 class SingletonKieloTVLocaleSupport(BaseModel):
     data: KieloTVLocaleSupport
 
@@ -7758,6 +7946,10 @@ class SingletonMessageResponse(BaseModel):
     data: MessageResponse
 
 
+class SingletonMeteringSettings(BaseModel):
+    data: MeteringSettings
+
+
 class SingletonMicroDrill(BaseModel):
     data: MicroDrill
 
@@ -7846,6 +8038,10 @@ class SingletonQueueStatus(BaseModel):
     data: QueueStatus
 
 
+class SingletonReadArticleIDs(BaseModel):
+    data: ReadArticleIDs
+
+
 class SingletonRecentArticleReadIDsResponse(BaseModel):
     data: RecentArticleReadIDsResponse
 
@@ -7864,6 +8060,10 @@ class SingletonRedeemPromoCodeResponse(BaseModel):
 
 class SingletonRedeemPromoCodeResponseUserService(BaseModel):
     data: RedeemPromoCodeResponseUserService
+
+
+class SingletonRefillSettings(BaseModel):
+    data: RefillSettings
 
 
 class SingletonRefreshTokenResponse(BaseModel):
@@ -8280,6 +8480,153 @@ class StorageUntrackedPage(BaseModel):
     total: int
 
 
+class StoreLocaleMapping(BaseModel):
+    app_store: list[str]
+    google_play: list[str]
+    locale: str
+
+
+class StoreScreenshotAsset(BaseModel):
+    asset_id: UUID_aliased
+    bytes: int
+    checksums: ImageChecksums
+    created_at: AwareDatetime
+    file_name: str | None = None
+    format: str
+    height: int
+    kind: str
+    locale: str | None = None
+    set_id: UUID_aliased
+    slot: int | None = None
+    snapshot: int | None = None
+    target_id: str | None = None
+    url: str | None = None
+    width: int
+
+
+class StoreScreenshotAssetListResponse(BaseModel):
+    items: list[StoreScreenshotAsset]
+
+
+class StoreScreenshotDraft(BaseModel):
+    document: Any
+    draft_revision: int
+    set_id: UUID_aliased
+    updated_at: AwareDatetime
+
+
+class StoreScreenshotDraftSaveRequest(BaseModel):
+    document: Any
+    draft_revision: int
+
+
+class StoreScreenshotExportListResponse(BaseModel):
+    items: list[StoreScreenshotAsset]
+    set_id: UUID_aliased
+    snapshot: int
+
+
+class StoreScreenshotLocaleListResponse(BaseModel):
+    items: list[StoreLocaleMapping]
+
+
+class StoreScreenshotPublishItem(BaseModel):
+    action: str
+    error: str | None = None
+    locale: str
+    slot: int
+    status: str
+    store: str
+    store_locale: str
+    target_id: str
+
+
+class StoreScreenshotPublishRun(BaseModel):
+    created_at: AwareDatetime
+    created_by: UUID_aliased | None = None
+    dry_run: bool
+    finished_at: AwareDatetime | None = None
+    items: list[StoreScreenshotPublishItem]
+    locales: list[str]
+    run_id: UUID_aliased
+    set_id: UUID_aliased
+    snapshot: int
+    status: str
+    stores: list[str]
+
+
+class StoreScreenshotPublishRunCreateRequest(BaseModel):
+    dry_run: bool | None = None
+    locales: list[str]
+    snapshot: int
+    stores: list[str]
+
+
+class StoreScreenshotSet(BaseModel):
+    archived_at: AwareDatetime | None = None
+    created_at: AwareDatetime
+    created_by: UUID_aliased | None = None
+    draft_revision: int
+    latest_snapshot: int | None = None
+    name: str
+    set_id: UUID_aliased
+    slug: str
+    targets: list[str]
+    updated_at: AwareDatetime
+
+
+class StoreScreenshotSetCreateRequest(BaseModel):
+    name: str
+    slug: str
+    targets: list[str]
+
+
+class StoreScreenshotSetListResponse(BaseModel):
+    items: list[StoreScreenshotSet]
+
+
+class StoreScreenshotSetUpdateRequest(BaseModel):
+    name: str | None = None
+    targets: list[str] | None = None
+
+
+class StoreScreenshotSnapshot(BaseModel):
+    created_at: AwareDatetime
+    created_by: UUID_aliased | None = None
+    document: Any
+    set_id: UUID_aliased
+    version: int
+
+
+class StoreScreenshotSnapshotCreateRequest(BaseModel):
+    draft_revision: int
+
+
+class StoreScreenshotSnapshotListResponse(BaseModel):
+    items: list[StoreScreenshotSnapshot]
+
+
+class StoreScreenshotStringsResponse(BaseModel):
+    locale: str
+    missing: list[str]
+    set_id: UUID_aliased
+    strings: dict[str, str]
+
+
+class StoreScreenshotTargetListResponse(BaseModel):
+    items: list[ScreenshotTarget]
+
+
+class StoreScreenshotValidationResponse(BaseModel):
+    bytes: int
+    checksums: ImageChecksums
+    format: str
+    height: int
+    normalized: bool
+    target_id: str
+    width: int
+
+
 class StreakInfo(BaseModel):
     current_streak_days: int
     grace_day_used: bool
@@ -8447,6 +8794,7 @@ class SurfaceReference(BaseModel):
 
 
 class SurfaceReferenceContentService(BaseModel):
+    article_type: str | None = None
     caption_index: int | None = None
     inflected_form_details_raw: str | None = None
     language_code: str
@@ -9293,6 +9641,12 @@ class UpdatePromoCampaignRequest(BaseModel):
     status: str | None = None
 
 
+class UpdateRefillSettingsRequest(BaseModel):
+    refill_mode: str
+    updated_by: str | None = None
+    window_hours: int
+
+
 class UpdateScenarioResponse(DeleteVoiceAgentResponse):
     pass
 
@@ -9836,174 +10190,6 @@ class FieldTranslateBatchResponse(BaseModel):
     translations: list[str] | None = Field(None, title="Translations")
 
 
-class ImageChecksums(BaseModel):
-    md5: str
-    sha256: str
-
-
-class ScreenshotTarget(BaseModel):
-    height: int
-    id: str
-    label: str
-    max_count: int
-    min_count: int
-    required: bool
-    store: str
-    store_slot: str
-    width: int
-
-
-class StoreLocaleMapping(BaseModel):
-    app_store: list[str]
-    google_play: list[str]
-    locale: str
-
-
-class StoreScreenshotAsset(BaseModel):
-    asset_id: UUID_aliased
-    bytes: int
-    checksums: ImageChecksums
-    created_at: AwareDatetime
-    file_name: str | None = None
-    format: str
-    height: int
-    kind: str
-    locale: str | None = None
-    set_id: UUID_aliased
-    slot: int | None = None
-    snapshot: int | None = None
-    target_id: str | None = None
-    url: str | None = None
-    width: int
-
-
-class StoreScreenshotDraft(BaseModel):
-    document: Any
-    draft_revision: int
-    set_id: UUID_aliased
-    updated_at: AwareDatetime
-
-
-class StoreScreenshotDraftSaveRequest(BaseModel):
-    document: Any
-    draft_revision: int
-
-
-class StoreScreenshotExportListResponse(BaseModel):
-    items: list[StoreScreenshotAsset]
-    set_id: UUID_aliased
-    snapshot: int
-
-
-class StoreScreenshotLocaleListResponse(BaseModel):
-    items: list[StoreLocaleMapping]
-
-
-class StoreScreenshotPublishItem(BaseModel):
-    action: str
-    error: str | None = None
-    locale: str
-    slot: int
-    status: str
-    store: str
-    store_locale: str
-    target_id: str
-
-
-class StoreScreenshotPublishRun(BaseModel):
-    created_at: AwareDatetime
-    created_by: UUID_aliased | None = None
-    dry_run: bool
-    finished_at: AwareDatetime | None = None
-    items: list[StoreScreenshotPublishItem]
-    locales: list[str]
-    run_id: UUID_aliased
-    set_id: UUID_aliased
-    snapshot: int
-    status: str
-    stores: list[str]
-
-
-class StoreScreenshotPublishRunCreateRequest(BaseModel):
-    dry_run: bool | None = None
-    locales: list[str]
-    snapshot: int
-    stores: list[str]
-
-
-class StoreScreenshotSet(BaseModel):
-    archived_at: AwareDatetime | None = None
-    created_at: AwareDatetime
-    created_by: UUID_aliased | None = None
-    draft_revision: int
-    latest_snapshot: int | None = None
-    name: str
-    set_id: UUID_aliased
-    slug: str
-    targets: list[str]
-    updated_at: AwareDatetime
-
-
-class StoreScreenshotSetCreateRequest(BaseModel):
-    name: str
-    slug: str
-    targets: list[str]
-
-
-class StoreScreenshotSetListResponse(BaseModel):
-    items: list[StoreScreenshotSet]
-
-
-class StoreScreenshotSetUpdateRequest(BaseModel):
-    name: str | None = None
-    targets: list[str] | None = None
-
-
-class StoreScreenshotSnapshot(BaseModel):
-    created_at: AwareDatetime
-    created_by: UUID_aliased | None = None
-    document: Any
-    set_id: UUID_aliased
-    version: int
-
-
-class StoreScreenshotSnapshotCreateRequest(BaseModel):
-    draft_revision: int
-
-
-class StoreScreenshotSnapshotListResponse(BaseModel):
-    items: list[StoreScreenshotSnapshot]
-
-
-class StoreScreenshotStringsResponse(BaseModel):
-    locale: str
-    missing: list[str]
-    set_id: UUID_aliased
-    strings: dict[str, str]
-
-
-class StoreScreenshotTargetListResponse(BaseModel):
-    items: list[ScreenshotTarget]
-
-
-class StoreScreenshotValidationResponse(BaseModel):
-    bytes: int
-    checksums: ImageChecksums
-    format: str
-    height: int
-    normalized: bool
-    target_id: str
-    width: int
-
-
-class StoreScreenshotAssetListResponse(BaseModel):
-    items: list[StoreScreenshotAsset]
-
-
-class SingletonStoreScreenshotAssetListResponse(BaseModel):
-    data: StoreScreenshotAssetListResponse
-
-
 class AIConversation(BaseModel):
     description: str | None = None
     id: str
@@ -10502,6 +10688,7 @@ class ConversationScenario(BaseModel):
     estimated_duration: int
     id: str
     is_featured: bool
+    last_played_at: str | None = None
     learning_language_code: str | None = None
     learning_objective: str | None = None
     localization: LocalizationStatus | None = None
@@ -10958,6 +11145,16 @@ class KTVCaptionGenerateResponse(BaseModel):
     workflow: KTVWorkflow | None = None
 
 
+class KTVEditDocument(BaseModel):
+    canvas: KTVEditCanvas
+    captions: KTVEditCaptions | None = None
+    clips: list[KTVEditClip]
+    export: KTVEditExport
+    music: KTVEditMusic | None = None
+    outro: KTVEditOutro | None = None
+    version: int
+
+
 class KTVGenerationJobClaimItem(BaseModel):
     job: KTVGenerationJob
     workflow: KTVWorkflow
@@ -11001,6 +11198,42 @@ class KTVSpeechFixResponse(BaseModel):
     notes: str | None = None
     speech_script: str
     workflow: KTVWorkflow | None = None
+
+
+class KTVUseClipResponse(BaseModel):
+    created: bool
+    entry_id: UUID_aliased
+    variant_id: UUID_aliased
+    warnings: list[str] | None = None
+    workflow: KTVWorkflow | None = None
+
+
+class KieloTVEditSource(BaseModel):
+    duration: float
+    original_url: str
+    peaks: KieloTVEditPeaks | None = None
+    proxy_url: str
+    sprite: KieloTVEditSprite | None = None
+    sprite_url: str
+    title: str
+    video_id: str | None = None
+
+
+class KieloTVEditStateResponse(BaseModel):
+    blockers: KieloTVEditBlockers
+    captions_by_video: dict[str, list[KieloTVEditCue]]
+    doc_hash: str
+    document: KTVEditDocument
+    proxies: dict[str, KieloTVEditProxy]
+    published: KieloTVEditPublished | None = None
+    renders: KieloTVEditRenders
+    social_export: KieloTVEditSocialExport | None = None
+    sources: dict[str, KieloTVEditSource]
+    video_id: str
+
+
+class KieloTVEditUpdateRequest(BaseModel):
+    document: KTVEditDocument
 
 
 class KieloTVPipeline(BaseModel):
@@ -11654,6 +11887,14 @@ class SingletonKTVSpeechFixResponse(BaseModel):
     data: KTVSpeechFixResponse
 
 
+class SingletonKTVUseClipResponse(BaseModel):
+    data: KTVUseClipResponse
+
+
+class SingletonKieloTVEditStateResponse(BaseModel):
+    data: KieloTVEditStateResponse
+
+
 class SingletonKieloTVVideo(BaseModel):
     data: KieloTVVideo
 
@@ -11760,6 +12001,58 @@ class SingletonStorageFinalizeResult(BaseModel):
 
 class SingletonStorageUntrackedPage(BaseModel):
     data: StorageUntrackedPage
+
+
+class SingletonStoreScreenshotAsset(BaseModel):
+    data: StoreScreenshotAsset
+
+
+class SingletonStoreScreenshotAssetListResponse(BaseModel):
+    data: StoreScreenshotAssetListResponse
+
+
+class SingletonStoreScreenshotDraft(BaseModel):
+    data: StoreScreenshotDraft
+
+
+class SingletonStoreScreenshotExportListResponse(BaseModel):
+    data: StoreScreenshotExportListResponse
+
+
+class SingletonStoreScreenshotLocaleListResponse(BaseModel):
+    data: StoreScreenshotLocaleListResponse
+
+
+class SingletonStoreScreenshotPublishRun(BaseModel):
+    data: StoreScreenshotPublishRun
+
+
+class SingletonStoreScreenshotSet(BaseModel):
+    data: StoreScreenshotSet
+
+
+class SingletonStoreScreenshotSetListResponse(BaseModel):
+    data: StoreScreenshotSetListResponse
+
+
+class SingletonStoreScreenshotSnapshot(BaseModel):
+    data: StoreScreenshotSnapshot
+
+
+class SingletonStoreScreenshotSnapshotListResponse(BaseModel):
+    data: StoreScreenshotSnapshotListResponse
+
+
+class SingletonStoreScreenshotStringsResponse(BaseModel):
+    data: StoreScreenshotStringsResponse
+
+
+class SingletonStoreScreenshotTargetListResponse(BaseModel):
+    data: StoreScreenshotTargetListResponse
+
+
+class SingletonStoreScreenshotValidationResponse(BaseModel):
+    data: StoreScreenshotValidationResponse
 
 
 class SingletonStudyList(BaseModel):
@@ -12367,54 +12660,6 @@ class BundledHintResponse(HintResponse):
     pass
 
 
-class SingletonStoreScreenshotAsset(BaseModel):
-    data: StoreScreenshotAsset
-
-
-class SingletonStoreScreenshotDraft(BaseModel):
-    data: StoreScreenshotDraft
-
-
-class SingletonStoreScreenshotExportListResponse(BaseModel):
-    data: StoreScreenshotExportListResponse
-
-
-class SingletonStoreScreenshotLocaleListResponse(BaseModel):
-    data: StoreScreenshotLocaleListResponse
-
-
-class SingletonStoreScreenshotPublishRun(BaseModel):
-    data: StoreScreenshotPublishRun
-
-
-class SingletonStoreScreenshotSet(BaseModel):
-    data: StoreScreenshotSet
-
-
-class SingletonStoreScreenshotSetListResponse(BaseModel):
-    data: StoreScreenshotSetListResponse
-
-
-class SingletonStoreScreenshotSnapshot(BaseModel):
-    data: StoreScreenshotSnapshot
-
-
-class SingletonStoreScreenshotSnapshotListResponse(BaseModel):
-    data: StoreScreenshotSnapshotListResponse
-
-
-class SingletonStoreScreenshotStringsResponse(BaseModel):
-    data: StoreScreenshotStringsResponse
-
-
-class SingletonStoreScreenshotTargetListResponse(BaseModel):
-    data: StoreScreenshotTargetListResponse
-
-
-class SingletonStoreScreenshotValidationResponse(BaseModel):
-    data: StoreScreenshotValidationResponse
-
-
 class AiConversationContent(BaseModel):
     flows: list[SimpleAiConversationFlow | AiConversationFlow] = Field(
         ..., title="Flows"
@@ -12604,6 +12849,7 @@ class ConversationDiscoveryCardUserService(BaseModel):
 class ConversationDiscoveryResponse(BaseModel):
     cards: list[ConversationDiscoveryCard]
     interest_options: list[ConversationInterestOption]
+    last_call: ConversationLastCall | None = None
     next_page_key: str | None = None
     selected_interests: list[str]
     user_level: ConversationUserLevel
@@ -12612,6 +12858,7 @@ class ConversationDiscoveryResponse(BaseModel):
 class ConversationDiscoveryResponseUserService(BaseModel):
     cards: list[ConversationDiscoveryCardUserService]
     interest_options: list[ConversationInterestOption]
+    last_call: ConversationLastCallUserService | None = None
     next_cursor: str | None = Field(None, deprecated=True)
     next_page_key: str | None = None
     selected_interests: list[str]

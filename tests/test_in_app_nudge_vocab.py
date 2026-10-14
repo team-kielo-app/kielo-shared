@@ -19,29 +19,30 @@ from kielo_shared.vocab import (
 
 
 # ----------------------------------------------------------------------
-# InAppNudgeType (4 values)
+# InAppNudgeType (6 values)
 # ----------------------------------------------------------------------
 
 
-def test_in_app_nudge_type_cardinality_pinned_at_4():
-    """V117 CHECK constraint pins 4 values; SoT must match exactly."""
-    assert len(type_mod.ALL_IN_APP_NUDGE_TYPES) == 4
+def test_in_app_nudge_type_cardinality_pinned_at_6():
+    """The nudge_type CHECK (V117, extended by V403 for saved_words_waiting
+    and V404 for daily_challenge_waiting) pins 6 values; SoT must match
+    exactly."""
+    assert len(type_mod.ALL_IN_APP_NUDGE_TYPES) == 6
 
 
 def test_in_app_nudge_type_priority_order_covers_all_types():
     """The priority-ordered tuple is the canonical iteration for the
     engine InAppNudgeService — every type must appear exactly once."""
-    assert len(type_mod.IN_APP_NUDGE_TYPE_PRIORITY_ORDER) == 4
+    assert len(type_mod.IN_APP_NUDGE_TYPE_PRIORITY_ORDER) == 6
     assert set(type_mod.IN_APP_NUDGE_TYPE_PRIORITY_ORDER) == type_mod.ALL_IN_APP_NUDGE_TYPES
 
 
 def test_in_app_nudge_type_priority_order_highest_first():
-    """review_backlog_idle is highest-leverage (37.8% population
-    coverage); should be first in priority order."""
-    assert (
-        type_mod.IN_APP_NUDGE_TYPE_PRIORITY_ORDER[0]
-        == type_mod.IN_APP_NUDGE_TYPE_REVIEW_BACKLOG_IDLE
-    )
+    """Today's Päivä carries the due reviews and is free, so it is asked
+    for before the review backlog (Muisti, metered for free learners)."""
+    order = type_mod.IN_APP_NUDGE_TYPE_PRIORITY_ORDER
+    assert order[0] == type_mod.IN_APP_NUDGE_TYPE_DAILY_CHALLENGE_WAITING
+    assert order[1] == type_mod.IN_APP_NUDGE_TYPE_REVIEW_BACKLOG_IDLE
 
 
 def test_in_app_nudge_type_lowercase_snake_case():

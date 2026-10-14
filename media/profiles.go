@@ -415,6 +415,40 @@ var profiles = map[string]MediaProfile{
 		Retention:        RetentionPolicy{DeleteOnOwnerDelete: true, OrphanGrace: day},
 		GDPR:             GDPRClass{SubjectFrom: "none"},
 	},
+	// KTV video editor (docs/architecture/ktv-video-editor.md). The toolbox
+	// derives a 540p seek-friendly proxy and a thumbnail sprite from each
+	// clip source; the admin browser plays them directly, so the bytes are
+	// kept as rendered (no HLS, no webp) and served from the public bucket
+	// like the KTV videos they derive from. The CMS uploads with no owner and
+	// attaches to the KieloTVVideo before recording the id; a proxy whose
+	// source leaves the edit document is detached and reaped a day later.
+	// They can always be rendered again, so nothing here is precious.
+	"kielotv-edit-proxy": {
+		Key:              "kielotv-edit-proxy",
+		PathPrefix:       "kielotv/edit-proxies",
+		IncludeEntityID:  true,
+		AllowedMimes:     []string{"video/mp4"},
+		MaxUploadBytes:   1 * gib,
+		AttachmentRole:   "edit-proxy",
+		PassThrough:      true,
+		DisableHashDedup: true,
+		Access:           AccessPublic,
+		Retention:        RetentionPolicy{DeleteOnOwnerDelete: true, OrphanGrace: day},
+		GDPR:             GDPRClass{SubjectFrom: "none"},
+	},
+	"kielotv-edit-sprite": {
+		Key:              "kielotv-edit-sprite",
+		PathPrefix:       "kielotv/edit-proxies",
+		IncludeEntityID:  true,
+		AllowedMimes:     []string{"image/jpeg"},
+		MaxUploadBytes:   50 * mib,
+		AttachmentRole:   "edit-sprite",
+		PassThrough:      true,
+		DisableHashDedup: true,
+		Access:           AccessPublic,
+		Retention:        RetentionPolicy{DeleteOnOwnerDelete: true, OrphanGrace: day},
+		GDPR:             GDPRClass{SubjectFrom: "none"},
+	},
 }
 
 // Profiles returns the registry (read-only snapshot reference).

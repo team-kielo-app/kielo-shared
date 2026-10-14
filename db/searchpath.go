@@ -185,16 +185,6 @@ func FallbackTagFromContext(ctx context.Context) FallbackTag {
 	return FallbackTag{}
 }
 
-// FallbackCallsiteFromContext is the back-compat shim. Returns just the
-// Callsite string from the attached FallbackTag (empty if none).
-// Prefer FallbackTagFromContext for new code that wants the Expected
-// bit too.
-//
-// Deprecated: use FallbackTagFromContext.
-func FallbackCallsiteFromContext(ctx context.Context) string {
-	return FallbackTagFromContext(ctx).Callsite
-}
-
 // WithLanguage attaches a validated language code to ctx. Returns the
 // original ctx unchanged if lang fails ValidateLanguageIdent, so callers
 // that pass through user input fall back safely to "no language" rather

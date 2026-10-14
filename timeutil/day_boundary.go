@@ -119,7 +119,7 @@ func timezoneOffsetDuration(ctx context.Context) time.Duration {
 
 // DayStartUTC returns the UTC instant corresponding to the start of the
 // user's current local day. Use this when comparing against stored
-// timestamps (e.g. last_active_date).
+// timestamps.
 func DayStartUTC(ctx context.Context, now time.Time) time.Time {
 	offset := timezoneOffsetDuration(ctx)
 	nowUTC := now.UTC()

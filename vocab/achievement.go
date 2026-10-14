@@ -31,7 +31,7 @@ package vocab
 // at the `users.achievement_definitions.code` column.
 //
 // Values are lowercase snake_case with embedded numeric thresholds
-// (`words_10`, `streak_3`, `top_5_percent`). Stable since V005 (2024);
+// (`words_10`, `streak_3`). Stable since V005 (2024);
 // adding a new code requires a sibling Alembic/Flyway migration that
 // INSERTs into `users.achievement_definitions` AND a corresponding
 // constant + iteration-slice entry here.
@@ -99,28 +99,8 @@ const (
 	AchievementCodeFirstPayingUser   AchievementCode = "first_paying_user"
 )
 
-// Percentile-rank achievements (3).
-// Awarded by batch leaderboard job — NOT emitted from
-// engine's runtime path (`achievement_service.py` does not fire these).
-const (
-	AchievementCodeTop10Percent AchievementCode = "top_10_percent"
-	AchievementCodeTop5Percent  AchievementCode = "top_5_percent"
-	AchievementCodeTop1Percent  AchievementCode = "top_1_percent"
-)
-
-// Leaderboard winner achievements (2).
-// Awarded by kielolearn-engine `achievement_service.py:process_leaderboard_winner`
-// at line 430 via `code = f"top_learner_{period}"` f-string composition.
-// The `period` parameter is `Literal["weekly", "monthly"]` — see
-// CodeForLeaderboardPeriod() helper below.
-const (
-	AchievementCodeTopLearnerWeekly  AchievementCode = "top_learner_weekly"
-	AchievementCodeTopLearnerMonthly AchievementCode = "top_learner_monthly"
-)
-
 // AllAchievementCodes is the canonical iteration order, grouped by
-// category (word / grammar / exercise / streak / special / percentile /
-// leaderboard). This ordering is the SoT-readable taxonomy — V005's
+// category (word / grammar / exercise / streak / special). This ordering is the SoT-readable taxonomy — V005's
 // historical INSERT order is incidental (grammar_500 was appended last
 // at line 40 of V005, after the top_learner block).
 //
@@ -148,17 +128,10 @@ var AllAchievementCodes = []AchievementCode{
 	// Special
 	AchievementCodeConceptHubCreator,
 	AchievementCodeFirstPayingUser,
-	// Percentile rank (batch leaderboard)
-	AchievementCodeTop10Percent,
-	AchievementCodeTop5Percent,
-	AchievementCodeTop1Percent,
-	// Leaderboard winner
-	AchievementCodeTopLearnerWeekly,
-	AchievementCodeTopLearnerMonthly,
 }
 
 // IsValidAchievementCode returns true when s exactly matches one of the
-// 21 canonical codes. Producers parsing inbound user input (admin
+// 16 canonical codes. Producers parsing inbound user input (admin
 // endpoints accepting arbitrary `achievement_code` POST params) should
 // use this to validate before passing to repo/handler — protects against
 // typo bleed-through at the API boundary.
@@ -169,25 +142,4 @@ func IsValidAchievementCode(s string) bool {
 		}
 	}
 	return false
-}
-
-// CodeForLeaderboardPeriod is the typed replacement for the
-// `f"top_learner_{period}"` f-string composition at
-// `achievement_service.py:430`. Producer-side callers should use this
-// helper instead of raw string concatenation so the typed-vocab
-// invariant holds at compile time.
-//
-// Period values: "weekly" → AchievementCodeTopLearnerWeekly,
-// "monthly" → AchievementCodeTopLearnerMonthly, anything else → empty
-// AchievementCode (the caller MUST check IsValidAchievementCode before
-// emit).
-func CodeForLeaderboardPeriod(period string) AchievementCode {
-	switch period {
-	case "weekly":
-		return AchievementCodeTopLearnerWeekly
-	case "monthly":
-		return AchievementCodeTopLearnerMonthly
-	default:
-		return ""
-	}
 }
