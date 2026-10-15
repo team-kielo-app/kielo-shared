@@ -60,42 +60,76 @@ type TxBeginner interface {
 //     (klearn_<lang>, cms_<lang>, klearn, cms, users, localization, ...).
 //   - Surfaces validation/exec failures wrapped with context.
 func Apply(ctx context.Context, tx pgx.Tx) error {
-	exec := func(c context.Context, query string) error {
-		_, err := tx.Exec(c, query)
-		return err
-	}
-	return sharedDB.ApplySearchPathToTx(ctx, exec)
+	return sharedDB.ApplySearchPathToTx(ctx, execOn(tx))
 }
 
 // ApplyRequired is the strict variant of Apply. Use it for request
 // handlers that touch migrated per-language tables and must fail when
 // middleware did not attach an active learning language.
 func ApplyRequired(ctx context.Context, tx pgx.Tx) error {
-	exec := func(c context.Context, query string) error {
+	return sharedDB.ApplySearchPathToTxRequired(ctx, execOn(tx))
+}
+
+func execOn(tx pgx.Tx) func(context.Context, string) error {
+	return func(c context.Context, query string) error {
 		_, err := tx.Exec(c, query)
 		return err
 	}
-	return sharedDB.ApplySearchPathToTxRequired(ctx, exec)
 }
 
-// applyFn matches Apply / ApplyRequired's signature so the WithReadTx /
-// WithTx machinery can be parameterized by which strictness variant the
-// caller wants without duplicating the surrounding tx-management body.
-type applyFn func(ctx context.Context, tx pgx.Tx) error
+// applyFn is sharedDB.ApplySearchPathToTx or its Required variant: it
+// issues the SET LOCAL (if any) through exec, so the WithReadTx / WithTx
+// machinery is parameterized by strictness without duplicating the body.
+type applyFn func(ctx context.Context, exec func(context.Context, string) error) error
+
+type optionsBeginner interface {
+	BeginTx(ctx context.Context, opts pgx.TxOptions) (pgx.Tx, error)
+}
+
+// begin opens the transaction with its search_path. Through the pooler a
+// round trip costs ~33 ms (prod, 2026-10-15), so when the beginner takes
+// TxOptions (pgxpool.Pool, *pgx.Conn) BEGIN and SET LOCAL go out as one
+// simple-protocol message; otherwise the SET LOCAL follows the BEGIN.
+func begin(ctx context.Context, db TxBeginner, apply applyFn) (pgx.Tx, error) {
+	if ob, ok := db.(optionsBeginner); ok {
+		var setLocal string
+		if err := apply(ctx, func(_ context.Context, query string) error {
+			setLocal = query
+			return nil
+		}); err != nil {
+			return nil, err
+		}
+		opts := pgx.TxOptions{}
+		if setLocal != "" {
+			opts.BeginQuery = "BEGIN; " + setLocal
+		}
+		tx, err := ob.BeginTx(ctx, opts)
+		if err != nil {
+			return nil, fmt.Errorf("pgxsearchpath: begin tx: %w", err)
+		}
+		return tx, nil
+	}
+	tx, err := db.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("pgxsearchpath: begin tx: %w", err)
+	}
+	if err := apply(ctx, execOn(tx)); err != nil {
+		_ = tx.Rollback(ctx)
+		return nil, err
+	}
+	return tx, nil
+}
 
 // withReadTx is the inner read-tx body: Begin → apply → fn → Rollback
 // (always). The exported wrappers parameterize it with Apply or
 // ApplyRequired so the surrounding boilerplate lives in exactly one
 // place rather than being duplicated for the strict variant.
 func withReadTx(ctx context.Context, db TxBeginner, apply applyFn, fn func(tx pgx.Tx) error) error {
-	tx, err := db.Begin(ctx)
+	tx, err := begin(ctx, db, apply)
 	if err != nil {
-		return fmt.Errorf("pgxsearchpath: begin read tx: %w", err)
-	}
-	defer func() { _ = tx.Rollback(ctx) }()
-	if err := apply(ctx, tx); err != nil {
 		return err
 	}
+	defer func() { _ = tx.Rollback(ctx) }()
 	return fn(tx)
 }
 
@@ -109,9 +143,9 @@ func withReadTx(ctx context.Context, db TxBeginner, apply applyFn, fn func(tx pg
 // the rollback error is intentionally swallowed — pgx considers
 // "rollback after successful commit" a no-op error.
 func withTx(ctx context.Context, db TxBeginner, apply applyFn, fn func(tx pgx.Tx) error) error {
-	tx, err := db.Begin(ctx)
+	tx, err := begin(ctx, db, apply)
 	if err != nil {
-		return fmt.Errorf("pgxsearchpath: begin tx: %w", err)
+		return err
 	}
 	committed := false
 	defer func() {
@@ -119,9 +153,6 @@ func withTx(ctx context.Context, db TxBeginner, apply applyFn, fn func(tx pgx.Tx
 			_ = tx.Rollback(ctx)
 		}
 	}()
-	if err := apply(ctx, tx); err != nil {
-		return err
-	}
 	if err := fn(tx); err != nil {
 		return err
 	}
@@ -144,14 +175,14 @@ func withTx(ctx context.Context, db TxBeginner, apply applyFn, fn func(tx pgx.Tx
 // Replaces the per-service `withReadTx` boilerplate that was previously
 // hand-rolled in kielo-user-service / kielo-cms / kielo-content-service.
 func WithReadTx(ctx context.Context, db TxBeginner, fn func(tx pgx.Tx) error) error {
-	return withReadTx(ctx, db, Apply, fn)
+	return withReadTx(ctx, db, sharedDB.ApplySearchPathToTx, fn)
 }
 
 // WithRequiredReadTx is the strict variant of WithReadTx. It returns
 // ErrNoActiveLanguage (wrapped) and does not run fn when ctx has no
 // active learning language.
 func WithRequiredReadTx(ctx context.Context, db TxBeginner, fn func(tx pgx.Tx) error) error {
-	return withReadTx(ctx, db, ApplyRequired, fn)
+	return withReadTx(ctx, db, sharedDB.ApplySearchPathToTxRequired, fn)
 }
 
 // WithTx opens a read-write transaction (Begin → Apply → fn → Commit on
@@ -163,12 +194,12 @@ func WithRequiredReadTx(ctx context.Context, db TxBeginner, fn func(tx pgx.Tx) e
 // error is returned verbatim so callers can `errors.Is` against domain
 // sentinels.
 func WithTx(ctx context.Context, db TxBeginner, fn func(tx pgx.Tx) error) error {
-	return withTx(ctx, db, Apply, fn)
+	return withTx(ctx, db, sharedDB.ApplySearchPathToTx, fn)
 }
 
 // WithRequiredTx is the strict variant of WithTx. It returns
 // ErrNoActiveLanguage (wrapped) and does not run fn when ctx has no
 // active learning language.
 func WithRequiredTx(ctx context.Context, db TxBeginner, fn func(tx pgx.Tx) error) error {
-	return withTx(ctx, db, ApplyRequired, fn)
+	return withTx(ctx, db, sharedDB.ApplySearchPathToTxRequired, fn)
 }

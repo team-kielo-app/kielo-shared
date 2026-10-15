@@ -338,3 +338,49 @@ func TestWithRequiredTx_FnError_RollsBack(t *testing.T) {
 	assert.False(t, tx.committed)
 	assert.True(t, tx.rolledBack)
 }
+
+// optionsStubBeginner also takes TxOptions, as pgxpool.Pool and *pgx.Conn do.
+type optionsStubBeginner struct {
+	stubBeginner
+	opts []pgx.TxOptions
+}
+
+func (s *optionsStubBeginner) BeginTx(_ context.Context, opts pgx.TxOptions) (pgx.Tx, error) {
+	s.calls++
+	s.opts = append(s.opts, opts)
+	return s.tx, s.beginErr
+}
+
+func TestWithTx_SendsBeginAndSetLocalInOneMessage(t *testing.T) {
+	tx := &trackingTx{}
+	beginner := &optionsStubBeginner{stubBeginner: stubBeginner{tx: tx}}
+	ctx := sharedDB.WithLanguage(context.Background(), "sv")
+
+	require.NoError(t, WithTx(ctx, beginner, func(_ pgx.Tx) error { return nil }))
+
+	require.Len(t, beginner.opts, 1)
+	assert.Regexp(t, `^BEGIN; SET LOCAL search_path TO klearn_sv,cms_sv,`, beginner.opts[0].BeginQuery)
+	assert.Empty(t, tx.queries, "no separate SET LOCAL round trip")
+	assert.True(t, tx.committed)
+}
+
+func TestWithReadTx_NoLanguageBeginsPlainlyThroughOptions(t *testing.T) {
+	tx := &trackingTx{}
+	beginner := &optionsStubBeginner{stubBeginner: stubBeginner{tx: tx}}
+
+	require.NoError(t, WithReadTx(context.Background(), beginner, func(_ pgx.Tx) error { return nil }))
+
+	require.Len(t, beginner.opts, 1)
+	assert.Empty(t, beginner.opts[0].BeginQuery)
+	assert.True(t, tx.rolledBack)
+}
+
+func TestWithRequiredTx_NoLanguageFailsBeforeBeginningThroughOptions(t *testing.T) {
+	beginner := &optionsStubBeginner{stubBeginner: stubBeginner{tx: &trackingTx{}}}
+
+	err := WithRequiredTx(context.Background(), beginner, func(_ pgx.Tx) error { return nil })
+
+	assert.ErrorIs(t, err, sharedDB.ErrNoActiveLanguage)
+	assert.Equal(t, 0, beginner.calls)
+}
+
