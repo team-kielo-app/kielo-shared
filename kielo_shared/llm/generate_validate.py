@@ -189,10 +189,17 @@ def _try_materialize(schema_class: type, payload: dict) -> Any | None:
         except Exception as exc:
             # Which fields failed, never their values: "schema materialize
             # failed" alone hid why every multiple-choice draw was refused.
+            # A model-level check has no field, so its own message (the
+            # schema author's text, not the output) says which check it was.
             errors = getattr(exc, "errors", None)
             fields = (
                 [
                     f"{'.'.join(str(p) for p in e.get('loc', ()))}:{e.get('type')}"
+                    + (
+                        f" ({str(e.get('msg', ''))[:120]})"
+                        if not e.get("loc") and e.get("type") == "value_error"
+                        else ""
+                    )
                     for e in errors()[:5]
                 ]
                 if callable(errors)
