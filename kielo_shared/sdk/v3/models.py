@@ -359,12 +359,12 @@ class ArticleParagraphTranslationsResponse(BaseModel):
     translations: list[ArticleParagraphTranslationItem]
 
 
-class ArticleRead(BaseModel):
+class ArticleReadTime(BaseModel):
     id: str
     read_at: str
 
 
-class ArticleReadUserService(BaseModel):
+class ArticleReadTimeUserService(BaseModel):
     id: str
     read_at: AwareDatetime
 
@@ -6153,7 +6153,7 @@ class QuickAddToStudyListRequest(AddTopicListItemRequest):
 
 class ReadArticleIDs(BaseModel):
     ids: list[str]
-    reads: list[ArticleRead]
+    reads: list[ArticleReadTime]
 
 
 class ReadinessResponse(BaseModel):
@@ -6163,7 +6163,7 @@ class ReadinessResponse(BaseModel):
 
 class RecentArticleReadIDsResponse(BaseModel):
     ids: list[str]
-    reads: list[ArticleReadUserService]
+    reads: list[ArticleReadTimeUserService]
 
 
 class RecommendationCampaign(BaseModel):
