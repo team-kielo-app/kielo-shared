@@ -186,7 +186,24 @@ def _try_materialize(schema_class: type, payload: dict) -> Any | None:
     if callable(validate):
         try:
             return validate(payload)
-        except Exception:
+        except Exception as exc:
+            # Which fields failed, never their values: "schema materialize
+            # failed" alone hid why every multiple-choice draw was refused.
+            errors = getattr(exc, "errors", None)
+            fields = (
+                [
+                    f"{'.'.join(str(p) for p in e.get('loc', ()))}:{e.get('type')}"
+                    for e in errors()[:5]
+                ]
+                if callable(errors)
+                else [type(exc).__name__]
+            )
+            logger.info(
+                "generate_and_validate: %s rejected keys=%s errors=%s",
+                getattr(schema_class, "__name__", schema_class),
+                sorted(payload)[:12],
+                fields,
+            )
             return None
     try:
         return schema_class(**payload)
