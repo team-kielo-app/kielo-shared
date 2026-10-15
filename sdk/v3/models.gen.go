@@ -1246,6 +1246,18 @@ type ArticleParagraphTranslationsResponse struct {
 	Translations []ArticleParagraphTranslationItem `json:"translations"`
 }
 
+// ArticleRead defines model for ArticleRead.
+type ArticleRead struct {
+	Id     string `json:"id"`
+	ReadAt string `json:"read_at"`
+}
+
+// ArticleReadUserService defines model for ArticleReadUserService.
+type ArticleReadUserService struct {
+	Id     string    `json:"id"`
+	ReadAt time.Time `json:"read_at"`
+}
+
 // ArticleVersion defines model for ArticleVersion.
 type ArticleVersion struct {
 	ArticleType                     *string                                `json:"article_type,omitempty"`
@@ -9744,7 +9756,8 @@ type QuickAddToStudyListRequest struct {
 
 // ReadArticleIDs defines model for ReadArticleIDs.
 type ReadArticleIDs struct {
-	Ids []string `json:"ids"`
+	Ids   []string      `json:"ids"`
+	Reads []ArticleRead `json:"reads"`
 }
 
 // ReadinessResponse defines model for ReadinessResponse.
@@ -9755,7 +9768,8 @@ type ReadinessResponse struct {
 
 // RecentArticleReadIDsResponse defines model for RecentArticleReadIDsResponse.
 type RecentArticleReadIDsResponse struct {
-	Ids []string `json:"ids"`
+	Ids   []string                 `json:"ids"`
+	Reads []ArticleReadUserService `json:"reads"`
 }
 
 // RecommendationCampaign defines model for RecommendationCampaign.

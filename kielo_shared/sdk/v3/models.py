@@ -359,6 +359,16 @@ class ArticleParagraphTranslationsResponse(BaseModel):
     translations: list[ArticleParagraphTranslationItem]
 
 
+class ArticleRead(BaseModel):
+    id: str
+    read_at: str
+
+
+class ArticleReadUserService(BaseModel):
+    id: str
+    read_at: AwareDatetime
+
+
 class ArticleVersionIngestionWire(BaseModel):
     article_metadata_id: UUID_aliased
     article_type: str
@@ -6143,6 +6153,7 @@ class QuickAddToStudyListRequest(AddTopicListItemRequest):
 
 class ReadArticleIDs(BaseModel):
     ids: list[str]
+    reads: list[ArticleRead]
 
 
 class ReadinessResponse(BaseModel):
@@ -6150,8 +6161,9 @@ class ReadinessResponse(BaseModel):
     status: str = Field(..., title="Status")
 
 
-class RecentArticleReadIDsResponse(ReadArticleIDs):
-    pass
+class RecentArticleReadIDsResponse(BaseModel):
+    ids: list[str]
+    reads: list[ArticleReadUserService]
 
 
 class RecommendationCampaign(BaseModel):
