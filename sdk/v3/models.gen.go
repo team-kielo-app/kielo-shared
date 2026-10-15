@@ -10151,8 +10151,12 @@ type ResultMetadata struct {
 	CefrLevel          *string `json:"cefr_level,omitempty"`
 	DurationSeconds    *int    `json:"duration_seconds,omitempty"`
 	IsSaved            *bool   `json:"is_saved,omitempty"`
+	Match              *string `json:"match,omitempty"`
+	MatchedForm        *string `json:"matched_form,omitempty"`
 	PartOfSpeech       *string `json:"part_of_speech,omitempty"`
 	ReadingTimeMinutes *int    `json:"reading_time_minutes,omitempty"`
+	SubtitleKey        *string `json:"subtitle_key,omitempty"`
+	TitleKey           *string `json:"title_key,omitempty"`
 }
 
 // ResumeSessionResponse defines model for ResumeSessionResponse.
@@ -10860,10 +10864,12 @@ type SearchExcerpt struct {
 
 // SearchResponse defines model for SearchResponse.
 type SearchResponse struct {
-	Cached  bool          `json:"cached"`
-	Query   string        `json:"query"`
-	Results SearchResults `json:"results"`
-	TookMs  int           `json:"took_ms"`
+	Cached        bool                `json:"cached"`
+	Query         string              `json:"query"`
+	Results       SearchResults       `json:"results"`
+	Sections      []SearchSection     `json:"sections"`
+	TookMs        int                 `json:"took_ms"`
+	Understanding SearchUnderstanding `json:"understanding"`
 }
 
 // SearchResult defines model for SearchResult.
@@ -10880,8 +10886,21 @@ type SearchResult struct {
 
 // SearchResults defines model for SearchResults.
 type SearchResults struct {
-	Content []SearchResult `json:"content"`
-	Saved   []SearchResult `json:"saved"`
+	Content      []SearchResult `json:"content"`
+	Destinations []SearchResult `json:"destinations"`
+	Saved        []SearchResult `json:"saved"`
+}
+
+// SearchSection defines model for SearchSection.
+type SearchSection struct {
+	Id    string         `json:"id"`
+	Items []SearchResult `json:"items"`
+}
+
+// SearchUnderstanding defines model for SearchUnderstanding.
+type SearchUnderstanding struct {
+	Core   string `json:"core"`
+	Intent string `json:"intent"`
 }
 
 // SemanticSearchResponse defines model for SemanticSearchResponse.
@@ -10897,6 +10916,8 @@ type SemanticSearchResult struct {
 	Description string  `json:"description"`
 	Id          string  `json:"id"`
 	Label       string  `json:"label"`
+	Match       *string `json:"match,omitempty"`
+	MatchedForm *string `json:"matched_form,omitempty"`
 	Score       float32 `json:"score"`
 	Type        string  `json:"type"`
 }
