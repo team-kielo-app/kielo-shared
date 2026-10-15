@@ -31,14 +31,14 @@ func newPool(t *testing.T) *pgxpool.Pool {
 		if os.Getenv("KIELO_TEST_PG_REQUIRED") == "1" {
 			t.Fatalf("pgxpool.New: %v", err)
 		}
-		t.Skipf("pgxpool.New failed and KIELO_TEST_PG_REQUIRED unset: %v", err)
+		t.Skipf("pgxpool.New failed and KIELO_TEST_PG_REQUIRED unset (make integration-test sets it): %v", err)
 	}
 	if err := pool.Ping(ctx); err != nil {
 		pool.Close()
 		if os.Getenv("KIELO_TEST_PG_REQUIRED") == "1" {
 			t.Fatalf("pool.Ping: %v", err)
 		}
-		t.Skipf("pool.Ping failed and KIELO_TEST_PG_REQUIRED unset: %v", err)
+		t.Skipf("pool.Ping failed and KIELO_TEST_PG_REQUIRED unset (make integration-test sets it): %v", err)
 	}
 	t.Cleanup(pool.Close)
 	return pool
