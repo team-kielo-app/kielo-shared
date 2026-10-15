@@ -383,4 +383,3 @@ func TestWithRequiredTx_NoLanguageFailsBeforeBeginningThroughOptions(t *testing.
 	assert.ErrorIs(t, err, sharedDB.ErrNoActiveLanguage)
 	assert.Equal(t, 0, beginner.calls)
 }
-
