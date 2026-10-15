@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -93,4 +94,10 @@ func TestSanitizeSearchPath_AcceptsCanonicalLists(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestShouldPingAfterIdle_OnlyLongIdleConnectionsArePinged(t *testing.T) {
+	ctx := context.Background()
+	assert.False(t, shouldPingAfterIdle(ctx, pgxpool.ShouldPingParams{IdleDuration: 2 * time.Second}))
+	assert.True(t, shouldPingAfterIdle(ctx, pgxpool.ShouldPingParams{IdleDuration: time.Minute}))
 }

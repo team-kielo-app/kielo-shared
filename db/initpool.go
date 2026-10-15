@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -27,6 +28,16 @@ const (
 	defaultMaxConns int32 = 25
 	defaultMinConns int32 = 2
 )
+
+// pingAfterIdle is how long a pooled connection may sit unused before it is
+// pinged on acquire. pgx's default (1 s) pinged almost every acquire in a
+// low-traffic service, one extra pooler round trip (~33 ms) per request;
+// TCP keepalives (dial.go) already catch a peer that went away.
+const pingAfterIdle = 30 * time.Second
+
+func shouldPingAfterIdle(_ context.Context, params pgxpool.ShouldPingParams) bool {
+	return params.IdleDuration > pingAfterIdle
+}
 
 // InitPool creates a pgx pool with the platform-standard configuration:
 //
@@ -69,6 +80,7 @@ func InitPool(ctx context.Context, dataSourceName string, opts PoolOptions) (*pg
 	cfg.MinConns = EnvNonNegInt32("PGX_MIN_CONNS", minFallback)
 
 	cfg.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
+	cfg.ShouldPing = shouldPingAfterIdle
 
 	if cfg.ConnConfig.ConnectTimeout == 0 {
 		cfg.ConnConfig.ConnectTimeout = connectTimeout
