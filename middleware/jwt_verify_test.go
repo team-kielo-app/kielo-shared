@@ -14,6 +14,8 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
+
+	"github.com/team-kielo-app/kielo-shared/jwtkeys"
 )
 
 func verifyStatus(t *testing.T, key *rsa.PublicKey, token string) int {
@@ -83,5 +85,71 @@ func TestJWTVerifier_AudienceAlgorithmAndExpiry(t *testing.T) {
 	pubPEM := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: pubDER})
 	if got := verifyStatus(t, &priv.PublicKey, mint(jwt.SigningMethodHS256, pubPEM, []string{"kielo-access"}, true, "kielo.app")); got != http.StatusUnauthorized {
 		t.Fatalf("HS256 key confusion: want 401, got %d", got)
+	}
+}
+
+func TestJWTVerifier_NextKeyRotation(t *testing.T) {
+	a, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+	der, err := x509.MarshalPKIXPublicKey(&b.PublicKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	nextPEM := string(pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: der}))
+
+	mint := func(key *rsa.PrivateKey, kid string, aud []string, exp bool) string {
+		claims := &Claims{
+			UserID:           uuid.New(),
+			RegisteredClaims: jwt.RegisteredClaims{Issuer: "kielo.app", Audience: aud},
+		}
+		if exp {
+			claims.ExpiresAt = jwt.NewNumericDate(time.Now().Add(time.Hour))
+		}
+		tok := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
+		if kid != "" {
+			tok.Header["kid"] = kid
+		}
+		s, err := tok.SignedString(key)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return s
+	}
+	access := []string{"kielo-access"}
+
+	t.Setenv("JWT_PUBLIC_KEY_PEM_NEXT", "")
+	if got := verifyStatus(t, &a.PublicKey, mint(b, "", access, true)); got != http.StatusUnauthorized {
+		t.Fatalf("NEXT unset: token from B must be refused, got %d", got)
+	}
+
+	t.Setenv("JWT_PUBLIC_KEY_PEM_NEXT", nextPEM)
+	for name, tok := range map[string]string{
+		"A no kid": mint(a, "", access, true),
+		"B no kid": mint(b, "", access, true),
+		"B kid":    mint(b, jwtkeys.Fingerprint(&b.PublicKey), access, true),
+		"A kid":    mint(a, jwtkeys.Fingerprint(&a.PublicKey), access, true),
+	} {
+		if got := verifyStatus(t, &a.PublicKey, tok); got != http.StatusOK {
+			t.Errorf("%s: want 200, got %d", name, got)
+		}
+	}
+	if got := verifyStatus(t, &a.PublicKey, mint(c, "", access, true)); got != http.StatusUnauthorized {
+		t.Errorf("token from C: want 401, got %d", got)
+	}
+	if got := verifyStatus(t, &a.PublicKey, mint(b, "", []string{"kielo-refresh"}, true)); got != http.StatusUnauthorized {
+		t.Errorf("refresh audience signed by NEXT: want 401, got %d", got)
+	}
+	if got := verifyStatus(t, &a.PublicKey, mint(b, "", access, false)); got != http.StatusUnauthorized {
+		t.Errorf("no exp signed by NEXT: want 401, got %d", got)
 	}
 }

@@ -14,6 +14,8 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
+
+	"github.com/team-kielo-app/kielo-shared/jwtkeys"
 )
 
 // RefreshTokenAudience is the `aud` auth-service stamps on refresh tokens.
@@ -103,6 +105,19 @@ type JWTOptions struct {
 
 // JWTAuthWithOptions validates JWT tokens with configurable options
 func JWTAuthWithOptions(jwtSecret string, userChecker UserExistenceChecker, options *JWTOptions) echo.MiddlewareFunc {
+	rsaKeys, rsaKeyErr := rsaKeySet(options)
+	rsaKeyFunc := func(token *jwt.Token) (any, error) {
+		if rsaKeys == nil && rsaKeyErr == nil {
+			return nil, errors.New("JWT secret or public key is not configured")
+		}
+		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v, expected RSA", token.Header["alg"])
+		}
+		if rsaKeyErr != nil {
+			return nil, rsaKeyErr
+		}
+		return rsaKeys.KeyFunc(token)
+	}
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			// SECURITY (S4, sweep 2026-07-06): the previously-trusted
@@ -137,28 +152,14 @@ func JWTAuthWithOptions(jwtSecret string, userChecker UserExistenceChecker, opti
 					"You've been signed out. Please log in again.")
 			}
 
-			keyFunc := func(token *jwt.Token) (any, error) {
-				// If RSA public key is provided, use it
-				if options != nil && (options.PublicKeyPEM != "" || options.PublicKey != nil) {
-					// Ensure the token is signed with an RSA algorithm
-					if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
-						return nil, fmt.Errorf("unexpected signing method: %v, expected RSA", token.Header["alg"])
-					}
-					if options.PublicKey != nil {
-						return options.PublicKey, nil
-					}
-					return jwt.ParseRSAPublicKeyFromPEM([]byte(options.PublicKeyPEM))
-				}
-				// Otherwise, fall back to the symmetric secret
-				if jwtSecret != "" {
-					// Ensure the token is signed with an HMAC algorithm
+			keyFunc := rsaKeyFunc
+			if rsaKeys == nil && jwtSecret != "" {
+				keyFunc = func(token *jwt.Token) (any, error) {
 					if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 						return nil, fmt.Errorf("unexpected signing method: %v, expected HMAC", token.Header["alg"])
 					}
 					return []byte(jwtSecret), nil
 				}
-				// If neither is configured, it's a server error
-				return nil, errors.New("JWT secret or public key is not configured")
 			}
 
 			token, err := jwt.ParseWithClaims(tokenString, &Claims{}, keyFunc,
@@ -205,6 +206,23 @@ func JWTAuthWithOptions(jwtSecret string, userChecker UserExistenceChecker, opti
 				"You've been signed out. Please log in again.")
 		}
 	}
+}
+
+// rsaKeySet is the verification key set for options: the configured key plus
+// JWT_PUBLIC_KEY_PEM_NEXT when that is set. A nil set with a nil error means
+// no RSA key is configured (HMAC or misconfigured); a PEM that does not parse
+// is reported per request, as it always was.
+func rsaKeySet(options *JWTOptions) (*jwtkeys.KeySet, error) {
+	if options == nil {
+		return nil, nil
+	}
+	if options.PublicKey != nil {
+		return jwtkeys.WithNextFromEnv(options.PublicKey), nil
+	}
+	if options.PublicKeyPEM != "" {
+		return jwtkeys.FromPEM(options.PublicKeyPEM)
+	}
+	return nil, nil
 }
 
 // setClaimsInContext sets claims in the echo context based on options
