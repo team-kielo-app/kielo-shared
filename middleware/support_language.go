@@ -68,10 +68,8 @@ func ResolveSupportLanguageStateless(c echo.Context) string {
 			return code
 		}
 	}
-	if v := strings.TrimSpace(c.Request().Header.Get(AcceptLanguageHeader)); v != "" {
-		if code := locale.BaseLocale(locale.NormalizeAcceptLanguage(v)); code != "" && locale.IsSupportedSupportLanguage(code) {
-			return code
-		}
+	if code := firstSupportedAcceptLanguage(c.Request().Header.Get(AcceptLanguageHeader)); code != "" {
+		return code
 	}
 	if learning, ok := db.LanguageFromContext(c.Request().Context()); ok && learning != "" {
 		if code := locale.BaseLocale(locale.NormalizeAcceptLanguage(learning)); code != "" && locale.IsSupportedSupportLanguage(code) {
@@ -79,4 +77,13 @@ func ResolveSupportLanguageStateless(c echo.Context) string {
 		}
 	}
 	return locale.TierASupportLocale
+}
+
+func firstSupportedAcceptLanguage(header string) string {
+	for _, part := range strings.Split(header, ",") {
+		if code := locale.BaseLocale(locale.NormalizeAcceptLanguage(part)); code != "" && locale.IsSupportedSupportLanguage(code) {
+			return code
+		}
+	}
+	return ""
 }
