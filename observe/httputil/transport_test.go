@@ -3,7 +3,11 @@ package httputil
 import (
 	"context"
 	"net/http"
+	"net/http/httptest"
+	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/team-kielo-app/kielo-shared/observe"
 )
@@ -216,5 +220,86 @@ func TestNewInternalClient_StampsKeyAndTrace(t *testing.T) {
 	}
 	if capturedTraceparent == "" {
 		t.Error("Traceparent header should have been stamped by TracingTransport")
+	}
+}
+
+func redirectServer(t *testing.T) (srv *httptest.Server, seenPaths *[]string) {
+	t.Helper()
+	var seen []string
+	var mu sync.Mutex
+	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		seen = append(seen, r.URL.Path+"|"+r.Header.Get(InternalAPIKeyHeader))
+		mu.Unlock()
+		switch r.URL.Path {
+		case "/api/v1/../internal/admin", "/api/v1/x":
+			http.Redirect(w, r, "/internal/admin", http.StatusFound)
+		case "/slash":
+			http.Redirect(w, r, "/slash/", http.StatusTemporaryRedirect)
+		case "/open":
+			http.Redirect(w, r, "/elsewhere", http.StatusFound)
+		}
+	}))
+	t.Cleanup(srv.Close)
+	return srv, &seen
+}
+
+func TestInternalClientDoesNotFollowPathChangingRedirect(t *testing.T) {
+	srv, seen := redirectServer(t)
+	client := NewInternalClient(time.Second, "secret")
+	resp, err := client.Get(srv.URL + "/api/v1/x")
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusFound {
+		t.Fatalf("status = %d, want the 302 returned to the caller", resp.StatusCode)
+	}
+	for _, s := range *seen {
+		if strings.HasPrefix(s, "/internal/admin") {
+			t.Fatalf("redirect target was requested with the key: %v", *seen)
+		}
+	}
+}
+
+func TestInternalClientFollowsTrailingSlashRedirect(t *testing.T) {
+	srv, seen := redirectServer(t)
+	client := NewInternalClient(time.Second, "secret")
+	resp, err := client.Post(srv.URL+"/slash", "application/json", strings.NewReader("{}"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK || len(*seen) != 2 {
+		t.Fatalf("status=%d seen=%v, want the slash hop followed", resp.StatusCode, *seen)
+	}
+}
+
+func TestNewClientDoesNotFollowRedirectWithCredentials(t *testing.T) {
+	srv, seen := redirectServer(t)
+	for _, header := range []string{InternalAPIKeyHeader, "Authorization", "X-User-ID"} {
+		*seen = nil
+		req, _ := http.NewRequest(http.MethodGet, srv.URL+"/open", nil)
+		req.Header.Set(header, "v")
+		resp, err := NewClient(time.Second).Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp.Body.Close()
+		if resp.StatusCode != http.StatusFound || len(*seen) != 1 {
+			t.Fatalf("%s: status=%d seen=%v, want redirect not followed", header, resp.StatusCode, *seen)
+		}
+	}
+}
+
+func TestNewClientFollowsRedirectWithoutCredentials(t *testing.T) {
+	srv, seen := redirectServer(t)
+	resp, err := NewClient(time.Second).Get(srv.URL + "/open")
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK || len(*seen) != 2 {
+		t.Fatalf("status=%d seen=%v, want public redirect followed", resp.StatusCode, *seen)
 	}
 }
