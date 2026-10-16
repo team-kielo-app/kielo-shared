@@ -111,6 +111,30 @@ func TestDeliveryContextualizesTheDevCDNEmulator(t *testing.T) {
 	assert.Equal(t, "https://media.kielo.app/pub/a.webp", prod.ObjectURL("kielo-cms", "pub", "a.webp"))
 }
 
+// A restored prod row embeds a storage URL with the bucket renamed locally;
+// the device gets it from the emulator. Only public buckets, only in dev.
+func TestDeliveryServesRestoredStorageURLsFromTheDevEmulator(t *testing.T) {
+	d := NewDelivery(DeliveryConfig{
+		CDNBaseURL:         "http://localhost:8097/{bucket}",
+		CDNInternalBaseURL: "http://kielo-cdn-emulator:8080/{bucket}",
+		PublicBucket:       "pub",
+		PrivateBucket:      "priv",
+	})
+	assert.Equal(t, "http://192.168.1.20:8097/pub/kielotv/a/main.webp",
+		d.ContextualizeURL("192.168.1.20:8084", "https://storage.googleapis.com/pub/kielotv/a/main.webp"))
+	for _, raw := range []string{
+		"https://storage.googleapis.com/priv/a.webp",
+		"https://storage.googleapis.com/someone-else/a.webp",
+		"https://storage.googleapis.com/pub",
+	} {
+		assert.Equal(t, raw, d.ContextualizeURL("192.168.1.20", raw))
+	}
+
+	prod := NewDelivery(DeliveryConfig{CDNBaseURL: "https://media.kielo.app/{bucket}", PublicBucket: "pub"})
+	raw := "https://storage.googleapis.com/pub/kielotv/a/main.webp"
+	assert.Equal(t, raw, prod.ContextualizeURL("api.kielo.app", raw))
+}
+
 // The access decisions of 2026-10-08: content and avatars are public, support
 // screenshots are served signed, conversation artifacts are private. A change
 // here moves assets between buckets (a migration), so it is pinned.

@@ -100,3 +100,13 @@ func TestResolveSupportLanguage_HeaderWinsOverContext(t *testing.T) {
 		t.Errorf("got %q, want vi — Accept-Language must win over learning-language ctx", got)
 	}
 }
+
+func TestResolveSupportLanguage_AcceptLanguageSkipsAnUnsupportedFirstTag(t *testing.T) {
+	c := newSupportCtx(t, "/x", map[string]string{
+		"Accept-Language": "gl-ES,gl;q=0.9,vi;q=0.8,en;q=0.5",
+	})
+
+	if got := ResolveSupportLanguageStateless(c); got != "vi" {
+		t.Errorf("got %q, want vi — the first supported tag wins, not the first tag", got)
+	}
+}

@@ -39,19 +39,20 @@ def test_build_asyncpg_url_and_connect_args_strips_ssl_query_params(monkeypatch)
     )
 
     assert async_url.startswith("postgresql+asyncpg://user:pass@example.com:5432/app")
-    # SQLAlchemy's asyncpg dialect prepared-statement cache must be off too.
-    assert "prepared_statement_cache_size=0" in async_url
+    assert "prepared_statement_cache_size=100" in async_url
     # search_path must NOT be sent via asyncpg server_settings — it gets
     # rejected by PgBouncer/PlanetScale as an unsupported startup parameter.
     assert "server_settings" not in connect_args
     assert connect_args["ssl"] is not None
-    # statement_cache_size must be 0 under PgBouncer transaction pooling —
-    # cached prepared-statement plans become invalid when PgBouncer reassigns
-    # the backend between transactions.
-    assert connect_args["statement_cache_size"] == 0
+    # Cached under unique names: one round trip per statement through the
+    # pooler, which tracks protocol-level prepared statements.
+    assert connect_args["statement_cache_size"] == 100
+    names = {connect_args["prepared_statement_name_func"]() for _ in range(3)}
+    assert len(names) == 3
 
 
-def test_build_asyncpg_url_and_connect_args_sets_statement_cache_without_ssl():
+def test_build_asyncpg_url_and_connect_args_sets_statement_cache_without_ssl(monkeypatch):
+    monkeypatch.setenv("KIELO_DB_STATEMENT_CACHE_SIZE", "0")
     async_url, connect_args = db_utils.build_asyncpg_url_and_connect_args(
         "postgresql://user:pass@example.com:5432/app",
         db_utils.KLEARN_DB_SEARCH_PATH,

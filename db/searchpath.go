@@ -250,11 +250,8 @@ func ValidateLearningLanguageIdent(lang string) error {
 
 // SanitizeSearchPath validates and canonicalizes a comma-separated
 // search_path identifier list. Returns the cleaned (whitespace-trimmed,
-// re-joined) string suitable for `SET search_path TO ...` or an error
-// if any element fails the identifier regex. Used by callers that
-// build connection-level AfterConnect handlers (kielo-shared/db/
-// pgxsearchpath.SetSearchPathOnConnect) and by the per-language
-// SET LOCAL machinery in this package.
+// re-joined) string suitable for `SET LOCAL search_path TO ...` or an
+// error if any element fails the identifier regex.
 func SanitizeSearchPath(searchPath string) (string, error) {
 	return validateSearchPathIdents(searchPath)
 }

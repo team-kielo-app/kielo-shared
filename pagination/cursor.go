@@ -77,10 +77,7 @@ func DecodeOffsetCursor(cursor string) (int, error) {
 		return 0, nil
 	}
 	if n, err := strconv.Atoi(cursor); err == nil {
-		if n < 0 {
-			return 0, fmt.Errorf("invalid cursor: negative offset")
-		}
-		return n, nil
+		return checkedOffset(n)
 	}
 	decoded, err := base64.RawURLEncoding.DecodeString(cursor)
 	if err != nil {
@@ -94,8 +91,18 @@ func DecodeOffsetCursor(cursor string) (int, error) {
 	if err != nil {
 		return 0, fmt.Errorf("invalid cursor: %w", err)
 	}
+	return checkedOffset(n)
+}
+
+// maxCursorOffset bounds a client-supplied offset so offset+limit can never overflow.
+const maxCursorOffset = 1_000_000
+
+func checkedOffset(n int) (int, error) {
 	if n < 0 {
 		return 0, fmt.Errorf("invalid cursor: negative offset")
+	}
+	if n > maxCursorOffset {
+		return 0, fmt.Errorf("invalid cursor: offset too large")
 	}
 	return n, nil
 }

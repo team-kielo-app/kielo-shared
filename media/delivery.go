@@ -260,7 +260,7 @@ func (d *Delivery) ContextualizeURL(requestHost, rawURL string) string {
 // contextualize points a dev CDN-emulator URL at a host the caller can
 // reach. Production CDN URLs (no internal base configured) pass through.
 func (d *Delivery) contextualize(requestHost, rawURL string) string {
-	canonical, internalOrigin, rest, ok := d.devCDNPath(rawURL)
+	canonical, internalOrigin, rest, ok := d.devCDNPath(d.devStorageURL(rawURL))
 	if !ok {
 		return rawURL
 	}
@@ -279,6 +279,30 @@ func (d *Delivery) contextualize(requestHost, rawURL string) string {
 	default:
 		return canonical.Scheme + "://" + canonical.Host + rest
 	}
+}
+
+// devStorageURL moves a Cloud Storage URL for a public bucket onto the dev
+// CDN emulator. Rows restored from prod embed
+// https://storage.googleapis.com/<bucket>/... with the bucket renamed to its
+// local name (pull-db-schemas.sh), and Google holds no such object: KieloTV
+// carousels showed broken images locally. Production has no emulator, so
+// the URL passes through.
+func (d *Delivery) devStorageURL(rawURL string) string {
+	if d.cdnInternal == "" || d.cdnBase == "" {
+		return rawURL
+	}
+	rest, ok := strings.CutPrefix(rawURL, "https://storage.googleapis.com/")
+	if !ok {
+		return rawURL
+	}
+	bucket, objectPath, ok := strings.Cut(rest, "/")
+	if !ok || objectPath == "" {
+		return rawURL
+	}
+	if class, known := d.ClassOf(bucket); !known || class != AccessPublic {
+		return rawURL
+	}
+	return d.CDNBaseURL(bucket) + "/" + objectPath
 }
 
 // devCDNPath splits a dev CDN-emulator URL minted under either origin — the

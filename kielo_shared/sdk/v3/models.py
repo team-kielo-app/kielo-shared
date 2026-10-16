@@ -359,6 +359,16 @@ class ArticleParagraphTranslationsResponse(BaseModel):
     translations: list[ArticleParagraphTranslationItem]
 
 
+class ArticleReadTime(BaseModel):
+    id: str
+    read_at: str
+
+
+class ArticleReadTimeUserService(BaseModel):
+    id: str
+    read_at: AwareDatetime
+
+
 class ArticleVersionIngestionWire(BaseModel):
     article_metadata_id: UUID_aliased
     article_type: str
@@ -6143,6 +6153,7 @@ class QuickAddToStudyListRequest(AddTopicListItemRequest):
 
 class ReadArticleIDs(BaseModel):
     ids: list[str]
+    reads: list[ArticleReadTime]
 
 
 class ReadinessResponse(BaseModel):
@@ -6150,8 +6161,9 @@ class ReadinessResponse(BaseModel):
     status: str = Field(..., title="Status")
 
 
-class RecentArticleReadIDsResponse(ReadArticleIDs):
-    pass
+class RecentArticleReadIDsResponse(BaseModel):
+    ids: list[str]
+    reads: list[ArticleReadTimeUserService]
 
 
 class RecommendationCampaign(BaseModel):
@@ -6471,8 +6483,12 @@ class ResultMetadata(BaseModel):
     cefr_level: str | None = None
     duration_seconds: int | None = None
     is_saved: bool | None = None
+    match: str | None = None
+    matched_form: str | None = None
     part_of_speech: str | None = None
     reading_time_minutes: int | None = None
+    subtitle_key: str | None = None
+    title_key: str | None = None
 
 
 class ResumeSessionResponse(BaseModel):
@@ -7037,7 +7053,18 @@ class SearchResult(BaseModel):
 
 class SearchResults(BaseModel):
     content: list[SearchResult]
+    destinations: list[SearchResult]
     saved: list[SearchResult]
+
+
+class SearchSection(BaseModel):
+    id: str
+    items: list[SearchResult]
+
+
+class SearchUnderstanding(BaseModel):
+    core: str
+    intent: str
 
 
 class SemanticSearchResult(BaseModel):
@@ -7045,6 +7072,8 @@ class SemanticSearchResult(BaseModel):
     description: str
     id: str
     label: str
+    match: str | None = None
+    matched_form: str | None = None
     score: float
     type: str
 
@@ -11685,7 +11714,9 @@ class SearchResponse(BaseModel):
     cached: bool
     query: str
     results: SearchResults
+    sections: list[SearchSection]
     took_ms: int
+    understanding: SearchUnderstanding
 
 
 class SemanticSearchResponse(BaseModel):

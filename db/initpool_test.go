@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -22,21 +23,10 @@ func TestInitPool_RejectsBadDSN(t *testing.T) {
 	assert.Contains(t, err.Error(), "parse pool config")
 }
 
-func TestInitPool_RejectsInvalidSearchPath(t *testing.T) {
-	// Inject SQL via the search_path string — the helper must reject it
-	// at config-build time, before any connection is opened.
-	dsn := "postgres://user:pw@127.0.0.1:1/db?sslmode=disable"
-	_, err := InitPool(context.Background(), dsn, PoolOptions{
-		SearchPath: "cms; DROP TABLE users;",
-	})
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "invalid search_path")
-}
-
 // poolConfigWithOptions is a test helper that walks through the same
 // config-shaping the real InitPool does, stopping before NewWithConfig
 // (which would actually try to connect). Lets us verify env-var handling
-// + search_path wiring without a real database.
+// handling without a real database.
 func poolConfigWithOptions(t *testing.T, opts PoolOptions) *pgxpool.Config {
 	t.Helper()
 	cfg, err := pgxpool.ParseConfig("postgres://x:y@h:1/db")
@@ -53,16 +43,6 @@ func poolConfigWithOptions(t *testing.T, opts PoolOptions) *pgxpool.Config {
 	cfg.MaxConns = EnvInt32("PGX_MAX_CONNS", maxFallback)
 	cfg.MinConns = EnvNonNegInt32("PGX_MIN_CONNS", minFallback)
 	cfg.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
-
-	if opts.SearchPath != "" {
-		cleaned, err := SanitizeSearchPath(opts.SearchPath)
-		require.NoError(t, err)
-		stmt := "SET search_path TO " + cleaned
-		cfg.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
-			_, err := conn.Exec(ctx, stmt)
-			return err
-		}
-	}
 	return cfg
 }
 
@@ -71,7 +51,7 @@ func TestInitPool_ConfigShape_DefaultPoolSizes(t *testing.T) {
 	assert.Equal(t, defaultMaxConns, cfg.MaxConns)
 	assert.Equal(t, defaultMinConns, cfg.MinConns)
 	assert.Equal(t, pgx.QueryExecModeSimpleProtocol, cfg.ConnConfig.DefaultQueryExecMode)
-	assert.Nil(t, cfg.AfterConnect, "no SearchPath → no AfterConnect hook")
+	assert.Nil(t, cfg.AfterConnect, "a session SET on connect would leak through the pooler")
 }
 
 func TestInitPool_ConfigShape_CustomPoolSizes(t *testing.T) {
@@ -90,13 +70,6 @@ func TestInitPool_ConfigShape_EnvOverridesPool(t *testing.T) {
 	})
 	assert.Equal(t, int32(8), cfg.MaxConns)
 	assert.Equal(t, int32(1), cfg.MinConns)
-}
-
-func TestInitPool_ConfigShape_SearchPathHookRegistered(t *testing.T) {
-	cfg := poolConfigWithOptions(t, PoolOptions{
-		SearchPath: "cms, public, klearn",
-	})
-	assert.NotNil(t, cfg.AfterConnect, "SearchPath should register an AfterConnect hook")
 }
 
 func TestSanitizeSearchPath_RejectsSemicolon(t *testing.T) {
@@ -121,4 +94,10 @@ func TestSanitizeSearchPath_AcceptsCanonicalLists(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestShouldPingAfterIdle_OnlyLongIdleConnectionsArePinged(t *testing.T) {
+	ctx := context.Background()
+	assert.False(t, shouldPingAfterIdle(ctx, pgxpool.ShouldPingParams{IdleDuration: 2 * time.Second}))
+	assert.True(t, shouldPingAfterIdle(ctx, pgxpool.ShouldPingParams{IdleDuration: time.Minute}))
 }
