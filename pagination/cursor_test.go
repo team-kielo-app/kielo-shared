@@ -102,3 +102,14 @@ func TestNewCursorPage_EmptyStringNextPageKey(t *testing.T) {
 	require.NoError(t, err)
 	assert.JSONEq(t, `{"items":["a"]}`, string(b))
 }
+
+func TestDecodeOffsetCursor_RefusesAnOffsetThatCouldOverflow(t *testing.T) {
+	for _, cursor := range []string{"9223372036854775807", EncodeOffsetCursor(maxCursorOffset + 1)} {
+		if _, err := DecodeOffsetCursor(cursor); err == nil {
+			t.Errorf("cursor %q decoded, want an invalid-cursor error", cursor)
+		}
+	}
+	if n, err := DecodeOffsetCursor(EncodeOffsetCursor(maxCursorOffset)); err != nil || n != maxCursorOffset {
+		t.Errorf("max offset: got %d, %v", n, err)
+	}
+}

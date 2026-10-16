@@ -30,6 +30,12 @@ func FuzzOffsetCursorRoundTrip(f *testing.F) {
 			return
 		}
 		got, err := DecodeOffsetCursor(encoded)
+		if offset > maxCursorOffset {
+			if err == nil {
+				t.Fatalf("offset %d above the cap decoded to %d", offset, got)
+			}
+			return
+		}
 		if err != nil || got != offset {
 			t.Fatalf("round trip of %d via %q gave %d, %v", offset, encoded, got, err)
 		}
