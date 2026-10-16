@@ -104,8 +104,11 @@ func TestStdlibWriter_Heartbeat(t *testing.T) {
 	w.StopHeartbeat()
 	// Should have emitted at least 2 heartbeat comments (plus the
 	// initial "connected" comment from NewStdlibWriter).
-	if strings.Count(rec.Body.String(), ": heartbeat\n\n") < 2 {
-		t.Errorf("expected at least 2 heartbeats; body: %q", rec.Body.String())
+	w.mu.Lock()
+	body := rec.Body.String()
+	w.mu.Unlock()
+	if strings.Count(body, ": heartbeat\n\n") < 2 {
+		t.Errorf("expected at least 2 heartbeats; body: %q", body)
 	}
 }
 
