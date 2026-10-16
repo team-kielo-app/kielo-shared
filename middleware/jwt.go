@@ -16,6 +16,27 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+// RefreshTokenAudience is the `aud` auth-service stamps on refresh tokens.
+// A refresh token is signed with the same key and carries the same user and
+// role claims as an access token, so every API verifier must refuse it:
+// otherwise the long-lived refresh credential doubles as a bearer token.
+const RefreshTokenAudience = "kielo-refresh"
+
+// IsRefreshTokenAudience reports whether verified claims belong to a refresh
+// token. Tokens with no audience (older access tokens) are not refresh tokens.
+func IsRefreshTokenAudience(claims jwt.Claims) bool {
+	aud, err := claims.GetAudience()
+	if err != nil {
+		return true
+	}
+	for _, a := range aud {
+		if a == RefreshTokenAudience {
+			return true
+		}
+	}
+	return false
+}
+
 // UserExistenceChecker interface for validating user existence
 type UserExistenceChecker interface {
 	UserExists(ctx context.Context, userID uuid.UUID) (bool, error)
@@ -142,6 +163,7 @@ func JWTAuthWithOptions(jwtSecret string, userChecker UserExistenceChecker, opti
 
 			token, err := jwt.ParseWithClaims(tokenString, &Claims{}, keyFunc,
 				jwt.WithIssuer("kielo.app"),
+				jwt.WithExpirationRequired(),
 				jwt.WithLeeway(1*time.Minute))
 
 			if err != nil {
@@ -156,6 +178,10 @@ func JWTAuthWithOptions(jwtSecret string, userChecker UserExistenceChecker, opti
 			}
 
 			if claims, ok := token.Claims.(*Claims); ok && token.Valid {
+				if IsRefreshTokenAudience(claims) {
+					return authErr(http.StatusUnauthorized, AuthCodeTokenClaimsInvalid,
+						"You've been signed out. Please log in again.")
+				}
 				// Check user existence if checker provided
 				if userChecker != nil {
 					exists, err := userChecker.UserExists(c.Request().Context(), claims.UserID)
