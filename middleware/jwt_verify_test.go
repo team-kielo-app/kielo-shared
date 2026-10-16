@@ -153,3 +153,126 @@ func TestJWTVerifier_NextKeyRotation(t *testing.T) {
 		t.Errorf("no exp signed by NEXT: want 401, got %d", got)
 	}
 }
+
+func pubPEM(t *testing.T, k *rsa.PublicKey) string {
+	t.Helper()
+	der, err := x509.MarshalPKIXPublicKey(k)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: der}))
+}
+
+func mintRSA(t *testing.T, key *rsa.PrivateKey) string {
+	t.Helper()
+	tok := jwt.NewWithClaims(jwt.SigningMethodRS256, &Claims{
+		UserID: uuid.New(),
+		RegisteredClaims: jwt.RegisteredClaims{
+			Issuer:    "kielo.app",
+			Audience:  []string{"kielo-access"},
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
+		},
+	})
+	s, err := tok.SignedString(key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return s
+}
+
+func serve(t *testing.T, mw echo.MiddlewareFunc, token string) int {
+	t.Helper()
+	e := echo.New()
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	c := e.NewContext(req, httptest.NewRecorder())
+	err := mw(func(c echo.Context) error { return c.NoContent(http.StatusOK) })(c)
+	if err == nil {
+		return http.StatusOK
+	}
+	if he, ok := err.(*echo.HTTPError); ok {
+		return he.Code
+	}
+	t.Fatalf("unexpected error type %T: %v", err, err)
+	return 0
+}
+
+func TestFlexibleAuth_BuildsKeySetOncePerMiddleware(t *testing.T) {
+	a, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("JWT_PUBLIC_KEY_PEM_NEXT", "")
+	before := keySetBuilds.Load()
+	mw := FlexibleAuthSimpleRSA(pubPEM(t, &a.PublicKey))
+	token := mintRSA(t, a)
+	for i := 0; i < 5; i++ {
+		if got := serve(t, mw, token); got != http.StatusOK {
+			t.Fatalf("request %d: want 200, got %d", i, got)
+		}
+	}
+	if builds := keySetBuilds.Load() - before; builds != 1 {
+		t.Fatalf("key set built %d times for 5 requests, want 1", builds)
+	}
+}
+
+func TestJWTAuth_MalformedNextFailsAtConstruction(t *testing.T) {
+	a, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("JWT_PUBLIC_KEY_PEM_NEXT", "not a pem")
+	opts := &JWTOptions{PublicKey: &a.PublicKey}
+
+	if _, err := JWTAuthWithOptionsE("", nil, opts); err == nil {
+		t.Fatal("JWTAuthWithOptionsE: want an error for a malformed NEXT")
+	}
+	if _, err := FlexibleAuthWithOptionsE("", nil, opts); err == nil {
+		t.Fatal("FlexibleAuthWithOptionsE: want an error for a malformed NEXT")
+	}
+	for name, build := range map[string]func(){
+		"JWTAuthWithOptions":      func() { JWTAuthWithOptions("", nil, opts) },
+		"FlexibleAuthWithOptions": func() { FlexibleAuthWithOptions("", nil, opts) },
+	} {
+		func() {
+			defer func() {
+				if recover() == nil {
+					t.Errorf("%s: want a panic at construction for a malformed NEXT", name)
+				}
+			}()
+			build()
+		}()
+	}
+
+	t.Setenv("JWT_PUBLIC_KEY_PEM_NEXT", "")
+	if _, err := JWTAuthWithOptionsE("", nil, opts); err != nil {
+		t.Fatalf("unset NEXT: want no error, got %v", err)
+	}
+}
+
+func TestJWTAuth_BadConfiguredPEMNeverFallsBackToHMAC(t *testing.T) {
+	t.Setenv("JWT_PUBLIC_KEY_PEM_NEXT", "")
+	secret := "hmac-secret"
+	hmacTok, err := jwt.NewWithClaims(jwt.SigningMethodHS256, &Claims{
+		UserID: uuid.New(),
+		RegisteredClaims: jwt.RegisteredClaims{
+			Issuer:    "kielo.app",
+			Audience:  []string{"kielo-access"},
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
+		},
+	}).SignedString([]byte(secret))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	opts := &JWTOptions{PublicKeyPEM: "garbage"}
+	if _, err := JWTAuthWithOptionsE(secret, nil, opts); err == nil {
+		t.Fatal("a configured PEM that fails to parse must be an error")
+	}
+	if got := serve(t, JWTAuthWithOptions(secret, nil, opts), hmacTok); got != http.StatusUnauthorized {
+		t.Fatalf("bad PEM with an HMAC secret: want 401, got %d", got)
+	}
+	if got := serve(t, JWTAuthWithOptions(secret, nil, nil), hmacTok); got != http.StatusOK {
+		t.Fatalf("no RSA configured: HMAC must still verify, got %d", got)
+	}
+}

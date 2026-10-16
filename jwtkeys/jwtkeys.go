@@ -55,34 +55,51 @@ func New(keys ...*rsa.PublicKey) *KeySet {
 }
 
 // WithNextFromEnv returns a set of primary plus the key in JWT_PUBLIC_KEY_PEM_NEXT.
-// An unset variable yields exactly the primary key; an unparsable one is
-// logged and ignored so a bad rotation secret cannot take a service down.
-func WithNextFromEnv(primary *rsa.PublicKey) *KeySet {
-	return New(primary, NextFromEnv())
+// An unset or blank variable yields exactly the primary key. A set but
+// unparsable one is an error: dropping it would 401 every token the new signer
+// issues once the rotation switches, so the service must fail to start instead.
+func WithNextFromEnv(primary *rsa.PublicKey) (*KeySet, error) {
+	next, err := NextFromEnv()
+	if err != nil {
+		return nil, err
+	}
+	return New(primary, next), nil
 }
 
-// NextFromEnv parses JWT_PUBLIC_KEY_PEM_NEXT, or returns nil.
-func NextFromEnv() *rsa.PublicKey {
+// NextFromEnv parses JWT_PUBLIC_KEY_PEM_NEXT, or returns nil when it is unset.
+func NextFromEnv() (*rsa.PublicKey, error) {
 	raw := strings.TrimSpace(os.Getenv(NextEnv))
 	if raw == "" {
-		return nil
+		return nil, nil
 	}
 	key, err := cryptoutil.ParseRSAPublicKey(raw)
 	if err != nil {
-		log.Printf("WARN: %s is set but is not a usable RSA public key; ignoring it: %v", NextEnv, err)
-		return nil
+		return nil, fmt.Errorf("%s is set but is not a usable RSA public key: %w", NextEnv, err)
 	}
-	return key
+	return key, nil
 }
 
-// FromPEM parses primaryPEM and adds the env NEXT key. The error is the
-// primary key's.
+// FromPEM parses primaryPEM and adds the env NEXT key.
 func FromPEM(primaryPEM string) (*KeySet, error) {
 	primary, err := jwt.ParseRSAPublicKeyFromPEM([]byte(primaryPEM))
 	if err != nil {
 		return nil, err
 	}
-	return WithNextFromEnv(primary), nil
+	return WithNextFromEnv(primary)
+}
+
+// Fingerprints are the kids of the keys in the set, in order. They identify
+// keys without exposing them.
+func (s *KeySet) Fingerprints() []string {
+	if s == nil {
+		return nil
+	}
+	return append([]string(nil), s.kids...)
+}
+
+// LogLoaded writes one line naming the fingerprints a verifier loaded.
+func (s *KeySet) LogLoaded(component string) {
+	log.Printf("%s: JWT verification keys loaded: count=%d kids=%s", component, s.Len(), strings.Join(s.Fingerprints(), ","))
 }
 
 // Len is the number of keys in the set.

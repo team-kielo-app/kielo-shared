@@ -119,13 +119,17 @@ func TestNextFromEnv(t *testing.T) {
 	a, b := genKey(t), genKey(t)
 
 	t.Setenv(NextEnv, "")
-	if got := WithNextFromEnv(&a.PublicKey); got.Len() != 1 {
-		t.Fatalf("unset NEXT must leave one key, got %d", got.Len())
+	got, err := WithNextFromEnv(&a.PublicKey)
+	if err != nil || got.Len() != 1 {
+		t.Fatalf("unset NEXT must leave one key, got %d, err %v", got.Len(), err)
 	}
 
 	t.Setenv(NextEnv, "not a pem")
-	if got := WithNextFromEnv(&a.PublicKey); got.Len() != 1 {
-		t.Fatalf("unparsable NEXT must be ignored, got %d keys", got.Len())
+	if got, err := WithNextFromEnv(&a.PublicKey); err == nil || got != nil {
+		t.Fatalf("unparsable NEXT must be an error, got %v, %v", got, err)
+	}
+	if _, err := FromPEM(pemOf(t, &a.PublicKey)); err == nil {
+		t.Fatal("FromPEM with an unparsable NEXT must error")
 	}
 
 	t.Setenv(NextEnv, pemOf(t, &b.PublicKey))
