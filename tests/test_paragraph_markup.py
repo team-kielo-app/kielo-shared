@@ -227,3 +227,32 @@ class TestStrictMarkerFormat:
     def test_no_brackets_placeholder_is_NOT_classified_as_leaked(self) -> None:
         result = parse_paragraph("MEDIA_PLACEHOLDER_1")
         assert result.paragraph_type is not ParagraphType.LEAKED_PLACEHOLDER
+
+
+class TestInlineMediaTagsNeverReachUserFacingText:
+    TAG = "[MEDIA::0a1b2c3d-0000-4000-8000-123456789abc::image]"
+    REF = "0a1b2c3d-0000-4000-8000-123456789abc::image"
+
+    def test_quote_with_inline_media_keeps_the_words_and_the_reference(self) -> None:
+        result = parse_paragraph(f"| said {self.TAG} loudly")
+        assert result.paragraph_type is ParagraphType.QUOTE
+        assert "[MEDIA" not in result.text
+        assert result.media_refs == [self.REF]
+
+    def test_list_item_with_inline_media_keeps_the_words_and_the_reference(self) -> None:
+        result = parse_paragraph(f"- item {self.TAG}")
+        assert result.paragraph_type is ParagraphType.LIST_ITEM
+        assert result.text == "item"
+        assert result.media_refs == [self.REF]
+
+    def test_list_item_that_is_only_a_media_tag_has_empty_text(self) -> None:
+        result = parse_paragraph(f"- {self.TAG}")
+        assert result.text == ""
+        assert result.media_refs == [self.REF]
+
+    def test_heading_with_inline_media_keeps_the_heading_text(self) -> None:
+        result = parse_paragraph(f"[H2] Title {self.TAG}")
+        assert result.paragraph_type is ParagraphType.HEADING
+        assert result.text == "Title"
+        assert result.heading_level == 2
+        assert result.media_refs == [self.REF]

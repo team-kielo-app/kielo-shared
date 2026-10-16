@@ -114,23 +114,23 @@ def parse_paragraph(line: str) -> ParsedParagraph:
     if not stripped:
         return ParsedParagraph(ParagraphType.EMPTY, "", raw)
 
+    media_refs = [
+        f"{m.group(1)}::{m.group(2)}" for m in MEDIA_TAG_REGEX.finditer(stripped)
+    ]
+    text_without_media = MEDIA_TAG_REGEX.sub("", stripped).strip()
+
     # Heading marker takes precedence; preserve the heading text.
     heading_match = HEADING_MARKER_REGEX.match(stripped)
     if heading_match:
         level = int(heading_match.group(1))
-        text = heading_match.group(2).strip()
+        text = MEDIA_TAG_REGEX.sub("", heading_match.group(2)).strip()
         return ParsedParagraph(
             ParagraphType.HEADING,
             text,
             raw,
             heading_level=level,
+            media_refs=media_refs,
         )
-
-    # Strip canonical media tags and check whether anything else remains.
-    media_refs = [
-        f"{m.group(1)}::{m.group(2)}" for m in MEDIA_TAG_REGEX.finditer(stripped)
-    ]
-    text_without_media = MEDIA_TAG_REGEX.sub("", stripped).strip()
 
     if not text_without_media and media_refs:
         return ParsedParagraph(
@@ -152,14 +152,14 @@ def parse_paragraph(line: str) -> ParsedParagraph:
     if stripped.startswith("|"):
         return ParsedParagraph(
             ParagraphType.QUOTE,
-            stripped.lstrip("|").strip(),
+            text_without_media.lstrip("|").strip(),
             raw,
             media_refs=media_refs,
         )
     if stripped.startswith("- "):
         return ParsedParagraph(
             ParagraphType.LIST_ITEM,
-            stripped[2:].strip(),
+            text_without_media[2:].strip(),
             raw,
             media_refs=media_refs,
         )
