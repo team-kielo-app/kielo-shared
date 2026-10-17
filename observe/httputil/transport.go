@@ -1,7 +1,9 @@
 package httputil
 
 import (
+	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/team-kielo-app/kielo-shared/observe"
@@ -78,8 +80,9 @@ func tunedTransport() *http.Transport {
 // propagation stays consistent across Kielo services.
 func NewClient(timeout time.Duration) *http.Client {
 	return &http.Client{
-		Timeout:   timeout,
-		Transport: TracingTransport(tunedTransport()),
+		Timeout:       timeout,
+		Transport:     TracingTransport(tunedTransport()),
+		CheckRedirect: SafeCheckRedirect,
 	}
 }
 
@@ -101,9 +104,59 @@ func NewClient(timeout time.Duration) *http.Client {
 // internal-auth layer becomes a pass-through.
 func NewInternalClient(timeout time.Duration, apiKey string) *http.Client {
 	return &http.Client{
-		Timeout:   timeout,
-		Transport: TracingTransport(InternalAuthTransport(tunedTransport(), apiKey)),
+		Timeout:       timeout,
+		Transport:     TracingTransport(InternalAuthTransport(tunedTransport(), apiKey)),
+		CheckRedirect: redirectPolicy(apiKey != ""),
 	}
+}
+
+const maxRedirects = 10
+
+var credentialHeaders = []string{InternalAPIKeyHeader, "Authorization", "X-User-ID"}
+
+// SafeCheckRedirect is the redirect policy of every client built here.
+//
+// Go keeps every header when a redirect stays on the same host, and
+// X-Internal-API-Key is not one of the headers it drops on a cross-host hop.
+// A front end that answers a dot-segment path with a same-host 302 therefore
+// replays the internal key and the caller's JWT against whatever path the
+// Location names. A request that carries credentials follows a redirect only
+// when it stays on the same scheme and host and changes nothing but a trailing
+// slash (the framework "/x" to "/x/" hop); any other hop is returned to the
+// caller as the response. A request with no credentials follows up to ten hops
+// as net/http does.
+func SafeCheckRedirect(req *http.Request, via []*http.Request) error {
+	return redirectPolicy(false)(req, via)
+}
+
+// redirectPolicy is SafeCheckRedirect; always marks every request as
+// credentialed for clients whose transport adds the internal key itself.
+func redirectPolicy(always bool) func(*http.Request, []*http.Request) error {
+	return func(req *http.Request, via []*http.Request) error {
+		if len(via) >= maxRedirects {
+			return errors.New("stopped after 10 redirects")
+		}
+		if len(via) == 0 || (!always && !carriesCredentials(via[0])) {
+			return nil
+		}
+		prev := via[len(via)-1]
+		if req.URL.Scheme != prev.URL.Scheme || !strings.EqualFold(req.URL.Host, prev.URL.Host) {
+			return http.ErrUseLastResponse
+		}
+		if strings.TrimSuffix(req.URL.Path, "/") != strings.TrimSuffix(prev.URL.Path, "/") {
+			return http.ErrUseLastResponse
+		}
+		return nil
+	}
+}
+
+func carriesCredentials(req *http.Request) bool {
+	for _, h := range credentialHeaders {
+		if req.Header.Get(h) != "" {
+			return true
+		}
+	}
+	return false
 }
 
 type tracingTransport struct {

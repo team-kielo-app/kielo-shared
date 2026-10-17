@@ -9,12 +9,36 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
+
+	"github.com/team-kielo-app/kielo-shared/jwtkeys"
 )
+
+// RefreshTokenAudience is the `aud` auth-service stamps on refresh tokens.
+// A refresh token is signed with the same key and carries the same user and
+// role claims as an access token, so every API verifier must refuse it:
+// otherwise the long-lived refresh credential doubles as a bearer token.
+const RefreshTokenAudience = "kielo-refresh"
+
+// IsRefreshTokenAudience reports whether verified claims belong to a refresh
+// token. Tokens with no audience (older access tokens) are not refresh tokens.
+func IsRefreshTokenAudience(claims jwt.Claims) bool {
+	aud, err := claims.GetAudience()
+	if err != nil {
+		return true
+	}
+	for _, a := range aud {
+		if a == RefreshTokenAudience {
+			return true
+		}
+	}
+	return false
+}
 
 // UserExistenceChecker interface for validating user existence
 type UserExistenceChecker interface {
@@ -80,8 +104,89 @@ type JWTOptions struct {
 	StoreAsUser  bool           // If true, stores entire claims as "user", otherwise individual fields
 }
 
-// JWTAuthWithOptions validates JWT tokens with configurable options
+// JWTAuthWithOptions validates JWT tokens with configurable options. It builds
+// the verification key set once, here. A JWT_PUBLIC_KEY_PEM_NEXT that is set
+// but unusable panics at construction, so the service dies at startup instead
+// of 401ing every token the new signer issues; use JWTAuthWithOptionsE to get
+// that as an error.
 func JWTAuthWithOptions(jwtSecret string, userChecker UserExistenceChecker, options *JWTOptions) echo.MiddlewareFunc {
+	keyFunc, err := buildKeyFunc(jwtSecret, options)
+	mustHaveValidNext(err)
+	return jwtAuthMiddleware(keyFunc, userChecker, options)
+}
+
+// JWTAuthWithOptionsE is JWTAuthWithOptions returning a key configuration
+// error (an unparsable PEM or JWT_PUBLIC_KEY_PEM_NEXT) instead of deferring or
+// panicking.
+func JWTAuthWithOptionsE(jwtSecret string, userChecker UserExistenceChecker, options *JWTOptions) (echo.MiddlewareFunc, error) {
+	keyFunc, err := buildKeyFunc(jwtSecret, options)
+	if err != nil {
+		return nil, err
+	}
+	return jwtAuthMiddleware(keyFunc, userChecker, options), nil
+}
+
+type nextKeyError struct{ error }
+
+func (e nextKeyError) Unwrap() error { return e.error }
+
+func mustHaveValidNext(err error) {
+	var nextErr nextKeyError
+	if errors.As(err, &nextErr) {
+		panic(fmt.Sprintf("invalid JWT verification key configuration: %v", err))
+	}
+}
+
+// keySetBuilds counts key set constructions; tests assert it stays at one per
+// middleware, not one per request.
+var keySetBuilds atomic.Int64
+
+// buildKeyFunc resolves the verification key function. A configured PEM that
+// does not parse is an error and never falls back to HMAC: the returned
+// keyFunc then refuses every token with that error, as it always did.
+func buildKeyFunc(jwtSecret string, options *JWTOptions) (jwt.Keyfunc, error) {
+	keySetBuilds.Add(1)
+	rsaConfigured := options != nil && (options.PublicKey != nil || options.PublicKeyPEM != "")
+	if !rsaConfigured {
+		if jwtSecret != "" {
+			return hmacKeyFunc(jwtSecret), nil
+		}
+		return func(*jwt.Token) (any, error) {
+			return nil, errors.New("JWT secret or public key is not configured")
+		}, nil
+	}
+
+	primary := options.PublicKey
+	if primary == nil {
+		parsed, err := jwt.ParseRSAPublicKeyFromPEM([]byte(options.PublicKeyPEM))
+		if err != nil {
+			return func(token *jwt.Token) (any, error) {
+				if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
+					return nil, fmt.Errorf("unexpected signing method: %v, expected RSA", token.Header["alg"])
+				}
+				return nil, err
+			}, err
+		}
+		primary = parsed
+	}
+	keys, err := jwtkeys.WithNextFromEnv(primary)
+	if err != nil {
+		return nil, nextKeyError{err}
+	}
+	keys.LogLoaded("jwt middleware")
+	return keys.KeyFunc, nil
+}
+
+func hmacKeyFunc(jwtSecret string) jwt.Keyfunc {
+	return func(token *jwt.Token) (any, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v, expected HMAC", token.Header["alg"])
+		}
+		return []byte(jwtSecret), nil
+	}
+}
+
+func jwtAuthMiddleware(keyFunc jwt.Keyfunc, userChecker UserExistenceChecker, options *JWTOptions) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			// SECURITY (S4, sweep 2026-07-06): the previously-trusted
@@ -116,32 +221,9 @@ func JWTAuthWithOptions(jwtSecret string, userChecker UserExistenceChecker, opti
 					"You've been signed out. Please log in again.")
 			}
 
-			keyFunc := func(token *jwt.Token) (any, error) {
-				// If RSA public key is provided, use it
-				if options != nil && (options.PublicKeyPEM != "" || options.PublicKey != nil) {
-					// Ensure the token is signed with an RSA algorithm
-					if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
-						return nil, fmt.Errorf("unexpected signing method: %v, expected RSA", token.Header["alg"])
-					}
-					if options.PublicKey != nil {
-						return options.PublicKey, nil
-					}
-					return jwt.ParseRSAPublicKeyFromPEM([]byte(options.PublicKeyPEM))
-				}
-				// Otherwise, fall back to the symmetric secret
-				if jwtSecret != "" {
-					// Ensure the token is signed with an HMAC algorithm
-					if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-						return nil, fmt.Errorf("unexpected signing method: %v, expected HMAC", token.Header["alg"])
-					}
-					return []byte(jwtSecret), nil
-				}
-				// If neither is configured, it's a server error
-				return nil, errors.New("JWT secret or public key is not configured")
-			}
-
 			token, err := jwt.ParseWithClaims(tokenString, &Claims{}, keyFunc,
 				jwt.WithIssuer("kielo.app"),
+				jwt.WithExpirationRequired(),
 				jwt.WithLeeway(1*time.Minute))
 
 			if err != nil {
@@ -156,6 +238,10 @@ func JWTAuthWithOptions(jwtSecret string, userChecker UserExistenceChecker, opti
 			}
 
 			if claims, ok := token.Claims.(*Claims); ok && token.Valid {
+				if IsRefreshTokenAudience(claims) {
+					return authErr(http.StatusUnauthorized, AuthCodeTokenClaimsInvalid,
+						"You've been signed out. Please log in again.")
+				}
 				// Check user existence if checker provided
 				if userChecker != nil {
 					exists, err := userChecker.UserExists(c.Request().Context(), claims.UserID)
@@ -323,8 +409,27 @@ func FlexibleAuthRSAWithUserStorage(publicKeyPEM string) echo.MiddlewareFunc {
 	})
 }
 
-// FlexibleAuthWithOptions supports both gateway headers and JWT validation with options
+// FlexibleAuthWithOptions supports both gateway headers and JWT validation with
+// options. The key set is built once, at construction; see JWTAuthWithOptions
+// for how an unusable JWT_PUBLIC_KEY_PEM_NEXT is handled.
 func FlexibleAuthWithOptions(jwtSecret string, userChecker UserExistenceChecker, options *JWTOptions) echo.MiddlewareFunc {
+	keyFunc, err := buildKeyFunc(jwtSecret, options)
+	mustHaveValidNext(err)
+	return flexibleAuth(keyFunc, userChecker, options)
+}
+
+// FlexibleAuthWithOptionsE is FlexibleAuthWithOptions returning a key
+// configuration error instead of deferring or panicking.
+func FlexibleAuthWithOptionsE(jwtSecret string, userChecker UserExistenceChecker, options *JWTOptions) (echo.MiddlewareFunc, error) {
+	keyFunc, err := buildKeyFunc(jwtSecret, options)
+	if err != nil {
+		return nil, err
+	}
+	return flexibleAuth(keyFunc, userChecker, options), nil
+}
+
+func flexibleAuth(keyFunc jwt.Keyfunc, userChecker UserExistenceChecker, options *JWTOptions) echo.MiddlewareFunc {
+	jwtAuth := jwtAuthMiddleware(keyFunc, userChecker, options)
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			// Try gateway headers first (preferred for internal calls)
@@ -370,7 +475,7 @@ func FlexibleAuthWithOptions(jwtSecret string, userChecker UserExistenceChecker,
 			}
 
 			// Fall back to JWT validation for direct API calls
-			return JWTAuthWithOptions(jwtSecret, userChecker, options)(next)(c)
+			return jwtAuth(next)(c)
 		}
 	}
 }

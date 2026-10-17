@@ -129,8 +129,16 @@ func (CanonicalGuard) IsSuspicious(sourceText, candidate, targetLocale string) b
 				contentCount++
 			}
 		}
-		if contentCount >= 4 && len(tokens) > 0 && len(tokens)*3 <= contentCount {
-			return true
+		target := guardTargetBase(targetLocale)
+		if _, unsegmented := guardNonWordSegmentedTargets[target]; !unsegmented &&
+			contentCount >= 4 && len(tokens) > 0 {
+			if _, compounding := guardCompoundingTargets[target]; compounding {
+				if guardRuneCount(tokens)*3 <= guardContentRuneCount(sourceR5Tokens) {
+					return true
+				}
+			} else if len(tokens)*3 <= contentCount {
+				return true
+			}
 		}
 	}
 
@@ -188,6 +196,44 @@ var guardEnFunctionWords = map[string]struct{}{
 	"be": {}, "been": {}, "being": {},
 	// Coordinators
 	"and": {}, "or": {}, "but": {}, "so": {},
+}
+
+// guardNonWordSegmentedTargets write no spaces between words, so a whole
+// translation is one token and R5's ratio means nothing: every zh/ja/th
+// answer to a 4-content-word title was rejected ("Matches your current
+// level.", prod 2026-10-14..17). Mirrors the Python canonical's
+// _NON_WORD_SEGMENTED_TARGETS.
+var guardNonWordSegmentedTargets = map[string]struct{}{"zh": {}, "ja": {}, "ko": {}, "th": {}}
+
+// guardCompoundingTargets fuse several English content words into one word
+// ("Present tense verb endings" -> "Präsensverbendungen"), so R5 compares
+// characters instead of tokens there. Mirrors the Python canonical's
+// _COMPOUNDING_TARGETS.
+var guardCompoundingTargets = map[string]struct{}{
+	"de": {}, "nl": {}, "sv": {}, "no": {}, "nb": {}, "nn": {}, "da": {}, "fi": {},
+}
+
+func guardTargetBase(locale string) string {
+	base, _, _ := strings.Cut(strings.ToLower(strings.TrimSpace(locale)), "-")
+	return base
+}
+
+func guardRuneCount(tokens []string) int {
+	total := 0
+	for _, t := range tokens {
+		total += len([]rune(t))
+	}
+	return total
+}
+
+func guardContentRuneCount(sourceTokens []string) int {
+	total := 0
+	for _, t := range sourceTokens {
+		if _, isFn := guardEnFunctionWords[t]; !isFn {
+			total += len([]rune(t))
+		}
+	}
+	return total
 }
 
 // guardNegationMarkers contains the strong negation cues per locale
