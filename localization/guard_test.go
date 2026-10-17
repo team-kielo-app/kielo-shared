@@ -82,6 +82,33 @@ func TestCanonicalGuard_R5_ContentTokenTruncation(t *testing.T) {
 	}
 }
 
+func TestCanonicalGuard_R5_SkipsTargetsWithoutWordSpaces(t *testing.T) {
+	g := NewCanonicalGuard()
+	for target, translated := range map[string]string{
+		"zh":    "符合你当前的水平。",
+		"ja":    "現在のレベルに合っています。",
+		"th":    "ตรงกับระดับปัจจุบันของคุณ",
+		"zh-hk": "符合你當前的水平。",
+	} {
+		if g.IsSuspicious("Matches your current level.", translated, target) {
+			t.Fatalf("R5 must not judge a %s answer by its token count", target)
+		}
+	}
+}
+
+func TestCanonicalGuard_R5_CompoundingTargetsCompareCharacters(t *testing.T) {
+	g := NewCanonicalGuard()
+	if g.IsSuspicious("Present tense verb endings", "Präsensverbendungen", "de") {
+		t.Fatal("R5: a German compound is not truncation")
+	}
+	if g.IsSuspicious("Past tense negative forms", "Imperfektnegationsformen", "de-AT") {
+		t.Fatal("R5: a region-tagged compounding target compares characters too")
+	}
+	if !g.IsSuspicious("Music genres list categories", "Musik", "de") {
+		t.Fatal("R5: real truncation still rejects on a compounding target")
+	}
+}
+
 func TestCanonicalGuard_R6_JunkSymbols(t *testing.T) {
 	g := NewCanonicalGuard()
 	// Music note in output (Sweep PP "New Level" → "♪ Cuộc sống").
