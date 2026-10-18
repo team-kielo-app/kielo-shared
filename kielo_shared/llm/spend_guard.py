@@ -365,16 +365,85 @@ def record_actual_usd(actual_usd: float, *, family: str = "") -> None:
         logger.warning("LLM_GUARD spend adjust failed: %s", exc)
 
 
+def has_headroom(family: str = "") -> bool:
+    """Read-only: may a new paid session start under this family's budget?
+
+    For callers that cannot be refused mid-flight (a live voice call): check once
+    when the session is built, then book usage with ``record_usd``. Counts the
+    family cap and the global rolling-24h budget; books nothing. Production
+    fails open when the counters are unreachable, like admit_paid_call.
+    """
+    if not paid_calls_enabled():
+        return False
+    family = family or llm_family_var.get()
+    prod = is_production()
+    e = os.environ
+    budget = _float(
+        e, "LLM_DAILY_BUDGET_USD", 0.0 if prod else _DEFAULT_NONPROD_BUDGET_USD
+    )
+    family_budget = _family_budget(family) if family else 0.0
+    if budget <= 0 and family_budget <= 0:
+        return True
+    current = _bucket(_clock())
+    try:
+        r = _client()
+        if family_budget > 0:
+            keys = [
+                _family_usd_key(family, current - i) for i in range(_WINDOW_BUCKETS)
+            ]
+            if sum(int(v or 0) for v in r.mget(keys)) >= int(family_budget * _MICRO):
+                return False
+        if budget > 0:
+            keys = [_usd_key(current - i) for i in range(_WINDOW_BUCKETS)]
+            if sum(int(v or 0) for v in r.mget(keys)) >= int(budget * _MICRO):
+                return False
+        return True
+    except Exception as exc:
+        if prod:
+            logger.error("LLM_GUARD_UNAVAILABLE headroom check failing open: %s", exc)
+            return True
+        return False
+
+
+def record_usd(usd: float, *, family: str = "") -> None:
+    """Book the full cost of a call that was never admitted (a session admitted
+    once by ``has_headroom``). Never raises."""
+    micro = int(max(0.0, usd) * _MICRO)
+    if micro == 0:
+        return
+    family = family or llm_family_var.get()
+    e = os.environ
+    prod = is_production()
+    budget = _float(
+        e, "LLM_DAILY_BUDGET_USD", 0.0 if prod else _DEFAULT_NONPROD_BUDGET_USD
+    )
+    current = _bucket(_clock())
+    try:
+        r = _client()
+        if family and _family_budget(family) > 0:
+            key = _family_usd_key(family, current)
+            r.incrby(key, micro)
+            r.expire(key, _BUCKET_SECONDS * (_WINDOW_BUCKETS + 1))
+        if budget > 0:
+            key = _usd_key(current)
+            r.incrby(key, micro)
+            r.expire(key, _BUCKET_SECONDS * (_WINDOW_BUCKETS + 1))
+    except Exception as exc:
+        logger.warning("LLM_GUARD spend booking failed: %s", exc)
+
+
 __all__ = [
     "LLMBudgetExceeded",
     "LLMGuardUnavailable",
     "PaidLLMCallRefused",
     "PaidLLMCallsDisabled",
     "admit_paid_call",
+    "has_headroom",
     "is_production",
     "llm_family_var",
     "paid_calls_enabled",
     "record_actual_usd",
+    "record_usd",
     "set_clock",
     "set_redis_factory",
 ]

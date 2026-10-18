@@ -17,8 +17,10 @@ daemon thread flushes it to the rollup endpoint every few minutes, best effort.
 
 from __future__ import annotations
 
+import asyncio
 import calendar
 import dataclasses
+import json
 import logging
 import os
 import random
@@ -60,6 +62,20 @@ _RESERVOIR = 512
 
 PROVIDER_GOOGLE = "google"
 PROVIDER_OPENAI = "openai"
+
+# Families whose call sites can only drive Gemini (the Go seam, RoutedGemini):
+# a route that names another provider for them is refused and the caller's
+# compiled default runs, with one logged line, rather than a misrouted call.
+GEMINI_ONLY_FAMILIES = frozenset(
+    {
+        "juka_hints",
+        "juka_translation",
+        "scenario_authoring",
+        "ktv_ai",
+    }
+)
+
+SNAPSHOT_TTL_SECONDS = 7 * 24 * 3600
 
 # Last resort when llm_models has no row for a routed model (store down on a
 # cold start, model not yet allowlisted): the model-name family decides.
@@ -140,21 +156,43 @@ class RouteClient:
         self._clock = clock
         self._routes: dict[str, Route] = {}
         self._models: dict[str, ModelInfo] = {}
+        self._models_loaded = False
+        self._snapshot_load: Callable[[], dict[str, Any] | None] | None = None
+        self._snapshot_save: Callable[[dict[str, Any]], None] | None = None
+        self._warned: set[tuple[str, ...]] = set()
         self._loaded = False
         self._fetched_at = 0.0
         self._refreshing = False
         self._lock = threading.Lock()
         self._logged: dict[str, Route] = {}
 
+    def set_snapshot_store(
+        self,
+        load: Callable[[], dict[str, Any] | None],
+        save: Callable[[dict[str, Any]], None],
+    ) -> None:
+        """Keep a last-good copy of the tables outside the process (Redis), so a
+        cold start during a localization outage serves the last good routes."""
+        self._snapshot_load, self._snapshot_save = load, save
+
+    def _warn_once(self, *key: str, message: str, args: tuple[Any, ...]) -> None:
+        if key in self._warned:
+            return
+        self._warned.add(key)
+        logger.error(message, *args)
+
     def route(self, family: str) -> Route | None:
-        """The stored route, or None when there is none (no store, unknown family)."""
+        """The stored route, or None when there is none or it cannot be served
+        (no store, unknown family, model missing/inactive, provider not allowed)."""
         if not self._base_url:
             return None
         self._maybe_refresh()
         found = self._routes.get(family)
         if found is None:
             return None
-        found = self._with_provider(found)
+        found = self._servable(family, found)
+        if found is None:
+            return None
         if self._logged.get(family) != found:
             self._logged[family] = found
             logger.info(
@@ -167,18 +205,38 @@ class RouteClient:
             )
         return found
 
-    def _with_provider(self, route: Route) -> Route:
+    def _servable(self, family: str, route: Route) -> Route | None:
         info = self._models.get(route.model)
-        if info is not None:
-            return dataclasses.replace(route, provider=info.provider)
-        if route.provider:
-            return route
-        provider = infer_provider(route.model)
-        logger.warning(
-            "LLM_ROUTE model=%s has no llm_models row; provider inferred=%s",
-            route.model,
-            provider or "unknown",
-        )
+        if self._models_loaded:
+            if info is None or not info.active:
+                reason = "missing from llm_models" if info is None else "inactive"
+                self._warn_once(
+                    "model",
+                    family,
+                    route.model,
+                    reason,
+                    message="LLM_ROUTE family=%s model=%s is %s; using the compiled default",
+                    args=(family, route.model, reason),
+                )
+                return None
+            provider = info.provider
+        else:
+            provider = route.provider or infer_provider(route.model)
+            self._warn_once(
+                "inferred",
+                route.model,
+                message="LLM_ROUTE llm_models never loaded; model=%s provider inferred=%s",
+                args=(route.model, provider or "unknown"),
+            )
+        if family in GEMINI_ONLY_FAMILIES and provider != PROVIDER_GOOGLE:
+            self._warn_once(
+                "provider",
+                family,
+                route.model,
+                message="LLM_ROUTE family=%s can only drive Gemini; route model=%s provider=%s refused, using the compiled default",
+                args=(family, route.model, provider or "unknown"),
+            )
+            return None
         return dataclasses.replace(route, provider=provider)
 
     def model_info(self, model: str) -> ModelInfo | None:
@@ -210,44 +268,102 @@ class RouteClient:
         if fresh:
             return
         if not self._loaded and not self._fetched_at:
-            self._refresh()
-            return
+            if not _loop_running():
+                self._refresh()
+                return
+            # Never fetch on the event loop: serve the last-good copy now and
+            # refresh in the background.
+            self._load_snapshot()
         with self._lock:
             if self._refreshing:
                 return
             self._refreshing = True
         threading.Thread(target=self._refresh, daemon=True).start()
 
+    def warm(self) -> None:
+        """Fetch now (worker prewarm), so the first session never waits on localization."""
+        if self._base_url:
+            self._refresh()
+
+    def _get_json(self, path: str, headers: dict[str, str]) -> Any:
+        resp = httpx.get(
+            self._base_url + path, headers=headers, timeout=_FETCH_TIMEOUT_SECONDS
+        )
+        resp.raise_for_status()
+        return resp.json()
+
     def _refresh(self) -> None:
         # Stamp failures too: an outage costs one short fetch per TTL, not one per call.
         self._fetched_at = self._clock()
         try:
             headers = {"X-Internal-API-Key": self._api_key} if self._api_key else {}
-            resp = httpx.get(
-                self._base_url + _ROUTES_PATH,
-                headers=headers,
-                timeout=_FETCH_TIMEOUT_SECONDS,
-            )
-            resp.raise_for_status()
-            self._routes, self._loaded = _decode(resp.json()), True
-            self._refresh_models(headers)
+            routes_body = self._get_json(_ROUTES_PATH, headers)
+            self._routes, self._loaded = _decode(routes_body), True
+            models_body = None
+            try:
+                models_body = self._get_json(_MODELS_PATH, headers)
+                self._models, self._models_loaded = _decode_models(models_body), True
+            except (httpx.HTTPError, ValueError, AttributeError):
+                pass
+            self._save_snapshot(routes_body, models_body)
         except (httpx.HTTPError, ValueError, AttributeError):
             pass
         finally:
             with self._lock:
                 self._refreshing = False
+        if not self._loaded:
+            self._load_snapshot()
 
-    def _refresh_models(self, headers: dict[str, str]) -> None:
+    def _save_snapshot(self, routes_body: Any, models_body: Any) -> None:
+        if self._snapshot_save is None:
+            return
         try:
-            resp = httpx.get(
-                self._base_url + _MODELS_PATH,
-                headers=headers,
-                timeout=_FETCH_TIMEOUT_SECONDS,
+            snap: dict[str, Any] = {"routes": routes_body}
+            if models_body is not None:
+                snap["models"] = models_body
+            elif self._models_loaded:
+                snap["models"] = {
+                    "items": [
+                        {
+                            "model": m,
+                            "provider": i.provider,
+                            "input_usd_per_mtok": i.input_usd_per_mtok,
+                            "output_usd_per_mtok": i.output_usd_per_mtok,
+                            "active": i.active,
+                        }
+                        for m, i in self._models.items()
+                    ]
+                }
+            self._snapshot_save(snap)
+        except Exception as exc:
+            logger.warning("LLM_ROUTE snapshot save failed: %s", exc)
+
+    def _load_snapshot(self) -> None:
+        if self._snapshot_load is None:
+            return
+        try:
+            snap = self._snapshot_load()
+            if not snap:
+                return
+            self._routes = _decode(snap.get("routes"))
+            self._loaded = True
+            if snap.get("models") is not None:
+                self._models = _decode_models(snap["models"])
+                self._models_loaded = True
+            logger.warning(
+                "LLM_ROUTE localization unreachable; serving the last-good snapshot (%d routes)",
+                len(self._routes),
             )
-            resp.raise_for_status()
-            self._models = _decode_models(resp.json())
-        except (httpx.HTTPError, ValueError, AttributeError):
-            pass
+        except Exception as exc:
+            logger.warning("LLM_ROUTE snapshot load failed: %s", exc)
+
+
+def _loop_running() -> bool:
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return False
+    return True
 
 
 class _Agg:
@@ -424,6 +540,34 @@ def configure(service: str, base_url: str, internal_api_key: str = "") -> None:
     _service = service
     _client = RouteClient(base_url, internal_api_key)
     _recorder = UsageRecorder(service, base_url, internal_api_key)
+
+
+def warm() -> None:
+    """Prefetch the route tables (call from worker prewarm, off the event loop)."""
+    if _client is not None:
+        _client.warm()
+
+
+def set_snapshot_store(
+    load: Callable[[], dict[str, Any] | None],
+    save: Callable[[dict[str, Any]], None],
+) -> None:
+    """Install a last-good snapshot store on the process-wide client (see RouteClient)."""
+    if _client is not None:
+        _client.set_snapshot_store(load, save)
+
+
+def snapshot_json_store(client: Any, key: str) -> tuple[Callable[[], Any], Callable[[Any], None]]:
+    """Load/save callables over a sync redis-like client (get/set with ex)."""
+
+    def load() -> dict[str, Any] | None:
+        raw = client.get(key)
+        return json.loads(raw) if raw else None
+
+    def save(snap: dict[str, Any]) -> None:
+        client.set(key, json.dumps(snap), ex=SNAPSHOT_TTL_SECONDS)
+
+    return load, save
 
 
 def configure_from_env(service: str) -> None:
