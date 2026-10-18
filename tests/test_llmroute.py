@@ -206,3 +206,15 @@ def test_default_route_carries_the_default_provider():
     llmroute.set_client_for_test(None)
     assert llmroute.resolve("x", "gemini-z").provider == "google"
     assert llmroute.resolve("x", "anything", default_provider="openai").provider == "openai"
+
+
+def test_stored_route_is_none_without_a_row(monkeypatch):
+    routes = {"items": [{"family": "juka_live", "model": "gemini-x"}]}
+    monkeypatch.setattr(httpx, "get", _fake_store(routes, {"items": []}))
+    llmroute.set_client_for_test(llmroute.RouteClient("http://loc"))
+    try:
+        assert llmroute.stored_route("juka_live").model == "gemini-x"
+        assert llmroute.stored_route("nope") is None
+    finally:
+        llmroute.set_client_for_test(None)
+    assert llmroute.stored_route("juka_live") is None
