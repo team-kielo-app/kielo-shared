@@ -188,6 +188,23 @@ _CONTEXT_RULE = (
     "Return only the translation of text, not a translation of the context."
 )
 
+_VERBATIM_RULE = (
+    "EXCEPTION to the evidence-only rule: when an item's context has a "
+    "keep_verbatim list, that is a binding instruction. Every string in it must "
+    "appear in your translation exactly as written, character for character. "
+    "These strings are learning-language material and may be a deliberate "
+    "mistake the learner has to spot: never correct, re-inflect, re-case, "
+    "re-punctuate or translate them, even if they look wrong."
+)
+
+
+def _context_rule(contexts) -> str:
+    rule = _CONTEXT_RULE
+    if any(isinstance(c, dict) and c.get("keep_verbatim") for c in contexts):
+        rule += " " + _VERBATIM_RULE
+    return rule
+
+
 # The app speaks to the learner informally (German copy says "du" 263 times
 # and "Sie" never; French "tu", Spanish "tú"). Unsteered, one German session
 # mixed "Wählen Sie" and "Höre dir an" card to card (audit 2026-09-25).
@@ -461,7 +478,7 @@ class OpenAIProvider:
             source_lang=source_lang, target_lang=target_lang
         )
         if any(item.context for item in items):
-            system_prompt += "\n" + _CONTEXT_RULE
+            system_prompt += "\n" + _context_rule([i.context for i in items])
         started = time.perf_counter()
         raw = await self._generate(
             system_prompt,
@@ -545,7 +562,7 @@ class OpenAIProvider:
             user_prompt = "{text}"
             variables = {"text": value}
             if item.context:
-                prompt += "\n" + _CONTEXT_RULE
+                prompt += "\n" + _context_rule([item.context])
                 user_prompt = "Text: {text}\nContext evidence: {context}"
                 variables["context"] = json.dumps(item.context, ensure_ascii=False)
             started = time.perf_counter()
