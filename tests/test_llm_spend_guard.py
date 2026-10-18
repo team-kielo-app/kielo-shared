@@ -154,100 +154,101 @@ def test_legacy_env_spelling_counts_as_the_environment(monkeypatch):
 # ----------------------------------------------- redis wiring and the audio loop
 
 
-def _clean_env(monkeypatch):
-    for k in (
-        "REDIS_URL",
-        "REDIS_HOST",
-        "REDIS_PORT",
-        "REDIS_PASSWORD",
-        "ENVIRONMENT",
-        "ENV",
-        "K_SERVICE",
-        "LLM_DAILY_BUDGET_USD",
-        "LLM_HOURLY_CALL_CAP",
-    ):
-        monkeypatch.delenv(k, raising=False)
-
-
-def _connection(client):
-    return client.connection_pool.connection_kwargs
-
-
 @pytest.mark.parametrize(
-    "host,port_env,want_host,want_port",
+    "env,want",
     [
-        ("h:6379", None, "h", 6379),
-        ("10.0.0.3:6380", None, "10.0.0.3", 6380),
-        ("h", "6381", "h", 6381),
-        ("h", None, "h", 6379),
-        ("h:6379", "9999", "h", 6379),
+        ({"REDIS_HOST": "h:6379"}, ("h", 6379, "")),
+        ({"REDIS_HOST": "10.0.0.3:6380"}, ("10.0.0.3", 6380, "")),
+        ({"REDIS_HOST": "h", "REDIS_PORT": "6381"}, ("h", 6381, "")),
+        ({"REDIS_HOST": "h"}, ("h", 6379, "")),
+        ({"REDIS_HOST": "h:6379", "REDIS_PORT": "9999"}, ("h", 6379, "")),
+        ({"REDIS_HOST": "h:notaport"}, ("h:notaport", 6379, "")),
+        (
+            {"REDIS_URL": "redis://u:pw@cache.internal:6390/2"},
+            ("", 6379, "redis://u:pw@cache.internal:6390/2"),
+        ),
+        (
+            {"REDIS_HOST": "redis://cache.internal:6391/0"},
+            ("", 6379, "redis://cache.internal:6391/0"),
+        ),
+        (
+            {"REDIS_URL": "redis://a:1/0", "REDIS_HOST": "h:6379"},
+            ("", 6379, "redis://a:1/0"),
+        ),
     ],
 )
-def test_redis_host_may_carry_its_port(monkeypatch, host, port_env, want_host, want_port):
-    pytest.importorskip("redis")
-    _clean_env(monkeypatch)
-    monkeypatch.setenv("REDIS_HOST", host)
-    if port_env:
-        monkeypatch.setenv("REDIS_PORT", port_env)
-    kw = _connection(sg._default_redis_factory())
-    assert (kw["host"], kw["port"]) == (want_host, want_port)
-    assert kw["socket_timeout"] <= 0.25 and kw["socket_connect_timeout"] <= 0.25
+def test_redis_target_parses_host_port_and_urls(env, want):
+    target = sg.redis_target(env)
+    assert (target.host, target.port, target.url) == want
 
 
-def test_redis_url_forms_are_honoured(monkeypatch):
-    pytest.importorskip("redis")
-    _clean_env(monkeypatch)
-    monkeypatch.setenv("REDIS_URL", "redis://u:pw@cache.internal:6390/2")
-    kw = _connection(sg._default_redis_factory())
-    assert (kw["host"], kw["port"], kw["db"]) == ("cache.internal", 6390, 2)
-    monkeypatch.delenv("REDIS_URL")
-    monkeypatch.setenv("REDIS_HOST", "redis://cache.internal:6391/0")
-    kw = _connection(sg._default_redis_factory())
-    assert (kw["host"], kw["port"]) == ("cache.internal", 6391)
+def test_redis_target_carries_the_password_and_needs_a_host():
+    assert sg.redis_target({"REDIS_HOST": "h:1", "REDIS_PASSWORD": "pw"}).password == "pw"
+    with pytest.raises(RuntimeError):
+        sg.redis_target({})
 
 
-@pytest.fixture
-def silent_redis_server():
-    """Accepts connections and never answers: a store that is up but unresponsive."""
-    import socket
-
-    server = socket.socket()
-    server.bind(("127.0.0.1", 0))
-    server.listen(8)
-    yield server.getsockname()[1]
-    server.close()
+def test_the_guard_waits_on_redis_for_a_short_bounded_time():
+    assert sg._REDIS_TIMEOUT_SECONDS <= 0.25
+    assert sg._LOOP_WAIT_SECONDS <= 0.3
 
 
-def test_an_unresponsive_store_returns_within_the_timeout_and_fails_open_in_prod(
-    monkeypatch, silent_redis_server
-):
-    import time
+class _UnresponsiveStore:
+    """A store that is up but never answers within the guard's patience."""
 
-    pytest.importorskip("redis")
-    _clean_env(monkeypatch)
+    def __init__(self, seconds: float = 1.0) -> None:
+        self.seconds = seconds
+
+    def mget(self, keys):
+        import time
+
+        time.sleep(self.seconds)
+        return [None] * len(keys)
+
+    def incrby(self, key, n):
+        import time
+
+        time.sleep(self.seconds)
+        return n
+
+    def expire(self, *_a):
+        return True
+
+
+def _prod_with_budget(monkeypatch):
+    for k in ("REDIS_URL", "REDIS_HOST", "ENV", "K_SERVICE", "LLM_HOURLY_CALL_CAP"):
+        monkeypatch.delenv(k, raising=False)
     monkeypatch.setenv("ENVIRONMENT", "production")
     monkeypatch.setenv("LLM_DAILY_BUDGET_USD", "5")
-    monkeypatch.setenv("REDIS_HOST", f"127.0.0.1:{silent_redis_server}")
-    sg.set_redis_factory(None)
-    try:
-        started = time.monotonic()
-        assert sg.session_headroom("juka_live") == sg.HEADROOM_OK
-        sg.record_usd(0.01, family="juka_live")
-        assert time.monotonic() - started < 1.0
-    finally:
-        sg.set_redis_factory(None)
 
 
-def test_the_audio_loop_never_stalls_on_the_guard(monkeypatch, silent_redis_server):
+def test_an_unresponsive_store_fails_open_within_the_loop_wait(monkeypatch):
     import asyncio
     import time
 
-    pytest.importorskip("redis")
-    _clean_env(monkeypatch)
-    monkeypatch.setenv("ENVIRONMENT", "production")
-    monkeypatch.setenv("LLM_DAILY_BUDGET_USD", "5")
-    monkeypatch.setenv("REDIS_HOST", f"127.0.0.1:{silent_redis_server}")
-    sg.set_redis_factory(None)
+    _prod_with_budget(monkeypatch)
+    sg.set_redis_factory(lambda: _UnresponsiveStore())
+
+    async def main():
+        started = time.monotonic()
+        result = sg.session_headroom("juka_live")
+        sg.record_usd(0.01, family="juka_live")
+        return result, time.monotonic() - started
+
+    try:
+        result, elapsed = asyncio.run(main())
+    finally:
+        sg.set_redis_factory(None)
+    assert result == sg.HEADROOM_OK
+    assert elapsed < 0.6
+
+
+def test_the_audio_loop_never_stalls_on_the_guard(monkeypatch):
+    import asyncio
+    import time
+
+    _prod_with_budget(monkeypatch)
+    sg.set_redis_factory(lambda: _UnresponsiveStore())
 
     async def main():
         worst = 0.0
