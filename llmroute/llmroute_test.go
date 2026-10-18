@@ -106,3 +106,28 @@ func TestRecorderAggregatesAndFlushes(t *testing.T) {
 	}
 	NewRecorder("svc", "", "").Record(Sample{Family: "x"})
 }
+
+func TestResolveCarriesProviderFromModels(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == modelsPath {
+			_, _ = w.Write([]byte(`{"items":[{"model":"listed-model","provider":"openai"}]}`))
+			return
+		}
+		_, _ = w.Write([]byte(`{"items":[` +
+			`{"family":"juka_live","model":"listed-model","thinking_budget":-1},` +
+			`{"family":"juka_hints","model":"gemini-x","thinking_budget":-1}]}`))
+	}))
+	defer srv.Close()
+	c := NewClient(srv.URL, "", 30*time.Second)
+	def := Route{Model: "gemini-default", ThinkingBudget: -1}
+
+	if got := c.Resolve(context.Background(), FamilyJukaLive, def); got.Provider != ProviderOpenAI {
+		t.Fatalf("listed model provider = %q", got.Provider)
+	}
+	if got := c.Resolve(context.Background(), FamilyJukaHints, def); got.Provider != ProviderGoogle {
+		t.Fatalf("unlisted model should infer from its name, got %q", got.Provider)
+	}
+	if got := c.Resolve(context.Background(), "unknown_family", def); got.Provider != ProviderGoogle {
+		t.Fatalf("default route should infer from the default model, got %q", got.Provider)
+	}
+}

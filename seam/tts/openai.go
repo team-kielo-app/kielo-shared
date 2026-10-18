@@ -17,12 +17,14 @@ import (
 // OpenAITTSProvider calls the OpenAI /v1/audio/speech endpoint.
 // Stateless beyond the injected http.Client + API key. Caller-side
 // concerns (cache, breaker, voice normalization) stay outside the
+const instructionsModelPrefix = "gpt-"
+
 // provider per the seam scope rules in types.go.
 type OpenAITTSProvider struct {
 	APIKey       string
 	HTTPClient   *http.Client
 	Endpoint     string // override for tests; defaults to OpenAI prod
-	DefaultModel string // applied when Request.Model is empty
+	DefaultModel string // applied when Request.Model is empty; unset by default, the tts_routes row supplies the model
 }
 
 // NewOpenAITTSProvider builds a provider with sensible defaults.
@@ -36,7 +38,6 @@ func NewOpenAITTSProvider(apiKey string, client *http.Client) *OpenAITTSProvider
 		APIKey:       apiKey,
 		HTTPClient:   client,
 		Endpoint:     "https://api.openai.com/v1/audio/speech",
-		DefaultModel: "tts-1",
 	}
 }
 
@@ -62,6 +63,9 @@ func (p *OpenAITTSProvider) Synthesize(ctx context.Context, req Request) (*Resul
 	if model == "" {
 		model = p.DefaultModel
 	}
+	if model == "" {
+		return nil, &Error{Class: ErrorClassClientError, Err: errors.New("no OpenAI TTS model: the tts_routes row supplies it")}
+	}
 	payload := map[string]any{
 		"model":           model,
 		"voice":           req.VoiceID,
@@ -71,9 +75,9 @@ func (p *OpenAITTSProvider) Synthesize(ctx context.Context, req Request) (*Resul
 	if req.Speed > 0 {
 		payload["speed"] = req.Speed
 	}
-	// gpt-4o-mini-tts accepts a `instructions` field for stylistic
-	// hints; older `tts-1*` models reject it.
-	if req.Instructions != "" && model == "gpt-4o-mini-tts" {
+	// gpt-* speech models accept an `instructions` field for stylistic
+	// hints; the older `tts-1*` models reject it.
+	if req.Instructions != "" && strings.HasPrefix(model, instructionsModelPrefix) {
 		payload["instructions"] = req.Instructions
 	}
 

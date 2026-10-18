@@ -416,7 +416,9 @@ async def test_openai_chat_provider_passes_request_through():
 
 @pytest.mark.asyncio
 async def test_openai_chat_provider_rejects_empty_prompt():
-    p = OpenAIChatProvider(_FakeChatClient(_FakeChatCompletions()))
+    p = OpenAIChatProvider(
+        _FakeChatClient(_FakeChatCompletions()), default_model="m"
+    )
     with pytest.raises(Error) as ei:
         await p.generate(Request(prompt="", task="t"))
     assert ei.value.error_class == ErrorClass.INVALID_REQUEST
@@ -425,7 +427,9 @@ async def test_openai_chat_provider_rejects_empty_prompt():
 @pytest.mark.asyncio
 async def test_openai_chat_provider_classifies_timeout():
     err = TimeoutError("request timeout")
-    p = OpenAIChatProvider(_FakeChatClient(_FakeChatCompletions(error=err)))
+    p = OpenAIChatProvider(
+        _FakeChatClient(_FakeChatCompletions(error=err)), default_model="m"
+    )
     with pytest.raises(Error) as ei:
         await p.generate(Request(prompt="x", task="t"))
     assert ei.value.error_class == ErrorClass.TIMEOUT
@@ -447,6 +451,14 @@ async def test_openai_chat_provider_streams_delta_tokens():
 @pytest.mark.asyncio
 async def test_openai_chat_provider_rejects_missing_client():
     p = OpenAIChatProvider(None)
+    with pytest.raises(Error) as ei:
+        await p.generate(Request(prompt="x", task="t"))
+    assert ei.value.error_class == ErrorClass.INVALID_REQUEST
+
+
+@pytest.mark.asyncio
+async def test_openai_chat_provider_has_no_default_model():
+    p = OpenAIChatProvider(_FakeChatClient(_FakeChatCompletions()))
     with pytest.raises(Error) as ei:
         await p.generate(Request(prompt="x", task="t"))
     assert ei.value.error_class == ErrorClass.INVALID_REQUEST

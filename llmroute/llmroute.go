@@ -44,7 +44,11 @@ const (
 
 	DefaultTTL = 30 * time.Second
 
-	routesPath     = "/internal/api/v3/localization/llm-routes"
+	routesPath = "/internal/api/v3/localization/llm-routes"
+	modelsPath = "/internal/api/v3/localization/llm-models"
+
+	ProviderGoogle = "google"
+	ProviderOpenAI = "openai"
 	fetchTimeout   = 2 * time.Second
 	maxResponseLen = 1 << 20
 )
@@ -55,9 +59,36 @@ type Route struct {
 	ThinkingBudget int
 	// DailyBudgetUSD is the per-family cap; 0 means no per-family cap.
 	DailyBudgetUSD float64
+	// Provider is llm_models.provider of Model ("google", "openai"); empty
+	// when neither the store nor the model name says.
+	Provider string
+}
+
+// providerByPrefix is the last resort when llm_models has no row for a routed
+// model: the model-name family decides.
+var providerByPrefix = []struct{ prefix, provider string }{
+	{"gemini-", ProviderGoogle},
+	{"gpt-", ProviderOpenAI},
+}
+
+// InferProvider names the provider from the model name alone, "" when unknown.
+func InferProvider(model string) string {
+	name := strings.ToLower(strings.TrimSpace(model))
+	for _, p := range providerByPrefix {
+		if strings.HasPrefix(name, p.prefix) {
+			return p.provider
+		}
+	}
+	return ""
+}
+
+type modelRow struct {
+	Model    string `json:"model"`
+	Provider string `json:"provider"`
 }
 
 type row struct {
+	Provider       string   `json:"provider"`
 	Family         string   `json:"family"`
 	Model          string   `json:"model"`
 	ThinkingBudget int      `json:"thinking_budget"`
@@ -73,6 +104,7 @@ type Client struct {
 
 	mu        sync.Mutex
 	routes    map[string]Route
+	providers map[string]string
 	logged    map[string]string
 	fetchedAt time.Time
 	now       func() time.Time
@@ -101,10 +133,29 @@ func (c *Client) Resolve(ctx context.Context, family string, def Route) Route {
 	}
 	got, ok := c.snapshot(ctx)[family]
 	if !ok || strings.TrimSpace(got.Model) == "" {
+		if def.Provider == "" {
+			def.Provider = InferProvider(def.Model)
+		}
 		return def
 	}
+	got.Provider = c.providerOf(got)
 	c.noteChange(family, got)
 	return got
+}
+
+func (c *Client) providerOf(r Route) string {
+	c.mu.Lock()
+	known := c.providers[r.Model]
+	c.mu.Unlock()
+	if known != "" {
+		return known
+	}
+	if r.Provider != "" {
+		return r.Provider
+	}
+	inferred := InferProvider(r.Model)
+	slog.Warn("LLM_ROUTE model has no llm_models row; provider inferred", "model", r.Model, "provider", inferred)
+	return inferred
 }
 
 func (c *Client) snapshot(ctx context.Context) map[string]Route {
@@ -118,18 +169,21 @@ func (c *Client) snapshot(ctx context.Context) map[string]Route {
 	c.fetchedAt = c.now()
 	if err == nil {
 		c.routes = routes
+		if providers, perr := c.fetchProviders(ctx); perr == nil {
+			c.providers = providers
+		}
 	}
 	return c.routes
 }
 
 func (c *Client) noteChange(family string, r Route) {
-	sig := fmt.Sprintf("%s|%d|%g", r.Model, r.ThinkingBudget, r.DailyBudgetUSD)
+	sig := fmt.Sprintf("%s|%s|%d|%g", r.Model, r.Provider, r.ThinkingBudget, r.DailyBudgetUSD)
 	c.mu.Lock()
 	prev, seen := c.logged[family]
 	c.logged[family] = sig
 	c.mu.Unlock()
 	if !seen || prev != sig {
-		slog.Info("LLM_ROUTE resolved", "family", family, "model", r.Model,
+		slog.Info("LLM_ROUTE resolved", "family", family, "model", r.Model, "provider", r.Provider,
 			"thinking_budget", r.ThinkingBudget, "daily_budget_usd", r.DailyBudgetUSD)
 	}
 }
@@ -157,6 +211,52 @@ func (c *Client) fetch(ctx context.Context) (map[string]Route, error) {
 	return decodeRoutes(body)
 }
 
+func (c *Client) fetchProviders(ctx context.Context) (map[string]string, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+modelsPath, http.NoBody)
+	if err != nil {
+		return nil, err
+	}
+	if c.apiKey != "" {
+		req.Header.Set("X-Internal-API-Key", c.apiKey)
+	}
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseLen))
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("llm-models: status %d", resp.StatusCode)
+	}
+	return decodeProviders(body)
+}
+
+func decodeProviders(body []byte) (map[string]string, error) {
+	var env struct {
+		Items []modelRow `json:"items"`
+		Data  *struct {
+			Items []modelRow `json:"items"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(body, &env); err != nil {
+		return nil, err
+	}
+	items := env.Items
+	if env.Data != nil {
+		items = env.Data.Items
+	}
+	out := make(map[string]string, len(items))
+	for _, m := range items {
+		if m.Model != "" && m.Provider != "" {
+			out[m.Model] = m.Provider
+		}
+	}
+	return out, nil
+}
+
 func decodeRoutes(body []byte) (map[string]Route, error) {
 	var env struct {
 		Items []row `json:"items"`
@@ -173,7 +273,7 @@ func decodeRoutes(body []byte) (map[string]Route, error) {
 	}
 	out := make(map[string]Route, len(items))
 	for _, r := range items {
-		route := Route{Model: r.Model, ThinkingBudget: r.ThinkingBudget}
+		route := Route{Model: r.Model, ThinkingBudget: r.ThinkingBudget, Provider: r.Provider}
 		if r.DailyBudgetUSD != nil {
 			route.DailyBudgetUSD = *r.DailyBudgetUSD
 		}

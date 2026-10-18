@@ -7,6 +7,10 @@ refreshed in the background; the last good copy keeps answering when the store
 is unreachable, and with no copy (or no ``LOCALIZATION_SERVICE_URL``) the
 caller's compiled default is returned (fail-open, same as opswitch).
 
+A route also answers WHICH provider serves its model (``Route.provider``): the
+``llm_models.provider`` of the routed model, fetched alongside the routes. The
+same table prices calls (``model_price`` / ``estimate_usd``).
+
 ``record_call`` aggregates usage per (service, family, model) in-process and a
 daemon thread flushes it to the rollup endpoint every few minutes, best effort.
 """
@@ -14,6 +18,7 @@ daemon thread flushes it to the rollup endpoint every few minutes, best effort.
 from __future__ import annotations
 
 import calendar
+import dataclasses
 import logging
 import os
 import random
@@ -23,6 +28,8 @@ from dataclasses import dataclass
 from typing import Any, Callable
 
 import httpx
+
+from kielo_shared.llm import pricing
 
 logger = logging.getLogger(__name__)
 
@@ -45,9 +52,18 @@ THINKING_DEFAULT = -1
 DEFAULT_TTL_SECONDS = 30.0
 DEFAULT_FLUSH_SECONDS = 300.0
 _ROUTES_PATH = "/internal/api/v3/localization/llm-routes"
+_MODELS_PATH = "/internal/api/v3/localization/llm-models"
 _USAGE_PATH = "/internal/api/v3/localization/llm-usage"
 _FETCH_TIMEOUT_SECONDS = 2.0
 _RESERVOIR = 512
+
+
+PROVIDER_GOOGLE = "google"
+PROVIDER_OPENAI = "openai"
+
+# Last resort when llm_models has no row for a routed model (store down on a
+# cold start, model not yet allowlisted): the model-name family decides.
+_PROVIDER_BY_PREFIX = (("gemini-", PROVIDER_GOOGLE), ("gpt-", PROVIDER_OPENAI))
 
 
 @dataclass(frozen=True)
@@ -55,6 +71,41 @@ class Route:
     model: str
     thinking_budget: int = THINKING_DEFAULT
     daily_budget_usd: float = 0.0
+    provider: str = ""
+
+
+@dataclass(frozen=True)
+class ModelInfo:
+    provider: str
+    input_usd_per_mtok: float
+    output_usd_per_mtok: float
+    active: bool = True
+
+
+def infer_provider(model: str) -> str:
+    name = (model or "").strip().lower()
+    for prefix, provider in _PROVIDER_BY_PREFIX:
+        if name.startswith(prefix):
+            return provider
+    return ""
+
+
+def _decode_models(body: Any) -> dict[str, ModelInfo]:
+    if isinstance(body, dict) and isinstance(body.get("data"), dict):
+        body = body["data"]
+    out: dict[str, ModelInfo] = {}
+    for row in (body or {}).get("items") or []:
+        model = (row.get("model") or "").strip()
+        provider = (row.get("provider") or "").strip()
+        if not model or not provider:
+            continue
+        out[model] = ModelInfo(
+            provider=provider,
+            input_usd_per_mtok=float(row.get("input_usd_per_mtok") or 0.0),
+            output_usd_per_mtok=float(row.get("output_usd_per_mtok") or 0.0),
+            active=bool(row.get("active", True)),
+        )
+    return out
 
 
 def _decode(body: Any) -> dict[str, Route]:
@@ -70,6 +121,7 @@ def _decode(body: Any) -> dict[str, Route]:
             model=model,
             thinking_budget=int(row.get("thinking_budget", THINKING_DEFAULT)),
             daily_budget_usd=float(budget) if budget is not None else 0.0,
+            provider=(row.get("provider") or "").strip(),
         )
     return out
 
@@ -87,6 +139,7 @@ class RouteClient:
         self._ttl = ttl if ttl > 0 else DEFAULT_TTL_SECONDS
         self._clock = clock
         self._routes: dict[str, Route] = {}
+        self._models: dict[str, ModelInfo] = {}
         self._loaded = False
         self._fetched_at = 0.0
         self._refreshing = False
@@ -99,26 +152,56 @@ class RouteClient:
             return None
         self._maybe_refresh()
         found = self._routes.get(family)
-        if found is not None and self._logged.get(family) != found:
+        if found is None:
+            return None
+        found = self._with_provider(found)
+        if self._logged.get(family) != found:
             self._logged[family] = found
             logger.info(
-                "LLM_ROUTE resolved family=%s model=%s thinking_budget=%d daily_budget_usd=%.4f",
+                "LLM_ROUTE resolved family=%s model=%s provider=%s thinking_budget=%d daily_budget_usd=%.4f",
                 family,
                 found.model,
+                found.provider,
                 found.thinking_budget,
                 found.daily_budget_usd,
             )
         return found
+
+    def _with_provider(self, route: Route) -> Route:
+        info = self._models.get(route.model)
+        if info is not None:
+            return dataclasses.replace(route, provider=info.provider)
+        if route.provider:
+            return route
+        provider = infer_provider(route.model)
+        logger.warning(
+            "LLM_ROUTE model=%s has no llm_models row; provider inferred=%s",
+            route.model,
+            provider or "unknown",
+        )
+        return dataclasses.replace(route, provider=provider)
+
+    def model_info(self, model: str) -> ModelInfo | None:
+        if not self._base_url:
+            return None
+        self._maybe_refresh()
+        return self._models.get(model)
 
     def resolve(
         self,
         family: str,
         default_model: str,
         default_thinking: int = THINKING_DEFAULT,
+        default_provider: str = "",
     ) -> Route:
         found = self.route(family)
         if found is None:
-            return Route(default_model, default_thinking, 0.0)
+            return Route(
+                default_model,
+                default_thinking,
+                0.0,
+                default_provider or infer_provider(default_model),
+            )
         return found
 
     def _maybe_refresh(self) -> None:
@@ -147,11 +230,24 @@ class RouteClient:
             )
             resp.raise_for_status()
             self._routes, self._loaded = _decode(resp.json()), True
+            self._refresh_models(headers)
         except (httpx.HTTPError, ValueError, AttributeError):
             pass
         finally:
             with self._lock:
                 self._refreshing = False
+
+    def _refresh_models(self, headers: dict[str, str]) -> None:
+        try:
+            resp = httpx.get(
+                self._base_url + _MODELS_PATH,
+                headers=headers,
+                timeout=_FETCH_TIMEOUT_SECONDS,
+            )
+            resp.raise_for_status()
+            self._models = _decode_models(resp.json())
+        except (httpx.HTTPError, ValueError, AttributeError):
+            pass
 
 
 class _Agg:
@@ -351,11 +447,33 @@ def service_name() -> str:
 
 
 def resolve(
-    family: str, default_model: str, default_thinking: int = THINKING_DEFAULT
+    family: str,
+    default_model: str,
+    default_thinking: int = THINKING_DEFAULT,
+    default_provider: str = "",
 ) -> Route:
+    """The family's model, provider and budgets; the default fills a gap (no store, unknown family)."""
     if _client is None:
-        return Route(default_model, default_thinking, 0.0)
-    return _client.resolve(family, default_model, default_thinking)
+        return Route(
+            default_model,
+            default_thinking,
+            0.0,
+            default_provider or infer_provider(default_model),
+        )
+    return _client.resolve(family, default_model, default_thinking, default_provider)
+
+
+def model_price(model: str) -> tuple[float, float]:
+    """USD per 1M tokens (input, output incl. thinking): llm_models first, then the compiled table."""
+    info = _client.model_info(model) if _client is not None else None
+    if info is not None:
+        return (info.input_usd_per_mtok, info.output_usd_per_mtok)
+    return pricing.PRICES.get(model, pricing.FALLBACK_PRICE)
+
+
+def estimate_usd(model: str, tokens_in: int, tokens_out: int, thinking: int = 0) -> float:
+    price_in, price_out = model_price(model)
+    return (tokens_in * price_in + (tokens_out + thinking) * price_out) / 1_000_000
 
 
 def daily_budget_usd(family: str) -> float:
