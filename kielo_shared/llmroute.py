@@ -463,6 +463,11 @@ def resolve(
     return _client.resolve(family, default_model, default_thinking, default_provider)
 
 
+def stored_route(family: str) -> Route | None:
+    """The route the store holds for family, None when there is none (no store, unknown family)."""
+    return _client.route(family) if _client is not None else None
+
+
 def model_price(model: str) -> tuple[float, float]:
     """USD per 1M tokens (input, output incl. thinking): llm_models first, then the compiled table."""
     info = _client.model_info(model) if _client is not None else None
