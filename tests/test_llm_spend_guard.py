@@ -149,3 +149,132 @@ def test_legacy_env_spelling_counts_as_the_environment(monkeypatch):
     monkeypatch.setenv("K_SERVICE", "svc")
     with pytest.raises(sg.PaidLLMCallsDisabled):
         sg.admit_paid_call("t")
+
+
+# ----------------------------------------------- redis wiring and the audio loop
+
+
+def _clean_env(monkeypatch):
+    for k in (
+        "REDIS_URL",
+        "REDIS_HOST",
+        "REDIS_PORT",
+        "REDIS_PASSWORD",
+        "ENVIRONMENT",
+        "ENV",
+        "K_SERVICE",
+        "LLM_DAILY_BUDGET_USD",
+        "LLM_HOURLY_CALL_CAP",
+    ):
+        monkeypatch.delenv(k, raising=False)
+
+
+def _connection(client):
+    return client.connection_pool.connection_kwargs
+
+
+@pytest.mark.parametrize(
+    "host,port_env,want_host,want_port",
+    [
+        ("h:6379", None, "h", 6379),
+        ("10.0.0.3:6380", None, "10.0.0.3", 6380),
+        ("h", "6381", "h", 6381),
+        ("h", None, "h", 6379),
+        ("h:6379", "9999", "h", 6379),
+    ],
+)
+def test_redis_host_may_carry_its_port(monkeypatch, host, port_env, want_host, want_port):
+    pytest.importorskip("redis")
+    _clean_env(monkeypatch)
+    monkeypatch.setenv("REDIS_HOST", host)
+    if port_env:
+        monkeypatch.setenv("REDIS_PORT", port_env)
+    kw = _connection(sg._default_redis_factory())
+    assert (kw["host"], kw["port"]) == (want_host, want_port)
+    assert kw["socket_timeout"] <= 0.25 and kw["socket_connect_timeout"] <= 0.25
+
+
+def test_redis_url_forms_are_honoured(monkeypatch):
+    pytest.importorskip("redis")
+    _clean_env(monkeypatch)
+    monkeypatch.setenv("REDIS_URL", "redis://u:pw@cache.internal:6390/2")
+    kw = _connection(sg._default_redis_factory())
+    assert (kw["host"], kw["port"], kw["db"]) == ("cache.internal", 6390, 2)
+    monkeypatch.delenv("REDIS_URL")
+    monkeypatch.setenv("REDIS_HOST", "redis://cache.internal:6391/0")
+    kw = _connection(sg._default_redis_factory())
+    assert (kw["host"], kw["port"]) == ("cache.internal", 6391)
+
+
+@pytest.fixture
+def silent_redis_server():
+    """Accepts connections and never answers: a store that is up but unresponsive."""
+    import socket
+
+    server = socket.socket()
+    server.bind(("127.0.0.1", 0))
+    server.listen(8)
+    yield server.getsockname()[1]
+    server.close()
+
+
+def test_an_unresponsive_store_returns_within_the_timeout_and_fails_open_in_prod(
+    monkeypatch, silent_redis_server
+):
+    import time
+
+    pytest.importorskip("redis")
+    _clean_env(monkeypatch)
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.setenv("LLM_DAILY_BUDGET_USD", "5")
+    monkeypatch.setenv("REDIS_HOST", f"127.0.0.1:{silent_redis_server}")
+    sg.set_redis_factory(None)
+    try:
+        started = time.monotonic()
+        assert sg.session_headroom("juka_live") == sg.HEADROOM_OK
+        sg.record_usd(0.01, family="juka_live")
+        assert time.monotonic() - started < 1.0
+    finally:
+        sg.set_redis_factory(None)
+
+
+def test_the_audio_loop_never_stalls_on_the_guard(monkeypatch, silent_redis_server):
+    import asyncio
+    import time
+
+    pytest.importorskip("redis")
+    _clean_env(monkeypatch)
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.setenv("LLM_DAILY_BUDGET_USD", "5")
+    monkeypatch.setenv("REDIS_HOST", f"127.0.0.1:{silent_redis_server}")
+    sg.set_redis_factory(None)
+
+    async def main():
+        worst = 0.0
+        stop = False
+
+        async def probe():
+            nonlocal worst
+            last = time.monotonic()
+            while not stop:
+                await asyncio.sleep(0.005)
+                now = time.monotonic()
+                worst = max(worst, now - last - 0.005)
+                last = now
+
+        task = asyncio.create_task(probe())
+        await asyncio.sleep(0.05)
+        result = await sg.asession_headroom("juka_live")
+        for _ in range(5):
+            sg.record_usd(0.01, family="juka_live")
+        await asyncio.sleep(0.05)
+        stop = True
+        await task
+        return result, worst
+
+    try:
+        result, worst = asyncio.run(main())
+    finally:
+        sg.set_redis_factory(None)
+    assert result == sg.HEADROOM_OK
+    assert worst < 0.1, f"event loop stalled for {worst:.3f}s"

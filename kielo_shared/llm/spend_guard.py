@@ -12,16 +12,20 @@ Env (read at call time):
   LLM_HOURLY_CALL_CAP       calls per clock hour. Default 200 non-prod, 0 (off) prod.
   LLM_GUARD_EST_USD_PER_CALL  cost booked at admission (default 0.002) and
                             corrected by `record_actual_usd` when known.
-  REDIS_URL | REDIS_HOST/REDIS_PORT/REDIS_PASSWORD   counter store.
+  REDIS_URL | REDIS_HOST[:port] | REDIS_HOST + REDIS_PORT, REDIS_PASSWORD
+                            counter store. REDIS_HOST may be "host:port" (the
+                            convo VM passes it that way) or a redis:// URL.
 
 Non-prod fails closed when Redis is unreachable; prod fails open (logged).
 """
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import time
+from concurrent.futures import ThreadPoolExecutor
 from contextvars import ContextVar
 from typing import Any, Callable
 
@@ -86,27 +90,60 @@ def _int(e: dict[str, str] | os._Environ, key: str, default: int) -> int:
     return int(_float(e, key, float(default)))
 
 
+# The guard sits on audio paths: keep every Redis round trip short, fail open in
+# production, and never wait on the store from an asyncio loop for longer than
+# _LOOP_WAIT_SECONDS.
+_REDIS_TIMEOUT_SECONDS = 0.2
+_LOOP_WAIT_SECONDS = 0.25
+
+
+def _split_host_port(raw: str) -> tuple[str, int | None]:
+    host, sep, port = raw.rpartition(":")
+    if sep and host and port.isdigit() and ":" not in host:
+        return host, int(port)
+    return raw, None
+
+
 def _default_redis_factory() -> Any:
     import redis  # type: ignore[import-not-found]
+    from redis.backoff import NoBackoff  # type: ignore[import-not-found]
+    from redis.retry import Retry  # type: ignore[import-not-found]
 
     e = os.environ
     kwargs: dict[str, Any] = {
-        "socket_connect_timeout": 1.0,
-        "socket_timeout": 1.0,
+        "socket_connect_timeout": _REDIS_TIMEOUT_SECONDS,
+        "socket_timeout": _REDIS_TIMEOUT_SECONDS,
         "decode_responses": True,
+        # redis-py retries timeouts with backoff by default (seconds per call):
+        # the guard fails fast and open instead.
+        "retry": Retry(NoBackoff(), 0),
     }
     url = (e.get("REDIS_URL") or "").strip()
+    host = (e.get("REDIS_HOST") or "").strip()
+    if not url and host.startswith(("redis://", "rediss://", "unix://")):
+        url = host
     if url:
         return redis.Redis.from_url(url, **kwargs)
-    host = (e.get("REDIS_HOST") or "").strip()
     if not host:
         raise RuntimeError("no REDIS_URL/REDIS_HOST configured")
+    host, port = _split_host_port(host)
     return redis.Redis(
         host=host,
-        port=_int(e, "REDIS_PORT", 6379),
+        port=port if port is not None else _int(e, "REDIS_PORT", 6379),
         password=(e.get("REDIS_PASSWORD") or None),
         **kwargs,
     )
+
+
+_executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="llm-guard")
+
+
+def _loop_running() -> bool:
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return False
+    return True
 
 
 _redis_factory: Callable[[], Any] = _default_redis_factory
@@ -365,57 +402,97 @@ def record_actual_usd(actual_usd: float, *, family: str = "") -> None:
         logger.warning("LLM_GUARD spend adjust failed: %s", exc)
 
 
-def has_headroom(family: str = "") -> bool:
-    """Read-only: may a new paid session start under this family's budget?
+HEADROOM_OK = "ok"
+HEADROOM_FAMILY_OVER = "family_daily_budget"
+HEADROOM_GLOBAL_OVER = "daily_budget"
+HEADROOM_DISABLED = "paid_calls_disabled"
+HEADROOM_UNAVAILABLE = "guard_unavailable"
 
-    For callers that cannot be refused mid-flight (a live voice call): check once
-    when the session is built, then book usage with ``record_usd``. Counts the
-    family cap and the global rolling-24h budget; books nothing. Production
-    fails open when the counters are unreachable, like admit_paid_call.
-    """
-    if not paid_calls_enabled():
-        return False
-    family = family or llm_family_var.get()
-    prod = is_production()
+
+def _headroom_blocking(family: str, prod: bool) -> str:
     e = os.environ
     budget = _float(
         e, "LLM_DAILY_BUDGET_USD", 0.0 if prod else _DEFAULT_NONPROD_BUDGET_USD
     )
     family_budget = _family_budget(family) if family else 0.0
     if budget <= 0 and family_budget <= 0:
-        return True
+        return HEADROOM_OK
     current = _bucket(_clock())
-    try:
-        r = _client()
-        if family_budget > 0:
-            keys = [
-                _family_usd_key(family, current - i) for i in range(_WINDOW_BUCKETS)
-            ]
-            if sum(int(v or 0) for v in r.mget(keys)) >= int(family_budget * _MICRO):
-                return False
-        if budget > 0:
-            keys = [_usd_key(current - i) for i in range(_WINDOW_BUCKETS)]
-            if sum(int(v or 0) for v in r.mget(keys)) >= int(budget * _MICRO):
-                return False
-        return True
-    except Exception as exc:
-        if prod:
-            logger.error("LLM_GUARD_UNAVAILABLE headroom check failing open: %s", exc)
-            return True
-        return False
+    r = _client()
+    if budget > 0:
+        keys = [_usd_key(current - i) for i in range(_WINDOW_BUCKETS)]
+        if sum(int(v or 0) for v in r.mget(keys)) >= int(budget * _MICRO):
+            return HEADROOM_GLOBAL_OVER
+    if family_budget > 0:
+        keys = [_family_usd_key(family, current - i) for i in range(_WINDOW_BUCKETS)]
+        if sum(int(v or 0) for v in r.mget(keys)) >= int(family_budget * _MICRO):
+            return HEADROOM_FAMILY_OVER
+    return HEADROOM_OK
 
 
-def record_usd(usd: float, *, family: str = "") -> None:
-    """Book the full cost of a call that was never admitted (a session admitted
-    once by ``has_headroom``). Never raises."""
-    micro = int(max(0.0, usd) * _MICRO)
-    if micro == 0:
-        return
+def _headroom_failed(exc: BaseException, prod: bool) -> str:
+    if prod:
+        logger.error(
+            "LLM_GUARD_UNAVAILABLE headroom check failing open: %s: %s",
+            type(exc).__name__,
+            exc,
+        )
+        return HEADROOM_OK
+    return HEADROOM_UNAVAILABLE
+
+
+def session_headroom(family: str = "") -> str:
+    """Read-only: why a new paid session may or may not start (HEADROOM_*).
+
+    For callers that cannot be refused mid-flight (a live voice call): check once
+    when the session is built, then book usage with ``record_usd``. The global
+    rolling-24h budget wins over the family cap (a family over its cap may still
+    run on a cheaper route; the global ceiling refuses). Books nothing.
+    Production fails open when the counters are unreachable.
+
+    Prefer ``asession_headroom`` from async code. Called on a running loop this
+    reads the store on a worker thread and waits at most _LOOP_WAIT_SECONDS.
+    """
+    if not paid_calls_enabled():
+        return HEADROOM_DISABLED
     family = family or llm_family_var.get()
-    e = os.environ
     prod = is_production()
+    try:
+        if _loop_running():
+            return _executor.submit(_headroom_blocking, family, prod).result(
+                timeout=_LOOP_WAIT_SECONDS
+            )
+        return _headroom_blocking(family, prod)
+    except Exception as exc:
+        return _headroom_failed(exc, prod)
+
+
+async def asession_headroom(family: str = "") -> str:
+    """``session_headroom`` without blocking the event loop at all."""
+    if not paid_calls_enabled():
+        return HEADROOM_DISABLED
+    family = family or llm_family_var.get()
+    prod = is_production()
+    loop = asyncio.get_running_loop()
+    try:
+        return await asyncio.wait_for(
+            loop.run_in_executor(_executor, _headroom_blocking, family, prod),
+            timeout=_LOOP_WAIT_SECONDS + 0.15,
+        )
+    except Exception as exc:
+        return _headroom_failed(exc, prod)
+
+
+def has_headroom(family: str = "") -> bool:
+    return session_headroom(family) == HEADROOM_OK
+
+
+def _record_usd_blocking(micro: int, family: str) -> None:
+    e = os.environ
     budget = _float(
-        e, "LLM_DAILY_BUDGET_USD", 0.0 if prod else _DEFAULT_NONPROD_BUDGET_USD
+        e,
+        "LLM_DAILY_BUDGET_USD",
+        0.0 if is_production() else _DEFAULT_NONPROD_BUDGET_USD,
     )
     current = _bucket(_clock())
     try:
@@ -432,12 +509,31 @@ def record_usd(usd: float, *, family: str = "") -> None:
         logger.warning("LLM_GUARD spend booking failed: %s", exc)
 
 
+def record_usd(usd: float, *, family: str = "") -> None:
+    """Book the full cost of a call that was never admitted (a session admitted
+    once by ``session_headroom``). Never raises, never waits on an asyncio loop."""
+    micro = int(max(0.0, usd) * _MICRO)
+    if micro == 0:
+        return
+    family = family or llm_family_var.get()
+    if _loop_running():
+        _executor.submit(_record_usd_blocking, micro, family)
+        return
+    _record_usd_blocking(micro, family)
+
+
 __all__ = [
     "LLMBudgetExceeded",
     "LLMGuardUnavailable",
     "PaidLLMCallRefused",
     "PaidLLMCallsDisabled",
     "admit_paid_call",
+    "HEADROOM_DISABLED",
+    "HEADROOM_FAMILY_OVER",
+    "HEADROOM_GLOBAL_OVER",
+    "HEADROOM_OK",
+    "HEADROOM_UNAVAILABLE",
+    "asession_headroom",
     "has_headroom",
     "is_production",
     "llm_family_var",
@@ -445,5 +541,6 @@ __all__ = [
     "record_actual_usd",
     "record_usd",
     "set_clock",
+    "session_headroom",
     "set_redis_factory",
 ]

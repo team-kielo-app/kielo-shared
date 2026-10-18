@@ -101,15 +101,21 @@ type row struct {
 	DailyBudgetUSD *float64 `json:"daily_budget_usd"`
 }
 
-// GeminiOnlyFamilies are the families whose call sites can only drive Gemini
-// (the Go seam, the Python RoutedGemini). A route naming another provider for
-// them is refused and the caller's compiled default runs, logged once.
-var GeminiOnlyFamilies = map[string]bool{
-	FamilyJukaHints:         true,
-	FamilyJukaTranslation:   true,
-	FamilyScenarioAuthoring: true,
-	FamilyKTVAI:             true,
+// OpenAICapableFamilies are the families whose call sites can drive an OpenAI
+// model (the convo agent's routed_llm and LiveKit builder). Every other family
+// (the engine's Gemini client, ingest, the Go Gemini seam, KTV, hints,
+// translation, scenario authoring) can only drive Gemini, so a new family is
+// Gemini-only by default: a route naming another provider for it is refused and
+// the caller's compiled default runs, logged once.
+var OpenAICapableFamilies = map[string]bool{
+	FamilyJukaLive:      true,
+	FamilyJukaFeedback:  true,
+	FamilyJukaStepCheck: true,
 }
+
+// maxStale bounds how long a stale copy keeps answering while a refresh runs;
+// past it callers wait (up to their context) for the refresh.
+const maxStale = 5 * time.Minute
 
 type tables struct {
 	routes       map[string]Route
@@ -209,7 +215,7 @@ func (c *Client) servable(family string, r Route) (Route, bool) {
 		c.warnOnce("inferred|"+r.Model, "LLM_ROUTE llm_models never loaded; provider inferred",
 			"model", r.Model, "provider", provider)
 	}
-	if GeminiOnlyFamilies[family] && provider != ProviderGoogle {
+	if !OpenAICapableFamilies[family] && provider != ProviderGoogle {
 		c.warnOnce("provider|"+family+"|"+r.Model,
 			"LLM_ROUTE family can only drive Gemini; route refused, using the compiled default",
 			"family", family, "model", r.Model, "provider", provider)
@@ -220,9 +226,10 @@ func (c *Client) servable(family string, r Route) (Route, bool) {
 }
 
 // snapshot returns the cached tables. The first caller to find them stale
-// fetches them outside the lock; while that runs, other callers get the old
-// copy (or, before any copy exists, wait for the first fetch). A stale refresh
-// runs in the background so no request blocks on a slow localization.
+// starts one refresh, on a context detached from any caller (a cancelled request
+// must not poison the cache); other callers get the old copy while it runs, up
+// to maxStale. With no copy yet, or one older than maxStale, callers wait for the
+// refresh or their own context, whichever ends first.
 func (c *Client) snapshot(ctx context.Context) tables {
 	c.mu.Lock()
 	if !c.fetchedAt.IsZero() && c.now().Sub(c.fetchedAt) < c.ttl {
@@ -230,38 +237,31 @@ func (c *Client) snapshot(ctx context.Context) tables {
 		c.mu.Unlock()
 		return d
 	}
-	if c.refreshing {
-		done, loaded, d := c.done, c.loaded, c.data
-		c.mu.Unlock()
-		if loaded {
-			return d
-		}
-		select {
-		case <-done:
-		case <-ctx.Done():
-		}
-		c.mu.Lock()
-		d = c.data
-		c.mu.Unlock()
-		return d
+	if !c.refreshing {
+		c.refreshing = true
+		c.done = make(chan struct{})
+		go c.refresh(c.done)
 	}
-	c.refreshing = true
-	c.done = make(chan struct{})
-	done, loaded, d := c.done, c.loaded, c.data
+	done := c.done
+	serveOld := c.loaded && c.now().Sub(c.fetchedAt) < maxStale
+	d := c.data
 	c.mu.Unlock()
-
-	if loaded {
-		go c.refresh(context.Background(), done)
+	if serveOld {
 		return d
 	}
-	c.refresh(ctx, done)
+	select {
+	case <-done:
+	case <-ctx.Done():
+	}
 	c.mu.Lock()
 	d = c.data
 	c.mu.Unlock()
 	return d
 }
 
-func (c *Client) refresh(ctx context.Context, done chan struct{}) {
+func (c *Client) refresh(done chan struct{}) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*fetchTimeout)
+	defer cancel()
 	routes, err := c.fetch(ctx)
 	var models map[string]modelInfo
 	var merr error
@@ -274,7 +274,8 @@ func (c *Client) refresh(ctx context.Context, done chan struct{}) {
 	if err == nil {
 		c.data.routes = routes
 		c.loaded = true
-		if merr == nil {
+		// An empty table is not a table: it must not refuse every route.
+		if merr == nil && len(models) > 0 {
 			c.data.models, c.data.modelsLoaded = models, true
 		}
 	}
