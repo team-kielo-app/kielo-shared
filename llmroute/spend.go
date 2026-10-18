@@ -23,6 +23,10 @@ var prices = map[string]price{
 	"gemini-2.5-flash":      {0.30, 2.50},
 	"gemini-2.5-flash-lite": {0.10, 0.40},
 	"gemini-2.5-pro":        {1.25, 10.00},
+	// Fallback only, for an unreachable llm_models: an unlisted OpenAI model must
+	// not book at the dearest rate.
+	"gpt-4o":      {2.50, 10.00},
+	"gpt-4o-mini": {0.15, 0.60},
 }
 
 var fallbackPrice = price{2.50, 10.00}

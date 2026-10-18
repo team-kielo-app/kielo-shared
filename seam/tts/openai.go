@@ -14,13 +14,14 @@ import (
 	"github.com/team-kielo-app/kielo-shared/observe/httputil"
 )
 
-// OpenAITTSProvider calls the OpenAI /v1/audio/speech endpoint.
-// Stateless beyond the injected http.Client + API key. Caller-side
-// concerns (cache, breaker, voice normalization) stay outside the
+// instructionsModelPrefix marks the speech models that take an `instructions` field.
 const instructionsModelPrefix = "gpt-"
 
 var errNoModel = errors.New("no OpenAI TTS model: the tts_routes row supplies it")
 
+// OpenAITTSProvider calls the OpenAI /v1/audio/speech endpoint.
+// Stateless beyond the injected http.Client + API key. Caller-side
+// concerns (cache, breaker, voice normalization) stay outside the
 // provider per the seam scope rules in types.go.
 type OpenAITTSProvider struct {
 	APIKey       string

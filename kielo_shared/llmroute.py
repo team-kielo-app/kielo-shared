@@ -63,15 +63,17 @@ _RESERVOIR = 512
 PROVIDER_GOOGLE = "google"
 PROVIDER_OPENAI = "openai"
 
-# Families whose call sites can only drive Gemini (the Go seam, RoutedGemini):
-# a route that names another provider for them is refused and the caller's
-# compiled default runs, with one logged line, rather than a misrouted call.
-GEMINI_ONLY_FAMILIES = frozenset(
+# Families whose call sites can drive an OpenAI model: the ones served by the
+# convo agent's routed_llm / LiveKit builder. Every other family (the engine's
+# LangChain Gemini client, ingest, the Go Gemini seam, KTV, hints, translation,
+# scenario authoring) can only drive Gemini, so a new family is Gemini-only by
+# default and a route naming another provider for it is refused: the caller's
+# compiled default runs, with one logged line, instead of a misrouted call.
+OPENAI_CAPABLE_FAMILIES = frozenset(
     {
-        "juka_hints",
-        "juka_translation",
-        "scenario_authoring",
-        "ktv_ai",
+        "juka_live",
+        "juka_feedback",
+        "juka_step_check",
     }
 )
 
@@ -228,7 +230,7 @@ class RouteClient:
                 message="LLM_ROUTE llm_models never loaded; model=%s provider inferred=%s",
                 args=(route.model, provider or "unknown"),
             )
-        if family in GEMINI_ONLY_FAMILIES and provider != PROVIDER_GOOGLE:
+        if family not in OPENAI_CAPABLE_FAMILIES and provider != PROVIDER_GOOGLE:
             self._warn_once(
                 "provider",
                 family,
@@ -280,6 +282,9 @@ class RouteClient:
             self._refreshing = True
         threading.Thread(target=self._refresh, daemon=True).start()
 
+    def age_seconds(self) -> float:
+        return self._clock() - self._fetched_at if self._fetched_at else float("inf")
+
     def warm(self) -> None:
         """Fetch now (worker prewarm), so the first session never waits on localization."""
         if self._base_url:
@@ -302,7 +307,10 @@ class RouteClient:
             models_body = None
             try:
                 models_body = self._get_json(_MODELS_PATH, headers)
-                self._models, self._models_loaded = _decode_models(models_body), True
+                decoded = _decode_models(models_body)
+                self._models = decoded
+                # An empty table is not a table: it must not refuse every route.
+                self._models_loaded = bool(decoded)
             except (httpx.HTTPError, ValueError, AttributeError):
                 pass
             self._save_snapshot(routes_body, models_body)
@@ -349,7 +357,7 @@ class RouteClient:
             self._loaded = True
             if snap.get("models") is not None:
                 self._models = _decode_models(snap["models"])
-                self._models_loaded = True
+                self._models_loaded = bool(self._models)
             logger.warning(
                 "LLM_ROUTE localization unreachable; serving the last-good snapshot (%d routes)",
                 len(self._routes),
@@ -555,6 +563,21 @@ def set_snapshot_store(
     """Install a last-good snapshot store on the process-wide client (see RouteClient)."""
     if _client is not None:
         _client.set_snapshot_store(load, save)
+
+
+async def refresh_if_stale(max_age_seconds: float = 300.0, wait_seconds: float = 2.5) -> None:
+    """Before building a session: if the route tables are older than max_age
+    (a prewarmed idle process can be minutes old, and the background refresh is
+    best effort), refresh them on a worker thread, waiting a bounded time."""
+    client = _client
+    if client is None or not client._base_url:
+        return
+    if client.age_seconds() <= max_age_seconds:
+        return
+    try:
+        await asyncio.wait_for(asyncio.to_thread(client.warm), timeout=wait_seconds)
+    except (asyncio.TimeoutError, Exception) as exc:
+        logger.warning("LLM_ROUTE stale refresh skipped: %s", type(exc).__name__)
 
 
 def snapshot_json_store(client: Any, key: str) -> tuple[Callable[[], Any], Callable[[Any], None]]:

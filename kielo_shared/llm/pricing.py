@@ -2,7 +2,7 @@
 
 The source of truth is localization.llm_models, read through
 ``kielo_shared.llmroute.model_price``. This table only answers while that table
-is unreachable, so it lists the models the platform runs by default; any other
+is unreachable, so it lists the models the platform runs by default (plus the OpenAI ones a route may name); any other
 model books at the dearest listed rate, never $0.
 """
 
@@ -16,6 +16,11 @@ PRICES: dict[str, tuple[float, float]] = {
     "gemini-2.5-flash": (0.30, 2.50),
     "gemini-2.5-flash-lite": (0.10, 0.40),
     "gemini-2.5-pro": (1.25, 10.00),
+    # Fallback only, for when llm_models is unreachable: an unlisted OpenAI model
+    # must not book at the dearest-rate fallback (16x for the mini). The real
+    # price is llm_models'.
+    "gpt-4o": (2.50, 10.00),
+    "gpt-4o-mini": (0.15, 0.60),
 }
 
 FALLBACK_PRICE: tuple[float, float] = (2.50, 10.00)

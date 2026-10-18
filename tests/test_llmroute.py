@@ -244,7 +244,7 @@ def test_inactive_model_refuses_the_route(monkeypatch):
     assert llmroute.RouteClient("http://loc").route("juka_live") is None
 
 
-def test_gemini_only_family_refuses_an_openai_route(monkeypatch):
+def test_a_family_outside_the_openai_allowlist_refuses_an_openai_route(monkeypatch):
     routes = {"items": [{"family": "juka_hints", "model": "o1"}, {"family": "juka_live", "model": "o1"}]}
     monkeypatch.setattr(
         httpx, "get", _fake_store(routes, _models("o1", provider="openai"))
@@ -396,3 +396,73 @@ def test_snapshot_json_store_round_trips():
     assert load() is None
     save({"routes": {"items": []}})
     assert load() == {"routes": {"items": []}}
+
+
+def test_an_empty_models_table_does_not_refuse_every_route(monkeypatch):
+    routes = {"items": [{"family": "juka_live", "model": "gemini-x"}]}
+    monkeypatch.setattr(httpx, "get", _fake_store(routes, {"items": []}))
+    got = llmroute.RouteClient("http://loc").route("juka_live")
+    assert got is not None and got.provider == "google"
+
+
+def test_every_unlisted_family_is_gemini_only_by_default(monkeypatch):
+    routes = {"items": [{"family": f, "model": "o1"} for f in ("exercise_judge", "web_ingest", "brand_new", "juka_feedback")]}
+    monkeypatch.setattr(httpx, "get", _fake_store(routes, _models("o1", provider="openai")))
+    client = llmroute.RouteClient("http://loc")
+    for family in ("exercise_judge", "web_ingest", "brand_new"):
+        assert client.route(family) is None
+    assert client.route("juka_feedback").provider == "openai"
+
+
+def test_refresh_if_stale_refreshes_only_old_tables(monkeypatch):
+    import asyncio
+
+    calls = []
+    routes = {"items": [{"family": "juka_live", "model": "gemini-x"}]}
+
+    def fake_get(url, headers=None, timeout=None):
+        calls.append(url)
+        return _Resp(_models("gemini-x") if url.endswith("/llm-models") else routes)
+
+    monkeypatch.setattr(httpx, "get", fake_get)
+    now = [1000.0]
+    client = llmroute.RouteClient("http://loc", clock=lambda: now[0])
+    llmroute.set_client_for_test(client)
+    try:
+        client.warm()
+        n = len(calls)
+        asyncio.run(llmroute.refresh_if_stale(300))
+        assert len(calls) == n
+        now[0] += 301
+        asyncio.run(llmroute.refresh_if_stale(300))
+        assert len(calls) > n
+    finally:
+        llmroute.set_client_for_test(None)
+
+
+def test_the_global_ceiling_is_told_apart_from_a_family_cap(monkeypatch):
+    for k in ("ENVIRONMENT", "K_SERVICE", "LLM_HOURLY_CALL_CAP"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("LLM_ALLOW_PAID_CALLS", "true")
+    monkeypatch.setenv("LLM_DAILY_BUDGET_USD", "1")
+    body = {"items": [{"family": "juka_live", "model": "gemini-x", "daily_budget_usd": 0.5}]}
+    models = {"items": [{"model": "gemini-x", "provider": "google", "active": True}]}
+    monkeypatch.setattr(
+        httpx,
+        "get",
+        lambda url, *a, **k: _Resp(models if url.endswith("/llm-models") else body),
+    )
+    redis = _FakeRedis()
+    llmroute.set_client_for_test(llmroute.RouteClient("http://loc"))
+    sg.set_clock(lambda: 1_000_000.0)
+    sg.set_redis_factory(lambda: redis)
+    try:
+        assert sg.session_headroom("juka_live") == sg.HEADROOM_OK
+        redis.d[sg._family_usd_key("juka_live", 1_000_000 // 3600)] = 600_000
+        assert sg.session_headroom("juka_live") == sg.HEADROOM_FAMILY_OVER
+        redis.d[sg._usd_key(1_000_000 // 3600)] = 1_000_000
+        assert sg.session_headroom("juka_live") == sg.HEADROOM_GLOBAL_OVER
+    finally:
+        sg.set_redis_factory(None)
+        sg.set_clock(None)
+        llmroute.set_client_for_test(None)
