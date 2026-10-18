@@ -19,6 +19,8 @@ import (
 // concerns (cache, breaker, voice normalization) stay outside the
 const instructionsModelPrefix = "gpt-"
 
+var errNoModel = errors.New("no OpenAI TTS model: the tts_routes row supplies it")
+
 // provider per the seam scope rules in types.go.
 type OpenAITTSProvider struct {
 	APIKey       string
@@ -35,9 +37,9 @@ func NewOpenAITTSProvider(apiKey string, client *http.Client) *OpenAITTSProvider
 		client = httputil.NewClient(30 * time.Second)
 	}
 	return &OpenAITTSProvider{
-		APIKey:       apiKey,
-		HTTPClient:   client,
-		Endpoint:     "https://api.openai.com/v1/audio/speech",
+		APIKey:     apiKey,
+		HTTPClient: client,
+		Endpoint:   "https://api.openai.com/v1/audio/speech",
 	}
 }
 
@@ -49,6 +51,24 @@ func (p *OpenAITTSProvider) ProviderID(req Request) string {
 		model = p.DefaultModel
 	}
 	return "openai-tts:" + model
+}
+
+// openAIPayload is the /v1/audio/speech body. gpt-* speech models accept an
+// `instructions` field for stylistic hints; the older `tts-1*` models reject it.
+func openAIPayload(req Request, model string) map[string]any {
+	payload := map[string]any{
+		"model":           model,
+		"voice":           req.VoiceID,
+		"input":           req.Text,
+		"response_format": "mp3",
+	}
+	if req.Speed > 0 {
+		payload["speed"] = req.Speed
+	}
+	if req.Instructions != "" && strings.HasPrefix(model, instructionsModelPrefix) {
+		payload["instructions"] = req.Instructions
+	}
+	return payload
 }
 
 func (p *OpenAITTSProvider) Synthesize(ctx context.Context, req Request) (*Result, error) {
@@ -64,22 +84,9 @@ func (p *OpenAITTSProvider) Synthesize(ctx context.Context, req Request) (*Resul
 		model = p.DefaultModel
 	}
 	if model == "" {
-		return nil, &Error{Class: ErrorClassClientError, Err: errors.New("no OpenAI TTS model: the tts_routes row supplies it")}
+		return nil, &Error{Class: ErrorClassClientError, Err: errNoModel}
 	}
-	payload := map[string]any{
-		"model":           model,
-		"voice":           req.VoiceID,
-		"input":           req.Text,
-		"response_format": "mp3",
-	}
-	if req.Speed > 0 {
-		payload["speed"] = req.Speed
-	}
-	// gpt-* speech models accept an `instructions` field for stylistic
-	// hints; the older `tts-1*` models reject it.
-	if req.Instructions != "" && strings.HasPrefix(model, instructionsModelPrefix) {
-		payload["instructions"] = req.Instructions
-	}
+	payload := openAIPayload(req, model)
 
 	body, err := json.Marshal(payload)
 	if err != nil {
