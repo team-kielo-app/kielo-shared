@@ -154,3 +154,55 @@ def test_spend_guard_honours_family_budget(monkeypatch):
         sg.set_redis_factory(None)
         sg.set_clock(None)
         llmroute.set_client_for_test(None)
+
+
+def _fake_store(routes, models):
+    def fake_get(url, headers=None, timeout=None):
+        return _Resp(models if url.endswith("/llm-models") else routes)
+
+    return fake_get
+
+
+def test_route_resolves_provider_from_llm_models(monkeypatch):
+    routes = {"items": [{"family": "juka_live", "model": "m-open", "thinking_budget": -1}]}
+    models = {
+        "items": [
+            {"model": "m-open", "provider": "openai", "input_usd_per_mtok": 2.5, "output_usd_per_mtok": 10},
+            {"model": "m-goog", "provider": "google", "input_usd_per_mtok": 0.25, "output_usd_per_mtok": 1.5},
+        ]
+    }
+    monkeypatch.setattr(httpx, "get", _fake_store(routes, models))
+    client = llmroute.RouteClient("http://loc")
+    got = client.resolve("juka_live", "compiled")
+    assert (got.model, got.provider) == ("m-open", "openai")
+    llmroute.set_client_for_test(client)
+    try:
+        assert llmroute.model_price("m-goog") == (0.25, 1.5)
+        assert llmroute.estimate_usd("m-open", 1_000_000, 0, 0) == 2.5
+    finally:
+        llmroute.set_client_for_test(None)
+
+
+def test_route_provider_falls_back_to_name_family_when_model_unlisted(monkeypatch):
+    routes = {"items": [{"family": "juka_live", "model": "gemini-x", "thinking_budget": -1}]}
+    monkeypatch.setattr(httpx, "get", _fake_store(routes, {"items": []}))
+    client = llmroute.RouteClient("http://loc")
+    assert client.resolve("juka_live", "compiled").provider == "google"
+
+
+def test_route_row_provider_is_honoured_when_models_unreachable(monkeypatch):
+    routes = {"items": [{"family": "juka_live", "model": "odd", "provider": "openai"}]}
+
+    def fake_get(url, headers=None, timeout=None):
+        if url.endswith("/llm-models"):
+            raise httpx.ConnectError("down")
+        return _Resp(routes)
+
+    monkeypatch.setattr(httpx, "get", fake_get)
+    assert llmroute.RouteClient("http://loc").resolve("juka_live", "c").provider == "openai"
+
+
+def test_default_route_carries_the_default_provider():
+    llmroute.set_client_for_test(None)
+    assert llmroute.resolve("x", "gemini-z").provider == "google"
+    assert llmroute.resolve("x", "anything", default_provider="openai").provider == "openai"

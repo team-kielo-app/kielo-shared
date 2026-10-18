@@ -55,6 +55,7 @@ func TestOpenAITTSProvider_HTTP5xxClassifiedAsServerError(t *testing.T) {
 	defer srv.Close()
 
 	p := tts.NewOpenAITTSProvider("test-key", srv.Client())
+	p.DefaultModel = "m"
 	p.Endpoint = srv.URL
 
 	_, err := p.Synthesize(context.Background(), tts.Request{
@@ -75,6 +76,7 @@ func TestOpenAITTSProvider_HTTP4xxClassifiedAsClientError(t *testing.T) {
 	defer srv.Close()
 
 	p := tts.NewOpenAITTSProvider("test-key", srv.Client())
+	p.DefaultModel = "m"
 	p.Endpoint = srv.URL
 
 	_, err := p.Synthesize(context.Background(), tts.Request{
@@ -93,6 +95,7 @@ func TestOpenAITTSProvider_TimeoutClassified(t *testing.T) {
 	defer srv.Close()
 
 	p := tts.NewOpenAITTSProvider("test-key", &http.Client{Timeout: 10 * time.Millisecond})
+	p.DefaultModel = "m"
 	p.Endpoint = srv.URL
 
 	_, err := p.Synthesize(context.Background(), tts.Request{
@@ -266,4 +269,12 @@ func TestMetricsDecorator_DefaultsTaskAndVoiceLabelsWhenEmpty(t *testing.T) {
 	// empty labels (would happen if WithLabelValues received "").
 	// The behavior is implicit via no-panic plus the bounded label
 	// strings documented in observe/metrics/tts.go.
+}
+
+func TestOpenAITTSProvider_NoModelRejected(t *testing.T) {
+	p := tts.NewOpenAITTSProvider("test-key", nil)
+	_, err := p.Synthesize(context.Background(), tts.Request{Text: "hi", VoiceID: "alloy"})
+	if tts.ClassOf(err) != tts.ErrorClassClientError {
+		t.Fatalf("ClassOf = %q, want client_error", tts.ClassOf(err))
+	}
 }

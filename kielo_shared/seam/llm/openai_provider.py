@@ -38,7 +38,7 @@ class OpenAIChatProvider:
         self,
         client: Any,
         *,
-        default_model: str = "gpt-4o-mini",
+        default_model: str = "",
     ) -> None:
         self._client = client
         self._default_model = default_model
@@ -55,6 +55,11 @@ class OpenAIChatProvider:
         return msgs
 
     def _common_kwargs(self, request: Request) -> dict[str, Any]:
+        if not (request.model or self._default_model):
+            raise Error(
+                ErrorClass.INVALID_REQUEST,
+                RuntimeError("no OpenAI chat model: the llm route supplies it"),
+            )
         kwargs: dict[str, Any] = {
             "model": request.model or self._default_model,
             "messages": self._messages(request),
