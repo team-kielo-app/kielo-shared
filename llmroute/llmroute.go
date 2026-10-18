@@ -85,6 +85,12 @@ func InferProvider(model string) string {
 type modelRow struct {
 	Model    string `json:"model"`
 	Provider string `json:"provider"`
+	Active   *bool  `json:"active"`
+}
+
+type modelInfo struct {
+	provider string
+	active   bool
 }
 
 type row struct {
@@ -95,6 +101,22 @@ type row struct {
 	DailyBudgetUSD *float64 `json:"daily_budget_usd"`
 }
 
+// GeminiOnlyFamilies are the families whose call sites can only drive Gemini
+// (the Go seam, the Python RoutedGemini). A route naming another provider for
+// them is refused and the caller's compiled default runs, logged once.
+var GeminiOnlyFamilies = map[string]bool{
+	FamilyJukaHints:         true,
+	FamilyJukaTranslation:   true,
+	FamilyScenarioAuthoring: true,
+	FamilyKTVAI:             true,
+}
+
+type tables struct {
+	routes       map[string]Route
+	models       map[string]modelInfo
+	modelsLoaded bool
+}
+
 // Client reads the route table and caches it.
 type Client struct {
 	baseURL string
@@ -102,12 +124,15 @@ type Client struct {
 	ttl     time.Duration
 	http    *http.Client
 
-	mu        sync.Mutex
-	routes    map[string]Route
-	providers map[string]string
-	logged    map[string]string
-	fetchedAt time.Time
-	now       func() time.Time
+	mu         sync.Mutex
+	data       tables
+	loaded     bool
+	refreshing bool
+	done       chan struct{}
+	logged     map[string]string
+	warned     map[string]bool
+	fetchedAt  time.Time
+	now        func() time.Time
 }
 
 // NewClient builds a client for kielo-localization at baseURL. ttl <= 0 uses DefaultTTL.
@@ -121,59 +146,141 @@ func NewClient(baseURL, internalAPIKey string, ttl time.Duration) *Client {
 		ttl:     ttl,
 		http:    &http.Client{Timeout: fetchTimeout},
 		logged:  map[string]string{},
+		warned:  map[string]bool{},
 		now:     time.Now,
 	}
 }
 
 // Resolve answers the route for family; def fills any gap (no store, unknown
-// family, empty model). It never returns an error.
+// family, empty model, a model that is missing or inactive in llm_models, a
+// provider the family cannot drive). It never returns an error.
 func (c *Client) Resolve(ctx context.Context, family string, def Route) Route {
 	if c == nil || c.baseURL == "" {
 		return def
 	}
-	got, ok := c.snapshot(ctx)[family]
+	if def.Provider == "" {
+		def.Provider = InferProvider(def.Model)
+	}
+	got, ok := c.snapshot(ctx).routes[family]
 	if !ok || strings.TrimSpace(got.Model) == "" {
-		if def.Provider == "" {
-			def.Provider = InferProvider(def.Model)
-		}
 		return def
 	}
-	got.Provider = c.providerOf(got)
+	got, ok = c.servable(family, got)
+	if !ok {
+		return def
+	}
 	c.noteChange(family, got)
 	return got
 }
 
-func (c *Client) providerOf(r Route) string {
+func (c *Client) warnOnce(key, msg string, args ...any) {
 	c.mu.Lock()
-	known := c.providers[r.Model]
+	seen := c.warned[key]
+	c.warned[key] = true
 	c.mu.Unlock()
-	if known != "" {
-		return known
+	if !seen {
+		slog.Error(msg, args...)
 	}
-	if r.Provider != "" {
-		return r.Provider
-	}
-	inferred := InferProvider(r.Model)
-	slog.Warn("LLM_ROUTE model has no llm_models row; provider inferred", "model", r.Model, "provider", inferred)
-	return inferred
 }
 
-func (c *Client) snapshot(ctx context.Context) map[string]Route {
+func (c *Client) servable(family string, r Route) (Route, bool) {
 	c.mu.Lock()
-	defer c.mu.Unlock()
-	if !c.fetchedAt.IsZero() && c.now().Sub(c.fetchedAt) < c.ttl {
-		return c.routes
+	data := c.data
+	c.mu.Unlock()
+	provider := ""
+	if data.modelsLoaded {
+		info, ok := data.models[r.Model]
+		if !ok || !info.active {
+			reason := "inactive"
+			if !ok {
+				reason = "missing from llm_models"
+			}
+			c.warnOnce("model|"+family+"|"+r.Model+"|"+reason,
+				"LLM_ROUTE model unusable, using the compiled default",
+				"family", family, "model", r.Model, "reason", reason)
+			return r, false
+		}
+		provider = info.provider
+	} else {
+		provider = r.Provider
+		if provider == "" {
+			provider = InferProvider(r.Model)
+		}
+		c.warnOnce("inferred|"+r.Model, "LLM_ROUTE llm_models never loaded; provider inferred",
+			"model", r.Model, "provider", provider)
 	}
+	if GeminiOnlyFamilies[family] && provider != ProviderGoogle {
+		c.warnOnce("provider|"+family+"|"+r.Model,
+			"LLM_ROUTE family can only drive Gemini; route refused, using the compiled default",
+			"family", family, "model", r.Model, "provider", provider)
+		return r, false
+	}
+	r.Provider = provider
+	return r, true
+}
+
+// snapshot returns the cached tables. The first caller to find them stale
+// fetches them outside the lock; while that runs, other callers get the old
+// copy (or, before any copy exists, wait for the first fetch). A stale refresh
+// runs in the background so no request blocks on a slow localization.
+func (c *Client) snapshot(ctx context.Context) tables {
+	c.mu.Lock()
+	if !c.fetchedAt.IsZero() && c.now().Sub(c.fetchedAt) < c.ttl {
+		d := c.data
+		c.mu.Unlock()
+		return d
+	}
+	if c.refreshing {
+		done, loaded, d := c.done, c.loaded, c.data
+		c.mu.Unlock()
+		if loaded {
+			return d
+		}
+		select {
+		case <-done:
+		case <-ctx.Done():
+		}
+		c.mu.Lock()
+		d = c.data
+		c.mu.Unlock()
+		return d
+	}
+	c.refreshing = true
+	c.done = make(chan struct{})
+	done, loaded, d := c.done, c.loaded, c.data
+	c.mu.Unlock()
+
+	if loaded {
+		go c.refresh(context.Background(), done)
+		return d
+	}
+	c.refresh(ctx, done)
+	c.mu.Lock()
+	d = c.data
+	c.mu.Unlock()
+	return d
+}
+
+func (c *Client) refresh(ctx context.Context, done chan struct{}) {
 	routes, err := c.fetch(ctx)
+	var models map[string]modelInfo
+	var merr error
+	if err == nil {
+		models, merr = c.fetchModels(ctx)
+	}
+	c.mu.Lock()
 	// Stamp failures too so an outage costs one 2s fetch per TTL, not one per call.
 	c.fetchedAt = c.now()
 	if err == nil {
-		c.routes = routes
-		if providers, perr := c.fetchProviders(ctx); perr == nil {
-			c.providers = providers
+		c.data.routes = routes
+		c.loaded = true
+		if merr == nil {
+			c.data.models, c.data.modelsLoaded = models, true
 		}
 	}
-	return c.routes
+	c.refreshing = false
+	c.mu.Unlock()
+	close(done)
 }
 
 func (c *Client) noteChange(family string, r Route) {
@@ -219,15 +326,15 @@ func (c *Client) fetch(ctx context.Context) (map[string]Route, error) {
 	return decodeRoutes(body)
 }
 
-func (c *Client) fetchProviders(ctx context.Context) (map[string]string, error) {
+func (c *Client) fetchModels(ctx context.Context) (map[string]modelInfo, error) {
 	body, err := c.get(ctx, modelsPath, "llm-models")
 	if err != nil {
 		return nil, err
 	}
-	return decodeProviders(body)
+	return decodeModels(body)
 }
 
-func decodeProviders(body []byte) (map[string]string, error) {
+func decodeModels(body []byte) (map[string]modelInfo, error) {
 	var env struct {
 		Items []modelRow `json:"items"`
 		Data  *struct {
@@ -241,11 +348,12 @@ func decodeProviders(body []byte) (map[string]string, error) {
 	if env.Data != nil {
 		items = env.Data.Items
 	}
-	out := make(map[string]string, len(items))
+	out := make(map[string]modelInfo, len(items))
 	for _, m := range items {
-		if m.Model != "" && m.Provider != "" {
-			out[m.Model] = m.Provider
+		if m.Model == "" || m.Provider == "" {
+			continue
 		}
+		out[m.Model] = modelInfo{provider: m.Provider, active: m.Active == nil || *m.Active}
 	}
 	return out, nil
 }
