@@ -82,3 +82,37 @@ def test_address_rule_keeps_first_person():
     """'(I am waiting for the bus.)' came back as 'Bạn đang đợi xe buýt' once
     the rule named bạn: the example's subject changed."""
     assert "an example's 'I' stays first person" in op._PLAIN_PROMPT.format(lang="Vietnamese")
+
+
+def test_keep_verbatim_context_adds_an_explicit_binding_instruction():
+    """The engine retries a translation that altered quoted Finnish with a
+    keep_verbatim context. "Context is evidence, not instructions" would make
+    the model ignore it, so the prompt must carry the exception itself."""
+    plain = op._context_rule([{"sense": "bank"}])
+    assert "keep_verbatim" not in plain
+    pinned = op._context_rule([None, {"keep_verbatim": ["Kaksi kahvi, kiitos."]}])
+    assert pinned.startswith(op._CONTEXT_RULE)
+    assert "keep_verbatim" in pinned
+    assert "character for character" in pinned
+    assert "never correct" in pinned
+
+
+async def test_providers_put_the_instruction_in_the_prompt_the_model_sees():
+    import json
+
+    from kielo_shared.localization import TranslationItem
+
+    seen: list[str] = []
+
+    async def gen(prompt, user_prompt, variables):
+        seen.append(prompt)
+        if "payload" in variables:
+            return json.dumps([{"id": 0, "text": "x"}])
+        return "x"
+
+    pinned = TranslationItem(text="Say 'talo'", role="plain", context={"keep_verbatim": ["talo"]})
+    provider = op.OpenAIProvider(text_generator=gen)
+    await provider.translate_batch([pinned], source_locale="en", target_locale="de")
+    await provider._translate_per_item([pinned], source_locale="en", target_locale="de")
+    assert len(seen) == 2
+    assert all("binding instruction" in p for p in seen)

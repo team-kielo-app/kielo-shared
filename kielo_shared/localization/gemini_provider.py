@@ -23,7 +23,7 @@ from typing import Awaitable, Callable
 from kielo_shared.localization.openai_provider import (
     _BATCH_SYSTEM,
     _BATCH_USER,
-    _CONTEXT_RULE,
+    _context_rule,
     _language_name,
     _parse_batch_payload,
     _role_prompt,
@@ -159,7 +159,7 @@ class GeminiProvider:
         # primary does — and the cache key, which DOES include the context,
         # would then store a sense-blind translation under a sense-specific key.
         if any(item.context for item in items):
-            system_prompt += "\n" + _CONTEXT_RULE
+            system_prompt += "\n" + _context_rule([i.context for i in items])
         started = time.perf_counter()
         raw = await self._generate(system_prompt, _BATCH_USER, {"payload": payload})
         elapsed_ms = int((time.perf_counter() - started) * 1000)
@@ -227,7 +227,7 @@ class GeminiProvider:
             user_prompt = "{text}"
             variables: dict[str, str] = {"text": value}
             if item.context:
-                prompt += "\n" + _CONTEXT_RULE
+                prompt += "\n" + _context_rule([item.context])
                 user_prompt = "Text: {text}\nContext evidence: {context}"
                 variables["context"] = json.dumps(item.context, ensure_ascii=False)
             started = time.perf_counter()
