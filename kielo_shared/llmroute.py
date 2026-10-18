@@ -565,7 +565,9 @@ def set_snapshot_store(
         _client.set_snapshot_store(load, save)
 
 
-async def refresh_if_stale(max_age_seconds: float = 300.0, wait_seconds: float = 2.5) -> None:
+async def refresh_if_stale(
+    max_age_seconds: float = 300.0, wait_seconds: float = 2.5
+) -> None:
     """Before building a session: if the route tables are older than max_age
     (a prewarmed idle process can be minutes old, and the background refresh is
     best effort), refresh them on a worker thread, waiting a bounded time."""
@@ -580,7 +582,9 @@ async def refresh_if_stale(max_age_seconds: float = 300.0, wait_seconds: float =
         logger.warning("LLM_ROUTE stale refresh skipped: %s", type(exc).__name__)
 
 
-def snapshot_json_store(client: Any, key: str) -> tuple[Callable[[], Any], Callable[[Any], None]]:
+def snapshot_json_store(
+    client: Any, key: str
+) -> tuple[Callable[[], Any], Callable[[Any], None]]:
     """Load/save callables over a sync redis-like client (get/set with ex)."""
 
     def load() -> dict[str, Any] | None:
@@ -643,7 +647,9 @@ def model_price(model: str) -> tuple[float, float]:
     return pricing.PRICES.get(model, pricing.FALLBACK_PRICE)
 
 
-def estimate_usd(model: str, tokens_in: int, tokens_out: int, thinking: int = 0) -> float:
+def estimate_usd(
+    model: str, tokens_in: int, tokens_out: int, thinking: int = 0
+) -> float:
     price_in, price_out = model_price(model)
     return (tokens_in * price_in + (tokens_out + thinking) * price_out) / 1_000_000
 
