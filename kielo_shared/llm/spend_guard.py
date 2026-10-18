@@ -487,7 +487,7 @@ def has_headroom(family: str = "") -> bool:
     return session_headroom(family) == HEADROOM_OK
 
 
-def _record_usd_blocking(micro: int, family: str) -> None:
+def _record_usd_blocking(micro: int, family: str, include_global: bool = True) -> None:
     e = os.environ
     budget = _float(
         e,
@@ -501,7 +501,7 @@ def _record_usd_blocking(micro: int, family: str) -> None:
             key = _family_usd_key(family, current)
             r.incrby(key, micro)
             r.expire(key, _BUCKET_SECONDS * (_WINDOW_BUCKETS + 1))
-        if budget > 0:
+        if budget > 0 and include_global:
             key = _usd_key(current)
             r.incrby(key, micro)
             r.expire(key, _BUCKET_SECONDS * (_WINDOW_BUCKETS + 1))
@@ -509,17 +509,23 @@ def _record_usd_blocking(micro: int, family: str) -> None:
         logger.warning("LLM_GUARD spend booking failed: %s", exc)
 
 
-def record_usd(usd: float, *, family: str = "") -> None:
+def record_usd(usd: float, *, family: str = "", include_global: bool = True) -> None:
     """Book the full cost of a call that was never admitted (a session admitted
-    once by ``session_headroom``). Never raises, never waits on an asyncio loop."""
+    once by ``session_headroom``). Never raises, never waits on an asyncio loop.
+    ``include_global=False`` books the family only (the global counter already
+    holds the call's admission estimate)."""
     micro = int(max(0.0, usd) * _MICRO)
     if micro == 0:
         return
     family = family or llm_family_var.get()
     if _loop_running():
-        _executor.submit(_record_usd_blocking, micro, family)
+        try:
+            _executor.submit(_record_usd_blocking, micro, family, include_global)
+        except RuntimeError as exc:
+            # The executor refuses work once the interpreter is shutting down.
+            logger.warning("LLM_GUARD spend booking dropped (shutting down): %s", exc)
         return
-    _record_usd_blocking(micro, family)
+    _record_usd_blocking(micro, family, include_global)
 
 
 __all__ = [

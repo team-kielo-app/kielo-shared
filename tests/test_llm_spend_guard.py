@@ -278,3 +278,21 @@ def test_the_audio_loop_never_stalls_on_the_guard(monkeypatch, silent_redis_serv
         sg.set_redis_factory(None)
     assert result == sg.HEADROOM_OK
     assert worst < 0.1, f"event loop stalled for {worst:.3f}s"
+
+
+def test_record_usd_never_raises_after_the_executor_shuts_down(monkeypatch, caplog):
+    import asyncio
+    import logging
+
+    class _Dead:
+        def submit(self, *a, **k):
+            raise RuntimeError("cannot schedule new futures after interpreter shutdown")
+
+    monkeypatch.setattr(sg, "_executor", _Dead())
+
+    async def main():
+        sg.record_usd(0.01, family="juka_live")
+
+    with caplog.at_level(logging.WARNING):
+        asyncio.run(main())
+    assert "dropped" in caplog.text
