@@ -20,7 +20,8 @@ from kielo_shared.seam.tts.types import (
 
 
 _DEFAULT_ENDPOINT = "https://api.openai.com/v1/audio/speech"
-_DEFAULT_MODEL = "tts-1"
+# Models that take the `instructions` field; the older tts-1 family rejects it.
+_INSTRUCTIONS_MODEL_PREFIX = "gpt-"
 
 
 class OpenAITTSProvider:
@@ -36,7 +37,7 @@ class OpenAITTSProvider:
         http_client: Optional[httpx.AsyncClient] = None,
         *,
         endpoint: str = _DEFAULT_ENDPOINT,
-        default_model: str = _DEFAULT_MODEL,
+        default_model: str = "",
     ) -> None:
         self._api_key = api_key
         self._client = http_client
@@ -57,6 +58,11 @@ class OpenAITTSProvider:
             )
         if not request.text:
             raise Error(ErrorClass.CLIENT_ERROR, RuntimeError("empty text"))
+        if not (request.model or self._default_model):
+            raise Error(
+                ErrorClass.CLIENT_ERROR,
+                RuntimeError("no OpenAI TTS model: the tts_routes row supplies it"),
+            )
 
     def _build_payload(self, request: Request) -> dict[str, Any]:
         model = request.model or self._default_model
@@ -68,7 +74,7 @@ class OpenAITTSProvider:
         }
         if request.speed > 0:
             payload["speed"] = request.speed
-        if request.instructions and model == "gpt-4o-mini-tts":
+        if request.instructions and model.startswith(_INSTRUCTIONS_MODEL_PREFIX):
             payload["instructions"] = request.instructions
         return payload
 

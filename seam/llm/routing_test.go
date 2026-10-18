@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/team-kielo-app/kielo-shared/llmroute"
@@ -18,7 +19,11 @@ func (f *fakeProvider) Generate(_ context.Context, req Request) (*Result, error)
 }
 
 func TestRoutingAppliesRouteAndBudget(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/llm-models") {
+			_, _ = w.Write([]byte(`{"items":[{"model":"gemini-3.8-flash","provider":"google"}]}`))
+			return
+		}
 		_, _ = w.Write([]byte(`{"items":[{"family":"unit_family","model":"gemini-3.8-flash","thinking_budget":0,"daily_budget_usd":0.001}]}`))
 	}))
 	defer srv.Close()

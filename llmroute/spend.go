@@ -13,7 +13,7 @@ var ErrFamilyBudgetExceeded = errors.New("llm family daily budget reached")
 // price is USD per million tokens (input, output including thinking).
 type price struct{ in, out float64 }
 
-// prices mirrors localization.llm_models and the Python llm_usage table. An
+// prices mirrors the compiled fallback of kielo_shared.llm.pricing; localization.llm_models is the source of truth. An
 // unlisted model books at the dearest listed rate, never $0.
 var prices = map[string]price{
 	"gemini-3.8-flash":      {0.75, 3.75},
@@ -23,8 +23,10 @@ var prices = map[string]price{
 	"gemini-2.5-flash":      {0.30, 2.50},
 	"gemini-2.5-flash-lite": {0.10, 0.40},
 	"gemini-2.5-pro":        {1.25, 10.00},
-	"gpt-4o":                {2.50, 10.00},
-	"gpt-4o-mini":           {0.15, 0.60},
+	// Fallback only, for an unreachable llm_models: an unlisted OpenAI model must
+	// not book at the dearest rate.
+	"gpt-4o":      {2.50, 10.00},
+	"gpt-4o-mini": {0.15, 0.60},
 }
 
 var fallbackPrice = price{2.50, 10.00}

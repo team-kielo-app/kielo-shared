@@ -149,3 +149,151 @@ def test_legacy_env_spelling_counts_as_the_environment(monkeypatch):
     monkeypatch.setenv("K_SERVICE", "svc")
     with pytest.raises(sg.PaidLLMCallsDisabled):
         sg.admit_paid_call("t")
+
+
+# ----------------------------------------------- redis wiring and the audio loop
+
+
+@pytest.mark.parametrize(
+    "env,want",
+    [
+        ({"REDIS_HOST": "h:6379"}, ("h", 6379, "")),
+        ({"REDIS_HOST": "10.0.0.3:6380"}, ("10.0.0.3", 6380, "")),
+        ({"REDIS_HOST": "h", "REDIS_PORT": "6381"}, ("h", 6381, "")),
+        ({"REDIS_HOST": "h"}, ("h", 6379, "")),
+        ({"REDIS_HOST": "h:6379", "REDIS_PORT": "9999"}, ("h", 6379, "")),
+        ({"REDIS_HOST": "h:notaport"}, ("h:notaport", 6379, "")),
+        (
+            {"REDIS_URL": "redis://u:pw@cache.internal:6390/2"},
+            ("", 6379, "redis://u:pw@cache.internal:6390/2"),
+        ),
+        (
+            {"REDIS_HOST": "redis://cache.internal:6391/0"},
+            ("", 6379, "redis://cache.internal:6391/0"),
+        ),
+        (
+            {"REDIS_URL": "redis://a:1/0", "REDIS_HOST": "h:6379"},
+            ("", 6379, "redis://a:1/0"),
+        ),
+    ],
+)
+def test_redis_target_parses_host_port_and_urls(env, want):
+    target = sg.redis_target(env)
+    assert (target.host, target.port, target.url) == want
+
+
+def test_redis_target_carries_the_password_and_needs_a_host():
+    assert sg.redis_target({"REDIS_HOST": "h:1", "REDIS_PASSWORD": "pw"}).password == "pw"
+    with pytest.raises(RuntimeError):
+        sg.redis_target({})
+
+
+def test_the_guard_waits_on_redis_for_a_short_bounded_time():
+    assert sg._REDIS_TIMEOUT_SECONDS <= 0.25
+    assert sg._LOOP_WAIT_SECONDS <= 0.3
+
+
+class _UnresponsiveStore:
+    """A store that is up but never answers within the guard's patience."""
+
+    def __init__(self, seconds: float = 1.0) -> None:
+        self.seconds = seconds
+
+    def mget(self, keys):
+        import time
+
+        time.sleep(self.seconds)
+        return [None] * len(keys)
+
+    def incrby(self, key, n):
+        import time
+
+        time.sleep(self.seconds)
+        return n
+
+    def expire(self, *_a):
+        return True
+
+
+def _prod_with_budget(monkeypatch):
+    for k in ("REDIS_URL", "REDIS_HOST", "ENV", "K_SERVICE", "LLM_HOURLY_CALL_CAP"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.setenv("LLM_DAILY_BUDGET_USD", "5")
+
+
+def test_an_unresponsive_store_fails_open_within_the_loop_wait(monkeypatch):
+    import asyncio
+    import time
+
+    _prod_with_budget(monkeypatch)
+    sg.set_redis_factory(lambda: _UnresponsiveStore())
+
+    async def main():
+        started = time.monotonic()
+        result = sg.session_headroom("juka_live")
+        sg.record_usd(0.01, family="juka_live")
+        return result, time.monotonic() - started
+
+    try:
+        result, elapsed = asyncio.run(main())
+    finally:
+        sg.set_redis_factory(None)
+    assert result == sg.HEADROOM_OK
+    assert elapsed < 0.6
+
+
+def test_the_audio_loop_never_stalls_on_the_guard(monkeypatch):
+    import asyncio
+    import time
+
+    _prod_with_budget(monkeypatch)
+    sg.set_redis_factory(lambda: _UnresponsiveStore())
+
+    async def main():
+        worst = 0.0
+        stop = False
+
+        async def probe():
+            nonlocal worst
+            last = time.monotonic()
+            while not stop:
+                await asyncio.sleep(0.005)
+                now = time.monotonic()
+                worst = max(worst, now - last - 0.005)
+                last = now
+
+        task = asyncio.create_task(probe())
+        await asyncio.sleep(0.05)
+        result = await sg.asession_headroom("juka_live")
+        for _ in range(5):
+            sg.record_usd(0.01, family="juka_live")
+        await asyncio.sleep(0.05)
+        stop = True
+        await task
+        return result, worst
+
+    try:
+        result, worst = asyncio.run(main())
+    finally:
+        sg.set_redis_factory(None)
+    assert result == sg.HEADROOM_OK
+    assert worst < 0.1, f"event loop stalled for {worst:.3f}s"
+
+
+def test_record_usd_never_raises_after_the_executor_shuts_down(monkeypatch, caplog):
+    import asyncio
+    import logging
+
+    class _Dead:
+        def submit(self, *a, **k):
+            raise RuntimeError("cannot schedule new futures after interpreter shutdown")
+
+    monkeypatch.setattr(sg, "_executor", _Dead())
+
+    async def main():
+        sg.record_usd(0.01, family="juka_live")
+
+    with caplog.at_level(logging.WARNING):
+        asyncio.run(main())
+    assert "dropped" in caplog.text

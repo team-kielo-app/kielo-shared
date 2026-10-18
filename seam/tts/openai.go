@@ -14,6 +14,11 @@ import (
 	"github.com/team-kielo-app/kielo-shared/observe/httputil"
 )
 
+// instructionsModelPrefix marks the speech models that take an `instructions` field.
+const instructionsModelPrefix = "gpt-"
+
+var errNoModel = errors.New("no OpenAI TTS model: the tts_routes row supplies it")
+
 // OpenAITTSProvider calls the OpenAI /v1/audio/speech endpoint.
 // Stateless beyond the injected http.Client + API key. Caller-side
 // concerns (cache, breaker, voice normalization) stay outside the
@@ -22,7 +27,7 @@ type OpenAITTSProvider struct {
 	APIKey       string
 	HTTPClient   *http.Client
 	Endpoint     string // override for tests; defaults to OpenAI prod
-	DefaultModel string // applied when Request.Model is empty
+	DefaultModel string // applied when Request.Model is empty; unset by default, the tts_routes row supplies the model
 }
 
 // NewOpenAITTSProvider builds a provider with sensible defaults.
@@ -33,10 +38,9 @@ func NewOpenAITTSProvider(apiKey string, client *http.Client) *OpenAITTSProvider
 		client = httputil.NewClient(30 * time.Second)
 	}
 	return &OpenAITTSProvider{
-		APIKey:       apiKey,
-		HTTPClient:   client,
-		Endpoint:     "https://api.openai.com/v1/audio/speech",
-		DefaultModel: "tts-1",
+		APIKey:     apiKey,
+		HTTPClient: client,
+		Endpoint:   "https://api.openai.com/v1/audio/speech",
 	}
 }
 
@@ -48,6 +52,24 @@ func (p *OpenAITTSProvider) ProviderID(req Request) string {
 		model = p.DefaultModel
 	}
 	return "openai-tts:" + model
+}
+
+// openAIPayload is the /v1/audio/speech body. gpt-* speech models accept an
+// `instructions` field for stylistic hints; the older `tts-1*` models reject it.
+func openAIPayload(req Request, model string) map[string]any {
+	payload := map[string]any{
+		"model":           model,
+		"voice":           req.VoiceID,
+		"input":           req.Text,
+		"response_format": "mp3",
+	}
+	if req.Speed > 0 {
+		payload["speed"] = req.Speed
+	}
+	if req.Instructions != "" && strings.HasPrefix(model, instructionsModelPrefix) {
+		payload["instructions"] = req.Instructions
+	}
+	return payload
 }
 
 func (p *OpenAITTSProvider) Synthesize(ctx context.Context, req Request) (*Result, error) {
@@ -62,20 +84,10 @@ func (p *OpenAITTSProvider) Synthesize(ctx context.Context, req Request) (*Resul
 	if model == "" {
 		model = p.DefaultModel
 	}
-	payload := map[string]any{
-		"model":           model,
-		"voice":           req.VoiceID,
-		"input":           req.Text,
-		"response_format": "mp3",
+	if model == "" {
+		return nil, &Error{Class: ErrorClassClientError, Err: errNoModel}
 	}
-	if req.Speed > 0 {
-		payload["speed"] = req.Speed
-	}
-	// gpt-4o-mini-tts accepts a `instructions` field for stylistic
-	// hints; older `tts-1*` models reject it.
-	if req.Instructions != "" && model == "gpt-4o-mini-tts" {
-		payload["instructions"] = req.Instructions
-	}
+	payload := openAIPayload(req, model)
 
 	body, err := json.Marshal(payload)
 	if err != nil {

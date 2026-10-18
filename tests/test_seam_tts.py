@@ -100,7 +100,7 @@ async def test_openai_tts_happy_path():
 async def test_openai_tts_5xx_classified_server_error():
     transport = httpx.MockTransport(lambda _r: httpx.Response(500, text="overloaded"))
     async with httpx.AsyncClient(transport=transport) as client:
-        provider = OpenAITTSProvider("k", client)
+        provider = OpenAITTSProvider("k", client, default_model="m")
         with pytest.raises(Error) as ei:
             await provider.synthesize(
                 Request(text="hi", voice_id="alloy", task="klearn_tts_baseword")
@@ -112,7 +112,7 @@ async def test_openai_tts_5xx_classified_server_error():
 async def test_openai_tts_4xx_classified_client_error():
     transport = httpx.MockTransport(lambda _r: httpx.Response(400, text="bad"))
     async with httpx.AsyncClient(transport=transport) as client:
-        provider = OpenAITTSProvider("k", client)
+        provider = OpenAITTSProvider("k", client, default_model="m")
         with pytest.raises(Error) as ei:
             await provider.synthesize(
                 Request(text="hi", voice_id="alloy", task="klearn_tts_baseword")
@@ -127,7 +127,7 @@ async def test_openai_tts_timeout_classified():
 
     transport = httpx.MockTransport(slow)
     async with httpx.AsyncClient(transport=transport) as client:
-        provider = OpenAITTSProvider("k", client)
+        provider = OpenAITTSProvider("k", client, default_model="m")
         with pytest.raises(Error) as ei:
             await provider.synthesize(
                 Request(text="hi", voice_id="alloy", task="klearn_tts_baseword")
@@ -142,7 +142,7 @@ async def test_openai_tts_connection_error_classified():
 
     transport = httpx.MockTransport(boom)
     async with httpx.AsyncClient(transport=transport) as client:
-        provider = OpenAITTSProvider("k", client)
+        provider = OpenAITTSProvider("k", client, default_model="m")
         with pytest.raises(Error) as ei:
             await provider.synthesize(
                 Request(text="hi", voice_id="alloy", task="klearn_tts_baseword")
@@ -154,7 +154,7 @@ async def test_openai_tts_connection_error_classified():
 async def test_openai_tts_empty_response_rejected():
     transport = httpx.MockTransport(lambda _r: httpx.Response(200, content=b""))
     async with httpx.AsyncClient(transport=transport) as client:
-        provider = OpenAITTSProvider("k", client)
+        provider = OpenAITTSProvider("k", client, default_model="m")
         with pytest.raises(Error) as ei:
             await provider.synthesize(
                 Request(text="hi", voice_id="alloy", task="klearn_tts_baseword")
@@ -174,7 +174,7 @@ async def test_openai_tts_missing_api_key_rejected():
 
 @pytest.mark.asyncio
 async def test_openai_tts_empty_text_rejected():
-    provider = OpenAITTSProvider("k", None)
+    provider = OpenAITTSProvider("k", None, default_model="m")
     with pytest.raises(Error) as ei:
         await provider.synthesize(
             Request(text="", voice_id="alloy", task="klearn_tts_baseword")
@@ -295,7 +295,7 @@ async def test_openai_tts_stream_yields_chunks_in_order():
 
     transport = httpx.MockTransport(handler)
     async with httpx.AsyncClient(transport=transport) as client:
-        provider = OpenAITTSProvider("k", client)
+        provider = OpenAITTSProvider("k", client, default_model="m")
         collected: list[bytes] = []
         async for chunk in provider.synthesize_stream(
             Request(text="hi", voice_id="alloy", task="klearn_tts_baseword_streaming"),
@@ -309,7 +309,7 @@ async def test_openai_tts_stream_yields_chunks_in_order():
 async def test_openai_tts_stream_4xx_raises_seam_error_before_iteration():
     transport = httpx.MockTransport(lambda _r: httpx.Response(401, text="unauth"))
     async with httpx.AsyncClient(transport=transport) as client:
-        provider = OpenAITTSProvider("k", client)
+        provider = OpenAITTSProvider("k", client, default_model="m")
         with pytest.raises(Error) as ei:
             async for _ in provider.synthesize_stream(
                 Request(
@@ -324,7 +324,7 @@ async def test_openai_tts_stream_4xx_raises_seam_error_before_iteration():
 async def test_openai_tts_stream_requires_caller_owned_http_client():
     """Streaming with an auto-spawned client would close the body
     mid-iteration. Provider rejects that path eagerly."""
-    provider = OpenAITTSProvider("k", None)
+    provider = OpenAITTSProvider("k", None, default_model="m")
     with pytest.raises(Error) as ei:
         async for _ in provider.synthesize_stream(
             Request(text="hi", voice_id="alloy", task="klearn_tts_baseword_streaming"),
@@ -421,3 +421,15 @@ async def test_decorator_streaming_raises_when_inner_lacks_streaming():
             Request(text="hi", voice_id="alloy", task="klearn_tts_baseword_streaming"),
         ):
             pass
+
+
+@pytest.mark.asyncio
+async def test_openai_tts_without_a_model_is_a_client_error():
+    transport = httpx.MockTransport(lambda _r: httpx.Response(200, content=b"x"))
+    async with httpx.AsyncClient(transport=transport) as client:
+        provider = OpenAITTSProvider("k", client)
+        with pytest.raises(Error) as ei:
+            await provider.synthesize(
+                Request(text="hi", voice_id="alloy", task="klearn_tts_baseword")
+            )
+    assert ei.value.error_class == ErrorClass.CLIENT_ERROR

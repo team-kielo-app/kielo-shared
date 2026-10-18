@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -17,6 +18,10 @@ func routesServer(t *testing.T, body *atomic.Value, hits *int32) *httptest.Serve
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
+		if r.URL.Path == modelsPath {
+			_, _ = w.Write([]byte(`{"items":[{"model":"gemini-3.8-flash","provider":"google"},{"model":"gemini-3.5-flash","provider":"google"}]}`))
+			return
+		}
 		_, _ = w.Write([]byte(body.Load().(string)))
 	}))
 }
@@ -27,9 +32,9 @@ func TestResolveFollowsStoreWithinTTL(t *testing.T) {
 	var hits int32
 	srv := routesServer(t, &body, &hits)
 	defer srv.Close()
-	now := time.Unix(1000, 0)
+	clk := newFakeClock()
 	c := NewClient(srv.URL, "k", 30*time.Second)
-	c.now = func() time.Time { return now }
+	c.now = clk.Now
 	def := Route{Model: "compiled", ThinkingBudget: -1}
 
 	got := c.Resolve(context.Background(), FamilyJukaHints, def)
@@ -40,7 +45,11 @@ func TestResolveFollowsStoreWithinTTL(t *testing.T) {
 	if c.Resolve(context.Background(), FamilyJukaHints, def).Model != "gemini-3.8-flash" {
 		t.Fatal("cache should hold within the TTL")
 	}
-	now = now.Add(31 * time.Second)
+	clk.Add(31 * time.Second)
+	if got := c.Resolve(context.Background(), FamilyJukaHints, def); got.Model != "gemini-3.8-flash" {
+		t.Fatalf("a stale copy keeps answering while it refreshes, got %+v", got)
+	}
+	waitRefresh(t, c)
 	if got := c.Resolve(context.Background(), FamilyJukaHints, def); got.Model != "gemini-3.5-flash" || got.DailyBudgetUSD != 0 {
 		t.Fatalf("after TTL = %+v", got)
 	}
@@ -105,4 +114,231 @@ func TestRecorderAggregatesAndFlushes(t *testing.T) {
 		t.Fatalf("flush err=%v body=%v", err, got.Load())
 	}
 	NewRecorder("svc", "", "").Record(Sample{Family: "x"})
+}
+
+func TestResolveCarriesProviderFromModels(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == modelsPath {
+			_, _ = w.Write([]byte(`{"items":[{"model":"listed-model","provider":"openai"},{"model":"gemini-x","provider":"google"}]}`))
+			return
+		}
+		_, _ = w.Write([]byte(`{"items":[` +
+			`{"family":"juka_live","model":"listed-model","thinking_budget":-1},` +
+			`{"family":"juka_hints","model":"gemini-x","thinking_budget":-1}]}`))
+	}))
+	defer srv.Close()
+	c := NewClient(srv.URL, "", 30*time.Second)
+	def := Route{Model: "gemini-default", ThinkingBudget: -1}
+
+	if got := c.Resolve(context.Background(), FamilyJukaLive, def); got.Provider != ProviderOpenAI {
+		t.Fatalf("listed model provider = %q", got.Provider)
+	}
+	if got := c.Resolve(context.Background(), FamilyJukaHints, def); got.Provider != ProviderGoogle {
+		t.Fatalf("listed google model, got %q", got.Provider)
+	}
+	if got := c.Resolve(context.Background(), "unknown_family", def); got.Provider != ProviderGoogle {
+		t.Fatalf("default route should infer from the default model, got %q", got.Provider)
+	}
+}
+
+type fakeClock struct {
+	mu sync.Mutex
+	t  time.Time
+}
+
+func newFakeClock() *fakeClock { return &fakeClock{t: time.Unix(1000, 0)} }
+
+func (f *fakeClock) Now() time.Time {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.t
+}
+
+func (f *fakeClock) Add(d time.Duration) {
+	f.mu.Lock()
+	f.t = f.t.Add(d)
+	f.mu.Unlock()
+}
+
+func waitRefresh(t *testing.T, c *Client) {
+	t.Helper()
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		c.mu.Lock()
+		busy := c.refreshing
+		c.mu.Unlock()
+		if !busy {
+			return
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	t.Fatal("refresh did not finish")
+}
+
+func modelsAndRoutes(models, routes string, modelsStatus int) *httptest.Server {
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == modelsPath {
+			if modelsStatus != http.StatusOK {
+				w.WriteHeader(modelsStatus)
+				return
+			}
+			_, _ = w.Write([]byte(models))
+			return
+		}
+		_, _ = w.Write([]byte(routes))
+	}))
+}
+
+func TestResolveRefusesAMissingOrInactiveModel(t *testing.T) {
+	srv := modelsAndRoutes(
+		`{"items":[{"model":"listed","provider":"openai","active":true},{"model":"retired","provider":"openai","active":false}]}`,
+		`{"items":[{"family":"juka_live","model":"retired"},{"family":"juka_feedback","model":"ghost"},{"family":"juka_step_check","model":"listed"}]}`,
+		http.StatusOK)
+	defer srv.Close()
+	c := NewClient(srv.URL, "", time.Minute)
+	def := Route{Model: "gemini-default", ThinkingBudget: -1}
+	for _, family := range []string{FamilyJukaLive, FamilyJukaFeedback} {
+		if got := c.Resolve(context.Background(), family, def); got.Model != "gemini-default" {
+			t.Fatalf("%s should fall back, got %+v", family, got)
+		}
+	}
+	if got := c.Resolve(context.Background(), FamilyJukaStepCheck, def); got.Provider != ProviderOpenAI {
+		t.Fatalf("listed active model should serve, got %+v", got)
+	}
+}
+
+func TestResolveInfersProviderOnlyWhenModelsNeverLoaded(t *testing.T) {
+	srv := modelsAndRoutes("", `{"items":[{"family":"juka_live","model":"gpt-x"}]}`, http.StatusInternalServerError)
+	defer srv.Close()
+	c := NewClient(srv.URL, "", time.Minute)
+	def := Route{Model: "gemini-default", ThinkingBudget: -1}
+	if got := c.Resolve(context.Background(), FamilyJukaLive, def); got.Model != "gpt-x" || got.Provider != ProviderOpenAI {
+		t.Fatalf("routes up, models down at cold start should infer, got %+v", got)
+	}
+}
+
+func TestGeminiOnlyFamilyRefusesAnOpenAIRoute(t *testing.T) {
+	srv := modelsAndRoutes(
+		`{"items":[{"model":"listed","provider":"openai"}]}`,
+		`{"items":[{"family":"juka_hints","model":"listed"},{"family":"juka_live","model":"listed"}]}`,
+		http.StatusOK)
+	defer srv.Close()
+	c := NewClient(srv.URL, "", time.Minute)
+	def := Route{Model: "gemini-default", ThinkingBudget: -1}
+	if got := c.Resolve(context.Background(), FamilyJukaHints, def); got.Model != "gemini-default" {
+		t.Fatalf("hints cannot drive OpenAI, got %+v", got)
+	}
+	if got := c.Resolve(context.Background(), FamilyJukaLive, def); got.Provider != ProviderOpenAI {
+		t.Fatalf("live may, got %+v", got)
+	}
+}
+
+func TestSnapshotDoesNotHoldTheLockWhileFetching(t *testing.T) {
+	release := make(chan struct{})
+	var first int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == modelsPath {
+			_, _ = w.Write([]byte(`{"items":[{"model":"gemini-3.8-flash","provider":"google"}]}`))
+			return
+		}
+		if atomic.AddInt32(&first, 1) > 1 {
+			<-release
+		}
+		_, _ = w.Write([]byte(`{"items":[{"family":"juka_live","model":"gemini-3.8-flash"}]}`))
+	}))
+	defer srv.Close()
+	defer close(release)
+	clk := newFakeClock()
+	c := NewClient(srv.URL, "", 30*time.Second)
+	c.now = clk.Now
+	def := Route{Model: "d", ThinkingBudget: -1}
+	c.Resolve(context.Background(), FamilyJukaLive, def)
+	clk.Add(time.Minute)
+
+	done := make(chan Route, 1)
+	go func() { done <- c.Resolve(context.Background(), FamilyJukaLive, def) }()
+	select {
+	case got := <-done:
+		if got.Model != "gemini-3.8-flash" {
+			t.Fatalf("stale copy expected, got %+v", got)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("Resolve blocked on a slow refresh")
+	}
+}
+
+func TestAnEmptyModelsTableDoesNotRefuseEveryRoute(t *testing.T) {
+	srv := modelsAndRoutes(`{"items":[]}`, `{"items":[{"family":"juka_live","model":"gemini-x"}]}`, http.StatusOK)
+	defer srv.Close()
+	c := NewClient(srv.URL, "", time.Minute)
+	got := c.Resolve(context.Background(), FamilyJukaLive, Route{Model: "d", ThinkingBudget: -1})
+	if got.Model != "gemini-x" || got.Provider != ProviderGoogle {
+		t.Fatalf("empty models table must not refuse routes, got %+v", got)
+	}
+}
+
+func TestFamiliesOutsideTheOpenAIAllowlistAreGeminiOnly(t *testing.T) {
+	srv := modelsAndRoutes(
+		`{"items":[{"model":"listed","provider":"openai"}]}`,
+		`{"items":[{"family":"exercise_judge","model":"listed"},{"family":"brand_new","model":"listed"},{"family":"juka_feedback","model":"listed"}]}`,
+		http.StatusOK)
+	defer srv.Close()
+	c := NewClient(srv.URL, "", time.Minute)
+	def := Route{Model: "gemini-default", ThinkingBudget: -1}
+	for _, family := range []string{"exercise_judge", "brand_new"} {
+		if got := c.Resolve(context.Background(), family, def); got.Model != "gemini-default" {
+			t.Fatalf("%s must stay Gemini, got %+v", family, got)
+		}
+	}
+	if got := c.Resolve(context.Background(), FamilyJukaFeedback, def); got.Provider != ProviderOpenAI {
+		t.Fatalf("feedback may use OpenAI, got %+v", got)
+	}
+}
+
+func TestACancelledCallerDoesNotPoisonTheCache(t *testing.T) {
+	srv := modelsAndRoutes(
+		`{"items":[{"model":"gemini-x","provider":"google"}]}`,
+		`{"items":[{"family":"juka_live","model":"gemini-x"}]}`,
+		http.StatusOK)
+	defer srv.Close()
+	c := NewClient(srv.URL, "", time.Minute)
+	def := Route{Model: "d", ThinkingBudget: -1}
+	cancelled, cancel := context.WithCancel(context.Background())
+	cancel()
+	c.Resolve(cancelled, FamilyJukaLive, def)
+	waitRefresh(t, c)
+	if got := c.Resolve(context.Background(), FamilyJukaLive, def); got.Model != "gemini-x" {
+		t.Fatalf("a cancelled first caller must not leave defaults in the cache, got %+v", got)
+	}
+}
+
+func TestACopyOlderThanMaxStaleIsNotServed(t *testing.T) {
+	release := make(chan struct{})
+	var calls int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == modelsPath {
+			_, _ = w.Write([]byte(`{"items":[{"model":"gemini-a","provider":"google"},{"model":"gemini-b","provider":"google"}]}`))
+			return
+		}
+		model := "gemini-a"
+		if atomic.AddInt32(&calls, 1) > 1 {
+			<-release
+			model = "gemini-b"
+		}
+		_, _ = w.Write([]byte(`{"items":[{"family":"juka_live","model":"` + model + `"}]}`))
+	}))
+	defer srv.Close()
+	clk := newFakeClock()
+	c := NewClient(srv.URL, "", time.Minute)
+	c.now = clk.Now
+	def := Route{Model: "d", ThinkingBudget: -1}
+	c.Resolve(context.Background(), FamilyJukaLive, def)
+	clk.Add(maxStale + time.Second)
+	go func() {
+		time.Sleep(50 * time.Millisecond)
+		close(release)
+	}()
+	if got := c.Resolve(context.Background(), FamilyJukaLive, def); got.Model != "gemini-b" {
+		t.Fatalf("a too-old copy must wait for the refresh, got %+v", got)
+	}
 }

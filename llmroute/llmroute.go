@@ -44,7 +44,11 @@ const (
 
 	DefaultTTL = 30 * time.Second
 
-	routesPath     = "/internal/api/v3/localization/llm-routes"
+	routesPath = "/internal/api/v3/localization/llm-routes"
+	modelsPath = "/internal/api/v3/localization/llm-models"
+
+	ProviderGoogle = "google"
+	ProviderOpenAI = "openai"
 	fetchTimeout   = 2 * time.Second
 	maxResponseLen = 1 << 20
 )
@@ -55,13 +59,68 @@ type Route struct {
 	ThinkingBudget int
 	// DailyBudgetUSD is the per-family cap; 0 means no per-family cap.
 	DailyBudgetUSD float64
+	// Provider is llm_models.provider of Model ("google", "openai"); empty
+	// when neither the store nor the model name says.
+	Provider string
+}
+
+// providerByPrefix is the last resort when llm_models has no row for a routed
+// model: the model-name family decides.
+var providerByPrefix = []struct{ prefix, provider string }{
+	{"gemini-", ProviderGoogle},
+	{"gpt-", ProviderOpenAI},
+}
+
+// InferProvider names the provider from the model name alone, "" when unknown.
+func InferProvider(model string) string {
+	name := strings.ToLower(strings.TrimSpace(model))
+	for _, p := range providerByPrefix {
+		if strings.HasPrefix(name, p.prefix) {
+			return p.provider
+		}
+	}
+	return ""
+}
+
+type modelRow struct {
+	Model    string `json:"model"`
+	Provider string `json:"provider"`
+	Active   *bool  `json:"active"`
+}
+
+type modelInfo struct {
+	provider string
+	active   bool
 }
 
 type row struct {
+	Provider       string   `json:"provider"`
 	Family         string   `json:"family"`
 	Model          string   `json:"model"`
 	ThinkingBudget int      `json:"thinking_budget"`
 	DailyBudgetUSD *float64 `json:"daily_budget_usd"`
+}
+
+// OpenAICapableFamilies are the families whose call sites can drive an OpenAI
+// model (the convo agent's routed_llm and LiveKit builder). Every other family
+// (the engine's Gemini client, ingest, the Go Gemini seam, KTV, hints,
+// translation, scenario authoring) can only drive Gemini, so a new family is
+// Gemini-only by default: a route naming another provider for it is refused and
+// the caller's compiled default runs, logged once.
+var OpenAICapableFamilies = map[string]bool{
+	FamilyJukaLive:      true,
+	FamilyJukaFeedback:  true,
+	FamilyJukaStepCheck: true,
+}
+
+// maxStale bounds how long a stale copy keeps answering while a refresh runs;
+// past it callers wait (up to their context) for the refresh.
+const maxStale = 5 * time.Minute
+
+type tables struct {
+	routes       map[string]Route
+	models       map[string]modelInfo
+	modelsLoaded bool
 }
 
 // Client reads the route table and caches it.
@@ -71,11 +130,15 @@ type Client struct {
 	ttl     time.Duration
 	http    *http.Client
 
-	mu        sync.Mutex
-	routes    map[string]Route
-	logged    map[string]string
-	fetchedAt time.Time
-	now       func() time.Time
+	mu         sync.Mutex
+	data       tables
+	loaded     bool
+	refreshing bool
+	done       chan struct{}
+	logged     map[string]string
+	warned     map[string]bool
+	fetchedAt  time.Time
+	now        func() time.Time
 }
 
 // NewClient builds a client for kielo-localization at baseURL. ttl <= 0 uses DefaultTTL.
@@ -89,53 +152,152 @@ func NewClient(baseURL, internalAPIKey string, ttl time.Duration) *Client {
 		ttl:     ttl,
 		http:    &http.Client{Timeout: fetchTimeout},
 		logged:  map[string]string{},
+		warned:  map[string]bool{},
 		now:     time.Now,
 	}
 }
 
 // Resolve answers the route for family; def fills any gap (no store, unknown
-// family, empty model). It never returns an error.
+// family, empty model, a model that is missing or inactive in llm_models, a
+// provider the family cannot drive). It never returns an error.
 func (c *Client) Resolve(ctx context.Context, family string, def Route) Route {
 	if c == nil || c.baseURL == "" {
 		return def
 	}
-	got, ok := c.snapshot(ctx)[family]
+	if def.Provider == "" {
+		def.Provider = InferProvider(def.Model)
+	}
+	got, ok := c.snapshot(ctx).routes[family]
 	if !ok || strings.TrimSpace(got.Model) == "" {
+		return def
+	}
+	got, ok = c.servable(family, got)
+	if !ok {
 		return def
 	}
 	c.noteChange(family, got)
 	return got
 }
 
-func (c *Client) snapshot(ctx context.Context) map[string]Route {
+func (c *Client) warnOnce(key, msg string, args ...any) {
 	c.mu.Lock()
-	defer c.mu.Unlock()
-	if !c.fetchedAt.IsZero() && c.now().Sub(c.fetchedAt) < c.ttl {
-		return c.routes
+	seen := c.warned[key]
+	c.warned[key] = true
+	c.mu.Unlock()
+	if !seen {
+		slog.Error(msg, args...)
 	}
+}
+
+func (c *Client) servable(family string, r Route) (Route, bool) {
+	c.mu.Lock()
+	data := c.data
+	c.mu.Unlock()
+	provider := ""
+	if data.modelsLoaded {
+		info, ok := data.models[r.Model]
+		if !ok || !info.active {
+			reason := "inactive"
+			if !ok {
+				reason = "missing from llm_models"
+			}
+			c.warnOnce("model|"+family+"|"+r.Model+"|"+reason,
+				"LLM_ROUTE model unusable, using the compiled default",
+				"family", family, "model", r.Model, "reason", reason)
+			return r, false
+		}
+		provider = info.provider
+	} else {
+		provider = r.Provider
+		if provider == "" {
+			provider = InferProvider(r.Model)
+		}
+		c.warnOnce("inferred|"+r.Model, "LLM_ROUTE llm_models never loaded; provider inferred",
+			"model", r.Model, "provider", provider)
+	}
+	if !OpenAICapableFamilies[family] && provider != ProviderGoogle {
+		c.warnOnce("provider|"+family+"|"+r.Model,
+			"LLM_ROUTE family can only drive Gemini; route refused, using the compiled default",
+			"family", family, "model", r.Model, "provider", provider)
+		return r, false
+	}
+	r.Provider = provider
+	return r, true
+}
+
+// snapshot returns the cached tables. The first caller to find them stale
+// starts one refresh, on a context detached from any caller (a canceled request
+// must not poison the cache); other callers get the old copy while it runs, up
+// to maxStale. With no copy yet, or one older than maxStale, callers wait for the
+// refresh or their own context, whichever ends first.
+func (c *Client) snapshot(ctx context.Context) tables {
+	c.mu.Lock()
+	if !c.fetchedAt.IsZero() && c.now().Sub(c.fetchedAt) < c.ttl {
+		d := c.data
+		c.mu.Unlock()
+		return d
+	}
+	if !c.refreshing {
+		c.refreshing = true
+		c.done = make(chan struct{})
+		go c.refresh(c.done)
+	}
+	done := c.done
+	serveOld := c.loaded && c.now().Sub(c.fetchedAt) < maxStale
+	d := c.data
+	c.mu.Unlock()
+	if serveOld {
+		return d
+	}
+	select {
+	case <-done:
+	case <-ctx.Done():
+	}
+	c.mu.Lock()
+	d = c.data
+	c.mu.Unlock()
+	return d
+}
+
+func (c *Client) refresh(done chan struct{}) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*fetchTimeout)
+	defer cancel()
 	routes, err := c.fetch(ctx)
+	var models map[string]modelInfo
+	var merr error
+	if err == nil {
+		models, merr = c.fetchModels(ctx)
+	}
+	c.mu.Lock()
 	// Stamp failures too so an outage costs one 2s fetch per TTL, not one per call.
 	c.fetchedAt = c.now()
 	if err == nil {
-		c.routes = routes
+		c.data.routes = routes
+		c.loaded = true
+		// An empty table is not a table: it must not refuse every route.
+		if merr == nil && len(models) > 0 {
+			c.data.models, c.data.modelsLoaded = models, true
+		}
 	}
-	return c.routes
+	c.refreshing = false
+	c.mu.Unlock()
+	close(done)
 }
 
 func (c *Client) noteChange(family string, r Route) {
-	sig := fmt.Sprintf("%s|%d|%g", r.Model, r.ThinkingBudget, r.DailyBudgetUSD)
+	sig := fmt.Sprintf("%s|%s|%d|%g", r.Model, r.Provider, r.ThinkingBudget, r.DailyBudgetUSD)
 	c.mu.Lock()
 	prev, seen := c.logged[family]
 	c.logged[family] = sig
 	c.mu.Unlock()
 	if !seen || prev != sig {
-		slog.Info("LLM_ROUTE resolved", "family", family, "model", r.Model,
+		slog.Info("LLM_ROUTE resolved", "family", family, "model", r.Model, "provider", r.Provider,
 			"thinking_budget", r.ThinkingBudget, "daily_budget_usd", r.DailyBudgetUSD)
 	}
 }
 
-func (c *Client) fetch(ctx context.Context) (map[string]Route, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+routesPath, http.NoBody)
+func (c *Client) get(ctx context.Context, path, what string) ([]byte, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+path, http.NoBody)
 	if err != nil {
 		return nil, err
 	}
@@ -152,9 +314,49 @@ func (c *Client) fetch(ctx context.Context) (map[string]Route, error) {
 		return nil, err
 	}
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("llm-routes: status %d", resp.StatusCode)
+		return nil, fmt.Errorf("%s: status %d", what, resp.StatusCode)
+	}
+	return body, nil
+}
+
+func (c *Client) fetch(ctx context.Context) (map[string]Route, error) {
+	body, err := c.get(ctx, routesPath, "llm-routes")
+	if err != nil {
+		return nil, err
 	}
 	return decodeRoutes(body)
+}
+
+func (c *Client) fetchModels(ctx context.Context) (map[string]modelInfo, error) {
+	body, err := c.get(ctx, modelsPath, "llm-models")
+	if err != nil {
+		return nil, err
+	}
+	return decodeModels(body)
+}
+
+func decodeModels(body []byte) (map[string]modelInfo, error) {
+	var env struct {
+		Items []modelRow `json:"items"`
+		Data  *struct {
+			Items []modelRow `json:"items"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(body, &env); err != nil {
+		return nil, err
+	}
+	items := env.Items
+	if env.Data != nil {
+		items = env.Data.Items
+	}
+	out := make(map[string]modelInfo, len(items))
+	for _, m := range items {
+		if m.Model == "" || m.Provider == "" {
+			continue
+		}
+		out[m.Model] = modelInfo{provider: m.Provider, active: m.Active == nil || *m.Active}
+	}
+	return out, nil
 }
 
 func decodeRoutes(body []byte) (map[string]Route, error) {
@@ -173,7 +375,7 @@ func decodeRoutes(body []byte) (map[string]Route, error) {
 	}
 	out := make(map[string]Route, len(items))
 	for _, r := range items {
-		route := Route{Model: r.Model, ThinkingBudget: r.ThinkingBudget}
+		route := Route{Model: r.Model, ThinkingBudget: r.ThinkingBudget, Provider: r.Provider}
 		if r.DailyBudgetUSD != nil {
 			route.DailyBudgetUSD = *r.DailyBudgetUSD
 		}

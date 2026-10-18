@@ -7,13 +7,20 @@ refreshed in the background; the last good copy keeps answering when the store
 is unreachable, and with no copy (or no ``LOCALIZATION_SERVICE_URL``) the
 caller's compiled default is returned (fail-open, same as opswitch).
 
+A route also answers WHICH provider serves its model (``Route.provider``): the
+``llm_models.provider`` of the routed model, fetched alongside the routes. The
+same table prices calls (``model_price`` / ``estimate_usd``).
+
 ``record_call`` aggregates usage per (service, family, model) in-process and a
 daemon thread flushes it to the rollup endpoint every few minutes, best effort.
 """
 
 from __future__ import annotations
 
+import asyncio
 import calendar
+import dataclasses
+import json
 import logging
 import os
 import random
@@ -23,6 +30,8 @@ from dataclasses import dataclass
 from typing import Any, Callable
 
 import httpx
+
+from kielo_shared.llm import pricing
 
 logger = logging.getLogger(__name__)
 
@@ -45,9 +54,34 @@ THINKING_DEFAULT = -1
 DEFAULT_TTL_SECONDS = 30.0
 DEFAULT_FLUSH_SECONDS = 300.0
 _ROUTES_PATH = "/internal/api/v3/localization/llm-routes"
+_MODELS_PATH = "/internal/api/v3/localization/llm-models"
 _USAGE_PATH = "/internal/api/v3/localization/llm-usage"
 _FETCH_TIMEOUT_SECONDS = 2.0
 _RESERVOIR = 512
+
+
+PROVIDER_GOOGLE = "google"
+PROVIDER_OPENAI = "openai"
+
+# Families whose call sites can drive an OpenAI model: the ones served by the
+# convo agent's routed_llm / LiveKit builder. Every other family (the engine's
+# LangChain Gemini client, ingest, the Go Gemini seam, KTV, hints, translation,
+# scenario authoring) can only drive Gemini, so a new family is Gemini-only by
+# default and a route naming another provider for it is refused: the caller's
+# compiled default runs, with one logged line, instead of a misrouted call.
+OPENAI_CAPABLE_FAMILIES = frozenset(
+    {
+        "juka_live",
+        "juka_feedback",
+        "juka_step_check",
+    }
+)
+
+SNAPSHOT_TTL_SECONDS = 7 * 24 * 3600
+
+# Last resort when llm_models has no row for a routed model (store down on a
+# cold start, model not yet allowlisted): the model-name family decides.
+_PROVIDER_BY_PREFIX = (("gemini-", PROVIDER_GOOGLE), ("gpt-", PROVIDER_OPENAI))
 
 
 @dataclass(frozen=True)
@@ -55,6 +89,41 @@ class Route:
     model: str
     thinking_budget: int = THINKING_DEFAULT
     daily_budget_usd: float = 0.0
+    provider: str = ""
+
+
+@dataclass(frozen=True)
+class ModelInfo:
+    provider: str
+    input_usd_per_mtok: float
+    output_usd_per_mtok: float
+    active: bool = True
+
+
+def infer_provider(model: str) -> str:
+    name = (model or "").strip().lower()
+    for prefix, provider in _PROVIDER_BY_PREFIX:
+        if name.startswith(prefix):
+            return provider
+    return ""
+
+
+def _decode_models(body: Any) -> dict[str, ModelInfo]:
+    if isinstance(body, dict) and isinstance(body.get("data"), dict):
+        body = body["data"]
+    out: dict[str, ModelInfo] = {}
+    for row in (body or {}).get("items") or []:
+        model = (row.get("model") or "").strip()
+        provider = (row.get("provider") or "").strip()
+        if not model or not provider:
+            continue
+        out[model] = ModelInfo(
+            provider=provider,
+            input_usd_per_mtok=float(row.get("input_usd_per_mtok") or 0.0),
+            output_usd_per_mtok=float(row.get("output_usd_per_mtok") or 0.0),
+            active=bool(row.get("active", True)),
+        )
+    return out
 
 
 def _decode(body: Any) -> dict[str, Route]:
@@ -70,6 +139,7 @@ def _decode(body: Any) -> dict[str, Route]:
             model=model,
             thinking_budget=int(row.get("thinking_budget", THINKING_DEFAULT)),
             daily_budget_usd=float(budget) if budget is not None else 0.0,
+            provider=(row.get("provider") or "").strip(),
         )
     return out
 
@@ -87,38 +157,111 @@ class RouteClient:
         self._ttl = ttl if ttl > 0 else DEFAULT_TTL_SECONDS
         self._clock = clock
         self._routes: dict[str, Route] = {}
+        self._models: dict[str, ModelInfo] = {}
+        self._models_loaded = False
+        self._snapshot_load: Callable[[], dict[str, Any] | None] | None = None
+        self._snapshot_save: Callable[[dict[str, Any]], None] | None = None
+        self._warned: set[tuple[str, ...]] = set()
         self._loaded = False
         self._fetched_at = 0.0
         self._refreshing = False
         self._lock = threading.Lock()
         self._logged: dict[str, Route] = {}
 
+    def set_snapshot_store(
+        self,
+        load: Callable[[], dict[str, Any] | None],
+        save: Callable[[dict[str, Any]], None],
+    ) -> None:
+        """Keep a last-good copy of the tables outside the process (Redis), so a
+        cold start during a localization outage serves the last good routes."""
+        self._snapshot_load, self._snapshot_save = load, save
+
+    def _warn_once(self, *key: str, message: str, args: tuple[Any, ...]) -> None:
+        if key in self._warned:
+            return
+        self._warned.add(key)
+        logger.error(message, *args)
+
     def route(self, family: str) -> Route | None:
-        """The stored route, or None when there is none (no store, unknown family)."""
+        """The stored route, or None when there is none or it cannot be served
+        (no store, unknown family, model missing/inactive, provider not allowed)."""
         if not self._base_url:
             return None
         self._maybe_refresh()
         found = self._routes.get(family)
-        if found is not None and self._logged.get(family) != found:
+        if found is None:
+            return None
+        found = self._servable(family, found)
+        if found is None:
+            return None
+        if self._logged.get(family) != found:
             self._logged[family] = found
             logger.info(
-                "LLM_ROUTE resolved family=%s model=%s thinking_budget=%d daily_budget_usd=%.4f",
+                "LLM_ROUTE resolved family=%s model=%s provider=%s thinking_budget=%d daily_budget_usd=%.4f",
                 family,
                 found.model,
+                found.provider,
                 found.thinking_budget,
                 found.daily_budget_usd,
             )
         return found
+
+    def _servable(self, family: str, route: Route) -> Route | None:
+        info = self._models.get(route.model)
+        if self._models_loaded:
+            if info is None or not info.active:
+                reason = "missing from llm_models" if info is None else "inactive"
+                self._warn_once(
+                    "model",
+                    family,
+                    route.model,
+                    reason,
+                    message="LLM_ROUTE family=%s model=%s is %s; using the compiled default",
+                    args=(family, route.model, reason),
+                )
+                return None
+            provider = info.provider
+        else:
+            provider = route.provider or infer_provider(route.model)
+            self._warn_once(
+                "inferred",
+                route.model,
+                message="LLM_ROUTE llm_models never loaded; model=%s provider inferred=%s",
+                args=(route.model, provider or "unknown"),
+            )
+        if family not in OPENAI_CAPABLE_FAMILIES and provider != PROVIDER_GOOGLE:
+            self._warn_once(
+                "provider",
+                family,
+                route.model,
+                message="LLM_ROUTE family=%s can only drive Gemini; route model=%s provider=%s refused, using the compiled default",
+                args=(family, route.model, provider or "unknown"),
+            )
+            return None
+        return dataclasses.replace(route, provider=provider)
+
+    def model_info(self, model: str) -> ModelInfo | None:
+        if not self._base_url:
+            return None
+        self._maybe_refresh()
+        return self._models.get(model)
 
     def resolve(
         self,
         family: str,
         default_model: str,
         default_thinking: int = THINKING_DEFAULT,
+        default_provider: str = "",
     ) -> Route:
         found = self.route(family)
         if found is None:
-            return Route(default_model, default_thinking, 0.0)
+            return Route(
+                default_model,
+                default_thinking,
+                0.0,
+                default_provider or infer_provider(default_model),
+            )
         return found
 
     def _maybe_refresh(self) -> None:
@@ -127,31 +270,108 @@ class RouteClient:
         if fresh:
             return
         if not self._loaded and not self._fetched_at:
-            self._refresh()
-            return
+            if not _loop_running():
+                self._refresh()
+                return
+            # Never fetch on the event loop: serve the last-good copy now and
+            # refresh in the background.
+            self._load_snapshot()
         with self._lock:
             if self._refreshing:
                 return
             self._refreshing = True
         threading.Thread(target=self._refresh, daemon=True).start()
 
+    def age_seconds(self) -> float:
+        return self._clock() - self._fetched_at if self._fetched_at else float("inf")
+
+    def warm(self) -> None:
+        """Fetch now (worker prewarm), so the first session never waits on localization."""
+        if self._base_url:
+            self._refresh()
+
+    def _get_json(self, path: str, headers: dict[str, str]) -> Any:
+        resp = httpx.get(
+            self._base_url + path, headers=headers, timeout=_FETCH_TIMEOUT_SECONDS
+        )
+        resp.raise_for_status()
+        return resp.json()
+
     def _refresh(self) -> None:
         # Stamp failures too: an outage costs one short fetch per TTL, not one per call.
         self._fetched_at = self._clock()
         try:
             headers = {"X-Internal-API-Key": self._api_key} if self._api_key else {}
-            resp = httpx.get(
-                self._base_url + _ROUTES_PATH,
-                headers=headers,
-                timeout=_FETCH_TIMEOUT_SECONDS,
-            )
-            resp.raise_for_status()
-            self._routes, self._loaded = _decode(resp.json()), True
+            routes_body = self._get_json(_ROUTES_PATH, headers)
+            self._routes, self._loaded = _decode(routes_body), True
+            models_body = None
+            try:
+                models_body = self._get_json(_MODELS_PATH, headers)
+                decoded = _decode_models(models_body)
+                self._models = decoded
+                # An empty table is not a table: it must not refuse every route.
+                self._models_loaded = bool(decoded)
+            except (httpx.HTTPError, ValueError, AttributeError):
+                pass
+            self._save_snapshot(routes_body, models_body)
         except (httpx.HTTPError, ValueError, AttributeError):
             pass
         finally:
             with self._lock:
                 self._refreshing = False
+        if not self._loaded:
+            self._load_snapshot()
+
+    def _save_snapshot(self, routes_body: Any, models_body: Any) -> None:
+        if self._snapshot_save is None:
+            return
+        try:
+            snap: dict[str, Any] = {"routes": routes_body}
+            if models_body is not None:
+                snap["models"] = models_body
+            elif self._models_loaded:
+                snap["models"] = {
+                    "items": [
+                        {
+                            "model": m,
+                            "provider": i.provider,
+                            "input_usd_per_mtok": i.input_usd_per_mtok,
+                            "output_usd_per_mtok": i.output_usd_per_mtok,
+                            "active": i.active,
+                        }
+                        for m, i in self._models.items()
+                    ]
+                }
+            self._snapshot_save(snap)
+        except Exception as exc:
+            logger.warning("LLM_ROUTE snapshot save failed: %s", exc)
+
+    def _load_snapshot(self) -> None:
+        if self._snapshot_load is None:
+            return
+        try:
+            snap = self._snapshot_load()
+            if not snap:
+                return
+            self._routes = _decode(snap.get("routes"))
+            self._loaded = True
+            if snap.get("models") is not None:
+                self._models = _decode_models(snap["models"])
+                self._models_loaded = bool(self._models)
+            logger.warning(
+                "LLM_ROUTE localization unreachable; serving the last-good snapshot (%d routes)",
+                len(self._routes),
+            )
+        except Exception as exc:
+            logger.warning("LLM_ROUTE snapshot load failed: %s", exc)
+
+
+def _loop_running() -> bool:
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return False
+    return True
 
 
 class _Agg:
@@ -330,6 +550,49 @@ def configure(service: str, base_url: str, internal_api_key: str = "") -> None:
     _recorder = UsageRecorder(service, base_url, internal_api_key)
 
 
+def warm() -> None:
+    """Prefetch the route tables (call from worker prewarm, off the event loop)."""
+    if _client is not None:
+        _client.warm()
+
+
+def set_snapshot_store(
+    load: Callable[[], dict[str, Any] | None],
+    save: Callable[[dict[str, Any]], None],
+) -> None:
+    """Install a last-good snapshot store on the process-wide client (see RouteClient)."""
+    if _client is not None:
+        _client.set_snapshot_store(load, save)
+
+
+async def refresh_if_stale(max_age_seconds: float = 300.0, wait_seconds: float = 2.5) -> None:
+    """Before building a session: if the route tables are older than max_age
+    (a prewarmed idle process can be minutes old, and the background refresh is
+    best effort), refresh them on a worker thread, waiting a bounded time."""
+    client = _client
+    if client is None or not client._base_url:
+        return
+    if client.age_seconds() <= max_age_seconds:
+        return
+    try:
+        await asyncio.wait_for(asyncio.to_thread(client.warm), timeout=wait_seconds)
+    except (asyncio.TimeoutError, Exception) as exc:
+        logger.warning("LLM_ROUTE stale refresh skipped: %s", type(exc).__name__)
+
+
+def snapshot_json_store(client: Any, key: str) -> tuple[Callable[[], Any], Callable[[Any], None]]:
+    """Load/save callables over a sync redis-like client (get/set with ex)."""
+
+    def load() -> dict[str, Any] | None:
+        raw = client.get(key)
+        return json.loads(raw) if raw else None
+
+    def save(snap: dict[str, Any]) -> None:
+        client.set(key, json.dumps(snap), ex=SNAPSHOT_TTL_SECONDS)
+
+    return load, save
+
+
 def configure_from_env(service: str) -> None:
     key = (
         os.environ.get("KIELO_INTERNAL_API_KEY")
@@ -351,11 +614,38 @@ def service_name() -> str:
 
 
 def resolve(
-    family: str, default_model: str, default_thinking: int = THINKING_DEFAULT
+    family: str,
+    default_model: str,
+    default_thinking: int = THINKING_DEFAULT,
+    default_provider: str = "",
 ) -> Route:
+    """The family's model, provider and budgets; the default fills a gap (no store, unknown family)."""
     if _client is None:
-        return Route(default_model, default_thinking, 0.0)
-    return _client.resolve(family, default_model, default_thinking)
+        return Route(
+            default_model,
+            default_thinking,
+            0.0,
+            default_provider or infer_provider(default_model),
+        )
+    return _client.resolve(family, default_model, default_thinking, default_provider)
+
+
+def stored_route(family: str) -> Route | None:
+    """The route the store holds for family, None when there is none (no store, unknown family)."""
+    return _client.route(family) if _client is not None else None
+
+
+def model_price(model: str) -> tuple[float, float]:
+    """USD per 1M tokens (input, output incl. thinking): llm_models first, then the compiled table."""
+    info = _client.model_info(model) if _client is not None else None
+    if info is not None:
+        return (info.input_usd_per_mtok, info.output_usd_per_mtok)
+    return pricing.PRICES.get(model, pricing.FALLBACK_PRICE)
+
+
+def estimate_usd(model: str, tokens_in: int, tokens_out: int, thinking: int = 0) -> float:
+    price_in, price_out = model_price(model)
+    return (tokens_in * price_in + (tokens_out + thinking) * price_out) / 1_000_000
 
 
 def daily_budget_usd(family: str) -> float:
