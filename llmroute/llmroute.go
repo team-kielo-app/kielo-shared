@@ -226,7 +226,7 @@ func (c *Client) servable(family string, r Route) (Route, bool) {
 }
 
 // snapshot returns the cached tables. The first caller to find them stale
-// starts one refresh, on a context detached from any caller (a cancelled request
+// starts one refresh, on a context detached from any caller (a canceled request
 // must not poison the cache); other callers get the old copy while it runs, up
 // to maxStale. With no copy yet, or one older than maxStale, callers wait for the
 // refresh or their own context, whichever ends first.
