@@ -188,8 +188,8 @@ func (c *Client) noteChange(family string, r Route) {
 	}
 }
 
-func (c *Client) fetch(ctx context.Context) (map[string]Route, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+routesPath, http.NoBody)
+func (c *Client) get(ctx context.Context, path, what string) ([]byte, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+path, http.NoBody)
 	if err != nil {
 		return nil, err
 	}
@@ -206,30 +206,23 @@ func (c *Client) fetch(ctx context.Context) (map[string]Route, error) {
 		return nil, err
 	}
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("llm-routes: status %d", resp.StatusCode)
+		return nil, fmt.Errorf("%s: status %d", what, resp.StatusCode)
+	}
+	return body, nil
+}
+
+func (c *Client) fetch(ctx context.Context) (map[string]Route, error) {
+	body, err := c.get(ctx, routesPath, "llm-routes")
+	if err != nil {
+		return nil, err
 	}
 	return decodeRoutes(body)
 }
 
 func (c *Client) fetchProviders(ctx context.Context) (map[string]string, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+modelsPath, http.NoBody)
+	body, err := c.get(ctx, modelsPath, "llm-models")
 	if err != nil {
 		return nil, err
-	}
-	if c.apiKey != "" {
-		req.Header.Set("X-Internal-API-Key", c.apiKey)
-	}
-	resp, err := c.http.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	body, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseLen))
-	if err != nil {
-		return nil, err
-	}
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("llm-models: status %d", resp.StatusCode)
 	}
 	return decodeProviders(body)
 }
