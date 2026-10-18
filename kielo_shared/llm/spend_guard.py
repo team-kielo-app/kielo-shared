@@ -25,8 +25,10 @@ import asyncio
 import logging
 import os
 import time
+from collections.abc import Mapping
 from concurrent.futures import ThreadPoolExecutor
 from contextvars import ContextVar
+from dataclasses import dataclass
 from typing import Any, Callable
 
 logger = logging.getLogger(__name__)
@@ -76,7 +78,7 @@ def is_production(env: dict[str, str] | None = None) -> bool:
     return bool(e.get("K_SERVICE"))
 
 
-def _float(e: dict[str, str] | os._Environ, key: str, default: float) -> float:
+def _float(e: Mapping[str, str], key: str, default: float) -> float:
     raw = (e.get(key) or "").strip()
     if not raw:
         return default
@@ -86,7 +88,7 @@ def _float(e: dict[str, str] | os._Environ, key: str, default: float) -> float:
         return default
 
 
-def _int(e: dict[str, str] | os._Environ, key: str, default: int) -> int:
+def _int(e: Mapping[str, str], key: str, default: int) -> int:
     return int(_float(e, key, float(default)))
 
 
@@ -104,12 +106,46 @@ def _split_host_port(raw: str) -> tuple[str, int | None]:
     return raw, None
 
 
+@dataclass(frozen=True)
+class RedisTarget:
+    """Where the counters live: a URL, or host/port/password."""
+
+    url: str = ""
+    host: str = ""
+    port: int = 6379
+    password: str | None = None
+
+
+def redis_target(env: Mapping[str, str] | None = None) -> RedisTarget:
+    """Resolve REDIS_URL | REDIS_HOST[:port] | REDIS_HOST + REDIS_PORT.
+
+    Pure (no redis import): REDIS_HOST may carry its port ("10.0.0.3:6379", how
+    the convo VM passes it) or be a redis:// URL. Raises RuntimeError when
+    nothing is configured.
+    """
+    e = env if env is not None else os.environ
+    url = (e.get("REDIS_URL") or "").strip()
+    host = (e.get("REDIS_HOST") or "").strip()
+    if not url and host.startswith(("redis://", "rediss://", "unix://")):
+        url = host
+    if url:
+        return RedisTarget(url=url)
+    if not host:
+        raise RuntimeError("no REDIS_URL/REDIS_HOST configured")
+    host, port = _split_host_port(host)
+    return RedisTarget(
+        host=host,
+        port=port if port is not None else _int(e, "REDIS_PORT", 6379),
+        password=(e.get("REDIS_PASSWORD") or None),
+    )
+
+
 def _default_redis_factory() -> Any:
     import redis  # type: ignore[import-not-found]
     from redis.backoff import NoBackoff  # type: ignore[import-not-found]
     from redis.retry import Retry  # type: ignore[import-not-found]
 
-    e = os.environ
+    target = redis_target()
     kwargs: dict[str, Any] = {
         "socket_connect_timeout": _REDIS_TIMEOUT_SECONDS,
         "socket_timeout": _REDIS_TIMEOUT_SECONDS,
@@ -118,20 +154,10 @@ def _default_redis_factory() -> Any:
         # the guard fails fast and open instead.
         "retry": Retry(NoBackoff(), 0),
     }
-    url = (e.get("REDIS_URL") or "").strip()
-    host = (e.get("REDIS_HOST") or "").strip()
-    if not url and host.startswith(("redis://", "rediss://", "unix://")):
-        url = host
-    if url:
-        return redis.Redis.from_url(url, **kwargs)
-    if not host:
-        raise RuntimeError("no REDIS_URL/REDIS_HOST configured")
-    host, port = _split_host_port(host)
+    if target.url:
+        return redis.Redis.from_url(target.url, **kwargs)
     return redis.Redis(
-        host=host,
-        port=port if port is not None else _int(e, "REDIS_PORT", 6379),
-        password=(e.get("REDIS_PASSWORD") or None),
-        **kwargs,
+        host=target.host, port=target.port, password=target.password, **kwargs
     )
 
 
