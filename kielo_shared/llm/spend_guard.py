@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 import os
 import time
 from collections.abc import Callable, Mapping
@@ -318,6 +319,14 @@ _admit_script: Any = None
 _admit_script_client: Any = None
 
 
+# Errors raised INSIDE a script ("Error running script ...", "user_script") are
+# not "unsupported": the script may have booked part of the estimate already.
+_SCRIPT_UNSUPPORTED_RE = re.compile(
+    r"unknown command|noscript|crossslot|command not allowed|not supported",
+    re.IGNORECASE,
+)
+
+
 def _script_unsupported() -> tuple[type[BaseException], ...]:
     try:
         from redis.exceptions import ResponseError  # type: ignore[import-not-found]
@@ -371,9 +380,25 @@ def _admit_scripted(
             int(budget * _MICRO) if budget > 0 else 0,
         ]
         code, spent = (int(x) for x in _admit_script(keys=keys, args=args))
-    except _script_unsupported():
-        logger.warning("LLM_GUARD admission script unsupported; using sequential path")
-        return False
+    except _script_unsupported() as exc:
+        # Only "this store cannot run scripts" falls back. Any other error may
+        # come from a script that already booked part of the estimate, and the
+        # sequential path would book it again.
+        if _SCRIPT_UNSUPPORTED_RE.search(str(exc)):
+            logger.warning(
+                "LLM_GUARD admission script unsupported; using sequential path"
+            )
+            return False
+        if prod:
+            logger.error("LLM_GUARD_UNAVAILABLE failing open in production: %s", exc)
+            return True
+        raise _refuse(
+            LLMGuardUnavailable(
+                f"LLM spend counter unreachable ({type(exc).__name__}); refusing paid call",
+                reason="guard_unavailable",
+                task=task,
+            )
+        ) from exc
     except Exception as exc:
         if prod:
             logger.error("LLM_GUARD_UNAVAILABLE failing open in production: %s", exc)

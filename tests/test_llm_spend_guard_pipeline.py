@@ -351,3 +351,42 @@ def test_script_rejected_by_store_falls_back_to_sequential(monkeypatch):
     with pytest.raises(sg.LLMBudgetExceeded) as ei:
         sg.admit_paid_call("t")
     assert ei.value.reason == "hourly_cap"
+
+
+def _script_error(monkeypatch, r):
+    from redis.exceptions import ResponseError
+
+    calls = {"n": 0}
+
+    def boom(src):
+        def call(**kw):
+            calls["n"] += 1
+            raise ResponseError(
+                "Error running script (call to f_x): @user_script:1: WRONGTYPE"
+            )
+
+        return call
+
+    monkeypatch.setattr(r, "register_script", boom)
+    return calls
+
+
+def test_an_error_inside_the_script_does_not_book_again_sequentially(monkeypatch):
+    env = DEV | {"LLM_DAILY_BUDGET_USD": "1", "LLM_HOURLY_CALL_CAP": "2"}
+    r = _setup(monkeypatch, env, 0, None)
+    _script_error(monkeypatch, r)
+    with pytest.raises(sg.LLMGuardUnavailable):
+        sg.admit_paid_call("t")
+    assert r.get(sg._calls_key(sg._bucket(sg._clock()))) is None
+
+
+def test_an_error_inside_the_script_fails_open_in_production(monkeypatch):
+    env = DEV | {
+        "ENVIRONMENT": "production",
+        "LLM_DAILY_BUDGET_USD": "1",
+        "LLM_HOURLY_CALL_CAP": "2",
+    }
+    r = _setup(monkeypatch, env, 0, None)
+    _script_error(monkeypatch, r)
+    sg.admit_paid_call("t")
+    assert r.get(sg._calls_key(sg._bucket(sg._clock()))) is None
