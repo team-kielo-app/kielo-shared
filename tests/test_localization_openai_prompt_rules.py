@@ -7,6 +7,8 @@ prompt must state the rule, and the provider id must have moved off the
 prompt's previous tag so the provider-chain cache cannot serve the old output.
 """
 
+import pytest
+
 from kielo_shared.localization import openai_provider as op
 
 
@@ -97,6 +99,7 @@ def test_keep_verbatim_context_adds_an_explicit_binding_instruction():
     assert "never correct" in pinned
 
 
+@pytest.mark.asyncio
 async def test_providers_put_the_instruction_in_the_prompt_the_model_sees():
     import json
 
