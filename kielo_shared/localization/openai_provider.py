@@ -118,7 +118,16 @@ _REPEATED_CASE_RE = re.compile(
 def name_finnish_cases(translated: str) -> str:
     def _finnish(match: re.Match[str]) -> str:
         found = match.group(1)
-        name = _FINNISH_CASE_NAMES[found.lower()]
+        # IGNORECASE also matches look-alikes whose lower() is not ASCII:
+        # Turkish "İnessive" lowers to "i\u0307nessive".
+        key = "".join(
+            c
+            for c in unicodedata.normalize("NFKD", found)
+            if not unicodedata.combining(c)
+        ).lower()
+        name = _FINNISH_CASE_NAMES.get(key)
+        if name is None:
+            return found
         return name.capitalize() if found[0].isupper() else name
 
     if not translated:
