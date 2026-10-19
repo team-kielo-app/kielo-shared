@@ -11,7 +11,7 @@ import pytest
 fakeredis = pytest.importorskip("fakeredis")
 pytest.importorskip("lupa")
 
-from kielo_shared.llm import spend_guard as sg
+from kielo_shared.llm import spend_guard as sg  # noqa: E402
 
 NOW = 1_000_000.0
 ENV_KEYS = (
