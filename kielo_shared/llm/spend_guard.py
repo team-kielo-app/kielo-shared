@@ -25,11 +25,11 @@ import asyncio
 import logging
 import os
 import time
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from concurrent.futures import ThreadPoolExecutor
 from contextvars import ContextVar
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -179,9 +179,11 @@ _clock: Callable[[], float] = time.time
 
 def set_redis_factory(factory: Callable[[], Any] | None) -> None:
     """Test hook / explicit wiring. Resets the cached client."""
-    global _redis_factory, _redis_client
+    global _redis_factory, _redis_client, _admit_script, _admit_script_client
     _redis_factory = factory or _default_redis_factory
     _redis_client = None
+    _admit_script = None
+    _admit_script_client = None
 
 
 def set_clock(clock: Callable[[], float] | None) -> None:
@@ -282,6 +284,134 @@ def _admit_family(family: str, task: str, est_micro: int, prod: bool) -> None:
         ) from exc
 
 
+_ADMIT_SCRIPT_SRC = """
+local nfam = tonumber(ARGV[1])
+local est = tonumber(ARGV[2])
+local ttl = tonumber(ARGV[3])
+if nfam > 0 then
+  local spent = 0
+  for i = 1, nfam do
+    spent = spent + (tonumber(redis.call('GET', KEYS[i])) or 0)
+  end
+  if spent >= tonumber(ARGV[4]) then return {1, spent} end
+  redis.call('INCRBY', KEYS[1], est)
+  redis.call('EXPIRE', KEYS[1], ttl)
+end
+if ARGV[5] == '0' then return {0, 0} end
+local calls = redis.call('INCR', KEYS[nfam + 1])
+if calls == 1 then redis.call('EXPIRE', KEYS[nfam + 1], tonumber(ARGV[6])) end
+local cap = tonumber(ARGV[7])
+if cap > 0 and calls > cap then return {2, calls} end
+if ARGV[8] == '1' then
+  local spent = 0
+  for i = nfam + 2, nfam + 1 + tonumber(ARGV[9]) do
+    spent = spent + (tonumber(redis.call('GET', KEYS[i])) or 0)
+  end
+  if spent >= tonumber(ARGV[10]) then return {3, spent} end
+  redis.call('INCRBY', KEYS[nfam + 2], est)
+  redis.call('EXPIRE', KEYS[nfam + 2], ttl)
+end
+return {0, 0}
+"""
+
+_admit_script: Any = None
+_admit_script_client: Any = None
+
+
+def _script_unsupported() -> tuple[type[BaseException], ...]:
+    try:
+        from redis.exceptions import ResponseError  # type: ignore[import-not-found]
+    except ImportError:
+        return ()
+    return (ResponseError,)
+
+
+def _admit_scripted(
+    family: str,
+    family_budget: float,
+    task: str,
+    est_micro: int,
+    budget: float,
+    hourly_cap: int,
+    prod: bool,
+) -> bool:
+    """The admission checks as ONE Redis round trip (same commands, same order,
+    same early exits as `_admit_sequential`; the script makes them atomic too).
+
+    Returns False when the store cannot run it, so the caller falls back.
+    """
+    global _admit_script, _admit_script_client
+    current = _bucket(_clock())
+    fam_on = family_budget > 0
+    try:
+        r = _client()
+        if not hasattr(r, "register_script"):
+            return False
+        if _admit_script is None or _admit_script_client is not r:
+            _admit_script = r.register_script(_ADMIT_SCRIPT_SRC)
+            _admit_script_client = r
+        keys: list[str] = []
+        if fam_on:
+            keys += [
+                _family_usd_key(family, current - i) for i in range(_WINDOW_BUCKETS)
+            ]
+        keys.append(_calls_key(current))
+        keys += [_usd_key(current - i) for i in range(_WINDOW_BUCKETS)]
+        global_on = budget > 0 or hourly_cap > 0
+        args = [
+            _WINDOW_BUCKETS if fam_on else 0,
+            est_micro,
+            _BUCKET_SECONDS * (_WINDOW_BUCKETS + 1),
+            int(family_budget * _MICRO) if fam_on else 0,
+            1 if global_on else 0,
+            _BUCKET_SECONDS * 2,
+            max(hourly_cap, 0),
+            1 if budget > 0 else 0,
+            _WINDOW_BUCKETS,
+            int(budget * _MICRO) if budget > 0 else 0,
+        ]
+        code, spent = (int(x) for x in _admit_script(keys=keys, args=args))
+    except _script_unsupported():
+        logger.warning("LLM_GUARD admission script unsupported; using sequential path")
+        return False
+    except Exception as exc:
+        if prod:
+            logger.error("LLM_GUARD_UNAVAILABLE failing open in production: %s", exc)
+            return True
+        raise _refuse(
+            LLMGuardUnavailable(
+                f"LLM spend counter unreachable ({type(exc).__name__}); refusing paid call",
+                reason="guard_unavailable",
+                task=task,
+            )
+        ) from exc
+    if code == 1:
+        raise _refuse(
+            LLMBudgetExceeded(
+                f"family {family} daily budget reached (${spent / _MICRO:.2f} of ${family_budget:.2f})",
+                reason="family_daily_budget",
+                task=task,
+            )
+        )
+    if code == 2:
+        raise _refuse(
+            LLMBudgetExceeded(
+                f"hourly LLM call cap reached ({hourly_cap}/h)",
+                reason="hourly_cap",
+                task=task,
+            )
+        )
+    if code == 3:
+        raise _refuse(
+            LLMBudgetExceeded(
+                f"rolling 24h LLM budget reached (${spent / _MICRO:.2f} of ${budget:.2f})",
+                reason="daily_budget",
+                task=task,
+            )
+        )
+    return True
+
+
 def admit_paid_call(
     task: str = "", *, provider: str = "", book: bool = True, family: str = ""
 ) -> None:
@@ -306,33 +436,41 @@ def admit_paid_call(
         return
 
     family = family or llm_family_var.get()
-    if family:
-        _admit_family(
-            family,
-            task,
-            int(
-                max(
-                    0.0,
-                    _float(e, "LLM_GUARD_EST_USD_PER_CALL", _DEFAULT_EST_USD_PER_CALL),
-                )
-                * _MICRO
-            ),
-            prod,
-        )
-
+    est_micro = int(
+        max(0.0, _float(e, "LLM_GUARD_EST_USD_PER_CALL", _DEFAULT_EST_USD_PER_CALL))
+        * _MICRO
+    )
     budget = _float(
         e, "LLM_DAILY_BUDGET_USD", 0.0 if prod else _DEFAULT_NONPROD_BUDGET_USD
     )
     hourly_cap = _int(
         e, "LLM_HOURLY_CALL_CAP", 0 if prod else _DEFAULT_NONPROD_HOURLY_CAP
     )
-    if budget <= 0 and hourly_cap <= 0:
+    family_budget = _family_budget(family) if family else 0.0
+    if family_budget <= 0 and budget <= 0 and hourly_cap <= 0:
         return
 
-    est_micro = int(
-        max(0.0, _float(e, "LLM_GUARD_EST_USD_PER_CALL", _DEFAULT_EST_USD_PER_CALL))
-        * _MICRO
-    )
+    if _admit_scripted(
+        family, family_budget, task, est_micro, budget, hourly_cap, prod
+    ):
+        return
+    _admit_sequential(family, task, est_micro, budget, hourly_cap, prod)
+
+
+def _admit_sequential(
+    family: str,
+    task: str,
+    est_micro: int,
+    budget: float,
+    hourly_cap: int,
+    prod: bool,
+) -> None:
+    """One Redis round trip per command. Used when the store cannot run the
+    admission script (a stub client, a cluster that rejects cross-slot keys)."""
+    if family:
+        _admit_family(family, task, est_micro, prod)
+    if budget <= 0 and hourly_cap <= 0:
+        return
     now = _clock()
     current = _bucket(now)
     try:
@@ -378,39 +516,34 @@ def admit_paid_call(
         ) from exc
 
 
-def _record_family_usd(family: str, actual_usd: float) -> None:
-    if _family_budget(family) <= 0:
+def _book(bookings: list[tuple[str, int]]) -> None:
+    """INCRBY + EXPIRE for each (key, delta), in one pipelined round trip."""
+    if not bookings:
         return
-    est = int(
-        max(
-            0.0,
-            _float(os.environ, "LLM_GUARD_EST_USD_PER_CALL", _DEFAULT_EST_USD_PER_CALL),
-        )
-        * _MICRO
-    )
-    delta = int(max(0.0, actual_usd) * _MICRO) - est
-    if delta == 0:
+    r = _client()
+    ttl = _BUCKET_SECONDS * (_WINDOW_BUCKETS + 1)
+    if not hasattr(r, "pipeline"):
+        for key, delta in bookings:
+            r.incrby(key, delta)
+            r.expire(key, ttl)
         return
-    try:
-        r = _client()
-        key = _family_usd_key(family, _bucket(_clock()))
-        r.incrby(key, delta)
-        r.expire(key, _BUCKET_SECONDS * (_WINDOW_BUCKETS + 1))
-    except Exception as exc:
-        logger.warning("LLM_GUARD family spend adjust failed: %s", exc)
+    pipe = r.pipeline(transaction=False)
+    for key, delta in bookings:
+        pipe.incrby(key, delta)
+        pipe.expire(key, ttl)
+    pipe.execute()
 
 
 def record_actual_usd(actual_usd: float, *, family: str = "") -> None:
     """Replace the admission estimate with the real cost of the finished call."""
     family = family or llm_family_var.get()
-    if family:
-        _record_family_usd(family, actual_usd)
     e = os.environ
     prod = is_production()
     budget = _float(
         e, "LLM_DAILY_BUDGET_USD", 0.0 if prod else _DEFAULT_NONPROD_BUDGET_USD
     )
-    if budget <= 0:
+    family_on = bool(family) and _family_budget(family) > 0
+    if budget <= 0 and not family_on:
         return
     est = int(
         max(0.0, _float(e, "LLM_GUARD_EST_USD_PER_CALL", _DEFAULT_EST_USD_PER_CALL))
@@ -419,11 +552,14 @@ def record_actual_usd(actual_usd: float, *, family: str = "") -> None:
     delta = int(max(0.0, actual_usd) * _MICRO) - est
     if delta == 0:
         return
+    current = _bucket(_clock())
+    bookings: list[tuple[str, int]] = []
+    if family_on:
+        bookings.append((_family_usd_key(family, current), delta))
+    if budget > 0:
+        bookings.append((_usd_key(current), delta))
     try:
-        r = _client()
-        key = _usd_key(_bucket(_clock()))
-        r.incrby(key, delta)
-        r.expire(key, _BUCKET_SECONDS * (_WINDOW_BUCKETS + 1))
+        _book(bookings)
     except Exception as exc:
         logger.warning("LLM_GUARD spend adjust failed: %s", exc)
 
@@ -445,13 +581,28 @@ def _headroom_blocking(family: str, prod: bool) -> str:
         return HEADROOM_OK
     current = _bucket(_clock())
     r = _client()
-    if budget > 0:
-        keys = [_usd_key(current - i) for i in range(_WINDOW_BUCKETS)]
-        if sum(int(v or 0) for v in r.mget(keys)) >= int(budget * _MICRO):
-            return HEADROOM_GLOBAL_OVER
-    if family_budget > 0:
-        keys = [_family_usd_key(family, current - i) for i in range(_WINDOW_BUCKETS)]
-        if sum(int(v or 0) for v in r.mget(keys)) >= int(family_budget * _MICRO):
+    global_keys = (
+        [_usd_key(current - i) for i in range(_WINDOW_BUCKETS)] if budget > 0 else []
+    )
+    family_keys = (
+        [_family_usd_key(family, current - i) for i in range(_WINDOW_BUCKETS)]
+        if family_budget > 0
+        else []
+    )
+    if global_keys and family_keys and hasattr(r, "pipeline"):
+        pipe = r.pipeline(transaction=False)
+        pipe.mget(global_keys)
+        pipe.mget(family_keys)
+        global_vals, family_vals = pipe.execute()
+    else:
+        global_vals = r.mget(global_keys) if global_keys else None
+        family_vals = None
+    if global_keys and sum(int(v or 0) for v in global_vals) >= int(budget * _MICRO):
+        return HEADROOM_GLOBAL_OVER
+    if family_keys:
+        if family_vals is None:
+            family_vals = r.mget(family_keys)
+        if sum(int(v or 0) for v in family_vals) >= int(family_budget * _MICRO):
             return HEADROOM_FAMILY_OVER
     return HEADROOM_OK
 
@@ -522,15 +673,12 @@ def _record_usd_blocking(micro: int, family: str, include_global: bool = True) -
     )
     current = _bucket(_clock())
     try:
-        r = _client()
+        bookings: list[tuple[str, int]] = []
         if family and _family_budget(family) > 0:
-            key = _family_usd_key(family, current)
-            r.incrby(key, micro)
-            r.expire(key, _BUCKET_SECONDS * (_WINDOW_BUCKETS + 1))
+            bookings.append((_family_usd_key(family, current), micro))
         if budget > 0 and include_global:
-            key = _usd_key(current)
-            r.incrby(key, micro)
-            r.expire(key, _BUCKET_SECONDS * (_WINDOW_BUCKETS + 1))
+            bookings.append((_usd_key(current), micro))
+        _book(bookings)
     except Exception as exc:
         logger.warning("LLM_GUARD spend booking failed: %s", exc)
 
