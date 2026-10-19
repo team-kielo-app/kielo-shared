@@ -12,9 +12,10 @@ gloss translation is shorter and stricter than the plain version of the
 same text).
 
 Behavior:
-  * Per-item read: GET → if hit, mark cached=True, latency≈0, skip inner.
+  * Batch read: one MGET → per item, if hit, mark cached=True, latency≈0, skip inner.
   * Misses are collected, sent through inner.translate_batch in ONE call,
     then results are written back with TTL.
+  * Misses are written back in one non-transactional pipeline (SET .. EX ttl).
   * Cache write/read failures degrade silently to the inner provider —
     Redis going down does not break translation.
 
@@ -29,7 +30,7 @@ import asyncio
 import hashlib
 import json
 import logging
-from typing import Any, Awaitable, Protocol
+from typing import Any, Protocol
 
 from kielo_shared.localization.provider import LocalizationProvider
 from kielo_shared.localization.types import TranslationItem, TranslationResult
@@ -138,10 +139,8 @@ class RedisCacheDecorator:
             for item in items
         ]
 
-        # 1) Fan-out GETs in parallel — Redis pipelines this server-side.
-        cached_texts: list[str | None] = await asyncio.gather(
-            *(self._safe_get(k) for k in keys), return_exceptions=False
-        )
+        # 1) One MGET for the whole batch.
+        cached_texts = await self._get_many(keys)
 
         results: list[TranslationResult | None] = [None] * len(items)
         miss_indices: list[int] = []
@@ -182,16 +181,16 @@ class RedisCacheDecorator:
                 # 3) Write results back. Skip provenance-marked passthroughs —
                 # caching a passthrough would lock the source text in place
                 # if a real provider becomes available later.
-                set_tasks: list[Awaitable[Any]] = []
+                to_set: list[tuple[str, str]] = []
                 for slot, r in zip(miss_indices, inner_results, strict=True):
                     results[slot] = r
                     if r.provider == "passthrough":
                         continue
                     if not (r.text or "").strip():
                         continue
-                    set_tasks.append(self._safe_set(keys[slot], r.text))
-                if set_tasks:
-                    await asyncio.gather(*set_tasks, return_exceptions=False)
+                    to_set.append((keys[slot], r.text))
+                if to_set:
+                    await self._set_many(to_set)
 
         # All slots filled (results contain TranslationResult, never None
         # here because inner is mandated to return one-per-input).
@@ -209,12 +208,44 @@ class RedisCacheDecorator:
     def _passthrough(item: TranslationItem) -> TranslationResult:
         return TranslationResult(text=item.text, provider="passthrough")
 
+    async def _get_many(self, keys: list[str]) -> list[str | None]:
+        mget = getattr(self._redis, "mget", None)
+        if mget is None:
+            return list(await asyncio.gather(*(self._safe_get(k) for k in keys)))
+        try:
+            values = await mget(keys)
+        except Exception as exc:
+            logger.debug("RedisCacheDecorator MGET failed n=%d: %s", len(keys), exc)
+            return [None] * len(keys)
+        if not isinstance(values, (list, tuple)) or len(values) != len(keys):
+            return [None] * len(keys)
+        return [self._decode(v) for v in values]
+
+    async def _set_many(self, pairs: list[tuple[str, str]]) -> None:
+        pipeline = getattr(self._redis, "pipeline", None)
+        if pipeline is None:
+            await asyncio.gather(*(self._safe_set(k, v) for k, v in pairs))
+            return
+        try:
+            pipe = pipeline(transaction=False)
+            for key, text in pairs:
+                pipe.set(key, text, ex=self._ttl)
+            await pipe.execute()
+        except Exception as exc:
+            logger.debug(
+                "RedisCacheDecorator pipelined SET failed n=%d: %s", len(pairs), exc
+            )
+
     async def _safe_get(self, key: str) -> str | None:
         try:
             value = await self._redis.get(key)  # type: ignore[union-attr]
         except Exception as exc:
             logger.debug("RedisCacheDecorator GET failed key=%s: %s", key, exc)
             return None
+        return self._decode(value)
+
+    @staticmethod
+    def _decode(value: Any) -> str | None:
         if value is None:
             return None
         if isinstance(value, bytes):

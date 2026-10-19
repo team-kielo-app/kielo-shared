@@ -69,3 +69,14 @@ def test_a_gloss_that_repeats_the_renamed_case_is_dropped() -> None:
 
     assert name_finnish_cases("Cách illative (Illatiivi) là một cách.") == "Cách illatiivi là một cách."
     assert name_finnish_cases("cách inessiivi (-ssa/-ssä)") == "cách inessiivi (-ssa/-ssä)"
+
+
+def test_a_turkish_dotted_capital_i_still_renames_the_case() -> None:
+    from kielo_shared.localization.openai_provider import name_finnish_cases
+
+    # tr concept hub, 2026-10-19 01:20Z: "İnessive" matched the case-insensitive
+    # pattern but lower() gives "i̇nessive" (i + U+0307), a KeyError that sent
+    # the whole batch back to English.
+    assert (
+        name_finnish_cases("İnessive hali ve İllative") == "Inessiivi hali ve Illatiivi"
+    )
