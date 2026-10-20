@@ -18607,7 +18607,7 @@ type SuggestSpellingInternalMorphologySuggestGetParams struct {
 
 // PostInternalPubsubNotificationControlPlaneTickParams defines parameters for PostInternalPubsubNotificationControlPlaneTick.
 type PostInternalPubsubNotificationControlPlaneTickParams struct {
-	// Stage One of schedules, campaigns, jobs, provider_receipts, inbox_outbox, admin_action_outbox, lane_funnel; omitted runs all stages for compatibility.
+	// Stage One of schedules, campaigns, jobs, provider_receipts, inbox_outbox, admin_action_outbox, lane_funnel, lifecycle_emails; omitted runs all stages for compatibility.
 	Stage *string `form:"stage,omitempty" json:"stage,omitempty"`
 }
 
