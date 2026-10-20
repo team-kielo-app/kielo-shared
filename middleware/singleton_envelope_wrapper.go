@@ -60,6 +60,20 @@ func SingletonEnvelopeWrapper() echo.MiddlewareFunc {
 		return func(c echo.Context) error {
 			rec := newSingletonCaptureWriter(c.Response().Writer)
 			c.Response().Writer = rec
+			// A panic skips both restores below, so Echo's Recover would write its 500
+			// into the capture buffer and the client would get an empty 200. Put the real
+			// writer back first; unless bytes already went out, drop the buffered body and
+			// uncommit so the 500 can still be written.
+			defer func() {
+				if r := recover(); r != nil {
+					c.Response().Writer = rec.original
+					if !rec.streamed {
+						c.Response().Committed = false
+						c.Response().Size = 0
+					}
+					panic(r)
+				}
+			}()
 
 			handlerErr := next(c)
 			if handlerErr != nil {

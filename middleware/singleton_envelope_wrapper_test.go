@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/labstack/echo/v4"
+	echomw "github.com/labstack/echo/v4/middleware"
 )
 
 // TestSingletonEnvelopeWrapper pins the wrap-vs-pass-through decision
@@ -124,5 +125,31 @@ func TestSingletonEnvelopeWrapper_NonJSONPassthrough(t *testing.T) {
 
 	if rec.Body.String() != "event: ping\ndata: {}\n\n" {
 		t.Errorf("non-JSON body was modified: %q", rec.Body.String())
+	}
+}
+
+func TestSingletonEnvelopeWrapper_PanicReachesRecoverAs500(t *testing.T) {
+	for name, handler := range map[string]echo.HandlerFunc{
+		"before writing": func(c echo.Context) error { panic("boom") },
+		"after writing": func(c echo.Context) error {
+			_ = c.JSON(http.StatusOK, map[string]string{"id": "x"})
+			panic("boom")
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			e := echo.New()
+			e.Use(echomw.Recover())
+			e.Use(SingletonEnvelopeWrapper())
+			e.GET("/x", handler)
+			req := httptest.NewRequest(http.MethodGet, "/x", nil)
+			rec := httptest.NewRecorder()
+			e.ServeHTTP(rec, req)
+			if rec.Code != http.StatusInternalServerError {
+				t.Fatalf("status = %d, want 500", rec.Code)
+			}
+			if rec.Body.Len() == 0 {
+				t.Fatal("empty body: the error envelope never reached the client")
+			}
+		})
 	}
 }
