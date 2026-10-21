@@ -24,7 +24,10 @@ import (
 
 // Task family keys. One per row of localization.llm_routes.
 const (
-	FamilyJukaLive          = "juka_live"
+	FamilyJukaLive = "juka_live"
+	// FamilyJukaLiveFailover names the model a live call fails over to (the
+	// convo agent picks it when the live route's provider errors or is unusable).
+	FamilyJukaLiveFailover  = "juka_live_failover"
 	FamilyJukaFeedback      = "juka_feedback"
 	FamilyJukaStepCheck     = "juka_step_check"
 	FamilyJukaHints         = "juka_hints"
@@ -108,9 +111,10 @@ type row struct {
 // Gemini-only by default: a route naming another provider for it is refused and
 // the caller's compiled default runs, logged once.
 var OpenAICapableFamilies = map[string]bool{
-	FamilyJukaLive:      true,
-	FamilyJukaFeedback:  true,
-	FamilyJukaStepCheck: true,
+	FamilyJukaLive:         true,
+	FamilyJukaLiveFailover: true,
+	FamilyJukaFeedback:     true,
+	FamilyJukaStepCheck:    true,
 }
 
 // maxStale bounds how long a stale copy keeps answering while a refresh runs;
