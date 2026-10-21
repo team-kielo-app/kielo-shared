@@ -36,6 +36,9 @@ from kielo_shared.llm import pricing
 logger = logging.getLogger(__name__)
 
 FAMILY_JUKA_LIVE = "juka_live"
+# The model a live call fails over to (the convo agent uses it when the live
+# route's provider errors or is unusable).
+FAMILY_JUKA_LIVE_FAILOVER = "juka_live_failover"
 FAMILY_JUKA_FEEDBACK = "juka_feedback"
 FAMILY_JUKA_STEP_CHECK = "juka_step_check"
 FAMILY_JUKA_HINTS = "juka_hints"
@@ -72,6 +75,7 @@ PROVIDER_OPENAI = "openai"
 OPENAI_CAPABLE_FAMILIES = frozenset(
     {
         "juka_live",
+        "juka_live_failover",
         "juka_feedback",
         "juka_step_check",
     }
