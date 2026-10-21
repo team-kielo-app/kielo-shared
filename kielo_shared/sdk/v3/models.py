@@ -6133,9 +6133,9 @@ class PushTokensResponse(BaseModel):
 
 
 class QueueStatus(BaseModel):
-    estimated_wait: int
     position: int
-    status: str
+    reason: str | None = None
+    state: str
 
 
 class QueueStatusResponse(BaseModel):

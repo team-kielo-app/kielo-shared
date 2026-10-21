@@ -9733,9 +9733,9 @@ type PushTokensResponse struct {
 
 // QueueStatus defines model for QueueStatus.
 type QueueStatus struct {
-	EstimatedWait int    `json:"estimated_wait"`
-	Position      int    `json:"position"`
-	Status        string `json:"status"`
+	Position int     `json:"position"`
+	Reason   *string `json:"reason,omitempty"`
+	State    string  `json:"state"`
 }
 
 // QueueStatusResponse defines model for QueueStatusResponse.
