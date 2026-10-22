@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+	shareddb "github.com/team-kielo-app/kielo-shared/db"
 )
 
 // dsn returns the postgres connection string for the test environment.
@@ -26,7 +27,7 @@ func dsn(t *testing.T) string {
 func newPool(t *testing.T) *pgxpool.Pool {
 	t.Helper()
 	ctx := context.Background()
-	pool, err := pgxpool.New(ctx, dsn(t))
+	pool, err := shareddb.NewTestPool(ctx, dsn(t))
 	if err != nil {
 		if os.Getenv("KIELO_TEST_PG_REQUIRED") == "1" {
 			t.Fatalf("pgxpool.New: %v", err)

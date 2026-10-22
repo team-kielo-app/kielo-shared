@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	shareddb "github.com/team-kielo-app/kielo-shared/db"
 )
 
 const (
@@ -23,7 +24,7 @@ func newTestPool(t *testing.T) *pgxpool.Pool {
 	if dbURL == "" {
 		dbURL = defaultTestDBURL
 	}
-	pool, err := pgxpool.New(context.Background(), dbURL)
+	pool, err := shareddb.NewTestPool(context.Background(), dbURL)
 	if err != nil {
 		t.Skipf("Database not available: %v", err)
 	}

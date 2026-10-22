@@ -63,6 +63,29 @@ func shouldPingAfterIdle(_ context.Context, params pgxpool.ShouldPingParams) boo
 // platform-wide tunings (PgBouncer compatibility, pool sizing) only
 // need updating in one place.
 func InitPool(ctx context.Context, dataSourceName string, opts PoolOptions) (*pgxpool.Pool, error) {
+	cfg, err := PoolConfig(dataSourceName, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	pool, err := pgxpool.NewWithConfig(ctx, cfg)
+	if err != nil {
+		return nil, fmt.Errorf("create pool: %w", err)
+	}
+
+	if err := pool.Ping(ctx); err != nil {
+		pool.Close()
+		return nil, fmt.Errorf("ping database: %w", err)
+	}
+
+	return pool, nil
+}
+
+// PoolConfig builds the pgxpool config InitPool opens a pool with: pool sizes,
+// the simple query protocol, ping policy, connect timeout and dialer. It is
+// the one definition of the service's pool, so a test pool built from it
+// (TestPoolConfig) cannot drift from production.
+func PoolConfig(dataSourceName string, opts PoolOptions) (*pgxpool.Config, error) {
 	cfg, err := pgxpool.ParseConfig(dataSourceName)
 	if err != nil {
 		return nil, fmt.Errorf("parse pool config: %w", err)
@@ -86,16 +109,5 @@ func InitPool(ctx context.Context, dataSourceName string, opts PoolOptions) (*pg
 		cfg.ConnConfig.ConnectTimeout = connectTimeout
 	}
 	cfg.ConnConfig.DialFunc = newDialer().DialContext
-
-	pool, err := pgxpool.NewWithConfig(ctx, cfg)
-	if err != nil {
-		return nil, fmt.Errorf("create pool: %w", err)
-	}
-
-	if err := pool.Ping(ctx); err != nil {
-		pool.Close()
-		return nil, fmt.Errorf("ping database: %w", err)
-	}
-
-	return pool, nil
+	return cfg, nil
 }
