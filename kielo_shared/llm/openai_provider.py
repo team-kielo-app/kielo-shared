@@ -51,7 +51,7 @@ class OpenAILLMProvider:
         text_generator: OpenAITextGenerator,
         *,
         json_generator: OpenAIJsonGenerator | None = None,
-        provider_id: str = "openai:gpt-4o-mini@phase-d",
+        provider_id: str = "injected:text-generator@phase-d",
         guard_calls: bool = True,
     ) -> None:
         self._guard_calls = guard_calls

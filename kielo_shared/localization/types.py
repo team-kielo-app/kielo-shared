@@ -47,7 +47,7 @@ class TranslationResult:
         text unchanged (graceful degrade) — `provider == "passthrough"`
         signals that.
       provider: stable provider id including version (e.g.
-        "openai:gpt-4o-mini@2026-04"). Never bare model name.
+        "gemini:gemini-3.1-flash-lite@phase-f"). Never bare model name.
       cached: True if served from a cache layer. False until cache decorator
         lands.
       latency_ms: per-item latency. For batch calls, the provider divides

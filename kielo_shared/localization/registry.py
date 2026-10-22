@@ -11,10 +11,10 @@ A request for a route whose provider id has not been registered raises
 
 Env layout (read by `build_registry_from_env`):
 
-    LOC_PROVIDER_DEFAULT=openai_gpt4o_mini
-    LOC_ROUTE_EN_VI=openai_gpt4o_mini
-    LOC_ROUTE_EN_*=openai_gpt4o_mini
-    LOC_ROUTE_*_*=openai_gpt4o_mini
+    LOC_PROVIDER_DEFAULT=gemini_flash_lite
+    LOC_ROUTE_EN_VI=gemini_flash_lite
+    LOC_ROUTE_EN_*=gemini_flash_lite
+    LOC_ROUTE_*_*=gemini_flash_lite
 
 `LOC_ROUTE_<SOURCE>_<TARGET>` keys add per-pair overrides; `*` is the
 wildcard sentinel and must be uppercase to read clean.

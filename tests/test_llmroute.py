@@ -466,3 +466,10 @@ def test_the_global_ceiling_is_told_apart_from_a_family_cap(monkeypatch):
         sg.set_redis_factory(None)
         sg.set_clock(None)
         llmroute.set_client_for_test(None)
+
+
+def test_estimate_prices_the_failover_model_without_the_store():
+    llmroute.set_client_for_test(None)
+    assert llmroute.model_price("gpt-6-luna") == (0.10, 0.50)
+    usd = llmroute.estimate_usd("gpt-6-luna", 1_000_000, 1_000_000)
+    assert usd == pytest.approx(0.60)

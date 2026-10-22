@@ -27,6 +27,7 @@ var prices = map[string]price{
 	// not book at the dearest rate.
 	"gpt-4o":      {2.50, 10.00},
 	"gpt-4o-mini": {0.15, 0.60},
+	"gpt-6-luna":  {0.10, 0.50},
 }
 
 var fallbackPrice = price{2.50, 10.00}
