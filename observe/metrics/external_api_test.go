@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"net/url"
 	"strings"
 	"testing"
 )
@@ -87,5 +88,34 @@ func TestExternalAPIFailureEmitClassifiesDeadlineExceeded(t *testing.T) {
 	})
 	if !strings.Contains(buf.String(), "kind=timeout") {
 		t.Fatalf("expected kind=timeout: %s", buf.String())
+	}
+}
+
+func TestExternalAPIFailureEmitSkipsCallerCancellation(t *testing.T) {
+	var buf bytes.Buffer
+	prev := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&buf, nil)))
+	t.Cleanup(func() { slog.SetDefault(prev) })
+
+	ExternalAPIFailureEmit(context.Background(), ExternalAPIFailure{
+		Provider:   "deepgram",
+		Operation:  "stt.prerecorded",
+		ErrorClass: "connection",
+		Err:        &url.Error{Op: "Post", URL: "https://api.deepgram.com/v1/listen", Err: context.Canceled},
+	})
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	ExternalAPIFailureEmit(ctx, ExternalAPIFailure{
+		Provider:  "deepgram",
+		Operation: "stt.prerecorded",
+		Err:       errors.New("read: connection reset by peer"),
+	})
+	if strings.Contains(buf.String(), ExternalAPIFailureLogToken) {
+		t.Fatalf("a call the caller canceled must not be recorded: %s", buf.String())
+	}
+
+	ExternalAPIFailureEmit(ctx, ExternalAPIFailure{Provider: "deepgram", Operation: "stt.prerecorded", Status: 503})
+	if !strings.Contains(buf.String(), "kind=server") {
+		t.Fatalf("a provider response is recorded even after cancellation: %s", buf.String())
 	}
 }
