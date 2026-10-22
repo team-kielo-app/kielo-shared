@@ -126,8 +126,13 @@ type ExternalAPIFailure struct {
 
 // ExternalAPIFailureEmit writes the canonical WARN line and bumps the
 // counter. Safe on a nil error and never panics; the service label comes
-// from SetServiceName, matching the search_path emitter.
+// from SetServiceName, matching the search_path emitter. A call our own side
+// canceled before any response (a hedge whose sibling won, a client that
+// went away) is not a provider failure and is not recorded.
 func ExternalAPIFailureEmit(ctx context.Context, f ExternalAPIFailure) {
+	if canceledByCaller(ctx, f) {
+		return
+	}
 	detail := f.Detail
 	if detail == "" && f.Err != nil {
 		detail = f.Err.Error()
@@ -166,6 +171,16 @@ func ExternalAPIFailureEmit(ctx context.Context, f ExternalAPIFailure) {
 		"status", f.Status,
 	)
 	ExternalAPIFailureTotal.WithLabelValues(svc, provider, kind).Inc()
+}
+
+func canceledByCaller(ctx context.Context, f ExternalAPIFailure) bool {
+	if f.Status > 0 {
+		return false
+	}
+	if f.Err != nil && errors.Is(f.Err, context.Canceled) {
+		return true
+	}
+	return ctx != nil && errors.Is(ctx.Err(), context.Canceled)
 }
 
 func statusLabel(status int) string {
