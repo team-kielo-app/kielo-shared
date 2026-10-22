@@ -21,6 +21,7 @@ PRICES: dict[str, tuple[float, float]] = {
     # price is llm_models'.
     "gpt-4o": (2.50, 10.00),
     "gpt-4o-mini": (0.15, 0.60),
+    "gpt-6-luna": (0.10, 0.50),
 }
 
 FALLBACK_PRICE: tuple[float, float] = (2.50, 10.00)

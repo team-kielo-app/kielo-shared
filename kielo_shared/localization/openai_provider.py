@@ -374,7 +374,7 @@ class OpenAIProvider:
         *,
         # @phase-c: prompt gained the title rule (DF-50); the provider-chain
         # cache is keyed by provider_id, so the tag is the cache bust.
-        provider_id: str = "openai:gpt-4o-mini@phase-c",
+        provider_id: str = "injected:text-generator@phase-c",
         max_batch_items: int = 30,
         max_parallel_chunks: int = 4,
         strict_batch: bool = False,

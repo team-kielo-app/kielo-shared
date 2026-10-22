@@ -107,7 +107,7 @@ class DisplayCapability:
 
 @dataclass(frozen=True)
 class TTSCapability:
-    """Per-language gpt-4o-mini-tts configuration.
+    """Per-language OpenAI speech-model configuration.
 
     REMOVED 2026-05-25 (registry coverage audit):
       * preferred_voice_id — populated as None for both fi+sv;
@@ -115,7 +115,7 @@ class TTSCapability:
     """
 
     pronunciation_instructions: Optional[str] = None
-    """Appended to gpt-4o-mini-tts `instructions` to nudge correct
+    """Appended to the OpenAI speech model's `instructions` to nudge correct
     pronunciation. None leaves the default English-trained behavior."""
 
 

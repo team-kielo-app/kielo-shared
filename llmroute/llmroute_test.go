@@ -90,6 +90,15 @@ func TestSpendAdmitBooksPerFamily(t *testing.T) {
 	}
 }
 
+func TestEstimateUSDPricesTheFailoverModelWithoutTheStore(t *testing.T) {
+	if got := EstimateUSD("gpt-6-luna", 1_000_000, 1_000_000, 0); got < 0.5999 || got > 0.6001 {
+		t.Fatalf("gpt-6-luna 1M in + 1M out = %v, want 0.60", got)
+	}
+	if got := EstimateUSD("unlisted-model", 1_000_000, 0, 0); got != fallbackPrice.in {
+		t.Fatalf("unlisted model books at the dearest rate, got %v", got)
+	}
+}
+
 func TestRecorderAggregatesAndFlushes(t *testing.T) {
 	var got atomic.Value
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
