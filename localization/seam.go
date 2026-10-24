@@ -600,14 +600,7 @@ func (s *Seam) providerBatchCall(
 ) {
 	provider, err := s.registry.Resolve(TierASupportLocale, target)
 	if err != nil {
-		for _, r := range remaining {
-			out[r.idx] = r.ref.SourceText
-			s.metrics.Record(ctx, r.ref.Namespace, target, "provider_error")
-		}
-		if len(remaining) > 0 {
-			logTranslationFallback("provider_error", remaining[0].ref.Namespace, "batch", target, len(remaining),
-				fmt.Sprintf("registry_resolve: %v", err))
-		}
+		s.failBatch(ctx, remaining, target, out, fmt.Sprintf("registry_resolve: %v", err))
 		return
 	}
 
@@ -621,15 +614,8 @@ func (s *Seam) providerBatchCall(
 	// len(remaining) would reject every correct response to a batch that
 	// contained a duplicate.
 	if err != nil || len(providerResults) != len(items) {
-		for _, r := range remaining {
-			out[r.idx] = r.ref.SourceText
-			s.metrics.Record(ctx, r.ref.Namespace, target, "provider_error")
-		}
-		if len(remaining) > 0 {
-			logTranslationFallback("provider_error", remaining[0].ref.Namespace, "batch", target, len(remaining),
-				providerFailureCause(err, fmt.Sprintf("result_count_mismatch: got %d want %d",
-					len(providerResults), len(items))))
-		}
+		s.failBatch(ctx, remaining, target, out, providerFailureCause(err, fmt.Sprintf("result_count_mismatch: got %d want %d",
+			len(providerResults), len(items))))
 		return
 	}
 
@@ -672,21 +658,38 @@ func (s *Seam) providerBatchCall(
 		}
 		s.metrics.Record(ctx, r.ref.Namespace, target, "provider_call")
 	}
-	if len(writeSet) > 0 {
-		if batchCache, ok := s.cache.(BatchCache); ok {
-			_ = batchCache.BatchSet(ctx, writeSet, s.freshTTL+s.staleTTL)
-		} else {
-			for k, v := range writeSet {
-				_ = s.cache.Set(ctx, k, v, s.freshTTL+s.staleTTL)
-			}
-		}
-	}
+	s.writeCache(ctx, writeSet)
 	s.cacheGuardRejections(ctx, rejectionSet)
 	// Round 10D: dynamic_translations write-through, per-item. Persister
 	// failures swallowed at impl layer (translation succeeded; losing
 	// the row only re-runs LLM on next request).
 	for _, p := range persistList {
 		_ = s.persister.Persist(ctx, p.ref, target, p.value)
+	}
+}
+
+// failBatch serves every ref its source text and records the provider failure once for the batch.
+func (s *Seam) failBatch(ctx context.Context, remaining []residueEntry, target string, out []string, cause string) {
+	for _, r := range remaining {
+		out[r.idx] = r.ref.SourceText
+		s.metrics.Record(ctx, r.ref.Namespace, target, "provider_error")
+	}
+	if len(remaining) > 0 {
+		logTranslationFallback("provider_error", remaining[0].ref.Namespace, "batch", target, len(remaining), cause)
+	}
+}
+
+// writeCache stores fresh translations through BatchSet when the cache supports it, else per key.
+func (s *Seam) writeCache(ctx context.Context, writeSet map[string]string) {
+	if len(writeSet) == 0 {
+		return
+	}
+	if batchCache, ok := s.cache.(BatchCache); ok {
+		_ = batchCache.BatchSet(ctx, writeSet, s.freshTTL+s.staleTTL)
+		return
+	}
+	for k, v := range writeSet {
+		_ = s.cache.Set(ctx, k, v, s.freshTTL+s.staleTTL)
 	}
 }
 
