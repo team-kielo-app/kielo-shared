@@ -69,7 +69,7 @@ func usablePersisted(ref SourceRef, value string) bool {
 	if strings.TrimSpace(value) == "" {
 		return false
 	}
-	return !(IsSourceEcho(ref.SourceText, value) && IsProse(ref.SourceText))
+	return !IsSourceEcho(ref.SourceText, value) || !IsProse(ref.SourceText)
 }
 
 func (s *Seam) persistedRow(ctx context.Context, ref SourceRef, target string) (string, bool) {
