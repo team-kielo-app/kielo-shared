@@ -164,10 +164,9 @@ func restorePlaceholders(translated string, tokens []string) (string, error) {
 // substituteTokens swaps each mask token for its original and counts how often
 // each index came back; a token with an index never issued is reported, not
 // replaced.
-func substituteTokens(translated string, tokens []string) (string, []int, []string) {
-	seen := make([]int, len(tokens))
-	var unknown []string
-	restored := maskTokenPattern.ReplaceAllStringFunc(translated, func(match string) string {
+func substituteTokens(translated string, tokens []string) (restored string, seen []int, unknown []string) {
+	seen = make([]int, len(tokens))
+	restored = maskTokenPattern.ReplaceAllStringFunc(translated, func(match string) string {
 		groups := maskTokenPattern.FindStringSubmatch(match)
 		index, err := strconv.Atoi(groups[1])
 		if err != nil || index < 0 || index >= len(tokens) {

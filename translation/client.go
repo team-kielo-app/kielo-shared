@@ -160,10 +160,10 @@ func (c *Client) TranslateBatchWithContextsResult(
 // guarantee is never persisted. Blocked entries still ride the batch —
 // dropping them would misalign every index against the backend's reply, which
 // is a worse bug than a wasted translation.
-func maskBatch(texts []string) ([]string, [][]string, []error) {
-	masked := make([]string, len(texts))
-	tokens := make([][]string, len(texts))
-	blocked := make([]error, len(texts))
+func maskBatch(texts []string) (masked []string, tokens [][]string, blocked []error) {
+	masked = make([]string, len(texts))
+	tokens = make([][]string, len(texts))
+	blocked = make([]error, len(texts))
 	for i, text := range texts {
 		masked[i], tokens[i] = maskPlaceholders(text)
 		if unsupported := unsupportedPlaceholders(masked[i]); len(unsupported) > 0 {
