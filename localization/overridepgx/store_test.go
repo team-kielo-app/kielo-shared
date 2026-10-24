@@ -10,15 +10,19 @@ import (
 	shareddb "github.com/team-kielo-app/kielo-shared/db"
 )
 
-// dsn returns the postgres connection string for the test environment.
-// Defaults to the local docker-compose layout (POSTGRES_PASSWORD=password,
-// port 5432). CI can override via KIELO_TEST_PG_DSN.
+// dsn returns the test database the gate provisions. There is no default:
+// localhost:5432 on a laptop is often a developer's forwarded database, and
+// these tests write to it.
 func dsn(t *testing.T) string {
 	t.Helper()
 	if v := os.Getenv("KIELO_TEST_PG_DSN"); v != "" {
 		return v
 	}
-	return "postgres://kielo:password@localhost:5432/kielo_test?sslmode=disable"
+	if os.Getenv("KIELO_TEST_PG_REQUIRED") == "1" {
+		t.Fatal("KIELO_TEST_PG_REQUIRED=1 but KIELO_TEST_PG_DSN is not set")
+	}
+	t.Skip("KIELO_TEST_PG_DSN not set")
+	return ""
 }
 
 // newPool connects to the local kielo_test DB. Skip the suite if it's

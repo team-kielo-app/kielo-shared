@@ -7,7 +7,8 @@ with the same status + source_version semantics:
 * status='override' beats status='approved' (admin edit wins).
 * stale source_version is silently filtered server-side; the seam falls
   through to the cache + provider chain.
-* All other statuses (machine, pending_review) are misses.
+* All other statuses (machine, pending_review) are misses here; the
+  machine rows are read by ``PgxPersistedStore`` below.
 
 Lives alongside the rest of the package because asyncpg is a soft
 dependency of the localization stack — Phase 3.5b wires this for
@@ -127,7 +128,7 @@ class PgxOverrideStore:
             )
         except Exception as exc:
             _log_pool_failure(
-                "PgxOverrideStore.lookup failed",
+                f"{type(self).__name__}.lookup failed",
                 exc,
                 {
                     "namespace": namespace,
@@ -203,7 +204,7 @@ class PgxOverrideStore:
             records = await self._pool.fetch(query, *args)
         except Exception as exc:
             _log_pool_failure(
-                "PgxOverrideStore.batch_lookup failed",
+                f"{type(self).__name__}.batch_lookup failed",
                 exc,
                 {"target_locale": target_locale, "batch_size": len(refs)},
             )
@@ -220,3 +221,33 @@ class PgxOverrideStore:
             if key not in out:
                 out[key] = str(rec["translated_text"])
         return out
+
+
+class PgxPersistedStore(PgxOverrideStore):
+    """asyncpg-backed PersistedStore: the status='machine' rows the seam's
+    persister wrote. Same query shapes and degrade-to-miss behaviour as
+    PgxOverrideStore with a different status filter. Pass as
+    ``Seam(..., persisted=PgxPersistedStore(pool))``; the seam rejects
+    stand-in rows (identical to a prose source) itself.
+    """
+
+    _LOOKUP_QUERY = """
+        SELECT translated_text
+          FROM localization.dynamic_translations
+         WHERE resource_type   = $1
+           AND resource_id     = $2
+           AND source_version  = $3
+           AND language_code   = $4
+           AND status          = 'machine'
+         LIMIT 1
+    """
+
+    _BATCH_LOOKUP_HEAD = (
+        "SELECT resource_type, resource_id, source_version, "
+        "       translated_text, status "
+        "  FROM localization.dynamic_translations "
+        " WHERE language_code = $1 "
+        "   AND status = 'machine' "
+        "   AND (resource_type, resource_id, source_version) IN ("
+    )
+    _BATCH_LOOKUP_TAIL = ") "

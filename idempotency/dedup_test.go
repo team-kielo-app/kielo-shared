@@ -13,16 +13,13 @@ import (
 	shareddb "github.com/team-kielo-app/kielo-shared/db"
 )
 
-const (
-	defaultTestDBURL = "postgres://kielo:password@localhost:5432/kielo_test?sslmode=disable"
-	testStaleAfter   = 5 * time.Minute
-)
+const testStaleAfter = 5 * time.Minute
 
 func newTestPool(t *testing.T) *pgxpool.Pool {
 	t.Helper()
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
-		dbURL = defaultTestDBURL
+		t.Skip("DATABASE_URL not set (no localhost default: that is often a developer's forwarded database)")
 	}
 	pool, err := shareddb.NewTestPool(context.Background(), dbURL)
 	if err != nil {
