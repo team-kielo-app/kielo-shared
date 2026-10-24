@@ -148,9 +148,25 @@ func restorePlaceholders(translated string, tokens []string) (string, error) {
 		return "", fmt.Errorf("translation invented template delimiter %q", loc)
 	}
 
+	restored, seen, unknown := substituteTokens(translated, tokens)
+	if len(unknown) > 0 {
+		return "", fmt.Errorf("translation invented placeholder tokens %s", strings.Join(unknown, ", "))
+	}
+	if err := tokenCountError(seen, tokens); err != nil {
+		return "", err
+	}
+	if err := samePlaceholders(restored, tokens); err != nil {
+		return "", err
+	}
+	return restored, nil
+}
+
+// substituteTokens swaps each mask token for its original and counts how often
+// each index came back; a token with an index never issued is reported, not
+// replaced.
+func substituteTokens(translated string, tokens []string) (string, []int, []string) {
 	seen := make([]int, len(tokens))
 	var unknown []string
-
 	restored := maskTokenPattern.ReplaceAllStringFunc(translated, func(match string) string {
 		groups := maskTokenPattern.FindStringSubmatch(match)
 		index, err := strconv.Atoi(groups[1])
@@ -161,11 +177,11 @@ func restorePlaceholders(translated string, tokens []string) (string, error) {
 		seen[index]++
 		return tokens[index]
 	})
+	return restored, seen, unknown
+}
 
-	if len(unknown) > 0 {
-		return "", fmt.Errorf("translation invented placeholder tokens %s", strings.Join(unknown, ", "))
-	}
-
+// tokenCountError reports tokens the translation dropped or repeated.
+func tokenCountError(seen []int, tokens []string) error {
 	var missing, duplicated []string
 	for index, count := range seen {
 		switch {
@@ -180,40 +196,42 @@ func restorePlaceholders(translated string, tokens []string) (string, error) {
 
 	switch {
 	case len(missing) > 0 && len(duplicated) > 0:
-		return "", fmt.Errorf("translation dropped %s and duplicated %s",
+		return fmt.Errorf("translation dropped %s and duplicated %s",
 			strings.Join(missing, ", "), strings.Join(duplicated, ", "))
 	case len(missing) > 0:
-		return "", fmt.Errorf("translation dropped placeholders %s", strings.Join(missing, ", "))
+		return fmt.Errorf("translation dropped placeholders %s", strings.Join(missing, ", "))
 	case len(duplicated) > 0:
-		return "", fmt.Errorf("translation duplicated placeholders %s", strings.Join(duplicated, ", "))
+		return fmt.Errorf("translation duplicated placeholders %s", strings.Join(duplicated, ", "))
 	}
+	return nil
+}
 
-	// Structural equivalence on the OUTPUT, not on the bookkeeping.
-	//
-	// The token accounting above proves each mask token came back exactly
-	// once. It does not prove the restored string carries the same
-	// placeholders as the source: a stray "%" the model added next to a
-	// restored token can form a NEW verb ("...%" + "s..." -> "%s"), and
-	// adjacent restorations can compose into a match that was not in either
-	// original. Comparing multisets is one cheap check that validates the
-	// thing actually persisted.
+// samePlaceholders checks structural equivalence on the OUTPUT, not on the
+// bookkeeping.
+//
+// The token accounting proves each mask token came back exactly once. It does
+// not prove the restored string carries the same placeholders as the source:
+// a stray "%" the model added next to a restored token can form a NEW verb
+// ("...%" + "s..." -> "%s"), and adjacent restorations can compose into a
+// match that was not in either original. Comparing multisets is one cheap
+// check that validates the thing actually persisted.
+func samePlaceholders(restored string, tokens []string) error {
 	want := make(map[string]int, len(tokens))
 	for _, t := range tokens {
 		want[t]++
 	}
 	got := placeholderMultiset(restored)
 	if len(want) != len(got) {
-		return "", fmt.Errorf("restored text has %d distinct placeholders, source had %d",
+		return fmt.Errorf("restored text has %d distinct placeholders, source had %d",
 			len(got), len(want))
 	}
 	for placeholder, wantCount := range want {
 		if got[placeholder] != wantCount {
-			return "", fmt.Errorf("restored text has %d x %s, source had %d",
+			return fmt.Errorf("restored text has %d x %s, source had %d",
 				got[placeholder], placeholder, wantCount)
 		}
 	}
-
-	return restored, nil
+	return nil
 }
 
 // MaskPlaceholders and RestorePlaceholders expose the masking pair so a caller

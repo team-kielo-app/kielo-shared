@@ -142,17 +142,27 @@ func (c *Client) TranslateBatchWithContextsResult(
 		return slices.Clone(texts), nil
 	}
 
-	// Mask placeholders so the translator rewrites prose and not structure.
-	// Placeholder-free texts come back byte-identical with no tokens, so the
-	// ordinary case is unaffected.
+	masked, tokens, blocked := maskBatch(texts)
+	translated, err := c.dispatchResult(ctx, backend, masked, contexts, sourceLang, targetLang)
+	if err != nil {
+		return nil, err
+	}
+	return restoreBatch(translated, tokens, blocked)
+}
+
+// maskBatch masks placeholders so the translator rewrites prose and not
+// structure. Placeholder-free texts come back byte-identical with no tokens,
+// so the ordinary case is unaffected.
+//
+// An unsupported printf verb (%02d, %.2f) is masked by nothing and reported by
+// nothing: the text looks like prose all the way to the translator. It is
+// recorded here and the entry refused at restore time, so a verb we cannot
+// guarantee is never persisted. Blocked entries still ride the batch —
+// dropping them would misalign every index against the backend's reply, which
+// is a worse bug than a wasted translation.
+func maskBatch(texts []string) ([]string, [][]string, []error) {
 	masked := make([]string, len(texts))
 	tokens := make([][]string, len(texts))
-	// An unsupported printf verb (%02d, %.2f) is masked by nothing and
-	// reported by nothing: the text looks like prose all the way to the
-	// translator. Record it here and refuse the entry at restore time, so a
-	// verb we cannot guarantee is never persisted. Blocked entries still ride
-	// the batch — dropping them would misalign every index against the
-	// backend's reply, which is a worse bug than a wasted translation.
 	blocked := make([]error, len(texts))
 	for i, text := range texts {
 		masked[i], tokens[i] = maskPlaceholders(text)
@@ -161,62 +171,63 @@ func (c *Client) TranslateBatchWithContextsResult(
 				strings.Join(unsupported, ", "))
 		}
 	}
+	return masked, tokens, blocked
+}
 
-	var (
-		translated []string
-		err        error
-	)
+func (c *Client) dispatchResult(
+	ctx context.Context,
+	backend Backend,
+	masked, contexts []string,
+	sourceLang, targetLang string,
+) ([]string, error) {
 	switch backend {
 	case BackendOpusMT:
 		// opus-mt cannot use hints — drop them rather than send a field the
 		// NMT service would have to ignore.
-		translated, err = c.dispatchOpusMTResult(ctx, masked, sourceLang, targetLang)
+		return c.dispatchOpusMTResult(ctx, masked, sourceLang, targetLang)
 	case BackendGemini:
-		translated, err = c.dispatchGeminiResult(ctx, masked, contexts, sourceLang, targetLang)
+		return c.dispatchGeminiResult(ctx, masked, contexts, sourceLang, targetLang)
 	default:
 		return nil, fmt.Errorf("unsupported translation backend %q", backend)
 	}
-	if err != nil {
-		return nil, err
-	}
+}
 
-	// Restore, rejecting any string whose placeholders did not survive. A
-	// rejected entry becomes "", which every caller already treats as "fall
-	// back to the source text" — and which surfaces in existing telemetry as
-	// an empty_translation rather than disappearing silently.
+// restoreBatch restores each entry, rejecting any whose placeholders did not
+// survive. A rejected entry becomes "", which every caller already treats as
+// "fall back to the source text" — and which surfaces in existing telemetry as
+// an empty_translation rather than disappearing silently. Only a wholesale
+// failure is an error: a partially usable batch is more useful to the caller
+// than none of it.
+func restoreBatch(translated []string, tokens [][]string, blocked []error) ([]string, error) {
 	restored := make([]string, len(translated))
 	rejected := 0
 	var firstRejection error
+	reject := func(i int, err error) {
+		rejected++
+		if firstRejection == nil {
+			firstRejection = err
+		}
+		restored[i] = ""
+	}
 	for i, text := range translated {
 		if i >= len(tokens) {
 			restored[i] = text
 			continue
 		}
 		if blocked[i] != nil {
-			rejected++
-			if firstRejection == nil {
-				firstRejection = blocked[i]
-			}
-			restored[i] = ""
+			reject(i, blocked[i])
 			continue
 		}
-		value, restoreErr := restorePlaceholders(text, tokens[i])
-		if restoreErr != nil {
-			rejected++
-			if firstRejection == nil {
-				firstRejection = restoreErr
-			}
-			restored[i] = ""
+		value, err := restorePlaceholders(text, tokens[i])
+		if err != nil {
+			reject(i, err)
 			continue
 		}
 		restored[i] = value
 	}
-	// Only a wholesale failure is an error: a partially usable batch is more
-	// useful to the caller than none of it.
 	if rejected > 0 && rejected == len(restored) {
 		return restored, firstRejection
 	}
-
 	return restored, nil
 }
 
