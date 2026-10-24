@@ -30,12 +30,21 @@ import (
 // runs out-of-band on the caller's scheduler (Cloud Scheduler, k8s
 // CronJob, in-process ticker — wiring is the caller's choice).
 type Store struct {
-	pool *pgxpool.Pool
+	pool        *pgxpool.Pool
+	lookupSQL   string
+	batchSQLFmt string
 }
 
 // New wraps a pgxpool.Pool as a localization.OverrideStore.
 func New(pool *pgxpool.Pool) *Store {
-	return &Store{pool: pool}
+	return &Store{pool: pool, lookupSQL: lookupQuery, batchSQLFmt: batchLookupQuery}
+}
+
+// NewPersisted wraps a pgxpool.Pool as a localization.PersistedStore: the same
+// queries as New with status='machine', the rows the seam's persister wrote.
+// Attach with Seam.WithPersisted; the seam rejects stand-in rows itself.
+func NewPersisted(pool *pgxpool.Pool) *Store {
+	return &Store{pool: pool, lookupSQL: persistedLookupQuery, batchSQLFmt: persistedBatchLookupQuery}
 }
 
 // lookupQuery is the single read path for OverrideStore.Lookup.
@@ -59,6 +68,25 @@ const lookupQuery = `
 	 LIMIT 1
 `
 
+const persistedLookupQuery = `
+	SELECT translated_text
+	  FROM localization.dynamic_translations
+	 WHERE resource_type   = $1
+	   AND resource_id     = $2
+	   AND source_version  = $3
+	   AND language_code   = $4
+	   AND status          = 'machine'
+	 LIMIT 1
+`
+
+const persistedBatchLookupQuery = `
+	SELECT resource_type, resource_id, source_version, translated_text
+	  FROM localization.dynamic_translations
+	 WHERE language_code = $1
+	   AND status        = 'machine'
+	   AND (resource_type, resource_id, source_version) IN (%s)
+`
+
 // Lookup implements localization.OverrideStore.
 //
 // Returns ("", false) on:
@@ -78,7 +106,7 @@ func (s *Store) Lookup(
 	}
 
 	var value string
-	err := s.pool.QueryRow(ctx, lookupQuery, namespace, sourceID, sourceVersion, targetLocale).Scan(&value)
+	err := s.pool.QueryRow(ctx, s.lookupSQL, namespace, sourceID, sourceVersion, targetLocale).Scan(&value)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return "", false
@@ -160,7 +188,7 @@ func (s *Store) BatchLookup(
 		tuples = append(tuples, ')')
 		args = append(args, ref.Namespace, ref.SourceID, ref.SourceVersion)
 	}
-	query := formatBatchLookupQuery(string(tuples))
+	query := formatBatchLookupQuery(s.batchSQLFmt, string(tuples))
 
 	rows, err := s.pool.Query(ctx, query, args...)
 	if err != nil {
@@ -215,19 +243,21 @@ func appendPlaceholder(dst []byte, n int) []byte {
 // parameterized as a single placeholder; the only thing the literal
 // embeds is the placeholder-index list, no user data, so this is
 // SQL-injection-safe.
-func formatBatchLookupQuery(tuples string) string {
+func formatBatchLookupQuery(template, tuples string) string {
 	// fmt.Sprintf-equivalent without the alloc. Append-only.
-	out := make([]byte, 0, len(batchLookupQuery)+len(tuples))
-	for i := 0; i < len(batchLookupQuery); i++ {
-		if batchLookupQuery[i] == '%' && i+1 < len(batchLookupQuery) && batchLookupQuery[i+1] == 's' {
+	out := make([]byte, 0, len(template)+len(tuples))
+	for i := 0; i < len(template); i++ {
+		if template[i] == '%' && i+1 < len(template) && template[i+1] == 's' {
 			out = append(out, tuples...)
 			i++
 			continue
 		}
-		out = append(out, batchLookupQuery[i])
+		out = append(out, template[i])
 	}
 	return string(out)
 }
 
 // Compile-time assertion that *Store satisfies BatchOverrideStore.
 var _ localization.BatchOverrideStore = (*Store)(nil)
+
+var _ localization.PersistedStore = (*Store)(nil)

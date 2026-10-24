@@ -13,6 +13,10 @@ locale and get back a string. The Seam handles:
   * English passthrough (target=en or target empty → return SourceText)
   * Admin-override lookup (localization.translations rows with
     status='approved'|'override' win over machine translations)
+  * Persisted-translation read (optional PersistedStore: the
+    status='machine' row an earlier provider call wrote through the
+    TranslationPersister; read after a cache miss, before the provider,
+    so a translation that exists is never re-bought from the LLM)
   * Source-version-pinned cache keys (author edit bumps version,
     making stale translations unreachable instead of leaking)
   * Single-flight on cache miss (one in-flight provider call per key
@@ -28,6 +32,7 @@ Telemetry source labels (stable, dashboarded):
   * "override"            — served from OverrideStore.lookup
   * "cache_hit"           — fresh cache hit
   * "cache_swr"           — stale cache hit, background refresh kicked off
+  * "persisted"           — served from PersistedStore (machine row), cache refilled
   * "cache_miss_share"    — single-flight share of an in-flight provider call
   * "provider_call"       — provider invoked, value cached
   * "provider_error"      — provider unavailable / errored / returned empty
@@ -54,6 +59,8 @@ from kielo_shared.localization.types import (
     TranslationItem,
     TranslationResult,
     TranslationRole,
+    is_prose,
+    is_source_echo,
 )
 
 logger = logging.getLogger(__name__)
@@ -153,6 +160,27 @@ class OverrideStore(Protocol):
     ) -> str | None: ...
 
 
+@runtime_checkable
+class PersistedStore(Protocol):
+    """Reads back the status='machine' rows the TranslationPersister wrote.
+
+    Same shape as OverrideStore, different status filter: only rows
+    whose source_version equals the requested one. The seam consults it
+    after override + cache miss and before the provider, and applies the
+    stand-in rule itself (a row identical to the source AND prose is a
+    miss). Implementations that also provide ``batch_lookup`` (see
+    BatchOverrideStore) collapse a batch to one query.
+    """
+
+    async def lookup(
+        self,
+        namespace: str,
+        source_id: str,
+        source_version: str,
+        target_locale: str,
+    ) -> str | None: ...
+
+
 class Metrics(Protocol):
     """One Record call per Seam.translate invocation, labeled by
     (namespace, target_locale, source). See module docstring for the
@@ -174,7 +202,12 @@ class TranslationPersister(Protocol):
     The next request for the same (namespace, source_id,
     source_version, target_locale) sees the row via the OverrideStore
     path (when admin promotes to ``approved``/``override``) or via
-    the cache (Redis MGET) — either way the LLM is NOT re-invoked.
+    the cache (Redis MGET). When the cache entry has expired the seam
+    reads the machine row back through ``PersistedStore`` (when wired),
+    so the LLM is re-invoked only when no usable row exists. Without a
+    PersistedStore the row is write-only and an expired cache entry
+    re-translates. A provider result identical to the row the seam just
+    read is not persisted again.
 
     Pre-Round-10A the seam wrote only to Redis cache. Operator
     intent (Round 10) was "treat ui-strings as data" via the
@@ -459,6 +492,32 @@ class MapOverrideStore:
         )
 
 
+class NoopPersistedStore:
+    """PersistedStore that always misses (the pre-persisted-tier behaviour)."""
+
+    async def lookup(
+        self,
+        namespace: str,
+        source_id: str,
+        source_version: str,
+        target_locale: str,
+    ) -> str | None:
+        return None
+
+
+def _usable_persisted(ref: SourceRef, value: str | None) -> bool:
+    """A persisted machine row may be served unless it is a stand-in.
+
+    Rows written before provenance tracking can hold the source itself in
+    place of a translation. Identical-to-source is legitimate for short
+    strings (brand names, greetings) but not for prose, so that
+    combination is treated as a miss and the provider is asked again.
+    """
+    if not value or not value.strip():
+        return False
+    return not (is_source_echo(ref.source_text, value) and is_prose(ref.source_text))
+
+
 class NoopMetrics:
     def record(self, namespace: str, target_locale: str, source: str) -> None:
         return None
@@ -517,6 +576,7 @@ class Seam:
         # tests + dev envs without kielo-localization.
         persister: TranslationPersister | None = None,
         guard: SuspiciousTranslationGuard | None = None,
+        persisted: PersistedStore | None = None,
     ) -> None:
         self._registry = registry
         self._cache = cache or NoopCache()
@@ -525,6 +585,7 @@ class Seam:
         self._config = config or SeamConfig()
         self._persister = persister or NoopPersister()
         self._guard = guard or NoopGuard()
+        self._persisted = persisted
         self._inflight: dict[str, asyncio.Future[str]] = {}
         self._swr_inflight: set[str] = set()
         self._lock = asyncio.Lock()
@@ -658,9 +719,37 @@ class Seam:
         if not remaining_after_cache:
             return out
 
+        # Phase 2b: persisted machine rows. 1 SQL RTT when wired; rows that
+        # exist are served and refill the cache instead of re-calling the LLM.
+        known_rows: dict[str, str] = {}
+        if self._persisted is not None:
+            rows = await self._batch_lookup(
+                self._persisted, remaining_after_cache, target
+            )
+            served: dict[str, str] = {}
+            still: list[tuple[int, SourceRef, str]] = []
+            for idx, ref, key in remaining_after_cache:
+                row = rows.get(
+                    override_batch_key(ref.namespace, ref.source_id, ref.source_version)
+                )
+                if row is None:
+                    still.append((idx, ref, key))
+                    continue
+                known_rows[key] = row
+                if _usable_persisted(ref, row):
+                    out[idx] = row
+                    served[key] = row
+                    self._metrics.record(ref.namespace, target, "persisted")
+                    continue
+                still.append((idx, ref, key))
+            await self._cache_write(served)
+            remaining_after_cache = still
+            if not remaining_after_cache:
+                return out
+
         # Phase 3: provider batch call + cache write-back. 1 LLM RTT.
         _record_budget(_BudgetKind.PROVIDER_CALL, 1)
-        await self._provider_batch_call(remaining_after_cache, target, out)
+        await self._provider_batch_call(remaining_after_cache, target, out, known_rows)
         return out
 
     # ───────────── Sweep AAAAA: batch-phase helpers ──────────────────
@@ -670,28 +759,37 @@ class Seam:
         residue: list[tuple[int, SourceRef, str]],
         target: str,
     ) -> dict[str, str]:
+        return await self._batch_lookup(self._overrides, residue, target)
+
+    @staticmethod
+    async def _batch_lookup(
+        store: OverrideStore | PersistedStore,
+        residue: list[tuple[int, SourceRef, str]],
+        target: str,
+    ) -> dict[str, str]:
         """Returns {override_batch_key: translated_text} for every hit.
-        Misses omitted. Uses BatchOverrideStore.batch_lookup when
-        available; falls back to per-ref OverrideStore.lookup gather."""
-        if isinstance(self._overrides, BatchOverrideStore):
+        Misses omitted. Uses batch_lookup when the store provides it;
+        falls back to per-ref lookup gather."""
+        if isinstance(store, BatchOverrideStore):
             ref_list = [
                 OverrideRef(r.namespace, r.source_id, r.source_version)
                 for _, r, _ in residue
             ]
             try:
-                return await self._overrides.batch_lookup(ref_list, target)
+                return await store.batch_lookup(ref_list, target)
             except Exception:
-                logger.exception(
-                    "seam batch_override_lookup failed; falling back to per-ref"
-                )
+                logger.exception("seam batch_lookup failed; falling back to per-ref")
         # Fallback: per-ref gather. Same shape the pre-AAAAA seam used.
         hits: dict[str, str] = {}
         coros = [
-            self._overrides.lookup(r.namespace, r.source_id, r.source_version, target)
+            store.lookup(r.namespace, r.source_id, r.source_version, target)
             for _, r, _ in residue
         ]
-        values = await asyncio.gather(*coros)
+        values = await asyncio.gather(*coros, return_exceptions=True)
         for (_, r, _), val in zip(residue, values):
+            if isinstance(val, BaseException):
+                logger.error("seam per-ref lookup failed: %s", val)
+                continue
             if val:
                 hits[override_batch_key(r.namespace, r.source_id, r.source_version)] = (
                     val
@@ -719,6 +817,7 @@ class Seam:
         remaining: list[tuple[int, SourceRef, str]],
         target: str,
         out: list[str],
+        known_rows: dict[str, str] | None = None,
     ) -> None:
         """One provider batch call + pipelined cache write-back. On
         any error, falls back to source text per ref (never raises)."""
@@ -836,26 +935,11 @@ class Seam:
                 continue
             out[idx] = value
             write_set[key] = value
-            persist_set[key] = (ref, value)
+            if (known_rows or {}).get(key) != value:
+                persist_set[key] = (ref, value)
             self._metrics.record(ref.namespace, target, "provider_call")
 
-        # Cache write-back.
-        if write_set:
-            ttl = self._config.fresh_ttl_seconds + self._config.stale_ttl_seconds
-            cache_ok = False
-            if isinstance(self._cache, BatchCache):
-                try:
-                    await self._cache.batch_set(write_set, ttl)
-                    cache_ok = True
-                except Exception:
-                    logger.exception("seam batch_set failed; falling back to per-key")
-            if not cache_ok:
-                try:
-                    await asyncio.gather(
-                        *(self._cache.set(k, v, ttl) for k, v in write_set.items())
-                    )
-                except Exception:
-                    logger.exception("seam batch cache write-back fallback failed")
+        await self._cache_write(write_set)
 
         if rejection_set:
             await self._cache_rejections(rejection_set)
@@ -875,6 +959,43 @@ class Seam:
                 )
             except Exception:
                 logger.exception("seam batch persister gather failed")
+
+    async def _cache_write(self, write_set: dict[str, str]) -> None:
+        if not write_set:
+            return
+        ttl = self._config.fresh_ttl_seconds + self._config.stale_ttl_seconds
+        cache_ok = False
+        if isinstance(self._cache, BatchCache):
+            try:
+                await self._cache.batch_set(write_set, ttl)
+                cache_ok = True
+            except Exception:
+                logger.exception("seam batch_set failed; falling back to per-key")
+        if not cache_ok:
+            try:
+                await asyncio.gather(
+                    *(self._cache.set(k, v, ttl) for k, v in write_set.items())
+                )
+            except Exception:
+                logger.exception("seam batch cache write-back fallback failed")
+
+    async def _persisted_row(self, ref: SourceRef, target: str) -> str | None:
+        if self._persisted is None:
+            return None
+        try:
+            return await self._persisted.lookup(
+                ref.namespace, ref.source_id, ref.source_version, target
+            )
+        except Exception:
+            logger.exception(
+                "seam persisted lookup failed; falling through to provider",
+                extra={
+                    "namespace": ref.namespace,
+                    "source_id": ref.source_id,
+                    "target": target,
+                },
+            )
+            return None
 
     # ──────────────────── resolution chain ───────────────────────────
 
@@ -994,6 +1115,14 @@ class Seam:
         # Single-flight coalescing in _provider_path means we only land
         # here for cache-misses that aren't already in flight, so this
         # counts unique LLM/opus-mt round-trips.
+        row = await self._persisted_row(ref, target)
+        if row is not None and _usable_persisted(ref, row):
+            await self._cache.set(
+                cache_key,
+                row,
+                self._config.fresh_ttl_seconds + self._config.stale_ttl_seconds,
+            )
+            return "persisted", row
         _record_budget(_BudgetKind.PROVIDER_CALL, 1)
         provider = self._registry.resolve(
             source_locale=TIER_A_LOCALE, target_locale=target
@@ -1054,6 +1183,8 @@ class Seam:
         # losing the persistence row only means the next request re-
         # runs the LLM (degraded but correct). NoopPersister swallows;
         # production DynClientPersister logs + returns silently.
+        if row == value:
+            return "provider_call", value
         try:
             await self._persister.persist(ref, target, value)
         except Exception:

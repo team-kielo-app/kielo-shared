@@ -16,8 +16,8 @@ import (
 
 // Seam is the high-level translation entry point per ADR-007. Callers
 // hand it a canonical English string and a target locale; the seam
-// resolves through override-table → Redis cache → provider in that
-// order, with single-flight protection on cache misses and
+// resolves through override-table → Redis cache → persisted machine row
+// (optional, WithPersisted) → provider in that order, with single-flight protection on cache misses and
 // stale-while-revalidate on hot keys.
 //
 // Construction: callers wire dependencies via NewSeam, passing concrete
@@ -32,6 +32,9 @@ type Seam struct {
 	registry  *Registry
 	cache     Cache
 	overrides OverrideStore
+	// persisted is the optional read tier over status='machine' rows
+	// (WithPersisted). nil = off.
+	persisted PersistedStore
 	metrics   Metrics
 	// persister is the seam's write-through to
 	// localization.dynamic_translations. Round 10D. Default
@@ -211,7 +214,7 @@ func SourceVersionFromText(parts ...string) string {
 // Telemetry: every call records exactly one
 // `kielo_translation_total{namespace, target_locale, source}` increment
 // where source is one of english_passthrough, override, cache_hit,
-// cache_swr, cache_miss_share, provider_call, provider_error,
+// cache_swr, persisted, cache_miss_share, provider_call, provider_error,
 // empty_translation (provider answered with an empty string), or
 // guard_rejected (suspicious-translation guard refused the output).
 // The last two fall back to English source text — a non-zero rate on
@@ -327,6 +330,7 @@ func (s *Seam) batchResolveCached(ctx context.Context, refs []SourceRef, targetL
 		}
 		remaining2 = append(remaining2, r)
 	}
+	remaining2 = s.resolvePersistedBatch(ctx, remaining2, target, out)
 	return out, remaining2
 }
 
@@ -428,6 +432,9 @@ type residueEntry struct {
 	idx int
 	ref SourceRef
 	key string // cache key
+	// known is a persisted row that exists but was rejected as a stand-in;
+	// an identical provider answer is not persisted again.
+	known string
 }
 
 func (s *Seam) resolveBatchCacheHit(
@@ -660,7 +667,9 @@ func (s *Seam) providerBatchCall(
 		}
 		out[r.idx] = value
 		writeSet[r.key] = value
-		persistList = append(persistList, persistItem{ref: r.ref, value: value})
+		if r.known != value {
+			persistList = append(persistList, persistItem{ref: r.ref, value: value})
+		}
 		s.metrics.Record(ctx, r.ref.Namespace, target, "provider_call")
 	}
 	if len(writeSet) > 0 {
@@ -718,13 +727,22 @@ func (s *Seam) resolve(ctx context.Context, ref SourceRef, targetLocale string) 
 	}
 
 	raw, _, shared := s.group.Do(cacheKey, func() (any, error) {
-		return s.callProvider(ctx, ref, target, cacheKey), nil
+		value, fromRow := s.callProvider(ctx, ref, target, cacheKey)
+		return providerOutcome{value: value, fromRow: fromRow}, nil
 	})
-	rendered, _ := raw.(string)
+	outcome, _ := raw.(providerOutcome)
 	if shared {
-		return "cache_miss_share", rendered
+		return "cache_miss_share", outcome.value
 	}
-	return "provider_call", rendered
+	if outcome.fromRow {
+		return "persisted", outcome.value
+	}
+	return "provider_call", outcome.value
+}
+
+type providerOutcome struct {
+	value   string
+	fromRow bool
 }
 
 // kickoffSWR launches a background refresh for a stale cache hit if no
@@ -754,7 +772,16 @@ func (s *Seam) kickoffSWR(ctx context.Context, ref SourceRef, target, cacheKey s
 // the TranslationPersister so the next request for the same (namespace,
 // source_id, source_version, target) tuple sees the row without
 // re-invoking the LLM.
-func (s *Seam) callProvider(ctx context.Context, ref SourceRef, target, cacheKey string) string {
+func (s *Seam) callProvider(ctx context.Context, ref SourceRef, target, cacheKey string) (value string, fromRow bool) {
+	row, hasRow := s.persistedRow(ctx, ref, target)
+	if hasRow && usablePersisted(ref, row) {
+		_ = s.cache.Set(ctx, cacheKey, row, s.freshTTL+s.staleTTL)
+		return row, true
+	}
+	return s.callProviderFresh(ctx, ref, target, cacheKey, row), false
+}
+
+func (s *Seam) callProviderFresh(ctx context.Context, ref SourceRef, target, cacheKey, knownRow string) string {
 	provider, err := s.registry.Resolve(TierASupportLocale, target)
 	if err != nil {
 		s.metrics.Record(ctx, ref.Namespace, target, "provider_error")
@@ -804,7 +831,9 @@ func (s *Seam) callProvider(ctx context.Context, ref SourceRef, target, cacheKey
 	// persistence row only means the next request re-runs the LLM
 	// (degraded but correct). NoopPersister no-ops; production
 	// DynClientPersister logs + returns silently.
-	_ = s.persister.Persist(ctx, ref, target, value)
+	if value != knownRow {
+		_ = s.persister.Persist(ctx, ref, target, value)
+	}
 	return value
 }
 
