@@ -20,7 +20,12 @@ import time
 from typing import Iterable
 
 from kielo_shared.localization.provider import LocalizationProvider
-from kielo_shared.localization.types import TranslationItem, TranslationResult
+from kielo_shared.localization.types import (
+    PASSTHROUGH_PROVIDER,
+    TranslationItem,
+    TranslationResult,
+    passthrough_result,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -95,8 +100,10 @@ class FallbackDecorator:
       2. Skip any whose breaker is OPEN.
       3. Try translate_batch. On exception OR empty result, record failure
          and advance.
-      4. Return the first successful result. If all providers fail, re-raise
-         the last exception.
+      4. Return the first successful result. A result list that is
+         `unavailable` for every item counts as a failure too. If all providers
+         fail, re-raise the last exception, else return the last all-unavailable
+         list.
 
     The decorator's `provider_id` is the stable chain id (caller-supplied) —
     individual results carry their actual producing provider via
@@ -136,6 +143,7 @@ class FallbackDecorator:
         idempotency_key: str | None = None,
     ) -> list[TranslationResult]:
         last_error: Exception | None = None
+        last_outage: list[TranslationResult] | None = None
         for idx, provider in enumerate(self._providers):
             breaker = self._breakers[idx]
             if not breaker.allow():
@@ -170,16 +178,34 @@ class FallbackDecorator:
                     len(items),
                 )
                 continue
+            if all(_is_outage(r) for r in results):
+                # A provider that swallows its own failure and answers with the
+                # source for every item is down as far as this chain is
+                # concerned: count it and let the next provider try.
+                breaker.record_failure()
+                last_outage = results
+                logger.warning(
+                    "FallbackDecorator: %s answered nothing for %d items — advancing.",
+                    provider.provider_id,
+                    len(items),
+                )
+                continue
             breaker.record_success()
             return results
         if last_error is not None:
             raise last_error
+        if last_outage is not None:
+            return last_outage
         # All breakers open + no exception captured — degrade to passthrough
         # so the caller doesn't get a None response.
         logger.warning("FallbackDecorator: all providers unavailable; passthrough.")
-        return [
-            TranslationResult(text=item.text, provider="passthrough") for item in items
-        ]
+        return [passthrough_result(item) for item in items]
+
+
+def _is_outage(result: TranslationResult) -> bool:
+    return result.status == "unavailable" or (
+        result.status == "translated" and result.provider == PASSTHROUGH_PROVIDER
+    )
 
 
 __all__ = ["CircuitBreaker", "FallbackDecorator"]

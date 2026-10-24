@@ -16,6 +16,7 @@ Decorators are themselves `LocalizationProvider`s so they can be stacked:
 
 from __future__ import annotations
 
+import dataclasses
 import logging
 import time
 import uuid
@@ -159,17 +160,7 @@ class CorrelationDecorator:
             if result.correlation_id:
                 stamped.append(result)
                 continue
-            stamped.append(
-                TranslationResult(
-                    text=result.text,
-                    provider=result.provider,
-                    cached=result.cached,
-                    latency_ms=result.latency_ms,
-                    confidence=result.confidence,
-                    correlation_id=trace_id,
-                    metadata=result.metadata,
-                )
-            )
+            stamped.append(dataclasses.replace(result, correlation_id=trace_id))
         return stamped
 
 

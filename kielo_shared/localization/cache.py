@@ -33,7 +33,13 @@ import logging
 from typing import Any, Protocol
 
 from kielo_shared.localization.provider import LocalizationProvider
-from kielo_shared.localization.types import TranslationItem, TranslationResult
+from kielo_shared.localization.types import (
+    TranslationItem,
+    TranslationResult,
+    is_prose,
+    is_source_echo,
+    passthrough_result,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -91,6 +97,11 @@ class RedisCacheDecorator:
       redis: async client (real or stub).
       ttl_sec: how long entries live. 7 days is reasonable for stable
         learner-facing strings; tighten in env if needed.
+      echo_ttl_sec: lifetime of an answer identical to a PROSE source (five
+        or more words). A model that hands back its input is a soft failure
+        that a retry may fix, so it is remembered briefly rather than for
+        `ttl_sec`; identical short strings (brand names, taught Finnish words)
+        are legitimate answers and keep the full TTL.
       key_prefix: optional namespace override (per-deployment isolation).
     """
 
@@ -100,11 +111,13 @@ class RedisCacheDecorator:
         redis: RedisAsyncClient | None,
         *,
         ttl_sec: int = 7 * 24 * 3600,
+        echo_ttl_sec: int = 3600,
         key_prefix: str | None = None,
     ) -> None:
         self._inner = inner
         self._redis = redis
         self._ttl = ttl_sec
+        self._echo_ttl = min(echo_ttl_sec, ttl_sec)
         self._prefix = key_prefix
 
     @property
@@ -178,17 +191,24 @@ class RedisCacheDecorator:
                 for slot, r in zip(miss_indices, inner_results, strict=False):
                     results[slot] = r
             else:
-                # 3) Write results back. Skip provenance-marked passthroughs —
-                # caching a passthrough would lock the source text in place
-                # if a real provider becomes available later.
-                to_set: list[tuple[str, str]] = []
+                # 3) Write results back. Skip passthroughs (outage, empty or
+                # same-locale: the source standing in for an answer) — caching
+                # one would lock the source text in place if a real provider
+                # becomes available later.
+                to_set: list[tuple[str, str, int]] = []
                 for slot, r in zip(miss_indices, inner_results, strict=True):
                     results[slot] = r
-                    if r.provider == "passthrough":
+                    if r.is_passthrough:
                         continue
                     if not (r.text or "").strip():
                         continue
-                    to_set.append((keys[slot], r.text))
+                    to_set.append(
+                        (
+                            keys[slot],
+                            r.text,
+                            self._ttl_for(items[slot], r, source_locale, target_locale),
+                        )
+                    )
                 if to_set:
                     await self._set_many(to_set)
 
@@ -204,9 +224,25 @@ class RedisCacheDecorator:
     def _maybe_prefix(self, key: str) -> str:
         return f"{self._prefix}:{key}" if self._prefix else key
 
+    def _ttl_for(
+        self,
+        item: TranslationItem,
+        result: TranslationResult,
+        source_locale: str,
+        target_locale: str,
+    ) -> int:
+        source_base = (source_locale or "").split("-", 1)[0].lower()
+        target_base = (target_locale or "").split("-", 1)[0].lower()
+        if source_base and source_base == target_base:
+            return self._ttl
+        echoed = result.status == "echo" or is_source_echo(item.text, result.text)
+        if echoed and is_prose(item.text):
+            return self._echo_ttl
+        return self._ttl
+
     @staticmethod
     def _passthrough(item: TranslationItem) -> TranslationResult:
-        return TranslationResult(text=item.text, provider="passthrough")
+        return passthrough_result(item)
 
     async def _get_many(self, keys: list[str]) -> list[str | None]:
         mget = getattr(self._redis, "mget", None)
@@ -221,15 +257,15 @@ class RedisCacheDecorator:
             return [None] * len(keys)
         return [self._decode(v) for v in values]
 
-    async def _set_many(self, pairs: list[tuple[str, str]]) -> None:
+    async def _set_many(self, pairs: list[tuple[str, str, int]]) -> None:
         pipeline = getattr(self._redis, "pipeline", None)
         if pipeline is None:
-            await asyncio.gather(*(self._safe_set(k, v) for k, v in pairs))
+            await asyncio.gather(*(self._safe_set(k, v, ttl) for k, v, ttl in pairs))
             return
         try:
             pipe = pipeline(transaction=False)
-            for key, text in pairs:
-                pipe.set(key, text, ex=self._ttl)
+            for key, text, ttl in pairs:
+                pipe.set(key, text, ex=ttl)
             await pipe.execute()
         except Exception as exc:
             logger.debug(
@@ -257,9 +293,9 @@ class RedisCacheDecorator:
             return value
         return None
 
-    async def _safe_set(self, key: str, text: str) -> None:
+    async def _safe_set(self, key: str, text: str, ttl: int) -> None:
         try:
-            await self._redis.set(key, text, ex=self._ttl)  # type: ignore[union-attr]
+            await self._redis.set(key, text, ex=ttl)  # type: ignore[union-attr]
         except Exception as exc:
             logger.debug("RedisCacheDecorator SET failed key=%s: %s", key, exc)
 
