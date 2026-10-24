@@ -42,14 +42,18 @@ _PREFIX = "convo.evaluation_fallback."
 
 
 def _dsn() -> str:
-    return os.environ.get(
-        "KIELO_TEST_PG_DSN",
-        "postgres://kielo:password@localhost:5432/kielo_test",
-    )
+    # No default: localhost:5432 on a laptop is often a developer's forwarded
+    # devbox database, and these tests write to it (2026-10-24). The integration
+    # gate sets the DSN to its own disposable database.
+    return os.environ.get("KIELO_TEST_PG_DSN", "")
 
 
 @pytest_asyncio.fixture
 async def real_pool() -> AsyncIterator[Any]:
+    if not _dsn():
+        if os.environ.get("KIELO_TEST_PG_REQUIRED") == "1":
+            pytest.fail("KIELO_TEST_PG_REQUIRED=1 but KIELO_TEST_PG_DSN is not set")
+        pytest.skip("KIELO_TEST_PG_DSN not set")
     try:
         pool = await asyncpg.create_pool(dsn=_dsn(), min_size=1, max_size=2)
     except Exception as exc:

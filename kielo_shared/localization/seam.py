@@ -62,6 +62,10 @@ logger = logging.getLogger(__name__)
 _GUARD_REJECTION_SENTINEL = "\x00kielo:guard_rejected"
 
 
+def _passthrough_tag(result: TranslationResult) -> str:
+    return "english_passthrough" if result.status == "same_locale" else "provider_error"
+
+
 # ──────────────────────── SourceRef ──────────────────────────────────────
 
 
@@ -804,6 +808,14 @@ class Seam:
         rejection_set: dict[str, str] = {}
         persist_set: dict[str, tuple[SourceRef, str]] = {}
         for (idx, ref, key), result in zip(remaining, results):
+            if result.is_passthrough:
+                # The provider answered with the source standing in for a
+                # translation (outage, timeout, empty reply, same locale).
+                # Caching or persisting it would pin the source language for
+                # the whole TTL, so serve it and write nothing.
+                out[idx] = ref.source_text
+                self._metrics.record(ref.namespace, target, _passthrough_tag(result))
+                continue
             value = (result.text or "").strip()
             if not value:
                 out[idx] = ref.source_text
@@ -1000,6 +1012,10 @@ class Seam:
         )
         if not results:
             return "provider_error", ref.source_text
+        if results[0].is_passthrough:
+            # See _provider_batch_call: the source standing in for a
+            # translation is served, never cached or persisted.
+            return _passthrough_tag(results[0]), ref.source_text
         value = (results[0].text or "").strip()
         if not value:
             return "empty_translation", ref.source_text

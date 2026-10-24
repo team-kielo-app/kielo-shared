@@ -23,7 +23,12 @@ import logging
 from typing import Callable
 
 from kielo_shared.localization.provider import LocalizationProvider
-from kielo_shared.localization.types import TranslationItem, TranslationResult
+from kielo_shared.localization.types import (
+    TranslationItem,
+    TranslationResult,
+    TranslationStatus,
+    passthrough_result,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -70,14 +75,14 @@ class RoutingDecorator:
             return []
         target_base = _base(target_locale)
         if target_base in {"", TIER_A_LOCALE}:
-            return [_passthrough(item) for item in items]
+            return [_passthrough(item, "same_locale") for item in items]
         # Drop empty items from the batch but keep their slot in the output
         # so callers don't see a length mismatch.
         sendable_idx: list[int] = [
             i for i, item in enumerate(items) if (item.text or "").strip()
         ]
         if not sendable_idx:
-            return [_passthrough(item) for item in items]
+            return [_passthrough(item, "empty_source") for item in items]
         sendable = [items[i] for i in sendable_idx]
         inner_results = await self._inner.translate_batch(
             sendable,
@@ -92,13 +97,18 @@ class RoutingDecorator:
                 len(inner_results),
                 len(sendable),
             )
-            return [_passthrough(item) for item in items]
+            return [
+                _passthrough(
+                    item, "unavailable" if (item.text or "").strip() else "empty_source"
+                )
+                for item in items
+            ]
         out: list[TranslationResult] = []
         merged: dict[int, TranslationResult] = dict(
             zip(sendable_idx, inner_results, strict=True)
         )
         for i, item in enumerate(items):
-            out.append(merged.get(i) or _passthrough(item))
+            out.append(merged.get(i) or _passthrough(item, "empty_source"))
         return out
 
 
@@ -158,7 +168,7 @@ class VietnameseFastPathDecorator:
         for i, item in enumerate(items):
             value = (item.text or "").strip()
             if not value:
-                results[i] = _passthrough(item)
+                results[i] = _passthrough(item, "empty_source")
                 continue
             override = self._lookup(value)
             if override:
@@ -201,8 +211,10 @@ class VietnameseFastPathDecorator:
 # ──────────────────────────────── helpers ────────────────────────────────
 
 
-def _passthrough(item: TranslationItem) -> TranslationResult:
-    return TranslationResult(text=item.text, provider="passthrough")
+def _passthrough(
+    item: TranslationItem, status: TranslationStatus = "unavailable"
+) -> TranslationResult:
+    return passthrough_result(item, status)
 
 
 __all__ = [

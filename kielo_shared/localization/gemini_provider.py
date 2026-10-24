@@ -30,7 +30,13 @@ from kielo_shared.localization.openai_provider import (
     _strip_code_fences,
     _with_learning_words,
 )
-from kielo_shared.localization.types import TranslationItem, TranslationResult
+from kielo_shared.localization.types import (
+    TranslationItem,
+    TranslationResult,
+    TranslationStatus,
+    answered_status,
+    passthrough_result,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -91,7 +97,7 @@ class GeminiProvider:
             return []
         target_base = (target_locale or "").split("-", 1)[0].lower()
         if target_base in {"", "en"}:
-            return [_passthrough(item) for item in items]
+            return [_passthrough(item, "same_locale") for item in items]
 
         chunks: list[list[TranslationItem]] = [
             items[i : i + self._max_batch_items]
@@ -136,7 +142,7 @@ class GeminiProvider:
             i for i, item in enumerate(items) if (item.text or "").strip()
         ]
         if not sendable_idx:
-            return [_passthrough(item) for item in items]
+            return [_passthrough(item, "empty_source") for item in items]
 
         payload = json.dumps(
             [
@@ -173,6 +179,20 @@ class GeminiProvider:
                 raise RuntimeError(
                     f"GeminiProvider batch parse failed (strict_batch=True); raw={raw!r}"
                 )
+            if not (raw or "").strip():
+                # No reply at all is an outage, not a formatting problem: do not
+                # repeat the failing call once per item.
+                logger.warning(
+                    "GeminiProvider: batch call returned nothing; not fanning "
+                    "out per-item (items=%d, target=%s)",
+                    len(sendable_idx),
+                    target_locale,
+                )
+                asked = set(sendable_idx)
+                return [
+                    _passthrough(item, "unavailable" if i in asked else "empty_source")
+                    for i, item in enumerate(items)
+                ]
             logger.warning(
                 "GeminiProvider: batch parse failed, falling back to per-item "
                 "(items=%d, target=%s)",
@@ -192,7 +212,7 @@ class GeminiProvider:
         sendable_set = set(sendable_idx)
         for i, item in enumerate(items):
             if i not in sendable_set:
-                results.append(_passthrough(item))
+                results.append(_passthrough(item, "empty_source"))
                 continue
             text = (translated_by_origin.get(i) or "").strip()
             if not text:
@@ -205,6 +225,7 @@ class GeminiProvider:
                     cached=False,
                     latency_ms=per_item_ms,
                     metadata={"role": item.role, "batch_size": len(sendable_idx)},
+                    status=answered_status(item.text, text),
                 )
             )
         return results
@@ -218,9 +239,13 @@ class GeminiProvider:
     ) -> list[TranslationResult]:
         target_lang = _language_name(target_locale)
         results: list[TranslationResult] = []
+        down = False
         for item in items:
             value = (item.text or "").strip()
             if not value:
+                results.append(_passthrough(item, "empty_source"))
+                continue
+            if down:
                 results.append(_passthrough(item))
                 continue
             prompt = _role_prompt(item.role, target_lang)
@@ -235,6 +260,7 @@ class GeminiProvider:
             elapsed_ms = int((time.perf_counter() - started) * 1000)
             cleaned = _strip_code_fences(raw or "")
             if not cleaned:
+                down = True
                 results.append(_passthrough(item))
                 continue
             results.append(
@@ -244,13 +270,16 @@ class GeminiProvider:
                     cached=False,
                     latency_ms=elapsed_ms,
                     metadata={"role": item.role, "batch_size": 1},
+                    status=answered_status(item.text, cleaned),
                 )
             )
         return results
 
 
-def _passthrough(item: TranslationItem) -> TranslationResult:
-    return TranslationResult(text=item.text, provider="passthrough")
+def _passthrough(
+    item: TranslationItem, status: TranslationStatus = "unavailable"
+) -> TranslationResult:
+    return passthrough_result(item, status)
 
 
 __all__ = ["GeminiProvider", "GeminiTextGenerator"]

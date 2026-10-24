@@ -25,7 +25,13 @@ import time
 import unicodedata
 from typing import Awaitable, Callable
 
-from kielo_shared.localization.types import TranslationItem, TranslationResult
+from kielo_shared.localization.types import (
+    TranslationItem,
+    TranslationResult,
+    TranslationStatus,
+    answered_status,
+    passthrough_result,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -408,7 +414,7 @@ class OpenAIProvider:
         # round-trips when callers haven't gated upstream.
         target_base = (target_locale or "").split("-", 1)[0].lower()
         if target_base in {"", "en"}:
-            return [self._passthrough(item) for item in items]
+            return [self._passthrough(item, "same_locale") for item in items]
 
         # Slice into chunks that fit one LLM call. Phase C2: chunks now run
         # in parallel under a semaphore — for a 27-item session that fits
@@ -444,13 +450,10 @@ class OpenAIProvider:
 
     # ─────────────────────────── internals ───────────────────────────────
 
-    def _passthrough(self, item: TranslationItem) -> TranslationResult:
-        return TranslationResult(
-            text=item.text,
-            provider="passthrough",
-            cached=False,
-            latency_ms=0,
-        )
+    def _passthrough(
+        self, item: TranslationItem, status: TranslationStatus = "unavailable"
+    ) -> TranslationResult:
+        return passthrough_result(item, status)
 
     async def _translate_chunk(
         self,
@@ -468,7 +471,7 @@ class OpenAIProvider:
             i for i, item in enumerate(items) if (item.text or "").strip()
         ]
         if not sendable_indices:
-            return [self._passthrough(item) for item in items]
+            return [self._passthrough(item, "empty_source") for item in items]
 
         payload = json.dumps(
             [
@@ -505,6 +508,23 @@ class OpenAIProvider:
                 raise RuntimeError(
                     f"OpenAIProvider batch parse failed (strict_batch=True); raw={raw!r}"
                 )
+            if not (raw or "").strip():
+                # No reply at all is an outage (timeout, 429, provider error),
+                # not a formatting problem: N per-item calls would meet the same
+                # outage N times over.
+                logger.warning(
+                    "OpenAIProvider: batch call returned nothing; not fanning "
+                    "out per-item (items=%d, target=%s)",
+                    len(sendable_indices),
+                    target_locale,
+                )
+                asked = set(sendable_indices)
+                return [
+                    self._passthrough(
+                        item, "unavailable" if i in asked else "empty_source"
+                    )
+                    for i, item in enumerate(items)
+                ]
             logger.warning(
                 "OpenAIProvider: batch parse failed, falling back to per-item "
                 "(items=%d, target=%s)",
@@ -533,7 +553,7 @@ class OpenAIProvider:
         )
         for i, item in enumerate(items):
             if i not in sendable_set:
-                results.append(self._passthrough(item))
+                results.append(self._passthrough(item, "empty_source"))
                 continue
             text = (translated_by_origin.get(i) or "").strip()
             if not text:
@@ -549,6 +569,7 @@ class OpenAIProvider:
                     latency_ms=per_item_ms,
                     correlation_id="",
                     metadata={"role": item.role, "batch_size": len(sendable_indices)},
+                    status=answered_status(item.text, text),
                 )
             )
         return results
@@ -562,9 +583,15 @@ class OpenAIProvider:
     ) -> list[TranslationResult]:
         target_lang = _language_name(target_locale)
         results: list[TranslationResult] = []
+        down = False
         for item in items:
             value = (item.text or "").strip()
             if not value:
+                results.append(self._passthrough(item, "empty_source"))
+                continue
+            if down:
+                # One item without an answer means the backend is down for this
+                # request; asking again for the rest only multiplies the wait.
                 results.append(self._passthrough(item))
                 continue
             prompt = _role_prompt(item.role, target_lang)
@@ -579,6 +606,7 @@ class OpenAIProvider:
             elapsed_ms = int((time.perf_counter() - started) * 1000)
             cleaned = _strip_code_fences(raw or "")
             if not cleaned:
+                down = True
                 results.append(self._passthrough(item))
                 continue
             results.append(
@@ -589,6 +617,7 @@ class OpenAIProvider:
                     latency_ms=elapsed_ms,
                     correlation_id="",
                     metadata={"role": item.role, "batch_size": 1},
+                    status=answered_status(item.text, cleaned),
                 )
             )
         return results

@@ -23,26 +23,10 @@ func TestInitPool_RejectsBadDSN(t *testing.T) {
 	assert.Contains(t, err.Error(), "parse pool config")
 }
 
-// poolConfigWithOptions is a test helper that walks through the same
-// config-shaping the real InitPool does, stopping before NewWithConfig
-// (which would actually try to connect). Lets us verify env-var handling
-// handling without a real database.
 func poolConfigWithOptions(t *testing.T, opts PoolOptions) *pgxpool.Config {
 	t.Helper()
-	cfg, err := pgxpool.ParseConfig("postgres://x:y@h:1/db")
+	cfg, err := PoolConfig("postgres://x:y@h:1/db", opts)
 	require.NoError(t, err)
-
-	maxFallback := opts.MaxConns
-	if maxFallback <= 0 {
-		maxFallback = defaultMaxConns
-	}
-	minFallback := opts.MinConns
-	if minFallback <= 0 {
-		minFallback = defaultMinConns
-	}
-	cfg.MaxConns = EnvInt32("PGX_MAX_CONNS", maxFallback)
-	cfg.MinConns = EnvNonNegInt32("PGX_MIN_CONNS", minFallback)
-	cfg.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
 	return cfg
 }
 

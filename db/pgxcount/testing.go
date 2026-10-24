@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	shareddb "github.com/team-kielo-app/kielo-shared/db"
 )
 
 // TestPool opens a pool on DATABASE_URL whose connections carry a Tracer with
@@ -22,7 +23,7 @@ func TestPool(t testing.TB, delay time.Duration) (*pgxpool.Pool, *Tracer) {
 	if dsn == "" {
 		t.Skip("DATABASE_URL environment variable is required")
 	}
-	cfg, err := pgxpool.ParseConfig(dsn)
+	cfg, err := shareddb.TestPoolConfig(dsn)
 	if err != nil {
 		t.Fatalf("parse DATABASE_URL: %v", err)
 	}
