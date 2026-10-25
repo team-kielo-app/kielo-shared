@@ -8,6 +8,8 @@ is the choke point for outbound TTS HTTP traffic, NOT a kitchen sink.
 Vertical slice today:
   * OpenAITTSProvider — POST to api.openai.com/v1/audio/speech.
   * ElevenLabsTTSProvider — POST to ElevenLabs streaming TTS.
+  * GeminiTTSProvider — Gemini generate_content audio, language pinned
+    via speech_config.language_code (see gemini_provider / languages).
   * MetricsDecorator   — emits `kielo_tts_calls_total` mirroring the
     Go-side family registered in
     `kielo-shared/observe/metrics/tts.go` so cross-process dashboards
@@ -27,6 +29,15 @@ Caller shape (mirrors the LLM seam pattern):
 
 from __future__ import annotations
 
+from kielo_shared.seam.tts.elevenlabs_provider import ElevenLabsTTSProvider
+from kielo_shared.seam.tts.gemini_provider import (
+    GeminiSpeechClient,
+    GeminiTTSProvider,
+    GenAISpeechClient,
+)
+from kielo_shared.seam.tts.languages import LANGUAGE_CODES, language_tag
+from kielo_shared.seam.tts.metrics import MetricsDecorator, with_metrics
+from kielo_shared.seam.tts.openai_provider import OpenAITTSProvider
 from kielo_shared.seam.tts.types import (
     Error,
     ErrorClass,
@@ -36,15 +47,15 @@ from kielo_shared.seam.tts.types import (
     StreamingProvider,
     class_of,
 )
-from kielo_shared.seam.tts.openai_provider import OpenAITTSProvider
-from kielo_shared.seam.tts.elevenlabs_provider import ElevenLabsTTSProvider
-from kielo_shared.seam.tts.metrics import MetricsDecorator, with_metrics
-
 
 __all__ = [
+    "LANGUAGE_CODES",
+    "ElevenLabsTTSProvider",
     "Error",
     "ErrorClass",
-    "ElevenLabsTTSProvider",
+    "GeminiSpeechClient",
+    "GeminiTTSProvider",
+    "GenAISpeechClient",
     "MetricsDecorator",
     "OpenAITTSProvider",
     "Provider",
@@ -52,5 +63,6 @@ __all__ = [
     "Result",
     "StreamingProvider",
     "class_of",
+    "language_tag",
     "with_metrics",
 ]

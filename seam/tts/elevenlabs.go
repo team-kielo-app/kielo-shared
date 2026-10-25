@@ -18,6 +18,8 @@ import (
 const (
 	defaultElevenLabsEndpoint = "https://api.elevenlabs.io/v1/text-to-speech"
 	defaultElevenLabsModel    = "eleven_flash_v2_5"
+	defaultStability          = 0.5
+	defaultSimilarityBoost    = 0.75
 )
 
 type ElevenLabsProvider struct {
@@ -25,6 +27,10 @@ type ElevenLabsProvider struct {
 	HTTPClient   *http.Client
 	Endpoint     string
 	DefaultModel string
+	// Stability and SimilarityBoost are provider-level overrides of the
+	// voice_settings defaults (0.5 / 0.75); Request values win.
+	Stability       *float64
+	SimilarityBoost *float64
 }
 
 func NewElevenLabsProvider(apiKey string, client *http.Client) *ElevenLabsProvider {
@@ -62,7 +68,7 @@ func (p *ElevenLabsProvider) Synthesize(ctx context.Context, req Request) (*Resu
 	if model == "" {
 		model = p.DefaultModel
 	}
-	body, err := json.Marshal(buildElevenLabsPayload(req, model))
+	body, err := json.Marshal(p.buildPayload(req, model))
 	if err != nil {
 		return nil, &Error{Class: ErrorClassMarshal, Err: err}
 	}
@@ -113,7 +119,7 @@ func (p *ElevenLabsProvider) Synthesize(ctx context.Context, req Request) (*Resu
 	}, nil
 }
 
-func buildElevenLabsPayload(req Request, model string) map[string]any {
+func (p *ElevenLabsProvider) buildPayload(req Request, model string) map[string]any {
 	payload := map[string]any{
 		"text":     req.Text,
 		"model_id": model,
@@ -121,12 +127,33 @@ func buildElevenLabsPayload(req Request, model string) map[string]any {
 	if req.LanguageCode != "" && model != "eleven_multilingual_v2" {
 		payload["language_code"] = strings.ToLower(strings.TrimSpace(req.LanguageCode))
 	}
-	if req.Speed > 0 {
-		payload["voice_settings"] = map[string]float64{
-			"stability":        0.5,
-			"similarity_boost": 0.75,
-			"speed":            max(0.7, min(req.Speed, 1.2)),
+	stability := firstSet(req.Stability, p.Stability)
+	similarity := firstSet(req.SimilarityBoost, p.SimilarityBoost)
+	if req.Speed > 0 || stability != nil || similarity != nil {
+		settings := map[string]float64{
+			"stability":        valueOr(stability, defaultStability),
+			"similarity_boost": valueOr(similarity, defaultSimilarityBoost),
 		}
+		if req.Speed > 0 {
+			settings["speed"] = max(0.7, min(req.Speed, 1.2))
+		}
+		payload["voice_settings"] = settings
 	}
 	return payload
+}
+
+func firstSet(values ...*float64) *float64 {
+	for _, v := range values {
+		if v != nil {
+			return v
+		}
+	}
+	return nil
+}
+
+func valueOr(v *float64, fallback float64) float64 {
+	if v == nil {
+		return fallback
+	}
+	return *v
 }

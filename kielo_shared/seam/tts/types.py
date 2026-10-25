@@ -6,9 +6,10 @@ from any caller (kielolearn-engine, ingest, kielo-convo python_agent).
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from enum import Enum
-from typing import AsyncIterator, Optional, Protocol
+from typing import Protocol
 
 
 class ErrorClass(str, Enum):
@@ -43,6 +44,8 @@ class Request:
     model: str = ""
     language_code: str = ""
     instructions: str = ""
+    stability: float | None = None
+    similarity_boost: float | None = None
 
 
 @dataclass(frozen=True)
@@ -57,7 +60,7 @@ class Error(Exception):
     a bounded ``ErrorClass`` for metric labels and caller-side retry
     / breaker decisions."""
 
-    def __init__(self, error_class: ErrorClass, cause: Optional[BaseException] = None):
+    def __init__(self, error_class: ErrorClass, cause: BaseException | None = None):
         self.error_class = error_class
         self.cause = cause
         message = error_class.value
@@ -66,7 +69,7 @@ class Error(Exception):
         super().__init__(message)
 
 
-def class_of(err: Optional[BaseException]) -> str:
+def class_of(err: BaseException | None) -> str:
     """Extract an ErrorClass string from any exception. Non-seam
     exceptions collapse to `unknown` so the metric label set stays
     bounded.
