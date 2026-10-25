@@ -272,10 +272,46 @@ async def test_genai_client_request_shape(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_wav_to_mp3_with_local_ffmpeg():
-    from kielo_shared.seam.tts.gemini_provider import _ffmpeg_executable, wav_to_mp3
+async def test_wav_to_mp3_pipes_the_wav_through_ffmpeg(monkeypatch):
+    import subprocess
 
-    if not _ffmpeg_executable():
-        pytest.skip("ffmpeg not available")
-    mp3 = await wav_to_mp3(pcm16_to_wav(b"\x00\x00" * 24000), 1.5)
-    assert mp3[:3] == b"ID3" or mp3[0] == 0xFF
+    from kielo_shared.seam.tts import gemini_provider
+
+    calls = []
+
+    def fake_run(command, **kwargs):
+        calls.append((command, kwargs["input"]))
+        return subprocess.CompletedProcess(command, 0, stdout=b"ID3mp3", stderr=b"")
+
+    monkeypatch.setattr(gemini_provider, "_ffmpeg_executable", lambda: "/bin/ffmpeg")
+    monkeypatch.setattr(gemini_provider.subprocess, "run", fake_run)
+    wav = pcm16_to_wav(b"\x00\x00" * 2400)
+    assert await gemini_provider.wav_to_mp3(wav, 1.5) == b"ID3mp3"
+    command, fed = calls[0]
+    assert command[0] == "/bin/ffmpeg" and fed == wav
+    assert "atempo=1.500" in command and command[-3:] == ["-f", "mp3", "pipe:1"]
+    await gemini_provider.wav_to_mp3(wav)
+    assert not any(arg.startswith("atempo") for arg in calls[1][0])
+
+
+@pytest.mark.asyncio
+async def test_wav_to_mp3_without_ffmpeg_or_on_failure_is_an_error(monkeypatch):
+    import subprocess
+
+    from kielo_shared.seam.tts import gemini_provider
+
+    wav = pcm16_to_wav(b"\x00\x00" * 240)
+    monkeypatch.setattr(gemini_provider, "_ffmpeg_executable", lambda: None)
+    with pytest.raises(Error):
+        await gemini_provider.wav_to_mp3(wav)
+    monkeypatch.setattr(gemini_provider, "_ffmpeg_executable", lambda: "/bin/ffmpeg")
+    monkeypatch.setattr(
+        gemini_provider.subprocess,
+        "run",
+        lambda command, **kw: subprocess.CompletedProcess(
+            command, 1, b"", b"bad input"
+        ),
+    )
+    with pytest.raises(Error) as raised:
+        await gemini_provider.wav_to_mp3(wav)
+    assert raised.value.error_class == ErrorClass.READ_BODY
