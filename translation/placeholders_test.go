@@ -126,3 +126,94 @@ func TestExportedHelpersMatchInternal(t *testing.T) {
 		t.Fatal("exported restore accepted a dropped placeholder")
 	}
 }
+
+// --- Hardening added 2026-09-07 -------------------------------------------
+//
+// The first masking pass protected the placeholders it knew about. These pin
+// the three ways it could still let corrupted structure through.
+
+func TestUnsupportedPrintfVerbsAreDetectedNotMasked(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		text string
+		want []string
+	}{
+		// The dangerous case: neither maskPlaceholders nor HasPlaceholders
+		// sees these, so the text looks like prose all the way to the model.
+		{"zero-padded width", "Day %02d of your streak", []string{"%02d"}},
+		{"precision", "You scored %.2f points", []string{"%.2f"}},
+		{"left-aligned width", "%-5s complete", []string{"%-5s"}},
+		{"explicit arg index", "%[1]s and %[1]s again", []string{"%[1]s"}},
+		{"unsupported bare verb", "id %x", []string{"%x"}},
+
+		// Supported verbs are masked, so nothing is left to report.
+		{"supported verbs", "Uses %d words like %s", nil},
+		{"escaped percent", "100%% complete", nil},
+
+		// The prose false positive the tight mask pattern exists to avoid. A
+		// permissive printf grammar matches "% o" here and would corrupt it.
+		{"percent in prose", "50% off today", nil},
+		{"percent then punctuation", "Progress: 80%.", nil},
+		{"percent at end", "Complete: 100%", nil},
+		{"no placeholders at all", "Ermin has them ready.", nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got := UnsupportedPlaceholders(tc.text)
+			if len(got) != len(tc.want) {
+				t.Fatalf("got %v, want %v", got, tc.want)
+			}
+			for i := range got {
+				if got[i] != tc.want[i] {
+					t.Fatalf("got %v, want %v", got, tc.want)
+				}
+			}
+		})
+	}
+}
+
+func TestRestoreRejectsInventedTemplateDelimiters(t *testing.T) {
+	masked, tokens := maskPlaceholders(`{{if .data.lesson_title}}Pick up “{{.data.lesson_title}}”{{end}}`)
+	if len(tokens) != 3 {
+		t.Fatalf("expected 3 masked actions, got %d: %q", len(tokens), masked)
+	}
+
+	// The model carried every token AND wrote an action of its own. Restoring
+	// this would hand text/template an {{if}} with no {{end}}, which fails the
+	// whole render — and the token bookkeeping alone is perfectly happy.
+	invented := `[[0]]Jatka “[[1]]”[[2]]{{if .data.extra}}`
+	if _, err := restorePlaceholders(invented, tokens); err == nil {
+		t.Fatal("invented {{ must be rejected")
+	}
+
+	// A clean reordering is still fine — word order differs by language and a
+	// template renders correctly whichever order its actions appear in.
+	reordered := `[[0]]“[[1]]” jatkuu[[2]]`
+	got, err := restorePlaceholders(reordered, tokens)
+	if err != nil {
+		t.Fatalf("clean reorder rejected: %v", err)
+	}
+	if !strings.Contains(got, `{{.data.lesson_title}}`) {
+		t.Errorf("placeholder not restored: %q", got)
+	}
+}
+
+func TestRestoreRejectsAPlaceholderComposedByTheTranslator(t *testing.T) {
+	// Source has ONE verb. The model returns the token intact but leaves a
+	// stray "%" against it, which composes into a second verb after
+	// restoration. Every per-token count is 1, so only a check on the OUTPUT
+	// catches this.
+	masked, tokens := maskPlaceholders("Uses %d words")
+	if len(tokens) != 1 {
+		t.Fatalf("expected 1 token, got %d: %q", len(tokens), masked)
+	}
+
+	if _, err := restorePlaceholders("Käyttää %[[0]] sanaa", tokens); err == nil {
+		t.Fatal("a verb composed from a stray %% must be rejected")
+	}
+
+	if got, err := restorePlaceholders("Käyttää [[0]] sanaa", tokens); err != nil {
+		t.Fatalf("clean translation rejected: %v", err)
+	} else if got != "Käyttää %d sanaa" {
+		t.Errorf("got %q", got)
+	}
+}
