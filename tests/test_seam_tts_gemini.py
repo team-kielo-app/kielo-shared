@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 import struct
+import sys
+import types as pytypes
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -219,8 +221,22 @@ def test_unknown_output_rejected():
 
 
 @pytest.mark.asyncio
-async def test_genai_client_request_shape():
-    pytest.importorskip("google.genai")
+async def test_genai_client_request_shape(monkeypatch):
+    fake_types = pytypes.ModuleType("google.genai.types")
+    for name in (
+        "GenerateContentConfig",
+        "SpeechConfig",
+        "VoiceConfig",
+        "PrebuiltVoiceConfig",
+    ):
+        setattr(fake_types, name, SimpleNamespace)
+    google_pkg = sys.modules.get("google") or pytypes.ModuleType("google")
+    genai_pkg = pytypes.ModuleType("google.genai")
+    genai_pkg.types = fake_types  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "google", google_pkg)
+    monkeypatch.setitem(sys.modules, "google.genai", genai_pkg)
+    monkeypatch.setitem(sys.modules, "google.genai.types", fake_types)
+    monkeypatch.setattr(google_pkg, "genai", genai_pkg, raising=False)
 
     captured = {}
 
