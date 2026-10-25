@@ -41,6 +41,10 @@ type Request struct {
 	// by `gpt-4o-mini-tts` ("speak slowly with a calm tone").
 	// Ignored by providers that don't support it.
 	Instructions string
+	// Stability and SimilarityBoost optionally override the ElevenLabs
+	// voice_settings (default 0.5 / 0.75). Ignored by other providers.
+	Stability       *float64
+	SimilarityBoost *float64
 	// Task is the canonical seam task tag (snake_case). Pinned per
 	// caller for dashboards / alerts. Mirrors the LLM seam's
 	// `task` field — keeps observability conventions uniform.

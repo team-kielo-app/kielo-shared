@@ -9,6 +9,7 @@ contract on `kielo_tts_calls_total`.
 from __future__ import annotations
 
 import asyncio
+import json
 
 import httpx
 import pytest
@@ -433,3 +434,47 @@ async def test_openai_tts_without_a_model_is_a_client_error():
                 Request(text="hi", voice_id="alloy", task="klearn_tts_baseword")
             )
     assert ei.value.error_class == ErrorClass.CLIENT_ERROR
+
+
+async def _eleven_voice_settings(request: Request, **provider_kwargs):
+    seen = {}
+
+    def handler(http_request: httpx.Request) -> httpx.Response:
+        seen.update(json.loads(http_request.content))
+        return httpx.Response(200, content=b"mp3")
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        provider = ElevenLabsTTSProvider(
+            "k", client, endpoint="https://example.test/v1", **provider_kwargs
+        )
+        await provider.synthesize(request)
+    return seen.get("voice_settings")
+
+
+def _eleven_request(**kwargs) -> Request:
+    return Request(text="Hei", task="t", voice_id="v", **kwargs)
+
+
+@pytest.mark.asyncio
+async def test_elevenlabs_voice_settings_defaults_unchanged():
+    assert await _eleven_voice_settings(_eleven_request(speed=1.0)) == {
+        "stability": 0.5,
+        "similarity_boost": 0.75,
+        "speed": 1.0,
+    }
+    assert await _eleven_voice_settings(_eleven_request()) is None
+
+
+@pytest.mark.asyncio
+async def test_elevenlabs_voice_settings_overrides():
+    provider_level = {"stability": 0.3, "similarity_boost": 0.9}
+    assert await _eleven_voice_settings(
+        _eleven_request(speed=1.0), **provider_level
+    ) == {"stability": 0.3, "similarity_boost": 0.9, "speed": 1.0}
+    assert await _eleven_voice_settings(
+        _eleven_request(stability=0.2), **provider_level
+    ) == {"stability": 0.2, "similarity_boost": 0.9}
+    assert await _eleven_voice_settings(_eleven_request(similarity_boost=0.1)) == {
+        "stability": 0.5,
+        "similarity_boost": 0.1,
+    }
