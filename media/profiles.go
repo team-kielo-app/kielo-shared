@@ -80,7 +80,7 @@ type GDPRClass struct {
 type AlertPolicy struct {
 	Enabled       bool
 	LookaheadDays int      // warn this many days before TTL-driven deletion
-	Channels      []string // "slack:ops" | "email:compliance"
+	Channels      []string // "discord:alerts" | "email:compliance" (a label on the alert log line; Cloud Monitoring routes it)
 	AlertOnDelete bool     // page if any delete is attempted (legal-hold-grade)
 }
 
@@ -371,7 +371,7 @@ var profiles = map[string]MediaProfile{
 		// User conversation data = PII. TTL + erasure are compliance-driven.
 		Retention:     RetentionPolicy{TTL: 365 * day, DeleteOnOwnerDelete: true, OrphanGrace: 7 * day},
 		GDPR:          GDPRClass{ContainsPII: true, SubjectFrom: "owner", ErasureSLA: 30 * day, DedupAcrossSubjects: false},
-		Alerts:        AlertPolicy{Enabled: true, LookaheadDays: 7, Channels: []string{"slack:ops"}},
+		Alerts:        AlertPolicy{Enabled: true, LookaheadDays: 7, Channels: []string{"discord:alerts"}},
 		LegalHoldable: true,
 	},
 	"convo-review": {
@@ -382,7 +382,7 @@ var profiles = map[string]MediaProfile{
 		Access:         AccessPrivate,
 		Retention:      RetentionPolicy{TTL: 365 * day, DeleteOnOwnerDelete: true, OrphanGrace: 7 * day},
 		GDPR:           GDPRClass{ContainsPII: true, SubjectFrom: "owner", ErasureSLA: 30 * day, DedupAcrossSubjects: false},
-		Alerts:         AlertPolicy{Enabled: true, LookaheadDays: 7, Channels: []string{"slack:ops"}},
+		Alerts:         AlertPolicy{Enabled: true, LookaheadDays: 7, Channels: []string{"discord:alerts"}},
 		LegalHoldable:  true,
 	},
 	// Store screenshot builder (#325). Owner = cms.store_screenshot_sets; the CMS
