@@ -92,6 +92,13 @@ EMAIL_BODY = "email.body"
 # registry-build time.
 UI_STRING = "ui.string"
 
+# kielo.app blog posts (cms_<lang>.site_posts), translated per post version
+# by the engine's site translation sweep. resource_id is the post_id.
+SITE_POST_TITLE = "site.post.title"
+SITE_POST_DESCRIPTION = "site.post.description"
+SITE_POST_HERO_IMAGE_ALT = "site.post.hero_image_alt"
+SITE_POST_BODY = "site.post.body"
+
 # Authoritative set used by `is_valid_resource_type`. Update when
 # constants above change.
 ALL_RESOURCE_TYPES: FrozenSet[str] = frozenset(
@@ -135,6 +142,10 @@ ALL_RESOURCE_TYPES: FrozenSet[str] = frozenset(
         EMAIL_SUBJECT,
         EMAIL_BODY,
         UI_STRING,
+        SITE_POST_TITLE,
+        SITE_POST_DESCRIPTION,
+        SITE_POST_HERO_IMAGE_ALT,
+        SITE_POST_BODY,
     }
 )
 
