@@ -220,24 +220,40 @@ func (c *Client) Upsert(ctx context.Context, req UpsertRequest) (*UpsertResponse
 // At least one of ResourceIDs or ResourceIDPrefix MUST be set —
 // the service rejects (400) otherwise to prevent accidental
 // full-table scans.
+//
+// AllVersions returns every row for the matched tuples, one per
+// source_version, instead of only the newest per (resource_type,
+// resource_id, language_code). Callers that decide freshness by
+// the exact current source_version need it: the newest row is not
+// the current one after an edit is reverted (A -> B -> A).
+//
+// OmitText returns translated_text (and source_text) empty, for
+// callers that only need which versions exist and their status.
+// It keeps key-only scans over long texts (blog bodies) small.
+//
+// Both default to false, which keeps the original behavior.
 type FetchRequest struct {
 	ResourceTypes    []string `json:"resource_types"`
 	ResourceIDs      []string `json:"resource_ids,omitempty"`
 	ResourceIDPrefix string   `json:"resource_id_prefix,omitempty"`
 	LanguageCode     string   `json:"language_code,omitempty"`
+	AllVersions      bool     `json:"all_versions,omitempty"`
+	OmitText         bool     `json:"omit_text,omitempty"`
 }
 
 // FetchResponse is the {items: [...]} list returned by the
 // fetch endpoint. One row per (resource_type, resource_id,
 // language_code) tuple — DISTINCT ON ordering keeps the freshest
-// visible row.
+// visible row — unless the request set AllVersions, in which case
+// one row per source_version.
 type FetchResponse struct {
 	Items []DynamicTranslation `json:"items"`
 }
 
 // FetchByResources returns the freshest visible row per
 // (resource_type, resource_id, language_code) tuple that
-// matches the supplied filters. Empty filters return an empty
+// matches the supplied filters, or every version of it when
+// req.AllVersions is set. Empty filters return an empty
 // list (service-side 400; this client surfaces the error).
 func (c *Client) FetchByResources(ctx context.Context, req FetchRequest) (*FetchResponse, error) {
 	if c == nil {

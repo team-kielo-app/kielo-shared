@@ -186,3 +186,41 @@ func TestUpsertRequest_SourceTextWireShape(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotContains(t, string(without), "source_text")
 }
+
+func TestFetchRequest_VersionAndTextOptionsWireShape(t *testing.T) {
+	base, err := json.Marshal(FetchRequest{ResourceTypes: []string{"r"}, ResourceIDs: []string{"1"}})
+	require.NoError(t, err)
+	assert.NotContains(t, string(base), "all_versions", "default requests keep the original wire shape")
+	assert.NotContains(t, string(base), "omit_text", "default requests keep the original wire shape")
+
+	opts, err := json.Marshal(FetchRequest{ResourceTypes: []string{"r"}, ResourceIDs: []string{"1"}, AllVersions: true, OmitText: true})
+	require.NoError(t, err)
+	assert.Contains(t, string(opts), `"all_versions":true`)
+	assert.Contains(t, string(opts), `"omit_text":true`)
+}
+
+func TestFetchByResources_SendsVersionAndTextOptions(t *testing.T) {
+	var raw map[string]any
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&raw))
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"items":[` +
+			`{"resource_type":"site.post.body","resource_id":"p","source_version":"v1","language_code":"de","translated_text":"","status":"machine"},` +
+			`{"resource_type":"site.post.body","resource_id":"p","source_version":"v2","language_code":"de","translated_text":"","status":"machine"}]}`))
+	}))
+	defer srv.Close()
+
+	c := New(srv.URL, "k", nil)
+	resp, err := c.FetchByResources(context.Background(), FetchRequest{
+		ResourceTypes: []string{"site.post.body"},
+		ResourceIDs:   []string{"p"},
+		AllVersions:   true,
+		OmitText:      true,
+	})
+	require.NoError(t, err)
+	require.Len(t, resp.Items, 2)
+	assert.Equal(t, "v1", resp.Items[0].SourceVersion)
+	assert.Equal(t, "v2", resp.Items[1].SourceVersion)
+	assert.Equal(t, true, raw["all_versions"])
+	assert.Equal(t, true, raw["omit_text"])
+}
