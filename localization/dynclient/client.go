@@ -149,10 +149,10 @@ func (c *Client) Upsert(ctx context.Context, req UpsertRequest) (*UpsertResponse
 	//
 	// Refusing here rather than at each call site because every autotranslate
 	// seam funnels through this method: seam_autotranslate_comms hit it with
-	// "fa" (Persian — in rtlLanguages but deliberately NOT in
-	// languageDisplayNames) across ui.string, notification.title and
-	// notification.body, and seam_autotranslate_content had already done the
-	// same with cs/sl/fa on paragraph translations.
+	// "fa" (Persian, before it became a support language on 2026-10-26)
+	// across ui.string, notification.title and notification.body, and
+	// seam_autotranslate_content had already done the same with cs/sl/fa on
+	// paragraph translations.
 	//
 	// ErrUnsupportedLanguage is typed so callers can tell "we don't serve this
 	// locale" apart from "the write failed". Seams treat it as a skip; nothing

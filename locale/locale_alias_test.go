@@ -19,7 +19,7 @@ var realWorldSpellings = map[string]string{
 	"jpn": "ja", "kor": "ko", "hin": "hi", "ben": "bn", "tur": "tr",
 	"ukr": "uk", "swe": "sv", "fin": "fi", "ita": "it", "pol": "pl",
 	"srp": "sr", "tha": "th", "vie": "vi", "nld": "nl", "dut": "nl",
-	"por": "pt", "hun": "hu",
+	"por": "pt", "hun": "hu", "fas": "fa", "per": "fa",
 
 	// Macrolanguage members observed or plausible from real devices.
 	"arb": "ar", "ars": "ar", "cmn": "zh",
@@ -52,10 +52,11 @@ func TestRealWorldSpellingsFoldToSupportedCodes(t *testing.T) {
 // for has to keep reporting false, so callers fall back to English instead of
 // translating into a locale that cannot be persisted.
 func TestUnsupportedLanguagesAreNotSilentlyFolded(t *testing.T) {
-	// cs and fa were both observed failing the dynamic_translations write in
-	// prod. They are genuinely unsupported — the fix for them is to stop
-	// doing the translation work, NOT to alias them onto something else.
-	for _, code := range []string{"cs", "ces", "cze", "fa", "fas", "per", "et", "est", "he", "id"} {
+	// cs was observed failing the dynamic_translations write in prod. It is
+	// genuinely unsupported — the fix is to stop doing the translation work,
+	// NOT to alias it onto something else. (fa failed the same way until
+	// Persian became a support language, 2026-10-26.)
+	for _, code := range []string{"cs", "ces", "cze", "et", "est", "he", "id"} {
 		if IsSupportedSupportLanguage(code) {
 			t.Errorf("IsSupportedSupportLanguage(%q) = true; folding must not "+
 				"claim support for a language with no authored content", code)

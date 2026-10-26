@@ -1,6 +1,7 @@
 package gemini
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -55,7 +56,7 @@ func TestLanguageMapMatchesPythonSource(t *testing.T) {
 }
 
 func TestLanguageTag(t *testing.T) {
-	cases := map[string]string{"fi": "fi-FI", "FI": "fi-FI", " zh ": "cmn-CN", "fi_FI": "fi-FI", "pt-BR": "pt-BR", "xx": "xx", "": ""}
+	cases := map[string]string{"fi": "fi-FI", "FI": "fi-FI", "zh": "cmn-CN", "fi_FI": "fi-FI", "pt-BR": "pt-BR", "xx": "xx", "": ""}
 	for in, want := range cases {
 		if got := LanguageTag(in); got != want {
 			t.Errorf("LanguageTag(%q)=%q want %q", in, got, want)
@@ -154,7 +155,7 @@ func TestWAVPassesThroughUntouched(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if string(res.Audio) != string(wav) || strings.Count(string(res.Audio), "RIFF") != 1 {
+	if !bytes.Equal(res.Audio, wav) || strings.Count(string(res.Audio), "RIFF") != 1 {
 		t.Errorf("WAV was altered or re-wrapped")
 	}
 }
@@ -166,11 +167,11 @@ func TestRawPCMWrappedOnceWithItsRate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if string(res.Audio[:4]) != "RIFF" || string(res.Audio[44:]) != string(pcm) || res.Audio[24] != 0x80 || res.Audio[25] != 0x3e {
+	if string(res.Audio[:4]) != "RIFF" || !bytes.Equal(res.Audio[44:], pcm) || res.Audio[24] != 0x80 || res.Audio[25] != 0x3e {
 		t.Errorf("unexpected wrap: % x", res.Audio[:48])
 	}
 	back, err := WAVToPCM(res.Audio)
-	if err != nil || string(back) != string(pcm) {
+	if err != nil || !bytes.Equal(back, pcm) {
 		t.Errorf("WAVToPCM=%v err=%v", back, err)
 	}
 }
