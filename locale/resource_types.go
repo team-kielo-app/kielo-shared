@@ -134,6 +134,15 @@ const (
 	// resource_id is the supportregistry.Key string verbatim; source_version
 	// is sha256(english_seed)[:16] computed at registry-build time.
 	ResourceTypeUIString = "ui.string"
+
+	// kielo.app blog posts (cms_<lang>.site_posts), translated per post
+	// version by the engine's site translation sweep and served by
+	// kielo-content-service's public site API. resource_id is the post_id;
+	// source_version is SourceVersionFromText of the English field.
+	ResourceTypeSitePostTitle        = "site.post.title"
+	ResourceTypeSitePostDescription  = "site.post.description"
+	ResourceTypeSitePostHeroImageAlt = "site.post.hero_image_alt"
+	ResourceTypeSitePostBody         = "site.post.body"
 )
 
 // allResourceTypes is the authoritative set of valid resource_type
@@ -178,6 +187,10 @@ var allResourceTypes = map[string]struct{}{
 	ResourceTypeEmailSubject:                       {},
 	ResourceTypeEmailBody:                          {},
 	ResourceTypeUIString:                           {},
+	ResourceTypeSitePostTitle:                      {},
+	ResourceTypeSitePostDescription:                {},
+	ResourceTypeSitePostHeroImageAlt:               {},
+	ResourceTypeSitePostBody:                       {},
 }
 
 // IsValidResourceType returns true if rt is a recognized resource_type.
