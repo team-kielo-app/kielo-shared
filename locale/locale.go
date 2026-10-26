@@ -96,7 +96,7 @@ var languageCodeAliases = map[string]string{
 
 	// ISO 639-2/T and 639-2/B for the supported set.
 	"ara": "ar", "ben": "bn", "deu": "de", "ger": "de", "eng": "en",
-	"spa": "es", "fin": "fi", "fra": "fr", "fre": "fr", "hin": "hi",
+	"spa": "es", "fas": "fa", "per": "fa", "fin": "fi", "fra": "fr", "fre": "fr", "hin": "hi",
 	"hun": "hu", "ita": "it", "jpn": "ja", "kor": "ko", "nld": "nl",
 	"dut": "nl", "pol": "pl", "por": "pt", "rus": "ru", "srp": "sr",
 	"swe": "sv", "tha": "th", "tur": "tr", "ukr": "uk", "vie": "vi",
@@ -167,6 +167,7 @@ var languageDisplayNames = map[string]string{
 	"de": "German",
 	"en": "English",
 	"es": "Spanish",
+	"fa": "Persian",
 	"fi": "Finnish",
 	"fr": "French",
 	"hi": "Hindi",

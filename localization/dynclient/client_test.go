@@ -86,7 +86,8 @@ func TestUpsert_PropagatesNon2xxStatus(t *testing.T) {
 // The languages foreign key makes an unsupported code unwritable, so Upsert
 // must refuse it locally instead of spending a round-trip to learn that.
 // seam_autotranslate_comms hit this with "fa" across ui.string,
-// notification.title and notification.body; content did the same with cs/sl.
+// notification.title and notification.body (before Persian became a support
+// language); content did the same with cs/sl.
 func TestUpsert_RefusesUnsupportedLanguageWithoutCallingServer(t *testing.T) {
 	called := false
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -96,7 +97,7 @@ func TestUpsert_RefusesUnsupportedLanguageWithoutCallingServer(t *testing.T) {
 	defer srv.Close()
 
 	c := New(srv.URL, "key", nil)
-	for _, code := range []string{"fa", "cs", "sl", ""} {
+	for _, code := range []string{"et", "cs", "sl", ""} {
 		_, err := c.Upsert(context.Background(), UpsertRequest{
 			ResourceType: "ui.string", ResourceID: "x", LanguageCode: code,
 			TranslatedText: "t", SourceVersion: "v",
