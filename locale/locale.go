@@ -99,7 +99,7 @@ var languageCodeAliases = map[string]string{
 	"spa": "es", "fas": "fa", "per": "fa", "fin": "fi", "fra": "fr", "fre": "fr", "hin": "hi",
 	"hun": "hu", "ita": "it", "jpn": "ja", "kor": "ko", "nld": "nl",
 	"dut": "nl", "pol": "pl", "por": "pt", "rus": "ru", "srp": "sr",
-	"swe": "sv", "tha": "th", "tur": "tr", "ukr": "uk", "vie": "vi",
+	"swe": "sv", "som": "so", "sqi": "sq", "alb": "sq", "nep": "ne", "tha": "th", "tur": "tr", "ukr": "uk", "vie": "vi",
 	"zho": "zh", "chi": "zh",
 
 	// Macrolanguage members that collapse without ambiguity.
@@ -162,30 +162,34 @@ func BaseLocale(value string) string {
 // when handling a locale that the platform officially supports. Add new
 // locales here, not in per-feature maps. Keys are normalized base codes.
 var languageDisplayNames = map[string]string{
-	"ar": "Arabic",
-	"bn": "Bengali",
-	"de": "German",
-	"en": "English",
-	"es": "Spanish",
-	"fa": "Persian",
-	"fi": "Finnish",
-	"fr": "French",
-	"hi": "Hindi",
-	"hu": "Hungarian",
-	"it": "Italian",
-	"ja": "Japanese",
-	"ko": "Korean",
-	"nl": "Dutch",
-	"pl": "Polish",
-	"pt": "Portuguese",
-	"ru": "Russian",
-	"sr": "Serbian",
-	"sv": "Swedish",
-	"th": "Thai",
-	"tr": "Turkish",
-	"uk": "Ukrainian",
-	"vi": "Vietnamese",
-	"zh": "Chinese",
+	"ar":  "Arabic",
+	"bn":  "Bengali",
+	"ckb": "Central Kurdish",
+	"de":  "German",
+	"en":  "English",
+	"es":  "Spanish",
+	"fa":  "Persian",
+	"fi":  "Finnish",
+	"fr":  "French",
+	"hi":  "Hindi",
+	"hu":  "Hungarian",
+	"it":  "Italian",
+	"ja":  "Japanese",
+	"ko":  "Korean",
+	"ne":  "Nepali",
+	"nl":  "Dutch",
+	"pl":  "Polish",
+	"pt":  "Portuguese",
+	"ru":  "Russian",
+	"so":  "Somali",
+	"sq":  "Albanian",
+	"sr":  "Serbian",
+	"sv":  "Swedish",
+	"th":  "Thai",
+	"tr":  "Turkish",
+	"uk":  "Ukrainian",
+	"vi":  "Vietnamese",
+	"zh":  "Chinese",
 }
 
 // languageFlags maps Kielo's canonical base language codes to their
@@ -231,10 +235,11 @@ func LanguageFlag(code string) string {
 // autotranslate to AllSupportLocales — every one must be a valid,
 // correctly-shaped languages row).
 var rtlLanguages = map[string]bool{
-	"ar": true, // Arabic
-	"fa": true, // Persian
-	"he": true, // Hebrew
-	"ur": true, // Urdu
+	"ar":  true, // Arabic
+	"fa":  true, // Persian
+	"ckb": true, // Central Kurdish (Sorani)
+	"he":  true, // Hebrew
+	"ur":  true, // Urdu
 }
 
 // LanguageDirection returns "rtl" for right-to-left scripts and "ltr"

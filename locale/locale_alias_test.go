@@ -20,6 +20,7 @@ var realWorldSpellings = map[string]string{
 	"ukr": "uk", "swe": "sv", "fin": "fi", "ita": "it", "pol": "pl",
 	"srp": "sr", "tha": "th", "vie": "vi", "nld": "nl", "dut": "nl",
 	"por": "pt", "hun": "hu", "fas": "fa", "per": "fa",
+	"som": "so", "sqi": "sq", "alb": "sq", "nep": "ne",
 
 	// Macrolanguage members observed or plausible from real devices.
 	"arb": "ar", "ars": "ar", "cmn": "zh",
