@@ -9,6 +9,7 @@ prompt's previous tag so the provider-chain cache cannot serve the old output.
 
 import pytest
 
+from kielo_shared.locale_constants import LANGUAGE_DISPLAY_NAMES
 from kielo_shared.localization import openai_provider as op
 
 
@@ -119,3 +120,12 @@ async def test_providers_put_the_instruction_in_the_prompt_the_model_sees():
     await provider._translate_per_item([pinned], source_locale="en", target_locale="de")
     assert len(seen) == 2
     assert all("binding instruction" in p for p in seen)
+
+
+@pytest.mark.parametrize("code", sorted(LANGUAGE_DISPLAY_NAMES))
+def test_every_support_language_is_named_in_the_prompt(code: str) -> None:
+    assert op._language_name(code) == LANGUAGE_DISPLAY_NAMES[code]
+
+
+def test_italian_is_named_not_left_as_the_word_it() -> None:
+    assert op._language_name("it-IT") == "Italian"
