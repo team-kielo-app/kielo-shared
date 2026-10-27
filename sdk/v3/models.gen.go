@@ -102,8 +102,8 @@ const (
 
 // Defines values for ConversationBriefWordKielolearnEngineExampleSpeaker.
 const (
-	Learner ConversationBriefWordKielolearnEngineExampleSpeaker = "learner"
-	Partner ConversationBriefWordKielolearnEngineExampleSpeaker = "partner"
+	ConversationBriefWordKielolearnEngineExampleSpeakerLearner ConversationBriefWordKielolearnEngineExampleSpeaker = "learner"
+	ConversationBriefWordKielolearnEngineExampleSpeakerPartner ConversationBriefWordKielolearnEngineExampleSpeaker = "partner"
 )
 
 // Defines values for ConversationBriefWordKielolearnEngineSource.
@@ -965,6 +965,30 @@ type ActivateAgentResponse struct {
 	Status   string `json:"status"`
 }
 
+// ActiveCampaign defines model for ActiveCampaign.
+type ActiveCampaign struct {
+	Copy       DiscountCampaignCopy  `json:"copy"`
+	EndsAt     *time.Time            `json:"ends_at,omitempty"`
+	Id         uuid.UUID             `json:"id"`
+	Kind       string                `json:"kind"`
+	Mechanism  *string               `json:"mechanism,omitempty"`
+	OfferRef   *string               `json:"offer_ref,omitempty"`
+	Offers     []ActiveCampaignOffer `json:"offers"`
+	PercentOff *int                  `json:"percent_off,omitempty"`
+}
+
+// ActiveCampaignList defines model for ActiveCampaignList.
+type ActiveCampaignList struct {
+	Campaigns []ActiveCampaign `json:"campaigns"`
+}
+
+// ActiveCampaignOffer defines model for ActiveCampaignOffer.
+type ActiveCampaignOffer struct {
+	DurationLabel string `json:"duration_label"`
+	PercentOff    int    `json:"percent_off"`
+	Plan          string `json:"plan"`
+}
+
 // ActiveLearningItem defines model for ActiveLearningItem.
 type ActiveLearningItem struct {
 	CefrLevel   *string   `json:"cefr_level"`
@@ -1468,6 +1492,18 @@ type Asset struct {
 	Width        *int     `json:"width,omitempty"`
 }
 
+// Attribution defines model for Attribution.
+type Attribution struct {
+	ClaimedAt    time.Time  `json:"claimed_at"`
+	Code         string     `json:"code"`
+	OverriddenBy *uuid.UUID `json:"overridden_by,omitempty"`
+	PartnerId    *uuid.UUID `json:"partner_id,omitempty"`
+	PartnerName  *string    `json:"partner_name,omitempty"`
+	SourceType   string     `json:"source_type"`
+	UserId       uuid.UUID  `json:"user_id"`
+	WindowEndsAt *time.Time `json:"window_ends_at,omitempty"`
+}
+
 // AuditLog defines model for AuditLog.
 type AuditLog struct {
 	Action      string       `json:"action"`
@@ -1903,6 +1939,17 @@ type CampaignConfigSchemaDefault struct {
 	Timezone         string                 `json:"timezone"`
 }
 
+// CampaignEventRequest defines model for CampaignEventRequest.
+type CampaignEventRequest struct {
+	Event    string `json:"event"`
+	Platform string `json:"platform"`
+}
+
+// CampaignEventResponse defines model for CampaignEventResponse.
+type CampaignEventResponse struct {
+	Recorded bool `json:"recorded"`
+}
+
 // CampaignPreviewDetails defines model for CampaignPreviewDetails.
 type CampaignPreviewDetails struct {
 	ContentTypes []string              `json:"content_types"`
@@ -2095,6 +2142,20 @@ type CheckFeatureUniqueRequest struct {
 	Peek   *bool   `json:"peek,omitempty"`
 }
 
+// ClaimAttributionRequest defines model for ClaimAttributionRequest.
+type ClaimAttributionRequest struct {
+	Code string `json:"code"`
+}
+
+// ClaimAttributionResponse defines model for ClaimAttributionResponse.
+type ClaimAttributionResponse struct {
+	Code            string    `json:"code"`
+	DiscountPercent int       `json:"discount_percent"`
+	PartnerName     string    `json:"partner_name"`
+	WebDiscountCode string    `json:"web_discount_code"`
+	WindowEndsAt    time.Time `json:"window_ends_at"`
+}
+
 // ClaimContentVersionForProcessingRequest defines model for ClaimContentVersionForProcessingRequest.
 type ClaimContentVersionForProcessingRequest struct {
 	ClaimantId string `json:"claimant_id"`
@@ -2112,6 +2173,36 @@ type ClaimGuestRequest struct {
 	Email       string  `json:"email"`
 	FirebaseUid *string `json:"firebase_uid,omitempty"`
 	Name        *string `json:"name,omitempty"`
+}
+
+// ClaimPartnerAttributionRequest defines model for ClaimPartnerAttributionRequest.
+type ClaimPartnerAttributionRequest struct {
+	Code string `json:"code"`
+}
+
+// ClaimPartnerAttributionResponse defines model for ClaimPartnerAttributionResponse.
+type ClaimPartnerAttributionResponse struct {
+	Code            string    `json:"code"`
+	DiscountPercent int       `json:"discount_percent"`
+	PartnerName     string    `json:"partner_name"`
+	WebDiscountCode string    `json:"web_discount_code"`
+	WindowEndsAt    time.Time `json:"window_ends_at"`
+}
+
+// ClaimReferralRequest defines model for ClaimReferralRequest.
+type ClaimReferralRequest struct {
+	ClientIp *string `json:"client_ip,omitempty"`
+	Code     string  `json:"code"`
+	DeviceId *string `json:"device_id,omitempty"`
+}
+
+// ClaimReferralResponse defines model for ClaimReferralResponse.
+type ClaimReferralResponse struct {
+	FriendMonths          int    `json:"friend_months"`
+	FriendPercent         int    `json:"friend_percent"`
+	FriendWebDiscountCode string `json:"friend_web_discount_code"`
+	ReferrerName          string `json:"referrer_name"`
+	Status                string `json:"status"`
 }
 
 // ClaimResult defines model for ClaimResult.
@@ -3980,6 +4071,32 @@ type CreateParagraphTTSSessionRequest struct {
 	Text        string `json:"text"`
 }
 
+// CreatePartnerCodeRequest defines model for CreatePartnerCodeRequest.
+type CreatePartnerCodeRequest struct {
+	AndroidOfferTag string     `json:"android_offer_tag"`
+	Code            string     `json:"code"`
+	DiscountPercent int        `json:"discount_percent"`
+	EndsAt          *time.Time `json:"ends_at,omitempty"`
+	IosOfferCode    string     `json:"ios_offer_code"`
+	StartsAt        *time.Time `json:"starts_at,omitempty"`
+	WebDiscountCode string     `json:"web_discount_code"`
+}
+
+// CreatePartnerPayoutRequest defines model for CreatePartnerPayoutRequest.
+type CreatePartnerPayoutRequest struct {
+	Month     string    `json:"month"`
+	PartnerId uuid.UUID `json:"partner_id"`
+}
+
+// CreatePartnerRequest defines model for CreatePartnerRequest.
+type CreatePartnerRequest struct {
+	ContactEmail      string `json:"contact_email"`
+	LegalName         string `json:"legal_name"`
+	Name              string `json:"name"`
+	ShareBps          *int   `json:"share_bps,omitempty"`
+	ShareWindowMonths *int   `json:"share_window_months,omitempty"`
+}
+
 // CreatePromoCampaignRequest defines model for CreatePromoCampaignRequest.
 type CreatePromoCampaignRequest struct {
 	Channel        *string    `json:"channel,omitempty"`
@@ -4981,6 +5098,79 @@ type DictionaryWordForm struct {
 	Label        *string            `json:"label,omitempty"`
 	LabelShort   *string            `json:"label_short,omitempty"`
 	ParadigmSlot *string            `json:"paradigm_slot,omitempty"`
+}
+
+// DiscountCampaign defines model for DiscountCampaign.
+type DiscountCampaign struct {
+	AndroidOfferTag   string                  `json:"android_offer_tag"`
+	Copy              []DiscountCampaignCopy  `json:"copy"`
+	CreatedAt         time.Time               `json:"created_at"`
+	CreatedBy         *uuid.UUID              `json:"created_by,omitempty"`
+	EffectiveStatus   string                  `json:"effective_status"`
+	Eligibility       string                  `json:"eligibility"`
+	EndsAt            *time.Time              `json:"ends_at,omitempty"`
+	Id                uuid.UUID               `json:"id"`
+	IosMechanism      string                  `json:"ios_mechanism"`
+	IosOfferRef       string                  `json:"ios_offer_ref"`
+	Kind              string                  `json:"kind"`
+	Name              string                  `json:"name"`
+	Offers            []DiscountCampaignOffer `json:"offers"`
+	PercentOff        *int                    `json:"percent_off,omitempty"`
+	Platforms         []string                `json:"platforms"`
+	RcWebDiscountCode string                  `json:"rc_web_discount_code"`
+	StartsAt          *time.Time              `json:"starts_at,omitempty"`
+	Stats             *DiscountCampaignStats  `json:"stats,omitempty"`
+	Status            string                  `json:"status"`
+	UpdatedAt         time.Time               `json:"updated_at"`
+}
+
+// DiscountCampaignCopy defines model for DiscountCampaignCopy.
+type DiscountCampaignCopy struct {
+	Body  string `json:"body"`
+	Cta   string `json:"cta"`
+	Lang  string `json:"lang"`
+	Title string `json:"title"`
+}
+
+// DiscountCampaignList defines model for DiscountCampaignList.
+type DiscountCampaignList struct {
+	Campaigns []DiscountCampaign `json:"campaigns"`
+}
+
+// DiscountCampaignOffer defines model for DiscountCampaignOffer.
+type DiscountCampaignOffer struct {
+	DurationLabel     string `json:"duration_label"`
+	PercentOff        int    `json:"percent_off"`
+	Plan              string `json:"plan"`
+	RcWebDiscountCode string `json:"rc_web_discount_code"`
+}
+
+// DiscountCampaignStats defines model for DiscountCampaignStats.
+type DiscountCampaignStats struct {
+	Clicked   int `json:"clicked"`
+	Dismissed int `json:"dismissed"`
+	Purchased int `json:"purchased"`
+	Shown     int `json:"shown"`
+}
+
+// DiscountCampaignWrite defines model for DiscountCampaignWrite.
+type DiscountCampaignWrite struct {
+	AndroidOfferTag   *string                  `json:"android_offer_tag,omitempty"`
+	ClearEndsAt       *bool                    `json:"clear_ends_at,omitempty"`
+	ClearStartsAt     *bool                    `json:"clear_starts_at,omitempty"`
+	Copy              *[]DiscountCampaignCopy  `json:"copy,omitempty"`
+	Eligibility       *string                  `json:"eligibility,omitempty"`
+	EndsAt            *time.Time               `json:"ends_at,omitempty"`
+	IosMechanism      *string                  `json:"ios_mechanism,omitempty"`
+	IosOfferRef       *string                  `json:"ios_offer_ref,omitempty"`
+	Kind              *string                  `json:"kind,omitempty"`
+	Name              *string                  `json:"name,omitempty"`
+	Offers            *[]DiscountCampaignOffer `json:"offers,omitempty"`
+	PercentOff        *int                     `json:"percent_off,omitempty"`
+	Platforms         *[]string                `json:"platforms,omitempty"`
+	RcWebDiscountCode *string                  `json:"rc_web_discount_code,omitempty"`
+	StartsAt          *time.Time               `json:"starts_at,omitempty"`
+	Status            *string                  `json:"status,omitempty"`
 }
 
 // DiscoveryItemsResponse defines model for DiscoveryItemsResponse.
@@ -8090,6 +8280,57 @@ type LearningStyleProfile struct {
 	UserSetPreferredModalities *[]string `json:"user_set_preferred_modalities,omitempty"`
 }
 
+// LedgerEntry defines model for LedgerEntry.
+type LedgerEntry struct {
+	CreatedAt        time.Time  `json:"created_at"`
+	Currency         string     `json:"currency"`
+	FxRate           float32    `json:"fx_rate"`
+	Gross            float32    `json:"gross"`
+	Id               uuid.UUID  `json:"id"`
+	Net              float32    `json:"net"`
+	NetEur           float32    `json:"net_eur"`
+	PartnerAmountEur float32    `json:"partner_amount_eur"`
+	PartnerId        uuid.UUID  `json:"partner_id"`
+	PayoutId         *uuid.UUID `json:"payout_id,omitempty"`
+	PeriodMonth      string     `json:"period_month"`
+	ProductId        string     `json:"product_id"`
+	ReversesId       *uuid.UUID `json:"reverses_id,omitempty"`
+	ShareBps         int        `json:"share_bps"`
+	Status           string     `json:"status"`
+	Store            string     `json:"store"`
+	StoreFee         float32    `json:"store_fee"`
+	Tax              float32    `json:"tax"`
+	TransactionId    string     `json:"transaction_id"`
+	UserId           uuid.UUID  `json:"user_id"`
+}
+
+// LedgerEntryList defines model for LedgerEntryList.
+type LedgerEntryList struct {
+	Entries []LedgerEntry `json:"entries"`
+}
+
+// LedgerMonth defines model for LedgerMonth.
+type LedgerMonth struct {
+	Charges         int        `json:"charges"`
+	GrossEur        float32    `json:"gross_eur"`
+	NetEur          float32    `json:"net_eur"`
+	OwedEur         float32    `json:"owed_eur"`
+	PartnerId       uuid.UUID  `json:"partner_id"`
+	PartnerName     string     `json:"partner_name"`
+	PayoutId        *uuid.UUID `json:"payout_id,omitempty"`
+	PayoutReference *string    `json:"payout_reference,omitempty"`
+	PayoutStatus    *string    `json:"payout_status,omitempty"`
+	PeriodMonth     string     `json:"period_month"`
+	Refunds         int        `json:"refunds"`
+	ReversedEur     float32    `json:"reversed_eur"`
+	ShareEur        float32    `json:"share_eur"`
+}
+
+// LedgerMonthList defines model for LedgerMonthList.
+type LedgerMonthList struct {
+	Months []LedgerMonth `json:"months"`
+}
+
 // LegalHoldResult defines model for LegalHoldResult.
 type LegalHoldResult struct {
 	LegalHold bool   `json:"legal_hold"`
@@ -9175,6 +9416,11 @@ type OperatorSwitchRequestLocalization struct {
 	UpdatedBy  *uuid.UUID `json:"updated_by,omitempty"`
 }
 
+// OverrideAttributionRequest defines model for OverrideAttributionRequest.
+type OverrideAttributionRequest struct {
+	Code string `json:"code"`
+}
+
 // OverrideDynamicTranslationRequest defines model for OverrideDynamicTranslationRequest.
 type OverrideDynamicTranslationRequest struct {
 	TranslatedText string `json:"translated_text"`
@@ -9251,6 +9497,84 @@ type PartCoverage struct {
 	Part    string  `json:"part"`
 	Problem *string `json:"problem,omitempty"`
 	Source  string  `json:"source"`
+}
+
+// Partner defines model for Partner.
+type Partner struct {
+	CodeCount         int       `json:"code_count"`
+	ContactEmail      string    `json:"contact_email"`
+	CreatedAt         time.Time `json:"created_at"`
+	Id                uuid.UUID `json:"id"`
+	LegalName         string    `json:"legal_name"`
+	Name              string    `json:"name"`
+	ShareBasis        string    `json:"share_basis"`
+	ShareBps          int       `json:"share_bps"`
+	ShareWindowMonths int       `json:"share_window_months"`
+	Status            string    `json:"status"`
+	UpdatedAt         time.Time `json:"updated_at"`
+}
+
+// PartnerCode defines model for PartnerCode.
+type PartnerCode struct {
+	AndroidOfferTag string     `json:"android_offer_tag"`
+	ClaimCount      int        `json:"claim_count"`
+	Code            string     `json:"code"`
+	CreatedAt       time.Time  `json:"created_at"`
+	DiscountPercent int        `json:"discount_percent"`
+	EndsAt          *time.Time `json:"ends_at,omitempty"`
+	IosOfferCode    string     `json:"ios_offer_code"`
+	PartnerId       uuid.UUID  `json:"partner_id"`
+	StartsAt        *time.Time `json:"starts_at,omitempty"`
+	Status          string     `json:"status"`
+	UpdatedAt       time.Time  `json:"updated_at"`
+	WebDiscountCode string     `json:"web_discount_code"`
+}
+
+// PartnerCodeList defines model for PartnerCodeList.
+type PartnerCodeList struct {
+	Codes []PartnerCode `json:"codes"`
+}
+
+// PartnerCodePreview defines model for PartnerCodePreview.
+type PartnerCodePreview struct {
+	Code            string     `json:"code"`
+	DiscountPercent *int       `json:"discount_percent,omitempty"`
+	EndsAt          *time.Time `json:"ends_at,omitempty"`
+	PartnerName     *string    `json:"partner_name,omitempty"`
+	Reason          *string    `json:"reason,omitempty"`
+	Valid           bool       `json:"valid"`
+	WebDiscountCode *string    `json:"web_discount_code,omitempty"`
+}
+
+// PartnerList defines model for PartnerList.
+type PartnerList struct {
+	Partners []Partner `json:"partners"`
+}
+
+// PartnerPayout defines model for PartnerPayout.
+type PartnerPayout struct {
+	ApprovedAt  *time.Time `json:"approved_at,omitempty"`
+	ApprovedBy  *uuid.UUID `json:"approved_by,omitempty"`
+	CreatedAt   time.Time  `json:"created_at"`
+	Id          uuid.UUID  `json:"id"`
+	PaidAt      *time.Time `json:"paid_at,omitempty"`
+	PartnerId   uuid.UUID  `json:"partner_id"`
+	PartnerName string     `json:"partner_name"`
+	PeriodMonth string     `json:"period_month"`
+	Reference   string     `json:"reference"`
+	Status      string     `json:"status"`
+	TotalEur    float32    `json:"total_eur"`
+	UpdatedAt   time.Time  `json:"updated_at"`
+}
+
+// PartnerPayoutActionRequest defines model for PartnerPayoutActionRequest.
+type PartnerPayoutActionRequest struct {
+	Reference string `json:"reference"`
+}
+
+// PartnerPayoutList defines model for PartnerPayoutList.
+type PartnerPayoutList struct {
+	Payouts []PartnerPayout `json:"payouts"`
 }
 
 // PaymentHistory defines model for PaymentHistory.
@@ -10104,6 +10428,111 @@ type RedeemPromoCodeResponseUserService struct {
 	Status            string     `json:"status"`
 }
 
+// Referral defines model for Referral.
+type Referral struct {
+	ClaimedAt       time.Time  `json:"claimed_at"`
+	Code            string     `json:"code"`
+	Flags           []string   `json:"flags"`
+	HoldUntil       *time.Time `json:"hold_until,omitempty"`
+	Id              uuid.UUID  `json:"id"`
+	QualifyingTxnId *string    `json:"qualifying_txn_id,omitempty"`
+	RefereeEmail    *string    `json:"referee_email,omitempty"`
+	RefereeId       uuid.UUID  `json:"referee_id"`
+	ReferrerEmail   *string    `json:"referrer_email,omitempty"`
+	ReferrerId      uuid.UUID  `json:"referrer_id"`
+	Review          string     `json:"review"`
+	RewardMonths    int        `json:"reward_months"`
+	Status          string     `json:"status"`
+}
+
+// ReferralCodePreview defines model for ReferralCodePreview.
+type ReferralCodePreview struct {
+	FriendMonths          int    `json:"friend_months"`
+	FriendPercent         int    `json:"friend_percent"`
+	FriendWebDiscountCode string `json:"friend_web_discount_code"`
+	ProgramActive         bool   `json:"program_active"`
+	ReferrerName          string `json:"referrer_name"`
+	Valid                 bool   `json:"valid"`
+}
+
+// ReferralList defines model for ReferralList.
+type ReferralList struct {
+	NextPageKey *string    `json:"next_page_key,omitempty"`
+	Referrals   []Referral `json:"referrals"`
+	TotalCount  int        `json:"total_count"`
+}
+
+// ReferralPreview defines model for ReferralPreview.
+type ReferralPreview struct {
+	FriendMonths          int    `json:"friend_months"`
+	FriendPercent         int    `json:"friend_percent"`
+	FriendWebDiscountCode string `json:"friend_web_discount_code"`
+	ProgramActive         bool   `json:"program_active"`
+	ReferrerName          string `json:"referrer_name"`
+	Valid                 bool   `json:"valid"`
+}
+
+// ReferralProgram defines model for ReferralProgram.
+type ReferralProgram struct {
+	Active                bool      `json:"active"`
+	CreatedAt             time.Time `json:"created_at"`
+	FriendMonths          int       `json:"friend_months"`
+	FriendPercent         int       `json:"friend_percent"`
+	FriendWebDiscountCode string    `json:"friend_web_discount_code"`
+	HoldDays              int       `json:"hold_days"`
+	Id                    int       `json:"id"`
+	MaxMonthsPerYear      int       `json:"max_months_per_year"`
+	ReferrerMonths        int       `json:"referrer_months"`
+}
+
+// ReferralReward defines model for ReferralReward.
+type ReferralReward struct {
+	CreatedAt      time.Time  `json:"created_at"`
+	Id             uuid.UUID  `json:"id"`
+	Months         int        `json:"months"`
+	RefereeEmail   string     `json:"referee_email"`
+	ReferralId     uuid.UUID  `json:"referral_id"`
+	ReferrerEmail  string     `json:"referrer_email"`
+	ReferrerId     uuid.UUID  `json:"referrer_id"`
+	ReversedAt     *time.Time `json:"reversed_at,omitempty"`
+	Status         string     `json:"status"`
+	SubscriptionId *uuid.UUID `json:"subscription_id,omitempty"`
+}
+
+// ReferralRewardList defines model for ReferralRewardList.
+type ReferralRewardList struct {
+	NextPageKey *string          `json:"next_page_key,omitempty"`
+	Rewards     []ReferralReward `json:"rewards"`
+	TotalCount  int              `json:"total_count"`
+}
+
+// ReferralStats defines model for ReferralStats.
+type ReferralStats struct {
+	Claimed       int `json:"claimed"`
+	Flagged       int `json:"flagged"`
+	MonthsGranted int `json:"months_granted"`
+	Qualified     int `json:"qualified"`
+	Rejected      int `json:"rejected"`
+	Reversed      int `json:"reversed"`
+	Rewarded      int `json:"rewarded"`
+}
+
+// ReferralSummary defines model for ReferralSummary.
+type ReferralSummary struct {
+	Code             string `json:"code"`
+	FriendMonths     int    `json:"friend_months"`
+	FriendPercent    int    `json:"friend_percent"`
+	FriendsJoined    int    `json:"friends_joined"`
+	FriendsPaid      int    `json:"friends_paid"`
+	HoldDays         int    `json:"hold_days"`
+	MaxMonthsPerYear int    `json:"max_months_per_year"`
+	MonthsEarned     int    `json:"months_earned"`
+	MonthsPending    int    `json:"months_pending"`
+	ProgramActive    bool   `json:"program_active"`
+	ReferrerMonths   int    `json:"referrer_months"`
+	ShareUrl         string `json:"share_url"`
+}
+
 // RefillSettings defines model for RefillSettings.
 type RefillSettings struct {
 	RefillMode  string    `json:"refill_mode"`
@@ -10839,6 +11268,16 @@ type SaveItemRequest struct {
 	SavedContext *map[string]interface{} `json:"saved_context,omitempty"`
 }
 
+// SaveReferralProgramRequest defines model for SaveReferralProgramRequest.
+type SaveReferralProgramRequest struct {
+	Active                bool   `json:"active"`
+	FriendPercent         int    `json:"friend_percent"`
+	FriendWebDiscountCode string `json:"friend_web_discount_code"`
+	HoldDays              int    `json:"hold_days"`
+	MaxMonthsPerYear      int    `json:"max_months_per_year"`
+	ReferrerMonths        int    `json:"referrer_months"`
+}
+
 // SavedCollectionPracticeRequest defines model for SavedCollectionPracticeRequest.
 type SavedCollectionPracticeRequest struct {
 	// Intent Pedagogical intent for the practice set.
@@ -11479,6 +11918,11 @@ type SingletonAchievementDefinitionsResponse struct {
 	Data AchievementDefinitionsResponse `json:"data"`
 }
 
+// SingletonActiveCampaignList defines model for SingletonActiveCampaignList.
+type SingletonActiveCampaignList struct {
+	Data ActiveCampaignList `json:"data"`
+}
+
 // SingletonAdminContentItem defines model for SingletonAdminContentItem.
 type SingletonAdminContentItem struct {
 	Data AdminContentItem `json:"data"`
@@ -11532,6 +11976,11 @@ type SingletonArticleVersionContentService struct {
 // SingletonArticleVersionIngestionWire defines model for SingletonArticleVersionIngestionWire.
 type SingletonArticleVersionIngestionWire struct {
 	Data ArticleVersionIngestionWire `json:"data"`
+}
+
+// SingletonAttribution defines model for SingletonAttribution.
+type SingletonAttribution struct {
+	Data Attribution `json:"data"`
 }
 
 // SingletonAuditLogsListResponse defines model for SingletonAuditLogsListResponse.
@@ -11609,6 +12058,11 @@ type SingletonCampaignConfigSchema struct {
 	Data CampaignConfigSchema `json:"data"`
 }
 
+// SingletonCampaignEventResponse defines model for SingletonCampaignEventResponse.
+type SingletonCampaignEventResponse struct {
+	Data CampaignEventResponse `json:"data"`
+}
+
 // SingletonCampaignPreviewResult defines model for SingletonCampaignPreviewResult.
 type SingletonCampaignPreviewResult struct {
 	Data CampaignPreviewResult `json:"data"`
@@ -11637,6 +12091,21 @@ type SingletonCardCheckoutStatus struct {
 // SingletonCheckAndAwardResponse defines model for SingletonCheckAndAwardResponse.
 type SingletonCheckAndAwardResponse struct {
 	Data CheckAndAwardResponse `json:"data"`
+}
+
+// SingletonClaimAttributionResponse defines model for SingletonClaimAttributionResponse.
+type SingletonClaimAttributionResponse struct {
+	Data ClaimAttributionResponse `json:"data"`
+}
+
+// SingletonClaimPartnerAttributionResponse defines model for SingletonClaimPartnerAttributionResponse.
+type SingletonClaimPartnerAttributionResponse struct {
+	Data ClaimPartnerAttributionResponse `json:"data"`
+}
+
+// SingletonClaimReferralResponse defines model for SingletonClaimReferralResponse.
+type SingletonClaimReferralResponse struct {
+	Data ClaimReferralResponse `json:"data"`
 }
 
 // SingletonClaimResult defines model for SingletonClaimResult.
@@ -12017,6 +12486,16 @@ type SingletonDictionaryLookupResponseCms struct {
 // SingletonDictionaryLookupResponseContentService defines model for SingletonDictionaryLookupResponseContentService.
 type SingletonDictionaryLookupResponseContentService struct {
 	Data DictionaryLookupResponseContentService `json:"data"`
+}
+
+// SingletonDiscountCampaign defines model for SingletonDiscountCampaign.
+type SingletonDiscountCampaign struct {
+	Data DiscountCampaign `json:"data"`
+}
+
+// SingletonDiscountCampaignList defines model for SingletonDiscountCampaignList.
+type SingletonDiscountCampaignList struct {
+	Data DiscountCampaignList `json:"data"`
 }
 
 // SingletonDynamicTranslation defines model for SingletonDynamicTranslation.
@@ -12509,6 +12988,16 @@ type SingletonLearningSessionV3 struct {
 	Data LearningSessionV3 `json:"data"`
 }
 
+// SingletonLedgerEntryList defines model for SingletonLedgerEntryList.
+type SingletonLedgerEntryList struct {
+	Data LedgerEntryList `json:"data"`
+}
+
+// SingletonLedgerMonthList defines model for SingletonLedgerMonthList.
+type SingletonLedgerMonthList struct {
+	Data LedgerMonthList `json:"data"`
+}
+
 // SingletonLegalHoldResult defines model for SingletonLegalHoldResult.
 type SingletonLegalHoldResult struct {
 	Data LegalHoldResult `json:"data"`
@@ -12669,6 +13158,41 @@ type SingletonParagraphTranslationResponse struct {
 	Data ParagraphTranslationResponse `json:"data"`
 }
 
+// SingletonPartner defines model for SingletonPartner.
+type SingletonPartner struct {
+	Data Partner `json:"data"`
+}
+
+// SingletonPartnerCode defines model for SingletonPartnerCode.
+type SingletonPartnerCode struct {
+	Data PartnerCode `json:"data"`
+}
+
+// SingletonPartnerCodeList defines model for SingletonPartnerCodeList.
+type SingletonPartnerCodeList struct {
+	Data PartnerCodeList `json:"data"`
+}
+
+// SingletonPartnerCodePreview defines model for SingletonPartnerCodePreview.
+type SingletonPartnerCodePreview struct {
+	Data PartnerCodePreview `json:"data"`
+}
+
+// SingletonPartnerList defines model for SingletonPartnerList.
+type SingletonPartnerList struct {
+	Data PartnerList `json:"data"`
+}
+
+// SingletonPartnerPayout defines model for SingletonPartnerPayout.
+type SingletonPartnerPayout struct {
+	Data PartnerPayout `json:"data"`
+}
+
+// SingletonPartnerPayoutList defines model for SingletonPartnerPayoutList.
+type SingletonPartnerPayoutList struct {
+	Data PartnerPayoutList `json:"data"`
+}
+
 // SingletonPendingDeletionRowList defines model for SingletonPendingDeletionRowList.
 type SingletonPendingDeletionRowList struct {
 	Data []PendingDeletionRow `json:"data"`
@@ -12782,6 +13306,46 @@ type SingletonRedeemPromoCodeResponse struct {
 // SingletonRedeemPromoCodeResponseUserService defines model for SingletonRedeemPromoCodeResponseUserService.
 type SingletonRedeemPromoCodeResponseUserService struct {
 	Data RedeemPromoCodeResponseUserService `json:"data"`
+}
+
+// SingletonReferral defines model for SingletonReferral.
+type SingletonReferral struct {
+	Data Referral `json:"data"`
+}
+
+// SingletonReferralCodePreview defines model for SingletonReferralCodePreview.
+type SingletonReferralCodePreview struct {
+	Data ReferralCodePreview `json:"data"`
+}
+
+// SingletonReferralList defines model for SingletonReferralList.
+type SingletonReferralList struct {
+	Data ReferralList `json:"data"`
+}
+
+// SingletonReferralPreview defines model for SingletonReferralPreview.
+type SingletonReferralPreview struct {
+	Data ReferralPreview `json:"data"`
+}
+
+// SingletonReferralProgram defines model for SingletonReferralProgram.
+type SingletonReferralProgram struct {
+	Data ReferralProgram `json:"data"`
+}
+
+// SingletonReferralRewardList defines model for SingletonReferralRewardList.
+type SingletonReferralRewardList struct {
+	Data ReferralRewardList `json:"data"`
+}
+
+// SingletonReferralStats defines model for SingletonReferralStats.
+type SingletonReferralStats struct {
+	Data ReferralStats `json:"data"`
+}
+
+// SingletonReferralSummary defines model for SingletonReferralSummary.
+type SingletonReferralSummary struct {
+	Data ReferralSummary `json:"data"`
 }
 
 // SingletonRefillSettings defines model for SingletonRefillSettings.
@@ -15384,6 +15948,27 @@ type UpdateNamespaceRequest struct {
 	Platform    *string `json:"platform,omitempty"`
 }
 
+// UpdatePartnerCodeRequest defines model for UpdatePartnerCodeRequest.
+type UpdatePartnerCodeRequest struct {
+	AndroidOfferTag *string    `json:"android_offer_tag,omitempty"`
+	DiscountPercent *int       `json:"discount_percent,omitempty"`
+	EndsAt          *time.Time `json:"ends_at,omitempty"`
+	IosOfferCode    *string    `json:"ios_offer_code,omitempty"`
+	StartsAt        *time.Time `json:"starts_at,omitempty"`
+	Status          *string    `json:"status,omitempty"`
+	WebDiscountCode *string    `json:"web_discount_code,omitempty"`
+}
+
+// UpdatePartnerRequest defines model for UpdatePartnerRequest.
+type UpdatePartnerRequest struct {
+	ContactEmail      *string `json:"contact_email,omitempty"`
+	LegalName         *string `json:"legal_name,omitempty"`
+	Name              *string `json:"name,omitempty"`
+	ShareBps          *int    `json:"share_bps,omitempty"`
+	ShareWindowMonths *int    `json:"share_window_months,omitempty"`
+	Status            *string `json:"status,omitempty"`
+}
+
 // UpdateProfileRequest defines model for UpdateProfileRequest.
 type UpdateProfileRequest struct {
 	AvatarMediaId *string `json:"avatar_media_id,omitempty"`
@@ -15923,13 +16508,15 @@ type WatchedVideosResponse struct {
 
 // WebCheckoutRequest defines model for WebCheckoutRequest.
 type WebCheckoutRequest struct {
-	Platform   string `json:"platform"`
-	Storefront string `json:"storefront"`
+	Plan       *string `json:"plan,omitempty"`
+	Platform   string  `json:"platform"`
+	Storefront string  `json:"storefront"`
 }
 
 // WebCheckoutResponse defines model for WebCheckoutResponse.
 type WebCheckoutResponse struct {
-	Url string `json:"url"`
+	DiscountCode *string `json:"discount_code,omitempty"`
+	Url          string  `json:"url"`
 }
 
 // WebIngestPlan defines model for WebIngestPlan.
@@ -16222,6 +16809,42 @@ type GetAdminApiV3FeedbackFeaturesFeatureIdCommentsParams struct {
 	Offset *int `form:"offset,omitempty" json:"offset,omitempty"`
 }
 
+// GetAdminApiV3PartnerLedgerParams defines parameters for GetAdminApiV3PartnerLedger.
+type GetAdminApiV3PartnerLedgerParams struct {
+	// PartnerId Limit to one partner
+	PartnerId *string `form:"partner_id,omitempty" json:"partner_id,omitempty"`
+
+	// From First month, YYYY-MM
+	From *string `form:"from,omitempty" json:"from,omitempty"`
+
+	// To Last month, YYYY-MM
+	To *string `form:"to,omitempty" json:"to,omitempty"`
+}
+
+// GetAdminApiV3PartnerLedgerEntriesParams defines parameters for GetAdminApiV3PartnerLedgerEntries.
+type GetAdminApiV3PartnerLedgerEntriesParams struct {
+	// PartnerId The partner
+	PartnerId string `form:"partner_id" json:"partner_id"`
+
+	// Month YYYY-MM
+	Month string `form:"month" json:"month"`
+}
+
+// GetAdminApiV3PartnerPayoutsParams defines parameters for GetAdminApiV3PartnerPayouts.
+type GetAdminApiV3PartnerPayoutsParams struct {
+	// PartnerId Limit to one partner
+	PartnerId *string `form:"partner_id,omitempty" json:"partner_id,omitempty"`
+
+	// Status draft, approved or paid
+	Status *string `form:"status,omitempty" json:"status,omitempty"`
+}
+
+// GetAdminApiV3PartnersParams defines parameters for GetAdminApiV3Partners.
+type GetAdminApiV3PartnersParams struct {
+	// Status active, paused or ended
+	Status *string `form:"status,omitempty" json:"status,omitempty"`
+}
+
 // GetAdminApiV3PromoCampaignsParams defines parameters for GetAdminApiV3PromoCampaigns.
 type GetAdminApiV3PromoCampaignsParams struct {
 	// Status active, paused or archived
@@ -16248,6 +16871,33 @@ type GetAdminApiV3PromoCampaignsCampaignIdCodesParams struct {
 
 // GetAdminApiV3PromoCampaignsCampaignIdRedemptionsParams defines parameters for GetAdminApiV3PromoCampaignsCampaignIdRedemptions.
 type GetAdminApiV3PromoCampaignsCampaignIdRedemptionsParams struct {
+	// PageSize Maximum number of items per page. Handler default applies if omitted.
+	PageSize *int `form:"page_size,omitempty" json:"page_size,omitempty"`
+
+	// NextPageKey Opaque pagination cursor returned by the previous response.
+	NextPageKey *string `form:"next_page_key,omitempty" json:"next_page_key,omitempty"`
+}
+
+// GetAdminApiV3ReferralRewardsParams defines parameters for GetAdminApiV3ReferralRewards.
+type GetAdminApiV3ReferralRewardsParams struct {
+	// PageSize Maximum number of items per page. Handler default applies if omitted.
+	PageSize *int `form:"page_size,omitempty" json:"page_size,omitempty"`
+
+	// NextPageKey Opaque pagination cursor returned by the previous response.
+	NextPageKey *string `form:"next_page_key,omitempty" json:"next_page_key,omitempty"`
+}
+
+// GetAdminApiV3ReferralsParams defines parameters for GetAdminApiV3Referrals.
+type GetAdminApiV3ReferralsParams struct {
+	// Status claimed, qualified, rewarded, rejected or reversed
+	Status *string `form:"status,omitempty" json:"status,omitempty"`
+
+	// Flagged true: the flagged queue (open flags, no review yet)
+	Flagged *bool `form:"flagged,omitempty" json:"flagged,omitempty"`
+
+	// Q Search emails or code
+	Q *string `form:"q,omitempty" json:"q,omitempty"`
+
 	// PageSize Maximum number of items per page. Handler default applies if omitted.
 	PageSize *int `form:"page_size,omitempty" json:"page_size,omitempty"`
 
@@ -17503,6 +18153,18 @@ type GetApiV3LocalizationSearchParams struct {
 	Offset *int `form:"offset,omitempty" json:"offset,omitempty"`
 }
 
+// GetApiV3MeCampaignsActiveParams defines parameters for GetApiV3MeCampaignsActive.
+type GetApiV3MeCampaignsActiveParams struct {
+	// Platform ios, android or web
+	Platform string `form:"platform" json:"platform"`
+
+	// Storefront Store country, ISO 3166 alpha-3
+	Storefront *string `form:"storefront,omitempty" json:"storefront,omitempty"`
+
+	// Lang App language code; defaults to Accept-Language
+	Lang *string `form:"lang,omitempty" json:"lang,omitempty"`
+}
+
 // GetApiV3MeDailyChallengeParams defines parameters for GetApiV3MeDailyChallenge.
 type GetApiV3MeDailyChallengeParams struct {
 	// Date ISO-8601 date filter (YYYY-MM-DD).
@@ -18351,6 +19013,18 @@ type DeleteInternalApiV3NotificationDedupeClaimsClaimIdParams struct {
 	Consumer string `form:"consumer" json:"consumer"`
 }
 
+// GetInternalApiV3UsersUserIdCampaignsActiveParams defines parameters for GetInternalApiV3UsersUserIdCampaignsActive.
+type GetInternalApiV3UsersUserIdCampaignsActiveParams struct {
+	// Platform ios, android or web
+	Platform string `form:"platform" json:"platform"`
+
+	// Storefront Store country, ISO 3166 alpha-3
+	Storefront *string `form:"storefront,omitempty" json:"storefront,omitempty"`
+
+	// Lang Learner's app language code
+	Lang *string `form:"lang,omitempty" json:"lang,omitempty"`
+}
+
 // GetInternalApiV3UsersUserIdConversationsParams defines parameters for GetInternalApiV3UsersUserIdConversations.
 type GetInternalApiV3UsersUserIdConversationsParams struct {
 	// Cursor Opaque pagination cursor (legacy alias for next_page_key).
@@ -19182,6 +19856,12 @@ type GetSignInLinkPreviewParams struct {
 // PutAdminApiV3AppLinkRulesJSONRequestBody defines body for PutAdminApiV3AppLinkRules for application/json ContentType.
 type PutAdminApiV3AppLinkRulesJSONRequestBody = AppLinkRuleList
 
+// PostAdminApiV3DiscountCampaignsJSONRequestBody defines body for PostAdminApiV3DiscountCampaigns for application/json ContentType.
+type PostAdminApiV3DiscountCampaignsJSONRequestBody = DiscountCampaignWrite
+
+// PatchAdminApiV3DiscountCampaignsCampaignIdJSONRequestBody defines body for PatchAdminApiV3DiscountCampaignsCampaignId for application/json ContentType.
+type PatchAdminApiV3DiscountCampaignsCampaignIdJSONRequestBody = DiscountCampaignWrite
+
 // PutAdminApiV3FeatureLimitsRefillJSONRequestBody defines body for PutAdminApiV3FeatureLimitsRefill for application/json ContentType.
 type PutAdminApiV3FeatureLimitsRefillJSONRequestBody = UpdateRefillSettingsRequest
 
@@ -19209,6 +19889,27 @@ type PutAdminApiV3FeedbackFeaturesFeatureIdStatusJSONRequestBody = UpdateFeature
 // PostAdminApiV3FeedbackFeedbackIdMessagesJSONRequestBody defines body for PostAdminApiV3FeedbackFeedbackIdMessages for application/json ContentType.
 type PostAdminApiV3FeedbackFeedbackIdMessagesJSONRequestBody = FeedbackMessageCreateRequest
 
+// PatchAdminApiV3PartnerCodesCodeJSONRequestBody defines body for PatchAdminApiV3PartnerCodesCode for application/json ContentType.
+type PatchAdminApiV3PartnerCodesCodeJSONRequestBody = UpdatePartnerCodeRequest
+
+// PostAdminApiV3PartnerPayoutsJSONRequestBody defines body for PostAdminApiV3PartnerPayouts for application/json ContentType.
+type PostAdminApiV3PartnerPayoutsJSONRequestBody = CreatePartnerPayoutRequest
+
+// PostAdminApiV3PartnerPayoutsPayoutIdApproveJSONRequestBody defines body for PostAdminApiV3PartnerPayoutsPayoutIdApprove for application/json ContentType.
+type PostAdminApiV3PartnerPayoutsPayoutIdApproveJSONRequestBody = PartnerPayoutActionRequest
+
+// PostAdminApiV3PartnerPayoutsPayoutIdPaidJSONRequestBody defines body for PostAdminApiV3PartnerPayoutsPayoutIdPaid for application/json ContentType.
+type PostAdminApiV3PartnerPayoutsPayoutIdPaidJSONRequestBody = PartnerPayoutActionRequest
+
+// PostAdminApiV3PartnersJSONRequestBody defines body for PostAdminApiV3Partners for application/json ContentType.
+type PostAdminApiV3PartnersJSONRequestBody = CreatePartnerRequest
+
+// PatchAdminApiV3PartnersPartnerIdJSONRequestBody defines body for PatchAdminApiV3PartnersPartnerId for application/json ContentType.
+type PatchAdminApiV3PartnersPartnerIdJSONRequestBody = UpdatePartnerRequest
+
+// PostAdminApiV3PartnersPartnerIdCodesJSONRequestBody defines body for PostAdminApiV3PartnersPartnerIdCodes for application/json ContentType.
+type PostAdminApiV3PartnersPartnerIdCodesJSONRequestBody = CreatePartnerCodeRequest
+
 // PostAdminApiV3PromoCampaignsJSONRequestBody defines body for PostAdminApiV3PromoCampaigns for application/json ContentType.
 type PostAdminApiV3PromoCampaignsJSONRequestBody = CreatePromoCampaignRequest
 
@@ -19218,8 +19919,14 @@ type PatchAdminApiV3PromoCampaignsCampaignIdJSONRequestBody = UpdatePromoCampaig
 // PostAdminApiV3PromoCampaignsCampaignIdCodesJSONRequestBody defines body for PostAdminApiV3PromoCampaignsCampaignIdCodes for application/json ContentType.
 type PostAdminApiV3PromoCampaignsCampaignIdCodesJSONRequestBody = GeneratePromoCodesRequest
 
+// PutAdminApiV3ReferralProgramJSONRequestBody defines body for PutAdminApiV3ReferralProgram for application/json ContentType.
+type PutAdminApiV3ReferralProgramJSONRequestBody = SaveReferralProgramRequest
+
 // PostAdminApiV3UsersUserIdAchievementsCodeJSONRequestBody defines body for PostAdminApiV3UsersUserIdAchievementsCode for application/json ContentType.
 type PostAdminApiV3UsersUserIdAchievementsCodeJSONRequestBody = AwardAchievementByPathRequest
+
+// PutAdminApiV3UsersUserIdAttributionJSONRequestBody defines body for PutAdminApiV3UsersUserIdAttribution for application/json ContentType.
+type PutAdminApiV3UsersUserIdAttributionJSONRequestBody = OverrideAttributionRequest
 
 // PostAdminApiV3UsersUserIdFeatureLimitsJSONRequestBody defines body for PostAdminApiV3UsersUserIdFeatureLimits for application/json ContentType.
 type PostAdminApiV3UsersUserIdFeatureLimitsJSONRequestBody = SetUserFeatureLimitRequest
@@ -19253,6 +19960,9 @@ type PostApiV3ApiKeysJSONRequestBody = APIKeyCreateRequest
 
 // PostApiV3ArticlesArticleIdParagraphTranslationsJSONRequestBody defines body for PostApiV3ArticlesArticleIdParagraphTranslations for application/json ContentType.
 type PostApiV3ArticlesArticleIdParagraphTranslationsJSONRequestBody = ParagraphTranslationRequest
+
+// PostApiV3AttributionClaimJSONRequestBody defines body for PostApiV3AttributionClaim for application/json ContentType.
+type PostApiV3AttributionClaimJSONRequestBody = ClaimPartnerAttributionRequest
 
 // PostApiV3AuthForgotPasswordJSONRequestBody defines body for PostApiV3AuthForgotPassword for application/json ContentType.
 type PostApiV3AuthForgotPasswordJSONRequestBody = ForgotPasswordRequest
@@ -19644,6 +20354,9 @@ type PostApiV3LogoutJSONRequestBody = LogoutRequestAuthService
 // PostApiV3MeArticlesReadJSONRequestBody defines body for PostApiV3MeArticlesRead for application/json ContentType.
 type PostApiV3MeArticlesReadJSONRequestBody = MarkArticleAsReadRequest
 
+// PostApiV3MeCampaignsCampaignIdEventsJSONRequestBody defines body for PostApiV3MeCampaignsCampaignIdEvents for application/json ContentType.
+type PostApiV3MeCampaignsCampaignIdEventsJSONRequestBody = CampaignEventRequest
+
 // PatchApiV3MeDevicePreferencesJSONRequestBody defines body for PatchApiV3MeDevicePreferences for application/json ContentType.
 type PatchApiV3MeDevicePreferencesJSONRequestBody = UpdateDevicePreferencesRequest
 
@@ -19691,6 +20404,9 @@ type PatchApiV3MeProfileJSONRequestBody = UpdateProfileRequest
 
 // PostApiV3MePushTokenJSONRequestBody defines body for PostApiV3MePushToken for application/json ContentType.
 type PostApiV3MePushTokenJSONRequestBody = RegisterPushTokenRequest
+
+// PostApiV3MeReferralClaimJSONRequestBody defines body for PostApiV3MeReferralClaim for application/json ContentType.
+type PostApiV3MeReferralClaimJSONRequestBody = ClaimReferralRequest
 
 // PostApiV3MeSavedItemsJSONRequestBody defines body for PostApiV3MeSavedItems for application/json ContentType.
 type PostApiV3MeSavedItemsJSONRequestBody = SaveItemRequest
@@ -19998,6 +20714,12 @@ type PostInternalApiV3UsersJSONRequestBody = CreateAuthUserRequest
 // PatchInternalApiV3UsersUserIdAccountClassJSONRequestBody defines body for PatchInternalApiV3UsersUserIdAccountClass for application/json ContentType.
 type PatchInternalApiV3UsersUserIdAccountClassJSONRequestBody = SetAccountClassRequest
 
+// PostInternalApiV3UsersUserIdAttributionClaimJSONRequestBody defines body for PostInternalApiV3UsersUserIdAttributionClaim for application/json ContentType.
+type PostInternalApiV3UsersUserIdAttributionClaimJSONRequestBody = ClaimAttributionRequest
+
+// PostInternalApiV3UsersUserIdCampaignsCampaignIdEventsJSONRequestBody defines body for PostInternalApiV3UsersUserIdCampaignsCampaignIdEvents for application/json ContentType.
+type PostInternalApiV3UsersUserIdCampaignsCampaignIdEventsJSONRequestBody = CampaignEventRequest
+
 // PatchInternalApiV3UsersUserIdClaimJSONRequestBody defines body for PatchInternalApiV3UsersUserIdClaim for application/json ContentType.
 type PatchInternalApiV3UsersUserIdClaimJSONRequestBody = ClaimGuestRequest
 
@@ -20027,6 +20749,9 @@ type PostInternalApiV3UsersUserIdPromoCodesRedeemJSONRequestBody = RedeemPromoCo
 
 // PostInternalApiV3UsersUserIdPushTokenJSONRequestBody defines body for PostInternalApiV3UsersUserIdPushToken for application/json ContentType.
 type PostInternalApiV3UsersUserIdPushTokenJSONRequestBody = RegisterPushTokenRequest
+
+// PostInternalApiV3UsersUserIdReferralClaimJSONRequestBody defines body for PostInternalApiV3UsersUserIdReferralClaim for application/json ContentType.
+type PostInternalApiV3UsersUserIdReferralClaimJSONRequestBody = ClaimReferralRequest
 
 // PutInternalApiV3UsersUserIdSkillLevelJSONRequestBody defines body for PutInternalApiV3UsersUserIdSkillLevel for application/json ContentType.
 type PutInternalApiV3UsersUserIdSkillLevelJSONRequestBody = UpdateSkillLevelRequest

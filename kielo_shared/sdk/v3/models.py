@@ -161,6 +161,12 @@ class ActivateAgentResponse(BaseModel):
     status: str
 
 
+class ActiveCampaignOffer(BaseModel):
+    duration_label: str
+    percent_off: int
+    plan: str
+
+
 class ActiveLearningItem(BaseModel):
     cefr_level: str | None = Field(None, title="Cefr Level")
     display_text: str | None = Field(None, title="Display Text")
@@ -404,6 +410,17 @@ class Asset(BaseModel):
     width: int | None = None
 
 
+class Attribution(BaseModel):
+    claimed_at: AwareDatetime
+    code: str
+    overridden_by: UUID_aliased | None = None
+    partner_id: UUID_aliased | None = None
+    partner_name: str | None = None
+    source_type: str
+    user_id: UUID_aliased
+    window_ends_at: AwareDatetime | None = None
+
+
 class AuditLog(BaseModel):
     action: str
     entity_id: UUID_aliased
@@ -638,6 +655,15 @@ class CampaignConfigSchemaDefault(BaseModel):
     timezone: str
 
 
+class CampaignEventRequest(BaseModel):
+    event: str
+    platform: str
+
+
+class CampaignEventResponse(BaseModel):
+    recorded: bool
+
+
 class CampaignPreviewItem(BaseModel):
     content_id: str | None = None
     content_type: str | None = None
@@ -785,6 +811,18 @@ class CheckFeatureUniqueRequest(BaseModel):
     peek: bool | None = None
 
 
+class ClaimAttributionRequest(BaseModel):
+    code: str
+
+
+class ClaimAttributionResponse(BaseModel):
+    code: str
+    discount_percent: int
+    partner_name: str
+    web_discount_code: str
+    window_ends_at: AwareDatetime
+
+
 class ClaimContentVersionForProcessingRequest(BaseModel):
     claimant_id: str
     ttl_minutes: int
@@ -799,6 +837,28 @@ class ClaimGuestRequest(BaseModel):
     email: str
     firebase_uid: str | None = None
     name: str | None = None
+
+
+class ClaimPartnerAttributionRequest(ClaimAttributionRequest):
+    pass
+
+
+class ClaimPartnerAttributionResponse(ClaimAttributionResponse):
+    pass
+
+
+class ClaimReferralRequest(BaseModel):
+    client_ip: str | None = None
+    code: str
+    device_id: str | None = None
+
+
+class ClaimReferralResponse(BaseModel):
+    friend_months: int
+    friend_percent: int
+    friend_web_discount_code: str
+    referrer_name: str
+    status: str
 
 
 class ClaimResult(BaseModel):
@@ -2142,6 +2202,29 @@ class CreateParagraphTTSSessionRequest(BaseModel):
     text: str
 
 
+class CreatePartnerCodeRequest(BaseModel):
+    android_offer_tag: str
+    code: str
+    discount_percent: int
+    ends_at: AwareDatetime | None = None
+    ios_offer_code: str
+    starts_at: AwareDatetime | None = None
+    web_discount_code: str
+
+
+class CreatePartnerPayoutRequest(BaseModel):
+    month: str
+    partner_id: UUID_aliased
+
+
+class CreatePartnerRequest(BaseModel):
+    contact_email: str
+    legal_name: str
+    name: str
+    share_bps: int | None = None
+    share_window_months: int | None = None
+
+
 class CreatePromoCampaignRequest(BaseModel):
     channel: str | None = None
     display_name: str
@@ -2656,6 +2739,46 @@ class DictionaryWordForm(BaseModel):
     label: str | None = None
     label_short: str | None = None
     paradigm_slot: str | None = None
+
+
+class DiscountCampaignCopy(BaseModel):
+    body: str
+    cta: str
+    lang: str
+    title: str
+
+
+class DiscountCampaignOffer(BaseModel):
+    duration_label: str
+    percent_off: int
+    plan: str
+    rc_web_discount_code: str
+
+
+class DiscountCampaignStats(BaseModel):
+    clicked: int
+    dismissed: int
+    purchased: int
+    shown: int
+
+
+class DiscountCampaignWrite(BaseModel):
+    android_offer_tag: str | None = None
+    clear_ends_at: bool | None = None
+    clear_starts_at: bool | None = None
+    copy_: list[DiscountCampaignCopy] | None = Field(None, alias="copy")
+    eligibility: str | None = None
+    ends_at: AwareDatetime | None = None
+    ios_mechanism: str | None = None
+    ios_offer_ref: str | None = None
+    kind: str | None = None
+    name: str | None = None
+    offers: list[DiscountCampaignOffer] | None = None
+    percent_off: int | None = None
+    platforms: list[str] | None = None
+    rc_web_discount_code: str | None = None
+    starts_at: AwareDatetime | None = None
+    status: str | None = None
 
 
 class DomainCount(BaseModel):
@@ -4927,6 +5050,53 @@ class LearningStyleProfile(BaseModel):
     )
 
 
+class LedgerEntry(BaseModel):
+    created_at: AwareDatetime
+    currency: str
+    fx_rate: float
+    gross: float
+    id: UUID_aliased
+    net: float
+    net_eur: float
+    partner_amount_eur: float
+    partner_id: UUID_aliased
+    payout_id: UUID_aliased | None = None
+    period_month: str
+    product_id: str
+    reverses_id: UUID_aliased | None = None
+    share_bps: int
+    status: str
+    store: str
+    store_fee: float
+    tax: float
+    transaction_id: str
+    user_id: UUID_aliased
+
+
+class LedgerEntryList(BaseModel):
+    entries: list[LedgerEntry]
+
+
+class LedgerMonth(BaseModel):
+    charges: int
+    gross_eur: float
+    net_eur: float
+    owed_eur: float
+    partner_id: UUID_aliased
+    partner_name: str
+    payout_id: UUID_aliased | None = None
+    payout_reference: str | None = None
+    payout_status: str | None = None
+    period_month: str
+    refunds: int
+    reversed_eur: float
+    share_eur: float
+
+
+class LedgerMonthList(BaseModel):
+    months: list[LedgerMonth]
+
+
 class LegalHoldResult(BaseModel):
     legal_hold: bool
     media_id: str
@@ -5723,6 +5893,10 @@ class OperatorSwitchRequestLocalization(BaseModel):
     updated_by: UUID_aliased | None = None
 
 
+class OverrideAttributionRequest(ClaimAttributionRequest):
+    pass
+
+
 class OverrideDynamicTranslationRequest(BaseModel):
     translated_text: str
 
@@ -5763,6 +5937,76 @@ class ParagraphTranslationResponse(BaseModel):
 
 class PartCoverage(CommsEmailPartCoverage):
     pass
+
+
+class Partner(BaseModel):
+    code_count: int
+    contact_email: str
+    created_at: AwareDatetime
+    id: UUID_aliased
+    legal_name: str
+    name: str
+    share_basis: str
+    share_bps: int
+    share_window_months: int
+    status: str
+    updated_at: AwareDatetime
+
+
+class PartnerCode(BaseModel):
+    android_offer_tag: str
+    claim_count: int
+    code: str
+    created_at: AwareDatetime
+    discount_percent: int
+    ends_at: AwareDatetime | None = None
+    ios_offer_code: str
+    partner_id: UUID_aliased
+    starts_at: AwareDatetime | None = None
+    status: str
+    updated_at: AwareDatetime
+    web_discount_code: str
+
+
+class PartnerCodeList(BaseModel):
+    codes: list[PartnerCode]
+
+
+class PartnerCodePreview(BaseModel):
+    code: str
+    discount_percent: int | None = None
+    ends_at: AwareDatetime | None = None
+    partner_name: str | None = None
+    reason: str | None = None
+    valid: bool
+    web_discount_code: str | None = None
+
+
+class PartnerList(BaseModel):
+    partners: list[Partner]
+
+
+class PartnerPayout(BaseModel):
+    approved_at: AwareDatetime | None = None
+    approved_by: UUID_aliased | None = None
+    created_at: AwareDatetime
+    id: UUID_aliased
+    paid_at: AwareDatetime | None = None
+    partner_id: UUID_aliased
+    partner_name: str
+    period_month: str
+    reference: str
+    status: str
+    total_eur: float
+    updated_at: AwareDatetime
+
+
+class PartnerPayoutActionRequest(BaseModel):
+    reference: str
+
+
+class PartnerPayoutList(BaseModel):
+    payouts: list[PartnerPayout]
 
 
 class PaymentHistory(BaseModel):
@@ -6385,6 +6629,97 @@ class RedeemPromoCodeResponseUserService(BaseModel):
     status: str
 
 
+class Referral(BaseModel):
+    claimed_at: AwareDatetime
+    code: str
+    flags: list[str]
+    hold_until: AwareDatetime | None = None
+    id: UUID_aliased
+    qualifying_txn_id: str | None = None
+    referee_email: str | None = None
+    referee_id: UUID_aliased
+    referrer_email: str | None = None
+    referrer_id: UUID_aliased
+    review: str
+    reward_months: int
+    status: str
+
+
+class ReferralCodePreview(BaseModel):
+    friend_months: int
+    friend_percent: int
+    friend_web_discount_code: str
+    program_active: bool
+    referrer_name: str
+    valid: bool
+
+
+class ReferralList(BaseModel):
+    next_page_key: str | None = None
+    referrals: list[Referral]
+    total_count: int
+
+
+class ReferralPreview(ReferralCodePreview):
+    pass
+
+
+class ReferralProgram(BaseModel):
+    active: bool
+    created_at: AwareDatetime
+    friend_months: int
+    friend_percent: int
+    friend_web_discount_code: str
+    hold_days: int
+    id: int
+    max_months_per_year: int
+    referrer_months: int
+
+
+class ReferralReward(BaseModel):
+    created_at: AwareDatetime
+    id: UUID_aliased
+    months: int
+    referee_email: str
+    referral_id: UUID_aliased
+    referrer_email: str
+    referrer_id: UUID_aliased
+    reversed_at: AwareDatetime | None = None
+    status: str
+    subscription_id: UUID_aliased | None = None
+
+
+class ReferralRewardList(BaseModel):
+    next_page_key: str | None = None
+    rewards: list[ReferralReward]
+    total_count: int
+
+
+class ReferralStats(BaseModel):
+    claimed: int
+    flagged: int
+    months_granted: int
+    qualified: int
+    rejected: int
+    reversed: int
+    rewarded: int
+
+
+class ReferralSummary(BaseModel):
+    code: str
+    friend_months: int
+    friend_percent: int
+    friends_joined: int
+    friends_paid: int
+    hold_days: int
+    max_months_per_year: int
+    months_earned: int
+    months_pending: int
+    program_active: bool
+    referrer_months: int
+    share_url: str
+
+
 class RefillSettings(MeteringSettings):
     pass
 
@@ -6911,6 +7246,15 @@ class SaveItemRequest(BaseModel):
     item_type: str
     notes: str | None = None
     saved_context: dict[str, Any] | None = None
+
+
+class SaveReferralProgramRequest(BaseModel):
+    active: bool
+    friend_percent: int
+    friend_web_discount_code: str
+    hold_days: int
+    max_months_per_year: int
+    referrer_months: int
 
 
 class Intent2(StrEnum):
@@ -7452,6 +7796,10 @@ class SingletonArticleVersionIngestionWire(BaseModel):
     data: ArticleVersionIngestionWire
 
 
+class SingletonAttribution(BaseModel):
+    data: Attribution
+
+
 class SingletonAuditLogsListResponse(BaseModel):
     data: AuditLogsListResponse
 
@@ -7484,6 +7832,10 @@ class SingletonCacheInvalidateResponse(BaseModel):
     data: CacheInvalidateResponse
 
 
+class SingletonCampaignEventResponse(BaseModel):
+    data: CampaignEventResponse
+
+
 class SingletonCampaignValidateResult(BaseModel):
     data: CampaignValidateResult
 
@@ -7502,6 +7854,18 @@ class SingletonCardCheckoutStatus(BaseModel):
 
 class SingletonCheckAndAwardResponse(BaseModel):
     data: CheckAndAwardResponse
+
+
+class SingletonClaimAttributionResponse(BaseModel):
+    data: ClaimAttributionResponse
+
+
+class SingletonClaimPartnerAttributionResponse(BaseModel):
+    data: ClaimPartnerAttributionResponse
+
+
+class SingletonClaimReferralResponse(BaseModel):
+    data: ClaimReferralResponse
 
 
 class SingletonClaimResult(BaseModel):
@@ -8000,6 +8364,14 @@ class SingletonLearningSessionV3(BaseModel):
     data: LearningSessionV3
 
 
+class SingletonLedgerEntryList(BaseModel):
+    data: LedgerEntryList
+
+
+class SingletonLedgerMonthList(BaseModel):
+    data: LedgerMonthList
+
+
 class SingletonLegalHoldResult(BaseModel):
     data: LegalHoldResult
 
@@ -8108,6 +8480,34 @@ class SingletonParagraphTranslationResponse(BaseModel):
     data: ParagraphTranslationResponse
 
 
+class SingletonPartner(BaseModel):
+    data: Partner
+
+
+class SingletonPartnerCode(BaseModel):
+    data: PartnerCode
+
+
+class SingletonPartnerCodeList(BaseModel):
+    data: PartnerCodeList
+
+
+class SingletonPartnerCodePreview(BaseModel):
+    data: PartnerCodePreview
+
+
+class SingletonPartnerList(BaseModel):
+    data: PartnerList
+
+
+class SingletonPartnerPayout(BaseModel):
+    data: PartnerPayout
+
+
+class SingletonPartnerPayoutList(BaseModel):
+    data: PartnerPayoutList
+
+
 class SingletonPendingDeletionRowList(BaseModel):
     data: list[PendingDeletionRow]
 
@@ -8182,6 +8582,38 @@ class SingletonRedeemPromoCodeResponse(BaseModel):
 
 class SingletonRedeemPromoCodeResponseUserService(BaseModel):
     data: RedeemPromoCodeResponseUserService
+
+
+class SingletonReferral(BaseModel):
+    data: Referral
+
+
+class SingletonReferralCodePreview(BaseModel):
+    data: ReferralCodePreview
+
+
+class SingletonReferralList(BaseModel):
+    data: ReferralList
+
+
+class SingletonReferralPreview(BaseModel):
+    data: ReferralPreview
+
+
+class SingletonReferralProgram(BaseModel):
+    data: ReferralProgram
+
+
+class SingletonReferralRewardList(BaseModel):
+    data: ReferralRewardList
+
+
+class SingletonReferralStats(BaseModel):
+    data: ReferralStats
+
+
+class SingletonReferralSummary(BaseModel):
+    data: ReferralSummary
 
 
 class SingletonRefillSettings(BaseModel):
@@ -9545,8 +9977,8 @@ class TransferCodeResponseAuthService(BaseModel):
     expires_at: AwareDatetime
 
 
-class TransferRedeemRequest(BaseModel):
-    code: str
+class TransferRedeemRequest(ClaimAttributionRequest):
+    pass
 
 
 class TransferSubscriptionRequest(BaseModel):
@@ -9720,6 +10152,25 @@ class UpdateLearningStatusRequest(BaseModel):
 
 class UpdateNamespaceRequest(CreateNamespaceRequest):
     pass
+
+
+class UpdatePartnerCodeRequest(BaseModel):
+    android_offer_tag: str | None = None
+    discount_percent: int | None = None
+    ends_at: AwareDatetime | None = None
+    ios_offer_code: str | None = None
+    starts_at: AwareDatetime | None = None
+    status: str | None = None
+    web_discount_code: str | None = None
+
+
+class UpdatePartnerRequest(BaseModel):
+    contact_email: str | None = None
+    legal_name: str | None = None
+    name: str | None = None
+    share_bps: int | None = None
+    share_window_months: int | None = None
+    status: str | None = None
 
 
 class LearningReason(StrEnum):
@@ -10134,11 +10585,13 @@ class WatchedVideosResponse(BaseModel):
 
 
 class WebCheckoutRequest(BaseModel):
+    plan: str | None = None
     platform: str
     storefront: str
 
 
 class WebCheckoutResponse(BaseModel):
+    discount_code: str | None = None
     url: str
 
 
@@ -10341,6 +10794,21 @@ class AIModelFamily(BaseModel):
     spend_7d: list[AIUsageDay]
     spend_today_usd: float
     thinking_budget: int
+
+
+class ActiveCampaign(BaseModel):
+    copy_: DiscountCampaignCopy = Field(..., alias="copy")
+    ends_at: AwareDatetime | None = None
+    id: UUID_aliased
+    kind: str
+    mechanism: str | None = None
+    offer_ref: str | None = None
+    offers: list[ActiveCampaignOffer]
+    percent_off: int | None = None
+
+
+class ActiveCampaignList(BaseModel):
+    campaigns: list[ActiveCampaign]
 
 
 class AdminDigestEmail(BaseModel):
@@ -11101,6 +11569,33 @@ class DictionaryParadigm(BaseModel):
     source: str | None = None
     type: str
     verified: bool | None = None
+
+
+class DiscountCampaign(BaseModel):
+    android_offer_tag: str
+    copy_: list[DiscountCampaignCopy] = Field(..., alias="copy")
+    created_at: AwareDatetime
+    created_by: UUID_aliased | None = None
+    effective_status: str
+    eligibility: str
+    ends_at: AwareDatetime | None = None
+    id: UUID_aliased
+    ios_mechanism: str
+    ios_offer_ref: str
+    kind: str
+    name: str
+    offers: list[DiscountCampaignOffer]
+    percent_off: int | None = None
+    platforms: list[str]
+    rc_web_discount_code: str
+    starts_at: AwareDatetime | None = None
+    stats: DiscountCampaignStats | None = None
+    status: str
+    updated_at: AwareDatetime
+
+
+class DiscountCampaignList(BaseModel):
+    campaigns: list[DiscountCampaign]
 
 
 class DiscoveryItemsResponse(BaseModel):
@@ -11907,6 +12402,10 @@ class SessionReconcileRequest(BaseModel):
     submissions: list[SubmitAnswerRequest]
 
 
+class SingletonActiveCampaignList(BaseModel):
+    data: ActiveCampaignList
+
+
 class SingletonAllFeatureLimitsResponse(BaseModel):
     data: AllFeatureLimitsResponse
 
@@ -12005,6 +12504,14 @@ class SingletonDictionaryEntryCms(BaseModel):
 
 class SingletonDictionaryLookupResponseCms(BaseModel):
     data: DictionaryLookupResponseCms
+
+
+class SingletonDiscountCampaign(BaseModel):
+    data: DiscountCampaign
+
+
+class SingletonDiscountCampaignList(BaseModel):
+    data: DiscountCampaignList
 
 
 class SingletonEffectiveUserLimitsResponse(BaseModel):
