@@ -6161,6 +6161,99 @@ class ReadinessResponse(BaseModel):
     status: str = Field(..., title="Status")
 
 
+class RecapDeltas(BaseModel):
+    articles_read: int | None = Field(0, title="Articles Read")
+    juka_calls: int | None = Field(0, title="Juka Calls")
+    lessons_done: int | None = Field(0, title="Lessons Done")
+    minutes: int | None = Field(0, title="Minutes")
+    mistakes_fixed: int | None = Field(0, title="Mistakes Fixed")
+    new_words: int | None = Field(0, title="New Words")
+    practice_days: int | None = Field(0, title="Practice Days")
+    videos_watched: int | None = Field(0, title="Videos Watched")
+    words_moved_up: int | None = Field(0, title="Words Moved Up")
+
+
+class RecapDeltasV3(BaseModel):
+    articles_read: int
+    juka_calls: int
+    lessons_done: int
+    minutes: int
+    mistakes_fixed: int
+    new_words: int
+    practice_days: int
+    videos_watched: int
+    words_moved_up: int
+
+
+class RecapMistakes(BaseModel):
+    fixed: int | None = Field(0, title="Fixed")
+    missed: int | None = Field(0, title="Missed")
+
+
+class RecapMistakesV3(BaseModel):
+    fixed: int
+    missed: int
+
+
+class Kind1(StrEnum):
+    article = "article"
+    ktv_video = "ktv_video"
+    conversation = "conversation"
+    review = "review"
+    browse = "browse"
+
+
+class RecapNextUp(BaseModel):
+    cta_label: str = Field(..., title="Cta Label")
+    deep_link: str = Field(..., title="Deep Link")
+    kind: Kind1 = Field(..., title="Kind")
+    subtitle: str | None = Field(None, title="Subtitle")
+    title: str = Field(..., title="Title")
+
+
+class RecapNextUpV3(BaseModel):
+    cta_label: str
+    deep_link: str
+    kind: str
+    subtitle: str | None = None
+    title: str
+
+
+class FromBand(StrEnum):
+    unseen = "unseen"
+    weak = "weak"
+    getting = "getting"
+    solid = "solid"
+
+
+class RecapWordMoved(BaseModel):
+    from_band: FromBand = Field(..., title="From Band")
+    item_id: str = Field(..., title="Item Id")
+    item_type: str = Field(..., title="Item Type")
+    term: str | None = Field(None, title="Term")
+    to_band: FromBand = Field(..., title="To Band")
+
+
+class RecapWordMovedV3(BaseModel):
+    from_band: str
+    item_id: str
+    item_type: str
+    term: str | None = None
+    to_band: str
+
+
+class RecapWords(BaseModel):
+    examples: list[RecapWordMoved] | None = Field(None, title="Examples")
+    moved_up: int | None = Field(0, title="Moved Up")
+    new_words: int | None = Field(0, title="New Words")
+
+
+class RecapWordsV3(BaseModel):
+    examples: list[RecapWordMovedV3]
+    moved_up: int
+    new_words: int
+
+
 class RecentArticleReadIDsResponse(BaseModel):
     ids: list[str]
     reads: list[ArticleReadTimeUserService]
@@ -11606,6 +11699,50 @@ class PushFilterTermListResponse(BaseModel):
     terms: list[PushFilterTermResponse]
 
 
+class RecapWeek(BaseModel):
+    active_dates: list[str] | None = Field(None, title="Active Dates")
+    articles_read: int | None = Field(0, title="Articles Read")
+    daily_minutes: list[int] | None = Field(
+        None,
+        description="Minutes studied per local day, Monday first; always 7 entries",
+        title="Daily Minutes",
+    )
+    days_in_window: conint(ge=1, le=7) = Field(..., title="Days In Window")
+    empty: bool | None = Field(True, title="Empty")
+    end_date: str = Field(
+        ..., description="Local Sunday, or today for the week so far", title="End Date"
+    )
+    is_partial: bool | None = Field(False, title="Is Partial")
+    juka_calls: int | None = Field(0, title="Juka Calls")
+    lessons_done: int | None = Field(0, title="Lessons Done")
+    minutes: int | None = Field(0, title="Minutes")
+    mistakes: RecapMistakes | None = None
+    practice_days: int | None = Field(0, title="Practice Days")
+    start_date: str = Field(
+        ..., description="Local Monday, YYYY-MM-DD", title="Start Date"
+    )
+    videos_watched: int | None = Field(0, title="Videos Watched")
+    words: RecapWords | None = None
+
+
+class RecapWeekV3(BaseModel):
+    active_dates: list[str]
+    articles_read: int
+    daily_minutes: list[int]
+    days_in_window: int
+    empty: bool
+    end_date: str
+    is_partial: bool
+    juka_calls: int
+    lessons_done: int
+    minutes: int
+    mistakes: RecapMistakesV3
+    practice_days: int
+    start_date: str
+    videos_watched: int
+    words: RecapWordsV3
+
+
 class RelatedVersionsResponse(BaseModel):
     current_type: str
     current_version_id: UUID_aliased
@@ -13134,6 +13271,30 @@ class Paragraph(BaseModel):
     words: list[str] | None = None
 
 
+class RecapResponse(BaseModel):
+    deltas: RecapDeltas | None = Field(
+        None, description="weeks[0] minus weeks[1]; only when weeks=2"
+    )
+    next_up: RecapNextUp | None = None
+    streak_days: int | None = Field(0, title="Streak Days")
+    this_week: RecapWeek
+    timezone_offset_minutes: int = Field(..., title="Timezone Offset Minutes")
+    weeks: list[RecapWeek] = Field(
+        ...,
+        description="Full Monday-Sunday weeks, newest first (1 or 2)",
+        title="Weeks",
+    )
+
+
+class RecapV3(BaseModel):
+    deltas: RecapDeltasV3 | None = None
+    next_up: RecapNextUpV3 | None = None
+    streak_days: int
+    this_week: RecapWeekV3
+    timezone_offset_minutes: int
+    weeks: list[RecapWeekV3]
+
+
 class SessionReconcileItemResult(BaseModel):
     exercise_id: UUID_aliased = Field(..., title="Exercise Id")
     result: SubmissionResult | None = None
@@ -13208,6 +13369,10 @@ class SingletonDictionaryLookupResponseContentService(BaseModel):
 
 class SingletonLearnerOverview(BaseModel):
     data: LearnerOverview
+
+
+class SingletonRecapV3(BaseModel):
+    data: RecapV3
 
 
 class SingletonSessionReconcileResponseV3(BaseModel):

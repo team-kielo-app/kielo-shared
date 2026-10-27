@@ -427,6 +427,31 @@ const (
 	C2 PreferredDifficultyProfileUserSetCefrLevel = "C2"
 )
 
+// Defines values for RecapNextUpKind.
+const (
+	RecapNextUpKindArticle      RecapNextUpKind = "article"
+	RecapNextUpKindBrowse       RecapNextUpKind = "browse"
+	RecapNextUpKindConversation RecapNextUpKind = "conversation"
+	RecapNextUpKindKtvVideo     RecapNextUpKind = "ktv_video"
+	RecapNextUpKindReview       RecapNextUpKind = "review"
+)
+
+// Defines values for RecapWordMovedFromBand.
+const (
+	RecapWordMovedFromBandGetting RecapWordMovedFromBand = "getting"
+	RecapWordMovedFromBandSolid   RecapWordMovedFromBand = "solid"
+	RecapWordMovedFromBandUnseen  RecapWordMovedFromBand = "unseen"
+	RecapWordMovedFromBandWeak    RecapWordMovedFromBand = "weak"
+)
+
+// Defines values for RecapWordMovedToBand.
+const (
+	RecapWordMovedToBandGetting RecapWordMovedToBand = "getting"
+	RecapWordMovedToBandSolid   RecapWordMovedToBand = "solid"
+	RecapWordMovedToBandUnseen  RecapWordMovedToBand = "unseen"
+	RecapWordMovedToBandWeak    RecapWordMovedToBand = "weak"
+)
+
 // Defines values for RecommendationLaunchParamsItemType.
 const (
 	RecommendationLaunchParamsItemTypeBaseWord       RecommendationLaunchParamsItemType = "BaseWord"
@@ -741,9 +766,9 @@ const (
 
 // Defines values for GetSurfaceNextStepsKlearnApiV3NextStepsGetParamsSourceKind.
 const (
-	GetSurfaceNextStepsKlearnApiV3NextStepsGetParamsSourceKindArticle      GetSurfaceNextStepsKlearnApiV3NextStepsGetParamsSourceKind = "article"
-	GetSurfaceNextStepsKlearnApiV3NextStepsGetParamsSourceKindConversation GetSurfaceNextStepsKlearnApiV3NextStepsGetParamsSourceKind = "conversation"
-	GetSurfaceNextStepsKlearnApiV3NextStepsGetParamsSourceKindKtvVideo     GetSurfaceNextStepsKlearnApiV3NextStepsGetParamsSourceKind = "ktv_video"
+	Article      GetSurfaceNextStepsKlearnApiV3NextStepsGetParamsSourceKind = "article"
+	Conversation GetSurfaceNextStepsKlearnApiV3NextStepsGetParamsSourceKind = "conversation"
+	KtvVideo     GetSurfaceNextStepsKlearnApiV3NextStepsGetParamsSourceKind = "ktv_video"
 )
 
 // AIConversation defines model for AIConversation.
@@ -9766,6 +9791,170 @@ type ReadinessResponse struct {
 	Status string `json:"status"`
 }
 
+// RecapDeltas defines model for RecapDeltas.
+type RecapDeltas struct {
+	ArticlesRead  *int `json:"articles_read,omitempty"`
+	JukaCalls     *int `json:"juka_calls,omitempty"`
+	LessonsDone   *int `json:"lessons_done,omitempty"`
+	Minutes       *int `json:"minutes,omitempty"`
+	MistakesFixed *int `json:"mistakes_fixed,omitempty"`
+	NewWords      *int `json:"new_words,omitempty"`
+	PracticeDays  *int `json:"practice_days,omitempty"`
+	VideosWatched *int `json:"videos_watched,omitempty"`
+	WordsMovedUp  *int `json:"words_moved_up,omitempty"`
+}
+
+// RecapDeltasV3 defines model for RecapDeltasV3.
+type RecapDeltasV3 struct {
+	ArticlesRead  int `json:"articles_read"`
+	JukaCalls     int `json:"juka_calls"`
+	LessonsDone   int `json:"lessons_done"`
+	Minutes       int `json:"minutes"`
+	MistakesFixed int `json:"mistakes_fixed"`
+	NewWords      int `json:"new_words"`
+	PracticeDays  int `json:"practice_days"`
+	VideosWatched int `json:"videos_watched"`
+	WordsMovedUp  int `json:"words_moved_up"`
+}
+
+// RecapMistakes defines model for RecapMistakes.
+type RecapMistakes struct {
+	Fixed  *int `json:"fixed,omitempty"`
+	Missed *int `json:"missed,omitempty"`
+}
+
+// RecapMistakesV3 defines model for RecapMistakesV3.
+type RecapMistakesV3 struct {
+	Fixed  int `json:"fixed"`
+	Missed int `json:"missed"`
+}
+
+// RecapNextUp defines model for RecapNextUp.
+type RecapNextUp struct {
+	CtaLabel string          `json:"cta_label"`
+	DeepLink string          `json:"deep_link"`
+	Kind     RecapNextUpKind `json:"kind"`
+	Subtitle *string         `json:"subtitle"`
+	Title    string          `json:"title"`
+}
+
+// RecapNextUpKind defines model for RecapNextUp.Kind.
+type RecapNextUpKind string
+
+// RecapNextUpV3 defines model for RecapNextUpV3.
+type RecapNextUpV3 struct {
+	CtaLabel string  `json:"cta_label"`
+	DeepLink string  `json:"deep_link"`
+	Kind     string  `json:"kind"`
+	Subtitle *string `json:"subtitle,omitempty"`
+	Title    string  `json:"title"`
+}
+
+// RecapResponse defines model for RecapResponse.
+type RecapResponse struct {
+	// Deltas weeks[0] minus weeks[1]; only when weeks=2
+	Deltas                *RecapDeltas `json:"deltas"`
+	NextUp                *RecapNextUp `json:"next_up"`
+	StreakDays            *int         `json:"streak_days,omitempty"`
+	ThisWeek              RecapWeek    `json:"this_week"`
+	TimezoneOffsetMinutes int          `json:"timezone_offset_minutes"`
+
+	// Weeks Full Monday-Sunday weeks, newest first (1 or 2)
+	Weeks []RecapWeek `json:"weeks"`
+}
+
+// RecapV3 defines model for RecapV3.
+type RecapV3 struct {
+	Deltas                *RecapDeltasV3 `json:"deltas,omitempty"`
+	NextUp                *RecapNextUpV3 `json:"next_up,omitempty"`
+	StreakDays            int            `json:"streak_days"`
+	ThisWeek              RecapWeekV3    `json:"this_week"`
+	TimezoneOffsetMinutes int            `json:"timezone_offset_minutes"`
+	Weeks                 []RecapWeekV3  `json:"weeks"`
+}
+
+// RecapWeek defines model for RecapWeek.
+type RecapWeek struct {
+	ActiveDates  *[]string `json:"active_dates,omitempty"`
+	ArticlesRead *int      `json:"articles_read,omitempty"`
+
+	// DailyMinutes Minutes studied per local day, Monday first; always 7 entries
+	DailyMinutes *[]int `json:"daily_minutes,omitempty"`
+	DaysInWindow int    `json:"days_in_window"`
+	Empty        *bool  `json:"empty,omitempty"`
+
+	// EndDate Local Sunday, or today for the week so far
+	EndDate      string         `json:"end_date"`
+	IsPartial    *bool          `json:"is_partial,omitempty"`
+	JukaCalls    *int           `json:"juka_calls,omitempty"`
+	LessonsDone  *int           `json:"lessons_done,omitempty"`
+	Minutes      *int           `json:"minutes,omitempty"`
+	Mistakes     *RecapMistakes `json:"mistakes,omitempty"`
+	PracticeDays *int           `json:"practice_days,omitempty"`
+
+	// StartDate Local Monday, YYYY-MM-DD
+	StartDate     string      `json:"start_date"`
+	VideosWatched *int        `json:"videos_watched,omitempty"`
+	Words         *RecapWords `json:"words,omitempty"`
+}
+
+// RecapWeekV3 defines model for RecapWeekV3.
+type RecapWeekV3 struct {
+	ActiveDates   []string        `json:"active_dates"`
+	ArticlesRead  int             `json:"articles_read"`
+	DailyMinutes  []int           `json:"daily_minutes"`
+	DaysInWindow  int             `json:"days_in_window"`
+	Empty         bool            `json:"empty"`
+	EndDate       string          `json:"end_date"`
+	IsPartial     bool            `json:"is_partial"`
+	JukaCalls     int             `json:"juka_calls"`
+	LessonsDone   int             `json:"lessons_done"`
+	Minutes       int             `json:"minutes"`
+	Mistakes      RecapMistakesV3 `json:"mistakes"`
+	PracticeDays  int             `json:"practice_days"`
+	StartDate     string          `json:"start_date"`
+	VideosWatched int             `json:"videos_watched"`
+	Words         RecapWordsV3    `json:"words"`
+}
+
+// RecapWordMoved defines model for RecapWordMoved.
+type RecapWordMoved struct {
+	FromBand RecapWordMovedFromBand `json:"from_band"`
+	ItemId   string                 `json:"item_id"`
+	ItemType string                 `json:"item_type"`
+	Term     *string                `json:"term"`
+	ToBand   RecapWordMovedToBand   `json:"to_band"`
+}
+
+// RecapWordMovedFromBand defines model for RecapWordMoved.FromBand.
+type RecapWordMovedFromBand string
+
+// RecapWordMovedToBand defines model for RecapWordMoved.ToBand.
+type RecapWordMovedToBand string
+
+// RecapWordMovedV3 defines model for RecapWordMovedV3.
+type RecapWordMovedV3 struct {
+	FromBand string  `json:"from_band"`
+	ItemId   string  `json:"item_id"`
+	ItemType string  `json:"item_type"`
+	Term     *string `json:"term,omitempty"`
+	ToBand   string  `json:"to_band"`
+}
+
+// RecapWords defines model for RecapWords.
+type RecapWords struct {
+	Examples *[]RecapWordMoved `json:"examples,omitempty"`
+	MovedUp  *int              `json:"moved_up,omitempty"`
+	NewWords *int              `json:"new_words,omitempty"`
+}
+
+// RecapWordsV3 defines model for RecapWordsV3.
+type RecapWordsV3 struct {
+	Examples []RecapWordMovedV3 `json:"examples"`
+	MovedUp  int                `json:"moved_up"`
+	NewWords int                `json:"new_words"`
+}
+
 // RecentArticleReadIDsResponse defines model for RecentArticleReadIDsResponse.
 type RecentArticleReadIDsResponse struct {
 	Ids   []string                     `json:"ids"`
@@ -12563,6 +12752,11 @@ type SingletonQueueStatus struct {
 // SingletonReadArticleIDs defines model for SingletonReadArticleIDs.
 type SingletonReadArticleIDs struct {
 	Data ReadArticleIDs `json:"data"`
+}
+
+// SingletonRecapV3 defines model for SingletonRecapV3.
+type SingletonRecapV3 struct {
+	Data RecapV3 `json:"data"`
 }
 
 // SingletonRecentArticleReadIDsResponse defines model for SingletonRecentArticleReadIDsResponse.
@@ -17420,6 +17614,15 @@ type GetApiV3MeProgressParams struct {
 	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
 }
 
+// GetApiV3MeRecapParams defines parameters for GetApiV3MeRecap.
+type GetApiV3MeRecapParams struct {
+	// Weeks 1 (default) = last full week; 2 = the last two full weeks side by side
+	Weeks *int `form:"weeks,omitempty" json:"weeks,omitempty"`
+
+	// SupportLanguageCode Two-letter ISO 639-1 code for translated UI strings (per ADR-006 §3.83).
+	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
+}
+
 // GetApiV3MeRecommendationsArticlesParams defines parameters for GetApiV3MeRecommendationsArticles.
 type GetApiV3MeRecommendationsArticlesParams struct {
 	// SupportLanguageCode Two-letter ISO 639-1 code for translated UI strings (per ADR-006 §3.83).
@@ -18518,6 +18721,17 @@ type GetInAppNudgeInternalMeInAppNudgesGetParams struct {
 // PostInAppNudgeStateInternalMeInAppNudgesNudgeIdStatePostParams defines parameters for PostInAppNudgeStateInternalMeInAppNudgesNudgeIdStatePost.
 type PostInAppNudgeStateInternalMeInAppNudgesNudgeIdStatePostParams struct {
 	XUserID uuid.UUID `json:"X-User-ID"`
+}
+
+// GetRecapInternalMeRecapGetParams defines parameters for GetRecapInternalMeRecapGet.
+type GetRecapInternalMeRecapGetParams struct {
+	// Weeks 1 = last full week; 2 = last two
+	Weeks                  *int      `form:"weeks,omitempty" json:"weeks,omitempty"`
+	XUserID                uuid.UUID `json:"X-User-ID"`
+	XKieloLearningLanguage *string   `json:"X-Kielo-Learning-Language,omitempty"`
+
+	// XTimezoneOffsetMinutes Learner's UTC offset in minutes; the stored zone when absent.
+	XTimezoneOffsetMinutes *string `json:"X-Timezone-Offset-Minutes,omitempty"`
 }
 
 // GetInternalMediaParams defines parameters for GetInternalMedia.
