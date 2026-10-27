@@ -25,6 +25,7 @@ import time
 import unicodedata
 from typing import Awaitable, Callable
 
+from kielo_shared.locale_constants import LANGUAGE_DISPLAY_NAMES
 from kielo_shared.localization.types import (
     TranslationItem,
     TranslationResult,
@@ -45,14 +46,11 @@ TextGenerator = Callable[
 ]
 
 
+# Every support language needs its name here: an unnamed code reaches the
+# prompt bare, and "Translate into it" came back in Vietnamese, the language
+# of the prompt's examples (Italian word meanings and lessons, 2026-10-10..27).
 _LANGUAGE_NAMES = {
-    "en": "English",
-    "fi": "Finnish",
-    "sv": "Swedish",
-    "vi": "Vietnamese",
-    "de": "German",
-    "es": "Spanish",
-    "fr": "French",
+    **LANGUAGE_DISPLAY_NAMES,
     "no": "Norwegian",
     "da": "Danish",
 }
