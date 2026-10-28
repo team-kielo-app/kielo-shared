@@ -1921,6 +1921,12 @@ type CacheInvalidateResponse struct {
 	Status   string  `json:"status"`
 }
 
+// CampaignClickRequest defines model for CampaignClickRequest.
+type CampaignClickRequest struct {
+	Platform string `json:"platform"`
+	UserId   string `json:"user_id"`
+}
+
 // CampaignConfigSchema defines model for CampaignConfigSchema.
 type CampaignConfigSchema struct {
 	CadenceTypes []string                    `json:"cadence_types"`
@@ -1978,6 +1984,13 @@ type CampaignPreviewResult struct {
 // CampaignPreviewSummary defines model for CampaignPreviewSummary.
 type CampaignPreviewSummary struct {
 	TargetCount int `json:"target_count"`
+}
+
+// CampaignRevenue defines model for CampaignRevenue.
+type CampaignRevenue struct {
+	Amount    float32 `json:"amount"`
+	Currency  string  `json:"currency"`
+	Purchases int     `json:"purchases"`
 }
 
 // CampaignValidateResult defines model for CampaignValidateResult.
@@ -5147,10 +5160,13 @@ type DiscountCampaignOffer struct {
 
 // DiscountCampaignStats defines model for DiscountCampaignStats.
 type DiscountCampaignStats struct {
-	Clicked   int `json:"clicked"`
-	Dismissed int `json:"dismissed"`
-	Purchased int `json:"purchased"`
-	Shown     int `json:"shown"`
+	Clicked          int               `json:"clicked"`
+	Dismissed        int               `json:"dismissed"`
+	Purchased        int               `json:"purchased"`
+	Revenue          []CampaignRevenue `json:"revenue"`
+	SandboxPurchased int               `json:"sandbox_purchased"`
+	SandboxRevenue   []CampaignRevenue `json:"sandbox_revenue"`
+	Shown            int               `json:"shown"`
 }
 
 // DiscountCampaignWrite defines model for DiscountCampaignWrite.
@@ -20067,6 +20083,9 @@ type PostApiV3AuthTransferJSONRequestBody = TransferRedeemRequest
 // PostApiV3AuthVerifyResetTokenJSONRequestBody defines body for PostApiV3AuthVerifyResetToken for application/json ContentType.
 type PostApiV3AuthVerifyResetTokenJSONRequestBody = VerifyResetTokenRequest
 
+// PostApiV3CampaignsIdClicksJSONRequestBody defines body for PostApiV3CampaignsIdClicks for application/json ContentType.
+type PostApiV3CampaignsIdClicksJSONRequestBody = CampaignClickRequest
+
 // PostApiV3CommunicationsDlqAuditIdReplayJSONRequestBody defines body for PostApiV3CommunicationsDlqAuditIdReplay for application/json ContentType.
 type PostApiV3CommunicationsDlqAuditIdReplayJSONRequestBody = CommsDLQAuditReplayRequest
 
@@ -20684,6 +20703,9 @@ type PostInternalApiV3AchievementsCheckAndAwardJSONRequestBody = CheckAndAwardRe
 
 // PostInternalApiV3AchievementsProgressJSONRequestBody defines body for PostInternalApiV3AchievementsProgress for application/json ContentType.
 type PostInternalApiV3AchievementsProgressJSONRequestBody = UpdateProgressRequest
+
+// PostInternalApiV3CampaignsCampaignIdClicksJSONRequestBody defines body for PostInternalApiV3CampaignsCampaignIdClicks for application/json ContentType.
+type PostInternalApiV3CampaignsCampaignIdClicksJSONRequestBody = CampaignClickRequest
 
 // PostInternalApiV3ConversationsSessionsSessionIdEvaluationJSONRequestBody defines body for PostInternalApiV3ConversationsSessionsSessionIdEvaluation for application/json ContentType.
 type PostInternalApiV3ConversationsSessionsSessionIdEvaluationJSONRequestBody = UpdateConversationSessionEvaluationRequest

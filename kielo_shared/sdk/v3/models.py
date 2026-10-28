@@ -646,6 +646,11 @@ class CacheInvalidateResponse(BaseModel):
     status: str
 
 
+class CampaignClickRequest(BaseModel):
+    platform: str
+    user_id: str
+
+
 class CampaignConfigSchemaDefault(BaseModel):
     cadence_config: dict[str, Any]
     cooldown_hours: int
@@ -677,6 +682,12 @@ class CampaignPreviewItem(BaseModel):
 
 class CampaignPreviewSummary(BaseModel):
     target_count: int
+
+
+class CampaignRevenue(BaseModel):
+    amount: float
+    currency: str
+    purchases: int
 
 
 class CampaignValidateResult(BaseModel):
@@ -2759,6 +2770,9 @@ class DiscountCampaignStats(BaseModel):
     clicked: int
     dismissed: int
     purchased: int
+    revenue: list[CampaignRevenue]
+    sandbox_purchased: int
+    sandbox_revenue: list[CampaignRevenue]
     shown: int
 
 
