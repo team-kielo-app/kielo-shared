@@ -13678,6 +13678,16 @@ type SingletonStoreScreenshotValidationResponse struct {
 	Data StoreScreenshotValidationResponse `json:"data"`
 }
 
+// SingletonStoreSyncPreview defines model for SingletonStoreSyncPreview.
+type SingletonStoreSyncPreview struct {
+	Data StoreSyncPreview `json:"data"`
+}
+
+// SingletonStoreSyncState defines model for SingletonStoreSyncState.
+type SingletonStoreSyncState struct {
+	Data StoreSyncState `json:"data"`
+}
+
 // SingletonStudyList defines model for SingletonStudyList.
 type SingletonStudyList struct {
 	Data StudyList `json:"data"`
@@ -14558,6 +14568,60 @@ type StoreScreenshotValidationResponse struct {
 	Normalized bool           `json:"normalized"`
 	TargetId   string         `json:"target_id"`
 	Width      int            `json:"width"`
+}
+
+// StoreSyncChange defines model for StoreSyncChange.
+type StoreSyncChange struct {
+	Op      string `json:"op"`
+	Plan    string `json:"plan"`
+	Summary string `json:"summary"`
+}
+
+// StoreSyncConfirmRequest defines model for StoreSyncConfirmRequest.
+type StoreSyncConfirmRequest struct {
+	Confirm bool `json:"confirm"`
+}
+
+// StoreSyncOffer defines model for StoreSyncOffer.
+type StoreSyncOffer struct {
+	Code       string `json:"code"`
+	Ended      bool   `json:"ended"`
+	ExternalId string `json:"external_id"`
+	Plan       string `json:"plan"`
+}
+
+// StoreSyncPlatform defines model for StoreSyncPlatform.
+type StoreSyncPlatform struct {
+	Label        string           `json:"label"`
+	LastError    string           `json:"last_error"`
+	LastSyncedAt *time.Time       `json:"last_synced_at,omitempty"`
+	Offers       []StoreSyncOffer `json:"offers"`
+	Platform     string           `json:"platform"`
+	Reason       string           `json:"reason"`
+	Status       string           `json:"status"`
+}
+
+// StoreSyncPreview defines model for StoreSyncPreview.
+type StoreSyncPreview struct {
+	CampaignId    uuid.UUID                  `json:"campaign_id"`
+	Platforms     []StoreSyncPreviewPlatform `json:"platforms"`
+	WritesEnabled bool                       `json:"writes_enabled"`
+}
+
+// StoreSyncPreviewPlatform defines model for StoreSyncPreviewPlatform.
+type StoreSyncPreviewPlatform struct {
+	Changes  []StoreSyncChange `json:"changes"`
+	Label    string            `json:"label"`
+	Platform string            `json:"platform"`
+	Reason   string            `json:"reason"`
+	Status   string            `json:"status"`
+}
+
+// StoreSyncState defines model for StoreSyncState.
+type StoreSyncState struct {
+	CampaignId    uuid.UUID           `json:"campaign_id"`
+	Platforms     []StoreSyncPlatform `json:"platforms"`
+	WritesEnabled bool                `json:"writes_enabled"`
 }
 
 // StreakInfo defines model for StreakInfo.
@@ -19861,6 +19925,12 @@ type PostAdminApiV3DiscountCampaignsJSONRequestBody = DiscountCampaignWrite
 
 // PatchAdminApiV3DiscountCampaignsCampaignIdJSONRequestBody defines body for PatchAdminApiV3DiscountCampaignsCampaignId for application/json ContentType.
 type PatchAdminApiV3DiscountCampaignsCampaignIdJSONRequestBody = DiscountCampaignWrite
+
+// PostAdminApiV3DiscountCampaignsCampaignIdStoreSyncApplyJSONRequestBody defines body for PostAdminApiV3DiscountCampaignsCampaignIdStoreSyncApply for application/json ContentType.
+type PostAdminApiV3DiscountCampaignsCampaignIdStoreSyncApplyJSONRequestBody = StoreSyncConfirmRequest
+
+// PostAdminApiV3DiscountCampaignsCampaignIdStoreSyncStopJSONRequestBody defines body for PostAdminApiV3DiscountCampaignsCampaignIdStoreSyncStop for application/json ContentType.
+type PostAdminApiV3DiscountCampaignsCampaignIdStoreSyncStopJSONRequestBody = StoreSyncConfirmRequest
 
 // PutAdminApiV3FeatureLimitsRefillJSONRequestBody defines body for PutAdminApiV3FeatureLimitsRefill for application/json ContentType.
 type PutAdminApiV3FeatureLimitsRefillJSONRequestBody = UpdateRefillSettingsRequest
