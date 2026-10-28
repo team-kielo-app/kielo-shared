@@ -58,6 +58,10 @@ const (
 	// (minutes per active day): short < 5, medium 5-12, long > 12.
 	ShortSessionBelow = 5.0
 	LongSessionAbove  = 12.0
+	// SessionMinDays is the fewest days with content minutes before a session
+	// length is named: a learner with one 8-minute day was called "short" and
+	// their feeds tilted on it (tutor walk, 2026-10-28).
+	SessionMinDays = 3
 )
 
 // Feature names read from users.feature_usage. Units follow
@@ -173,12 +177,12 @@ func Resolve(goal string, rows []UsageRow, now time.Time, window int) Profile {
 			daily = append(daily, dt.minutes)
 		}
 	}
-	if len(daily) > 0 {
+	if len(daily) >= SessionMinDays {
 		p.SessionMinutesPerDay = round1(median(daily))
 		p.SessionLen = sessionBucket(p.SessionMinutesPerDay)
 	}
 
-	p.Sources = sources(goal != "", total > 0, goalPrior, p, len(daily) > 0)
+	p.Sources = sources(goal != "", total > 0, goalPrior, p, len(daily) >= SessionMinDays)
 	return p
 }
 
