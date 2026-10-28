@@ -163,11 +163,19 @@ class ActivateAgentResponse(BaseModel):
 
 class ActiveCampaignOffer(BaseModel):
     duration_label: str
+    intro_live: bool | None = Field(
+        None,
+        description="iOS only. True when the campaign's paid intro offer for this plan is live in App Store Connect, so an intro-eligible learner gets the campaign price on the normal purchase.",
+    )
     percent_off: int
+    periods: conint(ge=1) = Field(
+        ...,
+        description="How many billing periods the discounted price lasts; the subscription then renews at the regular price.",
+    )
     plan: str
     store_ref: str | None = Field(
         None,
-        description="Store offer for this plan on the requested platform: the Google Play offer tag (android) or the App Store offer code (ios). Absent when the store has no live offer.",
+        description="Store offer for this plan on the requested platform: the Google Play offer tag (android) or the App Store promotional offer identifier (ios). Absent when the store has no live offer. Offer codes are never returned.",
     )
 
 
@@ -2766,6 +2774,9 @@ class DiscountCampaignCopy(BaseModel):
 class DiscountCampaignOffer(BaseModel):
     duration_label: str
     percent_off: int
+    periods: conint(ge=1, le=12) = Field(
+        ..., description="Billing periods the discounted price lasts (1-12); default 1."
+    )
     plan: str
     rc_web_discount_code: str
 
@@ -6045,6 +6056,11 @@ class PaymentHistoryUserService(BaseModel):
     status: str
 
 
+class PaywallHeadline(BaseModel):
+    subtitle: str
+    title: str
+
+
 class PendingDeletionRow(BaseModel):
     deleted_at: AwareDatetime | None = None
     legal_hold: bool
@@ -9213,6 +9229,9 @@ class StoreSyncOffer(BaseModel):
     code: str
     ended: bool
     external_id: str
+    kind: str | None = Field(
+        None, description="promo_offer for an iOS promotional offer; absent otherwise."
+    )
     plan: str
 
 
@@ -12183,6 +12202,14 @@ class Paradigm(BaseModel):
     type: str
 
 
+class PaywallConfig(BaseModel):
+    default_plan: str
+    experiment_id: str | None = None
+    headline: PaywallHeadline | None = None
+    plan_order: list[str]
+    variant: str
+
+
 class PostList(BaseModel):
     posts: list[PostSummary]
     total: int
@@ -12667,6 +12694,10 @@ class SingletonNextStepsResponseV3(BaseModel):
 
 class SingletonNotificationPreferences(BaseModel):
     data: NotificationPreferences
+
+
+class SingletonPaywallConfig(BaseModel):
+    data: PaywallConfig
 
 
 class SingletonProgressSummary(BaseModel):

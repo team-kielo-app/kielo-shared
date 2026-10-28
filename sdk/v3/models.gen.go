@@ -985,10 +985,16 @@ type ActiveCampaignList struct {
 // ActiveCampaignOffer defines model for ActiveCampaignOffer.
 type ActiveCampaignOffer struct {
 	DurationLabel string `json:"duration_label"`
-	PercentOff    int    `json:"percent_off"`
-	Plan          string `json:"plan"`
 
-	// StoreRef Store offer for this plan on the requested platform: the Google Play offer tag (android) or the App Store offer code (ios). Absent when the store has no live offer.
+	// IntroLive iOS only. True when the campaign's paid intro offer for this plan is live in App Store Connect, so an intro-eligible learner gets the campaign price on the normal purchase.
+	IntroLive  *bool `json:"intro_live,omitempty"`
+	PercentOff int   `json:"percent_off"`
+
+	// Periods How many billing periods the discounted price lasts; the subscription then renews at the regular price.
+	Periods int    `json:"periods"`
+	Plan    string `json:"plan"`
+
+	// StoreRef Store offer for this plan on the requested platform: the Google Play offer tag (android) or the App Store promotional offer identifier (ios). Absent when the store has no live offer. Offer codes are never returned.
 	StoreRef *string `json:"store_ref,omitempty"`
 }
 
@@ -5155,8 +5161,11 @@ type DiscountCampaignList struct {
 
 // DiscountCampaignOffer defines model for DiscountCampaignOffer.
 type DiscountCampaignOffer struct {
-	DurationLabel     string `json:"duration_label"`
-	PercentOff        int    `json:"percent_off"`
+	DurationLabel string `json:"duration_label"`
+	PercentOff    int    `json:"percent_off"`
+
+	// Periods Billing periods the discounted price lasts (1-12); default 1.
+	Periods           int    `json:"periods"`
 	Plan              string `json:"plan"`
 	RcWebDiscountCode string `json:"rc_web_discount_code"`
 }
@@ -9616,6 +9625,21 @@ type PaymentHistoryUserService struct {
 	Status      string    `json:"status"`
 }
 
+// PaywallConfig defines model for PaywallConfig.
+type PaywallConfig struct {
+	DefaultPlan  string           `json:"default_plan"`
+	ExperimentId *string          `json:"experiment_id,omitempty"`
+	Headline     *PaywallHeadline `json:"headline,omitempty"`
+	PlanOrder    []string         `json:"plan_order"`
+	Variant      string           `json:"variant"`
+}
+
+// PaywallHeadline defines model for PaywallHeadline.
+type PaywallHeadline struct {
+	Subtitle string `json:"subtitle"`
+	Title    string `json:"title"`
+}
+
 // PendingDeletionRow defines model for PendingDeletionRow.
 type PendingDeletionRow struct {
 	DeletedAt         *time.Time `json:"deleted_at,omitempty"`
@@ -13212,6 +13236,11 @@ type SingletonPartnerPayoutList struct {
 	Data PartnerPayoutList `json:"data"`
 }
 
+// SingletonPaywallConfig defines model for SingletonPaywallConfig.
+type SingletonPaywallConfig struct {
+	Data PaywallConfig `json:"data"`
+}
+
 // SingletonPendingDeletionRowList defines model for SingletonPendingDeletionRowList.
 type SingletonPendingDeletionRowList struct {
 	Data []PendingDeletionRow `json:"data"`
@@ -14606,7 +14635,10 @@ type StoreSyncOffer struct {
 	Code       string `json:"code"`
 	Ended      bool   `json:"ended"`
 	ExternalId string `json:"external_id"`
-	Plan       string `json:"plan"`
+
+	// Kind promo_offer for an iOS promotional offer; absent otherwise.
+	Kind *string `json:"kind,omitempty"`
+	Plan string  `json:"plan"`
 }
 
 // StoreSyncPlatform defines model for StoreSyncPlatform.
@@ -18344,6 +18376,18 @@ type GetApiV3MeNotificationsParams struct {
 	Unread *bool `form:"unread,omitempty" json:"unread,omitempty"`
 }
 
+// GetApiV3MePaywallConfigParams defines parameters for GetApiV3MePaywallConfig.
+type GetApiV3MePaywallConfigParams struct {
+	// Platform ios, android or web
+	Platform string `form:"platform" json:"platform"`
+
+	// Entry Where the paywall was opened from
+	Entry *string `form:"entry,omitempty" json:"entry,omitempty"`
+
+	// Reason Why the paywall was opened
+	Reason *string `form:"reason,omitempty" json:"reason,omitempty"`
+}
+
 // PostApiV3MePracticeSessionsParams defines parameters for PostApiV3MePracticeSessions.
 type PostApiV3MePracticeSessionsParams struct {
 	// ItemLimit Maximum number of items in a recommendation batch.
@@ -19136,6 +19180,21 @@ type DeleteInternalApiV3UsersUserIdDeviceTokenParams struct {
 
 	// TokenHash Lowercase SHA-256 hash of the device token to remove
 	TokenHash *string `form:"token_hash,omitempty" json:"token_hash,omitempty"`
+}
+
+// GetInternalApiV3UsersUserIdPaywallConfigParams defines parameters for GetInternalApiV3UsersUserIdPaywallConfig.
+type GetInternalApiV3UsersUserIdPaywallConfigParams struct {
+	// Platform ios, android or web
+	Platform string `form:"platform" json:"platform"`
+
+	// Entry Where the paywall was opened from
+	Entry *string `form:"entry,omitempty" json:"entry,omitempty"`
+
+	// Reason Why the paywall was opened
+	Reason *string `form:"reason,omitempty" json:"reason,omitempty"`
+
+	// Lang Learner's app language code
+	Lang *string `form:"lang,omitempty" json:"lang,omitempty"`
 }
 
 // DeleteInternalApiV3UsersUserIdPushTokenParams defines parameters for DeleteInternalApiV3UsersUserIdPushToken.
