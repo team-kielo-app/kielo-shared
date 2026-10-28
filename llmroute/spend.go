@@ -102,5 +102,8 @@ func Admit(family string, budget float64) error { return defaultSpend.Admit(fami
 // Book books usd on the process-wide ledger.
 func Book(family string, usd float64) { defaultSpend.Book(family, usd) }
 
+// Spent is family's USD booked today on the process-wide ledger.
+func Spent(family string) float64 { return defaultSpend.Spent(family) }
+
 // ResetSpend clears the process-wide ledger (test hook).
 func ResetSpend() { defaultSpend = NewSpend() }
