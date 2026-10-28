@@ -96,7 +96,7 @@ func TestLoadOneQueryWithResolverFeaturesAndWindow(t *testing.T) {
 	require.Len(t, got, 2)
 	assert.Equal(t, "work", got[a].Goal)
 	assert.Equal(t, TypeReading, got[a].TopType)
-	assert.Equal(t, SessionLong, got[a].SessionLen)
+	assert.Equal(t, "", got[a].SessionLen, "one day is too little to name a session length")
 	assert.Equal(t, SourceColdStart, got[b].Sources["type_minutes"])
 	assert.Equal(t, "", got[b].Goal)
 }
