@@ -18386,6 +18386,9 @@ type GetApiV3MePaywallConfigParams struct {
 
 	// Reason Why the paywall was opened
 	Reason *string `form:"reason,omitempty" json:"reason,omitempty"`
+
+	// Lang App language code; defaults to Accept-Language
+	Lang *string `form:"lang,omitempty" json:"lang,omitempty"`
 }
 
 // PostApiV3MePracticeSessionsParams defines parameters for PostApiV3MePracticeSessions.
