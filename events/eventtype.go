@@ -86,6 +86,18 @@ const (
 	EventClientError EventType = "client.error"
 )
 
+// Paywall funnel actions (ADR-011 D1.8). paywall.* are client-emitted;
+// checkout.card_started is server-emitted by user-service.
+const (
+	EventPaywallViewed            EventType = "paywall.viewed"
+	EventPaywallPlanSelected      EventType = "paywall.plan_selected"
+	EventPaywallPurchaseStarted   EventType = "paywall.purchase_started"
+	EventPaywallPurchaseCompleted EventType = "paywall.purchase_completed"
+	EventPaywallPurchaseCancelled EventType = "paywall.purchase_cancelled"
+	EventPaywallPurchaseFailed    EventType = "paywall.purchase_failed"
+	EventCheckoutCardStarted      EventType = "checkout.card_started" // server-emitted
+)
+
 // AllEventTypes is the closed set producers can publish. Used by the
 // contract test that pins this mirror against the spine vocabulary.
 // Order matches ADR-011 D1.1-D1.4.
@@ -123,6 +135,14 @@ var AllEventTypes = []EventType{
 	EventRecommendationShown,
 	EventRecommendationTapped,
 	EventRecommendationDismissed,
+	// D1.8 paywall funnel
+	EventPaywallViewed,
+	EventPaywallPlanSelected,
+	EventPaywallPurchaseStarted,
+	EventPaywallPurchaseCompleted,
+	EventPaywallPurchaseCancelled,
+	EventPaywallPurchaseFailed,
+	EventCheckoutCardStarted,
 
 	// client.error is deliberately absent — see the constant above. It is
 	// not publishable to the spine, and a producer that tries gets a 422.
