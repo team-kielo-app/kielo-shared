@@ -78,10 +78,19 @@ func Features() []string {
 }
 
 // GoalPrior maps an onboarding goal (users.learning_reason) to prior shares
-// over ContentTypes. It is deliberately empty: which goal leans toward which
-// content is a product decision awaiting review, so every goal currently uses
-// the flat prior. Filling it needs no other change; shares are normalized.
-var GoalPrior = map[string]map[string]float64{}
+// over ContentTypes (D-khanh-g0p). A gentle lean: the prior weighs
+// PriorWeightMinutes, so the learner's own minutes outweigh it within the first
+// half hour. Goals not listed (living_here, other, none) use the flat prior.
+var GoalPrior = map[string]map[string]float64{
+	"work":            {TypeConversation: 0.35, TypeReading: 0.25, TypePractice: 0.25, TypeVideo: 0.15},
+	"healthcare_work": {TypeConversation: 0.35, TypeReading: 0.25, TypePractice: 0.25, TypeVideo: 0.15},
+	"partner_family":  {TypeConversation: 0.40, TypeVideo: 0.20, TypePractice: 0.20, TypeReading: 0.20},
+	"travel":          {TypeConversation: 0.35, TypeVideo: 0.30, TypePractice: 0.20, TypeReading: 0.15},
+	"citizenship":     {TypeReading: 0.30, TypePractice: 0.30, TypeConversation: 0.20, TypeVideo: 0.20},
+	"study":           {TypeReading: 0.35, TypePractice: 0.30, TypeConversation: 0.20, TypeVideo: 0.15},
+	"heritage":        {TypeVideo: 0.35, TypeConversation: 0.25, TypeReading: 0.20, TypePractice: 0.20},
+	"curiosity":       {TypeVideo: 0.35, TypeReading: 0.25, TypePractice: 0.20, TypeConversation: 0.20},
+}
 
 // UsageRow is one users.feature_usage row.
 type UsageRow struct {

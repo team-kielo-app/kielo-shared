@@ -49,7 +49,8 @@ func TestResolveGoalOnly(t *testing.T) {
 	p := Resolve("  Work ", nil, now, 30)
 	assert.Equal(t, "work", p.Goal)
 	assert.Equal(t, SourceGoal, p.Sources["goal"])
-	assert.Equal(t, SourceColdStart, p.Sources["type_share"])
+	assert.Equal(t, SourceGoal, p.Sources["type_share"])
+	assert.InDelta(t, 0.35, p.TypeShare[TypeConversation], 1e-9)
 	assert.Equal(t, 30, p.WindowDays)
 	assert.Equal(t, "", p.TopType)
 }
@@ -181,8 +182,9 @@ func TestResolveVisitOnlyDayIsActiveWithoutSessionLen(t *testing.T) {
 }
 
 func TestResolveGoalPriorHook(t *testing.T) {
+	saved := GoalPrior["work"]
 	GoalPrior["work"] = map[string]float64{TypeConversation: 3, TypeReading: 1}
-	t.Cleanup(func() { delete(GoalPrior, "work") })
+	t.Cleanup(func() { GoalPrior["work"] = saved })
 
 	p := Resolve("work", nil, now, 0)
 	assert.Equal(t, SourceGoal, p.Sources["type_share"])
@@ -190,13 +192,31 @@ func TestResolveGoalPriorHook(t *testing.T) {
 	assert.InDelta(t, 0.25, p.TypeShare[TypeReading], 1e-9)
 	assert.InDelta(t, 0, p.TypeShare[TypeVideo], 1e-9)
 
-	other := Resolve("study", nil, now, 0)
+	other := Resolve("other", nil, now, 0)
 	assert.InDelta(t, 0.25, other.TypeShare[TypeConversation], 1e-9)
 	assert.Equal(t, SourceColdStart, other.Sources["type_share"])
 }
 
-func TestGoalPriorIsEmptyToday(t *testing.T) {
-	assert.Empty(t, GoalPrior)
+func TestGoalPriorsAreGentleAndComplete(t *testing.T) {
+	for goal, prior := range GoalPrior {
+		sum := 0.0
+		for _, typ := range ContentTypes {
+			share, ok := prior[typ]
+			assert.Truef(t, ok, "%s lacks %s", goal, typ)
+			assert.GreaterOrEqualf(t, share, 0.15, "%s %s", goal, typ)
+			assert.LessOrEqualf(t, share, 0.40, "%s %s", goal, typ)
+			sum += share
+		}
+		assert.InDeltaf(t, 1, sum, 1e-9, "%s sums to %v", goal, sum)
+	}
+	assert.NotContains(t, GoalPrior, "living_here")
+	assert.NotContains(t, GoalPrior, "other")
+}
+
+func TestBehaviorOutweighsTheGoalPrior(t *testing.T) {
+	p := Resolve("work", []UsageRow{row(FeatureVideoSeconds, 1, 40*60)}, now, 0)
+	assert.Equal(t, TypeVideo, p.TopType)
+	assert.Equal(t, SourceBehavior, p.Sources["type_share"])
 }
 
 func TestProfileJSONShape(t *testing.T) {
