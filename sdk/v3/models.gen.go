@@ -987,6 +987,9 @@ type ActiveCampaignOffer struct {
 	DurationLabel string `json:"duration_label"`
 	PercentOff    int    `json:"percent_off"`
 	Plan          string `json:"plan"`
+
+	// StoreRef Store offer for this plan on the requested platform: the Google Play offer tag (android) or the App Store offer code (ios). Absent when the store has no live offer.
+	StoreRef *string `json:"store_ref,omitempty"`
 }
 
 // ActiveLearningItem defines model for ActiveLearningItem.

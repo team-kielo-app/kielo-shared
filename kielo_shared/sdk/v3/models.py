@@ -165,6 +165,10 @@ class ActiveCampaignOffer(BaseModel):
     duration_label: str
     percent_off: int
     plan: str
+    store_ref: str | None = Field(
+        None,
+        description="Store offer for this plan on the requested platform: the Google Play offer tag (android) or the App Store offer code (ios). Absent when the store has no live offer.",
+    )
 
 
 class ActiveLearningItem(BaseModel):
