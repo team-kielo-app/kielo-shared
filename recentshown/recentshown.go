@@ -16,6 +16,7 @@ import (
 
 const (
 	DefaultWindow       = 24 * time.Hour
+	DefaultGrace        = time.Minute
 	DefaultMaxEntries   = 200
 	DefaultReadTimeout  = 150 * time.Millisecond
 	DefaultWriteTimeout = 500 * time.Millisecond
@@ -40,6 +41,17 @@ func WithWindow(d time.Duration) Option {
 	return func(s *Store) {
 		if d > 0 {
 			s.window = d
+		}
+	}
+}
+
+// WithGrace sets how old a showing must be before Recent counts it. A learner
+// who refreshes within the grace keeps the list they just saw instead of
+// having it shuffled behind less relevant items (tutor walk, 2026-10-28).
+func WithGrace(d time.Duration) Option {
+	return func(s *Store) {
+		if d >= 0 {
+			s.grace = d
 		}
 	}
 }
@@ -74,6 +86,7 @@ func WithWriteTimeout(d time.Duration) Option {
 type Store struct {
 	client       Client
 	window       time.Duration
+	grace        time.Duration
 	maxEntries   int
 	readTimeout  time.Duration
 	writeTimeout time.Duration
@@ -85,6 +98,7 @@ func New(client Client, opts ...Option) *Store {
 	s := &Store{
 		client:       client,
 		window:       DefaultWindow,
+		grace:        DefaultGrace,
 		maxEntries:   DefaultMaxEntries,
 		readTimeout:  DefaultReadTimeout,
 		writeTimeout: DefaultWriteTimeout,
@@ -139,8 +153,8 @@ func (s *Store) Record(ctx context.Context, userID, surface string, ids []string
 	_ = s.client.Expire(ctx, k, s.window).Err()
 }
 
-// Recent returns id -> times shown within the window ending at now. Any
-// failure returns an empty map.
+// Recent returns id -> times shown within the window ending at now, leaving
+// out showings younger than the grace. Any failure returns an empty map.
 func (s *Store) Recent(ctx context.Context, userID, surface string, now time.Time) (out map[string]int, err error) {
 	out = map[string]int{}
 	if !s.enabled() || userID == "" || surface == "" {
@@ -156,7 +170,7 @@ func (s *Store) Recent(ctx context.Context, userID, surface string, now time.Tim
 
 	members, qerr := s.client.ZRangeByScore(ctx, key(userID, surface), &redisv9.ZRangeBy{
 		Min: strconv.FormatInt(millis(now.Add(-s.window)), 10),
-		Max: "+inf",
+		Max: strconv.FormatInt(millis(now.Add(-s.grace)), 10),
 	}).Result()
 	if qerr != nil {
 		return map[string]int{}, nil

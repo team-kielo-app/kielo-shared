@@ -165,7 +165,7 @@ var t0 = time.Date(2026, 10, 28, 12, 0, 0, 0, time.UTC)
 
 func TestRecordAndRecentCountTimesShown(t *testing.T) {
 	f := newFake()
-	s := New(f)
+	s := New(f, WithGrace(0))
 	ctx := context.Background()
 	s.Record(ctx, "u1", "kielotv", []string{"a", "b", "a"}, t0)
 	s.Record(ctx, "u1", "kielotv", []string{"a", "c"}, t0.Add(time.Minute))
@@ -185,7 +185,7 @@ func TestRecordAndRecentCountTimesShown(t *testing.T) {
 
 func TestWindowExpiry(t *testing.T) {
 	f := newFake()
-	s := New(f, WithWindow(time.Hour))
+	s := New(f, WithGrace(0), WithWindow(time.Hour))
 	ctx := context.Background()
 	s.Record(ctx, "u", "s", []string{"old"}, t0)
 	s.Record(ctx, "u", "s", []string{"new"}, t0.Add(90*time.Minute))
@@ -197,7 +197,7 @@ func TestWindowExpiry(t *testing.T) {
 	got, _ = s.Recent(ctx, "u", "s", t0.Add(3*time.Hour))
 	assert.Empty(t, got)
 
-	exact := New(newFake(), WithWindow(time.Hour))
+	exact := New(newFake(), WithGrace(0), WithWindow(time.Hour))
 	exact.Record(ctx, "u", "s", []string{"edge"}, t0)
 	got, _ = exact.Recent(ctx, "u", "s", t0.Add(time.Hour))
 	assert.Equal(t, map[string]int{"edge": 1}, got, "exactly a window old still counts")
@@ -205,7 +205,7 @@ func TestWindowExpiry(t *testing.T) {
 
 func TestCapKeepsNewest(t *testing.T) {
 	f := newFake()
-	s := New(f, WithMaxEntries(5))
+	s := New(f, WithGrace(0), WithMaxEntries(5))
 	ctx := context.Background()
 	for i := range 4 {
 		ids := []string{"b" + strconv.Itoa(i) + "x", "b" + strconv.Itoa(i) + "y"}
@@ -231,7 +231,7 @@ func TestFailSoft(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, got)
 
-	noClient := New(nil)
+	noClient := New(nil, WithGrace(0))
 	noClient.Record(ctx, "u", "s", []string{"a"}, t0)
 	got, err = noClient.Recent(ctx, "u", "s", t0)
 	require.NoError(t, err)
@@ -240,13 +240,13 @@ func TestFailSoft(t *testing.T) {
 
 	f := newFake()
 	f.err = errors.New("redis down")
-	s := New(f)
+	s := New(f, WithGrace(0))
 	s.Record(ctx, "u", "s", []string{"a"}, t0)
 	got, err = s.Recent(ctx, "u", "s", t0)
 	require.NoError(t, err)
 	assert.Empty(t, got)
 
-	ok := New(newFake())
+	ok := New(newFake(), WithGrace(0))
 	ok.Record(ctx, "", "s", []string{"a"}, t0)
 	ok.Record(ctx, "u", "", []string{"a"}, t0)
 	ok.Record(ctx, "u", "s", nil, t0)
@@ -258,7 +258,7 @@ func TestFailSoft(t *testing.T) {
 func TestReadAndWriteTimeouts(t *testing.T) {
 	f := newFake()
 	f.block = true
-	s := New(f, WithReadTimeout(20*time.Millisecond), WithWriteTimeout(20*time.Millisecond))
+	s := New(f, WithGrace(0), WithReadTimeout(20*time.Millisecond), WithWriteTimeout(20*time.Millisecond))
 
 	start := time.Now()
 	got, err := s.Recent(context.Background(), "u", "s", t0)
@@ -270,7 +270,7 @@ func TestReadAndWriteTimeouts(t *testing.T) {
 
 func TestRecordSurvivesCancelledCallerContext(t *testing.T) {
 	f := newFake()
-	s := New(f)
+	s := New(f, WithGrace(0))
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	s.Record(ctx, "u", "s", []string{"a"}, t0)
@@ -279,7 +279,7 @@ func TestRecordSurvivesCancelledCallerContext(t *testing.T) {
 }
 
 func TestIdsWithSeparatorsRoundTrip(t *testing.T) {
-	s := New(newFake())
+	s := New(newFake(), WithGrace(0))
 	s.Record(context.Background(), "u", "s", []string{"a|b:c"}, t0)
 	got, _ := s.Recent(context.Background(), "u", "s", t0)
 	assert.Equal(t, map[string]int{"a|b:c": 1}, got)
@@ -291,7 +291,7 @@ func TestAgainstRealGoRedisClient(t *testing.T) {
 	t.Cleanup(func() { _ = client.Close() })
 	var _ Client = client
 
-	s := New(client, WithMaxEntries(3), WithWindow(time.Hour))
+	s := New(client, WithGrace(0), WithMaxEntries(3), WithWindow(time.Hour))
 	ctx := context.Background()
 	now := time.Now()
 	s.Record(ctx, "u", "s", []string{"a", "b"}, now)
@@ -328,4 +328,16 @@ func TestDemote(t *testing.T) {
 		})
 	}
 	assert.Empty(t, Demote(nil, map[string]int{"a": 1}))
+}
+
+func TestGraceHidesAJustShownList(t *testing.T) {
+	s := New(newFake(), WithGrace(time.Minute))
+	ctx := context.Background()
+	t0 := time.Date(2026, 10, 28, 19, 0, 0, 0, time.UTC)
+	s.Record(ctx, "u", "ktv", []string{"a", "b"}, t0)
+	got, err := s.Recent(ctx, "u", "ktv", t0.Add(30*time.Second))
+	require.NoError(t, err)
+	assert.Empty(t, got, "a refresh within the grace keeps the list it just showed")
+	got, _ = s.Recent(ctx, "u", "ktv", t0.Add(2*time.Minute))
+	assert.Equal(t, map[string]int{"a": 1, "b": 1}, got)
 }
