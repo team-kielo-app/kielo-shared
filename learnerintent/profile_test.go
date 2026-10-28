@@ -143,11 +143,11 @@ func TestResolveSessionBuckets(t *testing.T) {
 		perSrc  string
 	}{
 		{"short", []int{2, 3, 4}, SessionShort, 3, 3, SourceBehavior},
-		{"lower edge is medium", []int{5}, SessionMedium, 5, 1, SourceBehavior},
-		{"upper edge is medium", []int{12}, SessionMedium, 12, 1, SourceBehavior},
+		{"lower edge is medium", []int{5, 5, 5}, SessionMedium, 5, 3, SourceBehavior},
+		{"upper edge is medium", []int{12, 12, 12}, SessionMedium, 12, 3, SourceBehavior},
 		{"long", []int{13, 20, 30}, SessionLong, 20, 3, SourceBehavior},
 		{"median ignores a marathon day", []int{3, 4, 90}, SessionShort, 4, 3, SourceBehavior},
-		{"even count averages middle", []int{4, 6}, SessionMedium, 5, 2, SourceBehavior},
+		{"even count averages middle", []int{4, 4, 6, 6}, SessionMedium, 5, 4, SourceBehavior},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -165,12 +165,21 @@ func TestResolveSessionBuckets(t *testing.T) {
 }
 
 func TestResolveSessionMixesContentTypesPerDay(t *testing.T) {
-	p := Resolve("", []UsageRow{
-		row(FeaturePractice, 1, 4), row(FeatureVideoSeconds, 1, 300), row(FeatureConvoSeconds, 1, 240),
-	}, now, 0)
-	assert.Equal(t, 1, p.ActiveDays)
+	var rows []UsageRow
+	for d := 1; d <= SessionMinDays; d++ {
+		rows = append(rows, row(FeaturePractice, d, 4), row(FeatureVideoSeconds, d, 300), row(FeatureConvoSeconds, d, 240))
+	}
+	p := Resolve("", rows, now, 0)
+	assert.Equal(t, SessionMinDays, p.ActiveDays)
 	assert.InDelta(t, 13, p.SessionMinutesPerDay, 1e-9)
 	assert.Equal(t, SessionLong, p.SessionLen)
+}
+
+func TestResolveTooFewDaysNamesNoSessionLen(t *testing.T) {
+	p := Resolve("", []UsageRow{row(FeaturePractice, 1, 8), row(FeaturePractice, 2, 3)}, now, 0)
+	assert.Equal(t, 2, p.ActiveDays)
+	assert.Equal(t, "", p.SessionLen)
+	assert.Equal(t, SourceColdStart, p.Sources["session_len"])
 }
 
 func TestResolveVisitOnlyDayIsActiveWithoutSessionLen(t *testing.T) {
