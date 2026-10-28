@@ -114,16 +114,17 @@ func WindowStart(now time.Time, window int) time.Time {
 }
 
 type dayTotals struct {
-	visit    float64
+	minutes  float64
 	activity bool
 }
 
 // Resolve computes the profile from a learner's rows. Rows before the window
 // and rows for features the resolver does not read are ignored.
 //
-// session_minutes_per_day is the median, over active days with a visit credit,
-// of that day's time_spent:visit minutes; the median keeps one marathon day
-// from lifting the bucket.
+// session_minutes_per_day is the median, over days with any content minutes,
+// of that day's reading, practice, video and conversation minutes; the median
+// keeps one marathon day from lifting the bucket. time_spent:visit only marks a
+// day active: it is a capped progress-screen credit, not time spent.
 func Resolve(goal string, rows []UsageRow, now time.Time, window int) Profile {
 	if window <= 0 {
 		window = DefaultWindowDays
@@ -154,31 +155,31 @@ func Resolve(goal string, rows []UsageRow, now time.Time, window int) Profile {
 	p.TypeShare = smooth(minutes, total, prior)
 	p.TopType = topType(p.TypeShare, total)
 
-	var visits []float64
+	var daily []float64
 	for _, dt := range days {
 		if dt.activity {
 			p.ActiveDays++
 		}
-		if dt.activity && dt.visit > 0 {
-			visits = append(visits, dt.visit)
+		if dt.minutes > 0 {
+			daily = append(daily, dt.minutes)
 		}
 	}
-	if len(visits) > 0 {
-		p.SessionMinutesPerDay = round1(median(visits))
+	if len(daily) > 0 {
+		p.SessionMinutesPerDay = round1(median(daily))
 		p.SessionLen = sessionBucket(p.SessionMinutesPerDay)
 	}
 
-	p.Sources = sources(goal != "", total > 0, goalPrior, p, len(visits) > 0)
+	p.Sources = sources(goal != "", total > 0, goalPrior, p, len(daily) > 0)
 	return p
 }
 
-func sources(hasGoal, hasMinutes, goalPrior bool, p Profile, hasVisits bool) map[string]string {
+func sources(hasGoal, hasMinutes, goalPrior bool, p Profile, hasDaily bool) map[string]string {
 	s := map[string]string{
 		"goal":                    pick(hasGoal, SourceGoal),
 		"type_minutes":            pick(hasMinutes, SourceBehavior),
 		"top_type":                pick(p.TopType != "", SourceBehavior),
 		"active_days":             pick(p.ActiveDays > 0, SourceBehavior),
-		"session_minutes_per_day": pick(hasVisits, SourceBehavior),
+		"session_minutes_per_day": pick(hasDaily, SourceBehavior),
 		"session_len":             pick(p.SessionLen != "", SourceBehavior),
 	}
 	switch {
@@ -217,11 +218,12 @@ func aggregate(rows []UsageRow, start time.Time) (seconds map[string]float64, da
 		n := float64(r.UsageCount)
 		switch r.Feature {
 		case FeatureVisit:
-			dt.visit += n
 		case FeatureVideoSeconds, FeatureConvoSeconds:
 			seconds[t] += n
+			dt.minutes += n / 60
 		default:
 			seconds[t] += n * 60
+			dt.minutes += n
 		}
 	}
 	return seconds, days

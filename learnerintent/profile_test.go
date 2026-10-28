@@ -134,12 +134,12 @@ func TestResolveIgnoresUnknownFeaturesAndNonPositive(t *testing.T) {
 
 func TestResolveSessionBuckets(t *testing.T) {
 	cases := []struct {
-		name   string
-		visits []int
-		want   string
-		perDay float64
-		active int
-		perSrc string
+		name    string
+		minutes []int
+		want    string
+		perDay  float64
+		active  int
+		perSrc  string
 	}{
 		{"short", []int{2, 3, 4}, SessionShort, 3, 3, SourceBehavior},
 		{"lower edge is medium", []int{5}, SessionMedium, 5, 1, SourceBehavior},
@@ -151,8 +151,8 @@ func TestResolveSessionBuckets(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			var rows []UsageRow
-			for i, v := range c.visits {
-				rows = append(rows, row(FeatureVisit, i+1, v))
+			for i, v := range c.minutes {
+				rows = append(rows, row(FeaturePractice, i+1, v), row(FeatureVisit, i+1, 5))
 			}
 			p := Resolve("", rows, now, 0)
 			assert.Equal(t, c.want, p.SessionLen)
@@ -163,8 +163,17 @@ func TestResolveSessionBuckets(t *testing.T) {
 	}
 }
 
-func TestResolveActiveDayWithoutVisitHasNoSessionLen(t *testing.T) {
-	p := Resolve("", []UsageRow{row(FeaturePractice, 1, 5)}, now, 0)
+func TestResolveSessionMixesContentTypesPerDay(t *testing.T) {
+	p := Resolve("", []UsageRow{
+		row(FeaturePractice, 1, 4), row(FeatureVideoSeconds, 1, 300), row(FeatureConvoSeconds, 1, 240),
+	}, now, 0)
+	assert.Equal(t, 1, p.ActiveDays)
+	assert.InDelta(t, 13, p.SessionMinutesPerDay, 1e-9)
+	assert.Equal(t, SessionLong, p.SessionLen)
+}
+
+func TestResolveVisitOnlyDayIsActiveWithoutSessionLen(t *testing.T) {
+	p := Resolve("", []UsageRow{row(FeatureVisit, 1, 5)}, now, 0)
 	assert.Equal(t, 1, p.ActiveDays)
 	assert.Equal(t, "", p.SessionLen)
 	assert.Equal(t, SourceColdStart, p.Sources["session_len"])
