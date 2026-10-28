@@ -9181,6 +9181,47 @@ class StoreScreenshotValidationResponse(BaseModel):
     width: int
 
 
+class StoreSyncChange(BaseModel):
+    op: str
+    plan: str
+    summary: str
+
+
+class StoreSyncConfirmRequest(BaseModel):
+    confirm: bool
+
+
+class StoreSyncOffer(BaseModel):
+    code: str
+    ended: bool
+    external_id: str
+    plan: str
+
+
+class StoreSyncPlatform(BaseModel):
+    label: str
+    last_error: str
+    last_synced_at: AwareDatetime | None = None
+    offers: list[StoreSyncOffer]
+    platform: str
+    reason: str
+    status: str
+
+
+class StoreSyncPreviewPlatform(BaseModel):
+    changes: list[StoreSyncChange]
+    label: str
+    platform: str
+    reason: str
+    status: str
+
+
+class StoreSyncState(BaseModel):
+    campaign_id: UUID_aliased
+    platforms: list[StoreSyncPlatform]
+    writes_enabled: bool
+
+
 class StreakInfo(BaseModel):
     current_streak_days: int
     grace_day_used: bool
@@ -12730,6 +12771,10 @@ class SingletonStoreScreenshotValidationResponse(BaseModel):
     data: StoreScreenshotValidationResponse
 
 
+class SingletonStoreSyncState(BaseModel):
+    data: StoreSyncState
+
+
 class SingletonStudyList(BaseModel):
     data: StudyList
 
@@ -12991,6 +13036,12 @@ class StorageOverview(BaseModel):
     operations: list[StorageOperation]
     targets: dict[str, str]
     unmanaged_assets: list[StorageUnmanagedRow]
+
+
+class StoreSyncPreview(BaseModel):
+    campaign_id: UUID_aliased
+    platforms: list[StoreSyncPreviewPlatform]
+    writes_enabled: bool
 
 
 class SubmissionResult(BaseModel):
@@ -13900,6 +13951,10 @@ class SingletonStorageInventoryResult(BaseModel):
 
 class SingletonStorageOverview(BaseModel):
     data: StorageOverview
+
+
+class SingletonStoreSyncPreview(BaseModel):
+    data: StoreSyncPreview
 
 
 class SingletonSubmitAnswerResponseV3(BaseModel):
