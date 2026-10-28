@@ -6,17 +6,20 @@ a score or a 0-1 truth value, each with a calibrated confidence. Every failure
 its current check. Nothing here raises into the caller, and the state text is
 never logged.
 
-PROVISIONAL WIRE SHAPE: TypeSafe's request and response are not documented
-anywhere we can read. The shape below is our own minimal typed contract and must
-be reconciled with the real API before any call site relies on it.
+Wire shape per https://docs.typesafe.ai:
 
     POST {JEV_BASE_URL}/v1/systemone    Authorization: Bearer {JEV_API_KEY}
-    {"state": <str|json>, "questions": [{"id","kind","prompt","options"?}]}
-    -> {"model": "...", "usage": {"input_tokens": N},
-        "answers": {"<id>": {"value": ..., "confidence": 0-1}}}
+    {"state": <str|json>, "model": "jev-1.14.0",
+     "questions": {"<id>": {"type": "choice|score|noul", "instructions": "...",
+                            "criteria": {...}|[...]}}}
+    -> {"model", "usage": {"input_tokens", "output_tokens"}, "answers": {"<id>": ...}}
 
-Env: JEV_API_KEY, JEV_BASE_URL, JEV_TIMEOUT_S (default 1.5),
-JEV_USD_PER_MTOK (provisional input price booked on the spend guard, default 1.0),
+A truth question is sent as type "noul" and answers with a probability and no
+confidence (Answer.confidence is None); never invent one.
+
+Env: JEV_API_KEY, JEV_BASE_URL (default https://api.typesafe.ai), JEV_MODEL (default
+jev-1.14.0, pinned), JEV_TIMEOUT_S (default 1.5), JEV_USD_PER_MTOK (input price
+booked on the spend guard, default 0.042; output tokens are free),
 JEV_SHADOW_<SITE>=1 (see ``shadow_enabled``).
 """
 
@@ -37,7 +40,9 @@ logger = logging.getLogger(__name__)
 PATH = "/v1/systemone"
 FAMILY_PREFIX = "jev_"
 DEFAULT_TIMEOUT_S = 1.5
-DEFAULT_USD_PER_MTOK = 1.0
+DEFAULT_USD_PER_MTOK = 0.042
+DEFAULT_BASE_URL = "https://api.typesafe.ai"
+DEFAULT_MODEL = "jev-1.14.0"
 
 Kind = Literal["choice", "score", "truth"]
 
@@ -47,12 +52,24 @@ class Question(TypedDict, total=False):
     kind: Kind
     prompt: str
     options: list[str]
+    descriptions: dict[str, str]
 
 
 @dataclass(frozen=True)
 class Answer:
+    """value: chosen option (choice), number (score) or p(yes) (truth).
+    confidence is None for a truth question: Jev gives none."""
+
     value: Any
-    confidence: float
+    confidence: float | None = None
+    probabilities: dict[str, float] | None = None
+
+    @property
+    def conf(self) -> float:
+        """Confidence, or the truth probability itself when there is none."""
+        if self.confidence is not None:
+            return self.confidence
+        return float(self.value) if isinstance(self.value, (int, float)) else 0.0
 
 
 Answers = dict[str, Answer]
@@ -76,12 +93,36 @@ def shadow_enabled(site: str) -> bool:
     return flag == "1" and bool((os.environ.get("JEV_API_KEY") or "").strip())
 
 
+def _wire_question(q: Question) -> dict[str, Any]:
+    kind = q.get("kind", "choice")
+    out: dict[str, Any] = {"instructions": q["prompt"]}
+    options = list(q.get("options") or [])
+    if kind == "truth":
+        out["type"] = "noul"
+    elif kind == "score":
+        out["type"], out["criteria"] = "score", options
+    else:
+        desc = q.get("descriptions") or {}
+        out["type"] = "choice"
+        out["criteria"] = {o: desc.get(o) for o in options}
+    return out
+
+
+def _parse_answer(a: Mapping[str, Any]) -> Answer:
+    conf = a.get("confidence")
+    probs = a.get("probabilities")
+    if "noul" in a:
+        return Answer(value=float(a["noul"]))
+    value = a["choice"] if "choice" in a else float(a["score"])
+    return Answer(
+        value=value,
+        confidence=None if conf is None else float(conf),
+        probabilities=dict(probs) if probs else None,
+    )
+
+
 def _parse(payload: Any) -> tuple[Answers, str, int]:
-    raw = payload["answers"]
-    answers = {
-        str(qid): Answer(value=a["value"], confidence=float(a["confidence"]))
-        for qid, a in raw.items()
-    }
+    answers = {str(qid): _parse_answer(a) for qid, a in payload["answers"].items()}
     usage = payload.get("usage") or {}
     return answers, str(payload.get("model") or ""), int(usage.get("input_tokens") or 0)
 
@@ -89,7 +130,8 @@ def _parse(payload: Any) -> tuple[Answers, str, int]:
 @dataclass
 class JevClient:
     api_key: str = ""
-    base_url: str = ""
+    base_url: str = DEFAULT_BASE_URL
+    model: str = DEFAULT_MODEL
     timeout_s: float = DEFAULT_TIMEOUT_S
     usd_per_mtok: float = DEFAULT_USD_PER_MTOK
     transport: httpx.AsyncBaseTransport | None = field(default=None, repr=False)
@@ -98,7 +140,10 @@ class JevClient:
     def from_env(cls) -> "JevClient":
         return cls(
             api_key=(os.environ.get("JEV_API_KEY") or "").strip(),
-            base_url=(os.environ.get("JEV_BASE_URL") or "").strip().rstrip("/"),
+            base_url=(os.environ.get("JEV_BASE_URL") or DEFAULT_BASE_URL)
+            .strip()
+            .rstrip("/"),
+            model=(os.environ.get("JEV_MODEL") or "").strip() or DEFAULT_MODEL,
             timeout_s=_float_env("JEV_TIMEOUT_S", DEFAULT_TIMEOUT_S),
             usd_per_mtok=_float_env("JEV_USD_PER_MTOK", DEFAULT_USD_PER_MTOK),
         )
@@ -139,7 +184,11 @@ class JevClient:
         ) as http:
             resp = await http.post(
                 self.base_url + PATH,
-                json={"state": state, "questions": list(questions)},
+                json={
+                    "state": state,
+                    "model": self.model,
+                    "questions": {q["id"]: _wire_question(q) for q in questions},
+                },
                 headers={"Authorization": f"Bearer {self.api_key}"},
             )
         latency_ms = int((time.perf_counter() - started) * 1000)

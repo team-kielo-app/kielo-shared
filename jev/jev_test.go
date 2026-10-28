@@ -31,27 +31,78 @@ func TestNoKeyReturnsNilWithoutCalling(t *testing.T) {
 	}
 }
 
-func TestHappyPathBooksSpend(t *testing.T) {
+func TestHappyPathRealShapesAndSpend(t *testing.T) {
 	llmroute.ResetSpend()
-	var gotBody request
+	var got map[string]any
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != Path || r.Header.Get("Authorization") != "Bearer k" {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
-		_ = json.NewDecoder(r.Body).Decode(&gotBody)
-		_, _ = w.Write([]byte(`{"model":"jev-1","usage":{"input_tokens":500000},"answers":{"ok":{"value":0.9,"confidence":0.8}}}`))
+		_ = json.NewDecoder(r.Body).Decode(&got)
+		_, _ = w.Write([]byte(`{"model":"jev-1.14.0","usage":{"input_tokens":500000,"output_tokens":9},"answers":{
+			"ok":{"type":"noul","noul":0.9},
+			"sev":{"type":"choice","choice":"high","confidence":0.7,"probabilities":{"low":0.1,"high":0.9}},
+			"fit":{"type":"score","score":4,"confidence":0.6,"probabilities":{"4":0.6},"legend":"x"}}}`))
 	}))
 	defer srv.Close()
-	got := client(srv.URL).Decide(context.Background(), "exercise_publish", "text", qs)
-	if a, ok := got["ok"]; !ok || a.Confidence != 0.8 || a.Value.(float64) != 0.9 {
-		t.Fatalf("unexpected answers %v", got)
+	all := []Question{
+		qs[0],
+		{ID: "sev", Kind: KindChoice, Prompt: "Severity?", Options: []string{"low", "high"}, Descriptions: map[string]string{"low": "minor"}},
+		{ID: "fit", Kind: KindScore, Prompt: "Fit?", Options: []string{"1", "2"}},
 	}
-	if len(gotBody.Questions) != 1 || gotBody.Questions[0].Kind != KindTruth {
-		t.Fatalf("unexpected request %+v", gotBody)
+	c := client(srv.URL)
+	c.Model, c.USDPerMTok = DefaultModel, 0.042
+	out := c.Decide(context.Background(), "exercise_publish", "text", all)
+	if a := out["ok"]; a.Value.(float64) != 0.9 || a.Confidence != nil || a.Conf() != 0.9 {
+		t.Fatalf("noul answer %+v", a)
 	}
-	if spent := llmroute.Spent("jev_exercise_publish"); spent != 1.0 {
-		t.Fatalf("booked %v, want 1.0 under family jev_exercise_publish", spent)
+	if a := out["sev"]; a.Value != "high" || *a.Confidence != 0.7 || a.Probabilities["high"] != 0.9 {
+		t.Fatalf("choice answer %+v", a)
+	}
+	if a := out["fit"]; a.Value.(float64) != 4 || *a.Confidence != 0.6 {
+		t.Fatalf("score answer %+v", a)
+	}
+	if got["model"] != "jev-1.14.0" {
+		t.Fatalf("model %v", got["model"])
+	}
+	q := got["questions"].(map[string]any)
+	ok, sev, fit := q["ok"].(map[string]any), q["sev"].(map[string]any), q["fit"].(map[string]any)
+	if ok["type"] != "noul" || ok["instructions"] != "Is the key correct?" || ok["criteria"] != nil {
+		t.Fatalf("noul question %v", ok)
+	}
+	crit := sev["criteria"].(map[string]any)
+	if sev["type"] != "choice" || crit["low"] != "minor" || crit["high"] != nil {
+		t.Fatalf("choice question %v", sev)
+	}
+	if fit["type"] != "score" || len(fit["criteria"].([]any)) != 2 {
+		t.Fatalf("score question %v", fit)
+	}
+	want := 500000 * 0.042 / 1e6
+	if spent := llmroute.Spent("jev_exercise_publish"); spent < want*0.999 || spent > want*1.001 {
+		t.Fatalf("booked %v, want %v under jev_exercise_publish", spent, want)
+	}
+}
+
+func TestRateLimitReturnsNil(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusTooManyRequests) }))
+	defer srv.Close()
+	if got := client(srv.URL).Decide(context.Background(), "s", "t", qs); got != nil {
+		t.Fatalf("want nil, got %v", got)
+	}
+}
+
+func TestFromEnvDefaults(t *testing.T) {
+	t.Setenv(EnvBaseURL, "")
+	t.Setenv(EnvModel, "")
+	t.Setenv(EnvUSDPerMTok, "")
+	c := FromEnv()
+	if c.BaseURL != "https://api.typesafe.ai" || c.Model != "jev-1.14.0" || c.USDPerMTok != 0.042 {
+		t.Fatalf("defaults %+v", c)
+	}
+	t.Setenv(EnvModel, "jev-9")
+	if FromEnv().Model != "jev-9" {
+		t.Fatal("JEV_MODEL not honoured")
 	}
 }
 
@@ -132,9 +183,10 @@ func TestShadowEnabled(t *testing.T) {
 }
 
 func TestFake(t *testing.T) {
-	f := &Fake{Canned: Answers{"ok": {Value: 1.0, Confidence: 0.9}}}
+	conf := 0.9
+	f := &Fake{Canned: Answers{"ok": {Value: "a", Confidence: &conf}}}
 	got := f.Decide(context.Background(), "s", "t", append(qs, Question{ID: "other"}))
-	if len(got) != 1 || got["ok"].Confidence != 0.9 || f.Calls != 1 {
+	if len(got) != 1 || *got["ok"].Confidence != 0.9 || f.Calls != 1 {
 		t.Fatalf("got %v", got)
 	}
 }

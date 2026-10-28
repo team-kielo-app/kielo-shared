@@ -1,14 +1,11 @@
 // Package jev is a thin client for TypeSafe AI's Jev ("System One") model. Jev writes no text: it answers typed
-// questions about text or JSON with a choice, a score or a 0-1 truth value, each with a calibrated confidence.
+// questions about text or JSON with a choice, a score or a 0-1 truth value.
 //
-// Every failure (no key, timeout, error, refused spend) yields nil answers so the caller falls back to its current check.
+// Every failure (no key, timeout, 429, error, refused spend) yields nil answers so the caller falls back to its current check.
 //
-// PROVISIONAL WIRE SHAPE: TypeSafe's request and response are not documented anywhere we can read. The shape below is
-// our own minimal typed contract and must be reconciled with the real API before any call site relies on it.
-//
-//	POST {JEV_BASE_URL}/v1/systemone   Authorization: Bearer {JEV_API_KEY}
-//	{"state": <string|json>, "questions": [{"id","kind","prompt","options"?}]}
-//	-> {"model": "...", "usage": {"input_tokens": N}, "answers": {"<id>": {"value": ..., "confidence": 0-1}}}
+// Wire shape per https://docs.typesafe.ai: POST {JEV_BASE_URL}/v1/systemone with a Bearer key and
+// {"state", "model", "questions": {<id>: {"type": choice|score|noul, "instructions", "criteria"}}}. A truth question
+// is sent as type "noul" and answers with a probability and no confidence.
 package jev
 
 import (
@@ -31,11 +28,14 @@ const (
 	EnvAPIKey  = "JEV_API_KEY"
 	EnvBaseURL = "JEV_BASE_URL"
 	EnvTimeout = "JEV_TIMEOUT_S"
-	// EnvUSDPerMTok is the provisional price per million input tokens booked on the spend guard.
+	EnvModel   = "JEV_MODEL"
+	// EnvUSDPerMTok is the price per million input tokens booked on the spend guard; output tokens are free.
 	EnvUSDPerMTok = "JEV_USD_PER_MTOK"
 
+	DefaultBaseURL   = "https://api.typesafe.ai"
+	DefaultModel     = "jev-1.14.0"
 	DefaultTimeout   = 1500 * time.Millisecond
-	DefaultUSDPerTok = 1.0
+	DefaultUSDPerTok = 0.042
 	Path             = "/v1/systemone"
 	FamilyPrefix     = "jev_"
 	maxResponseBytes = 1 << 20
@@ -50,18 +50,33 @@ const (
 	KindTruth  Kind = "truth"
 )
 
-// Question is one typed question. Options applies to KindChoice (up to 255).
+// Question is one typed question. Options are the choices (up to 255) of a KindChoice or the levels of a KindScore.
+// Descriptions optionally explains a choice option by name.
 type Question struct {
-	ID      string   `json:"id"`
-	Kind    Kind     `json:"kind"`
-	Prompt  string   `json:"prompt"`
-	Options []string `json:"options,omitempty"`
+	ID           string
+	Kind         Kind
+	Prompt       string
+	Options      []string
+	Descriptions map[string]string
 }
 
-// Answer is Jev's answer: a chosen option (string), a score or a truth value (number), plus its confidence.
+// Answer is Jev's answer. Value is the chosen option (string) for a choice, a number for a score, or p(yes) for a truth
+// question. Confidence is nil for a truth question: Jev gives none. Probabilities is set for choice and score.
 type Answer struct {
-	Value      any     `json:"value"`
-	Confidence float64 `json:"confidence"`
+	Value         any
+	Confidence    *float64
+	Probabilities map[string]float64
+}
+
+// Conf returns the confidence, or the value itself for a truth answer (its probability), or 0.
+func (a Answer) Conf() float64 {
+	if a.Confidence != nil {
+		return *a.Confidence
+	}
+	if f, ok := a.Value.(float64); ok {
+		return f
+	}
+	return 0
 }
 
 // Answers maps question id to its answer.
@@ -73,8 +88,17 @@ type Decider interface {
 }
 
 type request struct {
-	State     any        `json:"state"`
-	Questions []Question `json:"questions"`
+	State     any                       `json:"state"`
+	Model     string                    `json:"model"`
+	Questions map[string]map[string]any `json:"questions"`
+}
+
+type answerWire struct {
+	Choice        *string            `json:"choice"`
+	Score         *float64           `json:"score"`
+	Noul          *float64           `json:"noul"`
+	Confidence    *float64           `json:"confidence"`
+	Probabilities map[string]float64 `json:"probabilities"`
 }
 
 type response struct {
@@ -82,13 +106,47 @@ type response struct {
 	Usage struct {
 		InputTokens int64 `json:"input_tokens"`
 	} `json:"usage"`
-	Answers Answers `json:"answers"`
+	Answers map[string]answerWire `json:"answers"`
+}
+
+func wireQuestion(q Question) map[string]any {
+	out := map[string]any{"instructions": q.Prompt}
+	switch q.Kind {
+	case KindTruth:
+		out["type"] = "noul"
+	case KindScore:
+		out["type"], out["criteria"] = "score", q.Options
+	default:
+		criteria := make(map[string]*string, len(q.Options))
+		for _, o := range q.Options {
+			var d *string
+			if v, ok := q.Descriptions[o]; ok {
+				d = &v
+			}
+			criteria[o] = d
+		}
+		out["type"], out["criteria"] = "choice", criteria
+	}
+	return out
+}
+
+func (a answerWire) answer() (Answer, bool) {
+	switch {
+	case a.Noul != nil:
+		return Answer{Value: *a.Noul}, true
+	case a.Choice != nil:
+		return Answer{Value: *a.Choice, Confidence: a.Confidence, Probabilities: a.Probabilities}, true
+	case a.Score != nil:
+		return Answer{Value: *a.Score, Confidence: a.Confidence, Probabilities: a.Probabilities}, true
+	}
+	return Answer{}, false
 }
 
 // Client calls Jev over HTTP.
 type Client struct {
 	APIKey     string
 	BaseURL    string
+	Model      string
 	Timeout    time.Duration
 	USDPerMTok float64
 	HTTP       *http.Client
@@ -99,8 +157,15 @@ func FromEnv() *Client {
 	c := &Client{
 		APIKey:     strings.TrimSpace(os.Getenv(EnvAPIKey)),
 		BaseURL:    strings.TrimRight(strings.TrimSpace(os.Getenv(EnvBaseURL)), "/"),
+		Model:      strings.TrimSpace(os.Getenv(EnvModel)),
 		Timeout:    DefaultTimeout,
 		USDPerMTok: DefaultUSDPerTok,
+	}
+	if c.BaseURL == "" {
+		c.BaseURL = DefaultBaseURL
+	}
+	if c.Model == "" {
+		c.Model = DefaultModel
 	}
 	if v, err := strconv.ParseFloat(strings.TrimSpace(os.Getenv(EnvTimeout)), 64); err == nil && v > 0 {
 		c.Timeout = time.Duration(v * float64(time.Second))
@@ -111,7 +176,7 @@ func FromEnv() *Client {
 	return c
 }
 
-// Enabled reports whether a key and base URL are configured.
+// Enabled reports whether a key and base URL are configured (the base URL defaults to TypeSafe's).
 func (c *Client) Enabled() bool {
 	return c != nil && c.APIKey != "" && c.BaseURL != ""
 }
@@ -148,11 +213,29 @@ func (c *Client) Decide(ctx context.Context, site string, state any, questions [
 	llmroute.Book(family, usd)
 	llmroute.Record(llmroute.Sample{Family: family, Model: res.Model, Latency: latency, InputTokens: res.Usage.InputTokens, USD: usd})
 	slog.Info("jev: decided", "site", site, "model", res.Model, "latency_ms", latency.Milliseconds(), "input_tokens", res.Usage.InputTokens)
-	return res.Answers
+	return res.answers()
+}
+
+func (r *response) answers() Answers {
+	out := make(Answers, len(r.Answers))
+	for id, w := range r.Answers {
+		if a, ok := w.answer(); ok {
+			out[id] = a
+		}
+	}
+	return out
 }
 
 func (c *Client) post(ctx context.Context, state any, questions []Question) (*response, time.Duration, error) {
-	body, err := json.Marshal(request{State: state, Questions: questions})
+	wire := make(map[string]map[string]any, len(questions))
+	for _, q := range questions {
+		wire[q.ID] = wireQuestion(q)
+	}
+	model := c.Model
+	if model == "" {
+		model = DefaultModel
+	}
+	body, err := json.Marshal(request{State: state, Model: model, Questions: wire})
 	if err != nil {
 		return nil, 0, fmt.Errorf("encode: %w", err)
 	}
