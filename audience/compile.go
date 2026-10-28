@@ -25,20 +25,20 @@ func (b *builder) arg(v any) string {
 	return "$" + strconv.Itoa(b.first+len(b.args)-1)
 }
 
-func (d Definition) where(firstArg int) (string, []any, error) {
+func (d Definition) where(firstArg int) (sql string, args []any, err error) {
 	if firstArg < 1 {
 		return "", nil, errors.New("placeholders are numbered from 1")
 	}
-	if err := d.Validate(); err != nil {
-		return "", nil, err
+	if verr := d.Validate(); verr != nil {
+		return "", nil, verr
 	}
 	b := &builder{first: firstArg}
 	parts := make([]string, 0, len(d.All)+1)
 	parts = append(parts, realLearner)
 	for _, c := range d.All {
-		cond, err := c.compile()
-		if err != nil {
-			return "", nil, err
+		cond, cerr := c.compile()
+		if cerr != nil {
+			return "", nil, cerr
 		}
 		parts = append(parts, cond(b))
 	}
