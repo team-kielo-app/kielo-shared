@@ -387,3 +387,13 @@ func TestCatalog_ReturnsCopies(t *testing.T) {
 	assert.NotEqual(t, "changed", b[0].Ops[0].Label)
 	assert.NotEqual(t, "changed", b[0].Options[0].Label)
 }
+
+func TestCatalogListsAreNeverNullInJSON(t *testing.T) {
+	raw, err := json.Marshal(Catalog())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(raw), `"options":null`) || strings.Contains(string(raw), `"ops":null`) {
+		t.Fatalf("the admin editor reads options[0]; a null list crashed it: %s", raw)
+	}
+}

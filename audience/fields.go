@@ -69,7 +69,7 @@ var fieldDefs = map[string]fieldDef{
 		spec: FieldSpec{
 			Field: "signed_up", Label: "Signed up",
 			Help:  "When the learner created their account.",
-			Ops:   []OpSpec{{Op: "within_days", Label: "in the last (days)"}, {Op: "before_days", Label: "more than (days) ago"}},
+			Ops:   []OpSpec{{Op: "within_days", Label: "in the last"}, {Op: "before_days", Label: "longer ago than"}},
 			Value: ValueIntDays,
 		},
 		parse: parseSignedUp,
@@ -79,7 +79,7 @@ var fieldDefs = map[string]fieldDef{
 			Field: "last_active", Label: "Last active",
 			Help: "The last time the learner did something real in Kielo, such as reading, practising or talking to Juka. " +
 				"Learners who never did anything count as not active.",
-			Ops:   []OpSpec{{Op: "within_days", Label: "in the last (days)"}, {Op: "not_within_days", Label: "not in the last (days)"}},
+			Ops:   []OpSpec{{Op: "within_days", Label: "in the last"}, {Op: "not_within_days", Label: "not in the last"}},
 			Value: ValueIntDays,
 		},
 		parse: parseLastActive,
@@ -98,16 +98,16 @@ var fieldDefs = map[string]fieldDef{
 		spec: FieldSpec{
 			Field: "plus_ends", Label: "Plus ends",
 			Help:  "Learners whose Plus access runs out soon. Plus that never runs out is not included.",
-			Ops:   []OpSpec{{Op: "within_days", Label: "within the next (days)"}},
+			Ops:   []OpSpec{{Op: "within_days", Label: "within the next"}},
 			Value: ValueIntDays,
 		},
 		parse: parsePlusEnds,
 	},
 	"paywall_viewed": {
 		spec: FieldSpec{
-			Field: "paywall_viewed", Label: "Saw the paywall",
+			Field: "paywall_viewed", Label: "Saw the paywall without buying",
 			Help:  "Learners who opened the Plus screen in this time and have not bought Plus since.",
-			Ops:   []OpSpec{{Op: "within_days", Label: "in the last (days), and did not buy since"}},
+			Ops:   []OpSpec{{Op: "within_days", Label: "in the last"}},
 			Value: ValueIntDays,
 		},
 		parse: parsePaywallViewed,
@@ -116,7 +116,7 @@ var fieldDefs = map[string]fieldDef{
 		spec: FieldSpec{
 			Field: "used_feature", Label: "Used a feature",
 			Help:    "Learners who used this part of Kielo in this time.",
-			Ops:     []OpSpec{{Op: "within_days", Label: "in the last (days)"}},
+			Ops:     []OpSpec{{Op: "within_days", Label: "in the last"}},
 			Value:   ValueFeatureDays,
 			Options: featureOptions,
 		},
@@ -146,8 +146,8 @@ var fieldDefs = map[string]fieldDef{
 			Field: "campaign", Label: "Discount campaign",
 			Help: "Learners who were shown, or tapped, a discount campaign in this time.",
 			Ops: []OpSpec{
-				{Op: "shown_within_days", Label: "was shown it in the last (days)"},
-				{Op: "clicked_within_days", Label: "tapped it in the last (days)"},
+				{Op: "shown_within_days", Label: "was shown it in the last"},
+				{Op: "clicked_within_days", Label: "tapped it in the last"},
 			},
 			Value: ValueCampaignDays,
 		},

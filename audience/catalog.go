@@ -65,8 +65,8 @@ func Catalog() []FieldSpec {
 	specs := make([]FieldSpec, 0, len(fieldOrder))
 	for _, name := range fieldOrder {
 		s := fieldDefs[name].spec
-		s.Ops = append([]OpSpec(nil), s.Ops...)
-		s.Options = append([]Option(nil), s.Options...)
+		s.Ops = append([]OpSpec{}, s.Ops...)
+		s.Options = append([]Option{}, s.Options...)
 		specs = append(specs, s)
 	}
 	return specs
