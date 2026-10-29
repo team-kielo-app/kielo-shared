@@ -14072,6 +14072,11 @@ type SingletonWatchedVideosResponse struct {
 	Data WatchedVideosResponse `json:"data"`
 }
 
+// SingletonWebCampaignOffers defines model for SingletonWebCampaignOffers.
+type SingletonWebCampaignOffers struct {
+	Data WebCampaignOffers `json:"data"`
+}
+
 // SingletonWebCheckoutResponse defines model for SingletonWebCheckoutResponse.
 type SingletonWebCheckoutResponse struct {
 	Data WebCheckoutResponse `json:"data"`
@@ -16627,6 +16632,22 @@ type WatchedVideosResponse struct {
 	WatchedDetails []WatchedVideo `json:"watched_details"`
 }
 
+// WebCampaignOffer defines model for WebCampaignOffer.
+type WebCampaignOffer struct {
+	DiscountCode  string `json:"discount_code"`
+	DurationLabel string `json:"duration_label"`
+	PercentOff    int    `json:"percent_off"`
+	Plan          string `json:"plan"`
+}
+
+// WebCampaignOffers defines model for WebCampaignOffers.
+type WebCampaignOffers struct {
+	EndsAt *time.Time         `json:"ends_at"`
+	Kind   string             `json:"kind"`
+	Offers []WebCampaignOffer `json:"offers"`
+	Title  string             `json:"title"`
+}
+
 // WebCheckoutRequest defines model for WebCheckoutRequest.
 type WebCheckoutRequest struct {
 	Plan       *string `json:"plan,omitempty"`
@@ -19054,6 +19075,12 @@ type GetInternalAdminMediaStorageUntrackedParams struct {
 // GetQualityInternalAiModelsQualityGetParams defines parameters for GetQualityInternalAiModelsQualityGet.
 type GetQualityInternalAiModelsQualityGetParams struct {
 	Days *int `form:"days,omitempty" json:"days,omitempty"`
+}
+
+// GetInternalApiV3CampaignsCampaignIdWebOffersParams defines parameters for GetInternalApiV3CampaignsCampaignIdWebOffers.
+type GetInternalApiV3CampaignsCampaignIdWebOffersParams struct {
+	// Lang Page language code for the title
+	Lang *string `form:"lang,omitempty" json:"lang,omitempty"`
 }
 
 // GetInternalApiV3FeedbackParams defines parameters for GetInternalApiV3Feedback.
