@@ -19079,6 +19079,11 @@ type GetInternalAdminMediaStorageUntrackedParams struct {
 	Offset *int `form:"offset,omitempty" json:"offset,omitempty"`
 }
 
+// GetBuilderUseInternalAiModelsBuilderUseGetParams defines parameters for GetBuilderUseInternalAiModelsBuilderUseGet.
+type GetBuilderUseInternalAiModelsBuilderUseGetParams struct {
+	Days *int `form:"days,omitempty" json:"days,omitempty"`
+}
+
 // GetQualityInternalAiModelsQualityGetParams defines parameters for GetQualityInternalAiModelsQualityGet.
 type GetQualityInternalAiModelsQualityGetParams struct {
 	Days *int `form:"days,omitempty" json:"days,omitempty"`
