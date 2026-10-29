@@ -167,6 +167,14 @@ class ActiveCampaignOffer(BaseModel):
         None,
         description="iOS only. True when the campaign's paid intro offer for this plan is live in App Store Connect, so an intro-eligible learner gets the campaign price on the normal purchase.",
     )
+    offer_code: str | None = Field(
+        None,
+        description="iOS only. The App Store offer code that gives an Apple ID new to the subscription group this discount while the paid intro is held; redeemed through the App Store's offer-code sheet.",
+    )
+    offer_code_price: float | None = Field(
+        None,
+        description="iOS only. The offer code's price in the App Store storefront named by ?storefront= (ISO 3166 alpha-3), in that storefront's currency. Absent when the storefront is unknown.",
+    )
     percent_off: int
     periods: conint(ge=1) = Field(
         ...,

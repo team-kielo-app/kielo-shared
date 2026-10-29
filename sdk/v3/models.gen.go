@@ -987,8 +987,14 @@ type ActiveCampaignOffer struct {
 	DurationLabel string `json:"duration_label"`
 
 	// IntroLive iOS only. True when the campaign's paid intro offer for this plan is live in App Store Connect, so an intro-eligible learner gets the campaign price on the normal purchase.
-	IntroLive  *bool `json:"intro_live,omitempty"`
-	PercentOff int   `json:"percent_off"`
+	IntroLive *bool `json:"intro_live,omitempty"`
+
+	// OfferCode iOS only. The App Store offer code that gives an Apple ID new to the subscription group this discount while the paid intro is held; redeemed through the App Store's offer-code sheet.
+	OfferCode *string `json:"offer_code,omitempty"`
+
+	// OfferCodePrice iOS only. The offer code's price in the App Store storefront named by ?storefront= (ISO 3166 alpha-3), in that storefront's currency. Absent when the storefront is unknown.
+	OfferCodePrice *float32 `json:"offer_code_price,omitempty"`
+	PercentOff     int      `json:"percent_off"`
 
 	// Periods How many billing periods the discounted price lasts; the subscription then renews at the regular price.
 	Periods int    `json:"periods"`
