@@ -13,6 +13,13 @@ import (
 )
 
 const (
+	// StageNew and NewMaxDays mirror the engine's derive_stage
+	// (services/learner_profile.py): new is 0-7 whole days since joining.
+	StageNew   = "new"
+	NewMaxDays = 7
+)
+
+const (
 	SourceMeasured = "measured"
 	SourceStated   = "stated"
 	SourceDefault  = "default"
@@ -59,6 +66,9 @@ type Measured struct {
 	ComputedAt *time.Time
 	Stage      *string
 	StageSince *time.Time
+	// JoinedAt is COALESCE(onboarding_completed_at, created_at), the engine's
+	// stage anchor; it decides "new" while no fresh stage is stored.
+	JoinedAt *time.Time
 }
 
 var cefrToken = regexp.MustCompile(`[ABC][12]`)
@@ -94,9 +104,24 @@ func Choose(m Measured, stated string, now time.Time, rule Rule) Level {
 // old, else "".
 func Stage(m Measured, now time.Time, rule Rule) (stage string, since *time.Time) {
 	if m.Stage == nil || m.ComputedAt == nil || now.Sub(*m.ComputedAt) > rule.MaxAge {
+		// No fresh profile stage: a learner within the engine's new window
+		// (0-7 whole days since joining) is new. A learner who joined today
+		// had no profile yet and got the stretch mix new learners do not
+		// (tutor walk, 2026-10-29).
+		if m.JoinedAt != nil && wholeDays(now.Sub(*m.JoinedAt)) <= NewMaxDays {
+			return StageNew, m.JoinedAt
+		}
 		return "", nil
 	}
 	return strings.TrimSpace(*m.Stage), m.StageSince
+}
+
+// wholeDays floors a duration to whole days, as the engine's _whole_days does.
+func wholeDays(d time.Duration) int {
+	if d < 0 {
+		return 0
+	}
+	return int(d / (24 * time.Hour))
 }
 
 // Resolve is Choose and Stage together.
