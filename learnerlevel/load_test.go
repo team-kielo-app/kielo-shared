@@ -189,7 +189,7 @@ func TestLoadAgainstDatabase(t *testing.T) {
 	now := time.Now().UTC()
 	newUser := func(stated any) uuid.UUID {
 		id := uuid.New()
-		_, err := tx.Exec(ctx, `INSERT INTO users.users (id, email, learning_language, estimated_skill_level) VALUES ($1, $2, 'fi', $3)`,
+		_, err := tx.Exec(ctx, `INSERT INTO users.users (id, email, learning_language, estimated_skill_level, created_at) VALUES ($1, $2, 'fi', $3, now() - interval '30 days')`,
 			id.String(), "level-"+id.String()[:8]+"@example.test", stated)
 		require.NoError(t, err)
 		return id
