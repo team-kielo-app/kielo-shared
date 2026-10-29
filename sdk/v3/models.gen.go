@@ -992,6 +992,9 @@ type ActiveCampaignOffer struct {
 	// OfferCode iOS only. The App Store offer code that gives an Apple ID new to the subscription group this discount while the paid intro is held; redeemed through the App Store's offer-code sheet.
 	OfferCode *string `json:"offer_code,omitempty"`
 
+	// OfferCodeCurrency ISO 4217 currency of offer_code_price (the storefront's).
+	OfferCodeCurrency *string `json:"offer_code_currency,omitempty"`
+
 	// OfferCodePrice iOS only. The offer code's price in the App Store storefront named by ?storefront= (ISO 3166 alpha-3), in that storefront's currency. Absent when the storefront is unknown.
 	OfferCodePrice *float32 `json:"offer_code_price,omitempty"`
 	PercentOff     int      `json:"percent_off"`

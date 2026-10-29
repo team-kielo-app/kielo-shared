@@ -175,6 +175,9 @@ class ActiveCampaignOffer(BaseModel):
         None,
         description="iOS only. The offer code's price in the App Store storefront named by ?storefront= (ISO 3166 alpha-3), in that storefront's currency. Absent when the storefront is unknown.",
     )
+    offer_code_currency: str | None = Field(
+        None, description="ISO 4217 currency of offer_code_price (the storefront's)."
+    )
     percent_off: int
     periods: conint(ge=1) = Field(
         ...,
