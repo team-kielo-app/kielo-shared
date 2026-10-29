@@ -45,6 +45,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
+from kielo_shared.localization.budget import detach_budget
 from kielo_shared.localization.support_locale_overrides import (
     clear_overrides,
     consume_missing,
@@ -177,6 +178,7 @@ async def _run_autotranslate(
     surface as `Task exception was never retrieved` warnings and
     confuse debugging. Catch + log here so the task always terminates
     cleanly."""
+    detach_budget()
     try:
         await callback(missing, locale)
     except Exception:
