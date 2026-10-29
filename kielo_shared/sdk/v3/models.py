@@ -12313,6 +12313,11 @@ class RecapWeek(BaseModel):
         description="Minutes studied per local day, Monday first; always 7 entries",
         title="Daily Minutes",
     )
+    visit_only_days: list[bool] | None = Field(
+        None,
+        description="Per local day, Monday first, always 7 entries: the learner opened the app (a time_spent:visit credit, which keeps the streak) and did no practice, reading, video or Juka that day",
+        title="Visit Only Days",
+    )
     days_in_window: conint(ge=1, le=7) = Field(..., title="Days In Window")
     empty: bool | None = Field(True, title="Empty")
     end_date: str = Field(
@@ -12335,6 +12340,7 @@ class RecapWeekV3(BaseModel):
     active_dates: list[str]
     articles_read: int
     daily_minutes: list[int]
+    visit_only_days: list[bool] | None = None
     days_in_window: int
     empty: bool
     end_date: str

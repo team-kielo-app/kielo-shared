@@ -10269,8 +10269,11 @@ type RecapWeek struct {
 	PracticeDays *int           `json:"practice_days,omitempty"`
 
 	// StartDate Local Monday, YYYY-MM-DD
-	StartDate     string      `json:"start_date"`
-	VideosWatched *int        `json:"videos_watched,omitempty"`
+	StartDate     string `json:"start_date"`
+	VideosWatched *int   `json:"videos_watched,omitempty"`
+
+	// VisitOnlyDays Per local day, Monday first, always 7 entries: the learner opened the app (a time_spent:visit credit, which keeps the streak) and did no practice, reading, video or Juka that day
+	VisitOnlyDays *[]bool     `json:"visit_only_days,omitempty"`
 	Words         *RecapWords `json:"words,omitempty"`
 }
 
@@ -10290,6 +10293,7 @@ type RecapWeekV3 struct {
 	PracticeDays  int             `json:"practice_days"`
 	StartDate     string          `json:"start_date"`
 	VideosWatched int             `json:"videos_watched"`
+	VisitOnlyDays *[]bool         `json:"visit_only_days,omitempty"`
 	Words         RecapWordsV3    `json:"words"`
 }
 
