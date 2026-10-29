@@ -37,7 +37,8 @@ const statedLevelSQL = `COALESCE(
 const LoadSQL = `
 SELECT ids.id::text,
   ` + statedLevelSQL + `,
-  lp.cefr_estimate, lp.band_source, lp.band_confidence::float8, lp.computed_at, lp.stage, lp.stage_since
+  lp.cefr_estimate, lp.band_source, lp.band_confidence::float8, lp.computed_at, lp.stage, lp.stage_since,
+  COALESCE(u.onboarding_completed_at, u.created_at)
 FROM unnest($1::text[]) AS ids(id)
 LEFT JOIN users.users u ON u.id = ids.id::uuid
 LEFT JOIN klearn.learner_profiles lp
@@ -48,7 +49,8 @@ LEFT JOIN klearn.learner_profiles lp
 // cannot be read.
 const LoadStatedOnlySQL = `
 SELECT ids.id::text,
-  ` + statedLevelSQL + `
+  ` + statedLevelSQL + `,
+  COALESCE(u.onboarding_completed_at, u.created_at)
 FROM unnest($1::text[]) AS ids(id)
 LEFT JOIN users.users u ON u.id = ids.id::uuid`
 
@@ -135,6 +137,7 @@ func loadChunk(
 		if withMeasured {
 			dest = append(dest, &m.CEFR, &m.Source, &m.Confidence, &m.ComputedAt, &m.Stage, &m.StageSince)
 		}
+		dest = append(dest, &m.JoinedAt)
 		if err := rows.Scan(dest...); err != nil {
 			return fmt.Errorf("learnerlevel: scan: %w", err)
 		}

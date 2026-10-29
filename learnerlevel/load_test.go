@@ -88,9 +88,9 @@ func TestLoadResolvesEachUserAndDefaultsMissing(t *testing.T) {
 	fresh := loadNow.Add(-time.Hour)
 	q := &fakeQuerier{reply: func(_ string, _ []string) [][]any {
 		return [][]any{
-			{measured.String(), "B1", "A2", "measured", 0.8, fresh, "steady", fresh},
-			{statedOnly.String(), "B2", nil, nil, nil, nil, nil, nil},
-			{missing.String(), nil, nil, nil, nil, nil, nil, nil},
+			{measured.String(), "B1", "A2", "measured", 0.8, fresh, "steady", fresh, nil},
+			{statedOnly.String(), "B2", nil, nil, nil, nil, nil, nil, nil},
+			{missing.String(), nil, nil, nil, nil, nil, nil, nil, nil},
 		}
 	}}
 	got, err := Load(context.Background(), q, []uuid.UUID{measured, statedOnly, missing, measured}, "fi", loadNow, DefaultRule())
@@ -120,7 +120,7 @@ func TestLoadChunksOfOneThousand(t *testing.T) {
 	q := &fakeQuerier{reply: func(_ string, ids []string) [][]any {
 		rows := make([][]any, len(ids))
 		for i, id := range ids {
-			rows[i] = []any{id, "A2", nil, nil, nil, nil, nil, nil}
+			rows[i] = []any{id, "A2", nil, nil, nil, nil, nil, nil, nil}
 		}
 		return rows
 	}}
@@ -139,7 +139,7 @@ func TestLoadDegradesToStatedWhenProfilesUnreadable(t *testing.T) {
 			errs: []error{&pgconn.PgError{Code: code}},
 			reply: func(sql string, _ []string) [][]any {
 				assert.NotContains(t, sql, "learner_profiles")
-				return [][]any{{id.String(), "B1"}}
+				return [][]any{{id.String(), "B1", nil}}
 			},
 		}
 		got, err := Load(context.Background(), q, []uuid.UUID{id}, "fi", loadNow, DefaultRule())
@@ -189,7 +189,7 @@ func TestLoadAgainstDatabase(t *testing.T) {
 	now := time.Now().UTC()
 	newUser := func(stated any) uuid.UUID {
 		id := uuid.New()
-		_, err := tx.Exec(ctx, `INSERT INTO users.users (id, email, learning_language, estimated_skill_level) VALUES ($1, $2, 'fi', $3)`,
+		_, err := tx.Exec(ctx, `INSERT INTO users.users (id, email, learning_language, estimated_skill_level, created_at) VALUES ($1, $2, 'fi', $3, now() - interval '30 days')`,
 			id.String(), "level-"+id.String()[:8]+"@example.test", stated)
 		require.NoError(t, err)
 		return id
@@ -224,4 +224,25 @@ func TestLoadAgainstDatabase(t *testing.T) {
 	assert.Equal(t, Level{"B1", SourceStated}, got[otherLang].Level, "another language's profile is not used")
 	assert.Equal(t, Level{"A1", SourceDefault}, got[noLevel].Level)
 	assert.Equal(t, Level{"A1", SourceDefault}, got[missing].Level)
+}
+
+func TestStageIsNewForAJoinedLearnerWithoutAFreshProfile(t *testing.T) {
+	now := time.Date(2026, 10, 29, 6, 0, 0, 0, time.UTC)
+	today := now.Add(-2 * time.Hour)
+	stage, since := Stage(Measured{JoinedAt: &today}, now, DefaultRule())
+	assert.Equal(t, StageNew, stage)
+	assert.Equal(t, &today, since)
+
+	eight := now.Add(-8 * 24 * time.Hour)
+	stage, _ = Stage(Measured{JoinedAt: &eight}, now, DefaultRule())
+	assert.Equal(t, "", stage, "past the 7-day window with no profile stage stays unknown")
+
+	stale := now.Add(-48 * time.Hour)
+	stored := "forming"
+	stage, _ = Stage(Measured{Stage: &stored, ComputedAt: &stale, JoinedAt: &today}, now, DefaultRule())
+	assert.Equal(t, StageNew, stage, "a stale stored stage falls back to the joined rule")
+
+	fresh := now.Add(-time.Hour)
+	stage, _ = Stage(Measured{Stage: &stored, ComputedAt: &fresh, JoinedAt: &today}, now, DefaultRule())
+	assert.Equal(t, "forming", stage, "a fresh stored stage wins")
 }
