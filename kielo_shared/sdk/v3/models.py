@@ -10670,6 +10670,20 @@ class WatchedVideosResponse(BaseModel):
     watched_details: list[WatchedVideo]
 
 
+class WebCampaignOffer(BaseModel):
+    discount_code: str
+    duration_label: str
+    percent_off: int
+    plan: str
+
+
+class WebCampaignOffers(BaseModel):
+    ends_at: AwareDatetime
+    kind: str
+    offers: list[WebCampaignOffer]
+    title: str
+
+
 class WebCheckoutRequest(BaseModel):
     plan: str | None = None
     platform: str
@@ -13046,6 +13060,10 @@ class SingletonVideo(BaseModel):
 
 class SingletonWatchedVideosResponse(BaseModel):
     data: WatchedVideosResponse
+
+
+class SingletonWebCampaignOffers(BaseModel):
+    data: WebCampaignOffers
 
 
 class SingletonWebCheckoutResponse(BaseModel):
