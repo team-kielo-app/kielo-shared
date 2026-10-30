@@ -351,3 +351,31 @@ func TestACopyOlderThanMaxStaleIsNotServed(t *testing.T) {
 		t.Fatalf("a too-old copy must wait for the refresh, got %+v", got)
 	}
 }
+
+func TestAllowProvidersDecidesWhichRoutesAProcessServes(t *testing.T) {
+	saved := drivable
+	t.Cleanup(func() { drivable = saved })
+	drivable = map[string]familySet{ProviderOpenAI: {families: OpenAICapableFamilies}}
+
+	if CanDrive("scene_pack", ProviderAnthropic) {
+		t.Fatal("a process that declares nothing must not drive Claude")
+	}
+	AllowProviders([]string{ProviderAnthropic}, "scene_pack")
+	if !CanDrive("scene_pack", ProviderAnthropic) || CanDrive("juka_hints", ProviderAnthropic) {
+		t.Fatal("family-scoped allowance")
+	}
+	AllowProviders([]string{ProviderAnthropic})
+	if !CanDrive("juka_hints", ProviderAnthropic) {
+		t.Fatal("an allowance with no families covers every family")
+	}
+	AllowProviders([]string{ProviderAnthropic}, "x")
+	if !CanDrive("anything", ProviderAnthropic) {
+		t.Fatal("a later scoped allowance must not narrow an all-families one")
+	}
+	if !CanDrive(FamilyJukaLive, ProviderOpenAI) || CanDrive("scene_pack", ProviderOpenAI) {
+		t.Fatal("the OpenAI default stays the convo families")
+	}
+	if InferProvider("claude-haiku-5-5") != ProviderAnthropic {
+		t.Fatal("claude- prefix")
+	}
+}
