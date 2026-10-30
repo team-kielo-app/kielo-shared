@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/team-kielo-app/kielo-shared/observe"
@@ -60,18 +61,33 @@ func InternalAuthTransport(base http.RoundTripper, apiKey string) http.RoundTrip
 	return &internalAuthTransport{base: base, apiKey: apiKey}
 }
 
-// tunedTransport clones [http.DefaultTransport] and raises the idle-connection
-// pool limits. Go's default MaxIdleConnsPerHost is 2, which starves clients
-// that fan heavy concurrent traffic to a few hosts (e.g. a BFF talking to
-// user-service, content-service, the learning engine) — every request beyond
+var (
+	sharedTransportOnce sync.Once
+	sharedTransport     *http.Transport
+)
+
+// tunedTransport returns the one [http.Transport] behind every client built
+// here. It is a clone of [http.DefaultTransport] with the idle-connection pool
+// widened: Go's default MaxIdleConnsPerHost is 2, which starves clients that
+// fan heavy concurrent traffic to a few hosts (e.g. a BFF talking to
+// user-service, content-service, the learning engine), and every request beyond
 // the 2 idle conns/host opens a fresh connection and pays a full TLS handshake.
-// We keep the default dial/keep-alive/timeout behavior and only widen the pool.
+//
+// The clone is made once. A transport owns its connection pool, so a clone per
+// [NewClient] gave each of a service's ~25 feature clients its own pool to the
+// same few hosts: the same upstream was dialed and TLS-handshaken once per
+// client instead of once per process. Timeouts and redirect policy live on the
+// [http.Client], and trace and key headers on the wrapping round-trippers, so
+// sharing the pool changes none of them. Dial/keep-alive/timeout behavior and
+// HTTP/2 negotiation are the defaults'.
 func tunedTransport() *http.Transport {
-	tr := http.DefaultTransport.(*http.Transport).Clone()
-	tr.MaxIdleConns = 100
-	tr.MaxIdleConnsPerHost = 32
-	tr.IdleConnTimeout = 90 * time.Second
-	return tr
+	sharedTransportOnce.Do(func() {
+		sharedTransport = http.DefaultTransport.(*http.Transport).Clone()
+		sharedTransport.MaxIdleConns = 100
+		sharedTransport.MaxIdleConnsPerHost = 32
+		sharedTransport.IdleConnTimeout = 90 * time.Second
+	})
+	return sharedTransport
 }
 
 // NewClient returns an [*http.Client] with the given timeout and an outbound
