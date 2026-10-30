@@ -31,7 +31,11 @@ is canonical per ADR-006 §2.
 
 from __future__ import annotations
 
-from typing import Optional, Union
+import asyncio
+import os
+import threading
+import weakref
+from typing import Any, Optional, Union
 
 import httpx
 
@@ -55,6 +59,49 @@ _TimeoutLike = Union[float, httpx.Timeout]
 # uses a SEPARATE ``X-API-Key`` for its own admin secret; conflating
 # the two is the long-standing source of cross-service 401s.
 INTERNAL_API_KEY_HEADER = "X-Internal-API-Key"
+
+MAX_CONNECTIONS = 100
+MAX_KEEPALIVE_CONNECTIONS = 20
+KEEPALIVE_EXPIRY_SECONDS = 60.0
+HTTP2_DISABLED_ENV = "KIELO_HTTP_DISABLE_HTTP2"
+
+
+def connection_limits() -> httpx.Limits:
+    """Pool limits for every client this module builds.
+
+    httpx drops an idle connection after 5 s by default, which is shorter than
+    the gap between two calls on a lightly loaded instance, so every call paid
+    a fresh TCP + TLS handshake. 60 s keeps the connection warm across those
+    gaps; httpcore still discards a connection the peer has already closed.
+    """
+    return httpx.Limits(
+        max_connections=MAX_CONNECTIONS,
+        max_keepalive_connections=MAX_KEEPALIVE_CONNECTIONS,
+        keepalive_expiry=KEEPALIVE_EXPIRY_SECONDS,
+    )
+
+
+def http2_enabled() -> bool:
+    """Whether new clients offer HTTP/2 (ALPN ``h2``, falling back to HTTP/1.1).
+
+    Off when the ``h2`` package is not installed (a consumer that did not add
+    ``httpx[http2]``) or when ``KIELO_HTTP_DISABLE_HTTP2`` is set, so a bad h2
+    interaction can be switched off without a code change. A server that does
+    not select ``h2`` during the TLS handshake is served over HTTP/1.1 by httpx
+    itself; plain ``http://`` URLs always use HTTP/1.1.
+    """
+    if os.environ.get(HTTP2_DISABLED_ENV, "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }:
+        return False
+    try:
+        import h2  # noqa: F401
+    except ImportError:
+        return False
+    return True
 
 
 def internal_headers(
@@ -107,6 +154,33 @@ def _canonical_case(header_name: str) -> str:
     return "-".join(part.capitalize() for part in header_name.split("-"))
 
 
+def _client_kwargs(
+    *,
+    base_url: str,
+    api_key: Optional[str],
+    timeout: _TimeoutLike,
+    headers: Optional[dict[str, str]],
+    transport: Any,
+    follow_redirects: bool,
+    sync: bool,
+) -> dict[str, Any]:
+    default_headers: dict[str, str] = {}
+    if api_key:
+        default_headers[INTERNAL_API_KEY_HEADER] = api_key
+    if headers:
+        default_headers.update(headers)
+    return {
+        "base_url": base_url,
+        "timeout": timeout,
+        "headers": default_headers,
+        "transport": transport,
+        "follow_redirects": follow_redirects,
+        "limits": connection_limits(),
+        "http2": http2_enabled(),
+        "event_hooks": {"request": _request_hooks_for(api_key, sync=sync)},
+    }
+
+
 def internal_client_async(
     *,
     base_url: str = "",
@@ -143,19 +217,16 @@ def internal_client_async(
     ``headers`` is merged into the default header set; pass ``None`` to
     use only the canonical defaults.
     """
-    default_headers: dict[str, str] = {}
-    if api_key:
-        default_headers[INTERNAL_API_KEY_HEADER] = api_key
-    if headers:
-        default_headers.update(headers)
-
     return httpx.AsyncClient(
-        base_url=base_url,
-        timeout=timeout,
-        headers=default_headers,
-        transport=transport,
-        follow_redirects=follow_redirects,
-        event_hooks={"request": _request_hooks_for(api_key, sync=False)},
+        **_client_kwargs(
+            base_url=base_url,
+            api_key=api_key,
+            timeout=timeout,
+            headers=headers,
+            transport=transport,
+            follow_redirects=follow_redirects,
+            sync=False,
+        )
     )
 
 
@@ -212,25 +283,186 @@ def internal_client_sync(
     for callers stuck in a sync code path (CLI tools, legacy worker
     threads).
     """
-    default_headers: dict[str, str] = {}
-    if api_key:
-        default_headers[INTERNAL_API_KEY_HEADER] = api_key
-    if headers:
-        default_headers.update(headers)
-
     return httpx.Client(
-        base_url=base_url,
-        timeout=timeout,
-        headers=default_headers,
-        transport=transport,
-        follow_redirects=follow_redirects,
-        event_hooks={"request": _request_hooks_for(api_key, sync=True)},
+        **_client_kwargs(
+            base_url=base_url,
+            api_key=api_key,
+            timeout=timeout,
+            headers=headers,
+            transport=transport,
+            follow_redirects=follow_redirects,
+            sync=True,
+        )
     )
+
+
+class _SharedAsyncClient(httpx.AsyncClient):
+    async def __aenter__(self) -> "_SharedAsyncClient":
+        return self
+
+    async def __aexit__(self, *_exc: Any) -> None:
+        return None
+
+    async def aclose(self) -> None:
+        return None
+
+    async def _close_pool(self) -> None:
+        await super().aclose()
+
+
+class _SharedSyncClient(httpx.Client):
+    def __enter__(self) -> "_SharedSyncClient":
+        return self
+
+    def __exit__(self, *_exc: Any) -> None:
+        return None
+
+    def close(self) -> None:
+        return None
+
+    def _close_pool(self) -> None:
+        super().close()
+
+
+_shared_lock = threading.Lock()
+_shared_async: weakref.WeakKeyDictionary[
+    asyncio.AbstractEventLoop, dict[tuple[Any, ...], _SharedAsyncClient]
+] = weakref.WeakKeyDictionary()
+_shared_sync: dict[tuple[Any, ...], _SharedSyncClient] = {}
+
+
+def _shared_key(
+    base_url: str,
+    api_key: Optional[str],
+    timeout: _TimeoutLike,
+    headers: Optional[dict[str, str]],
+    follow_redirects: bool,
+) -> tuple[Any, ...]:
+    return (
+        base_url,
+        api_key or "",
+        repr(timeout),
+        tuple(sorted((headers or {}).items())),
+        follow_redirects,
+    )
+
+
+def shared_internal_client_async(
+    *,
+    base_url: str = "",
+    api_key: Optional[str] = None,
+    timeout: _TimeoutLike = 10.0,
+    headers: Optional[dict[str, str]] = None,
+    follow_redirects: bool = False,
+) -> httpx.AsyncClient:
+    """Return the long-lived client for this event loop and configuration.
+
+    Same hook chain, headers and limits as :func:`internal_client_async`, but
+    the client is built once per (running loop, ``base_url``, ``api_key``,
+    ``timeout``, ``headers``, ``follow_redirects``) and handed to every caller,
+    so the TCP/TLS connection (one multiplexed connection under HTTP/2) is
+    reused across calls instead of re-opened.
+
+    ``aclose()`` and ``async with`` on the returned client are no-ops, so a
+    caller that was written for a private client cannot close the pool under
+    its neighbours; :func:`aclose_shared_internal_clients` closes the real pool
+    at shutdown. Call it from a running loop: httpx binds a connection to the
+    loop that opened it. Without a running loop the result is a private client,
+    exactly what :func:`internal_client_async` returns.
+    """
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        return internal_client_async(
+            base_url=base_url,
+            api_key=api_key,
+            timeout=timeout,
+            headers=headers,
+            follow_redirects=follow_redirects,
+        )
+
+    key = _shared_key(base_url, api_key, timeout, headers, follow_redirects)
+    with _shared_lock:
+        clients = _shared_async.setdefault(loop, {})
+        client = clients.get(key)
+        if client is None or client.is_closed:
+            client = _SharedAsyncClient(
+                **_client_kwargs(
+                    base_url=base_url,
+                    api_key=api_key,
+                    timeout=timeout,
+                    headers=headers,
+                    transport=None,
+                    follow_redirects=follow_redirects,
+                    sync=False,
+                )
+            )
+            clients[key] = client
+        return client
+
+
+def shared_internal_client_sync(
+    *,
+    base_url: str = "",
+    api_key: Optional[str] = None,
+    timeout: _TimeoutLike = 10.0,
+    headers: Optional[dict[str, str]] = None,
+    follow_redirects: bool = False,
+) -> httpx.Client:
+    """Sync sibling of :func:`shared_internal_client_async`, one per process.
+
+    ``httpx.Client`` is thread-safe, so the key carries no loop. ``close()`` and
+    ``with`` are no-ops; :func:`close_shared_internal_clients` closes the pool.
+    """
+    key = _shared_key(base_url, api_key, timeout, headers, follow_redirects)
+    with _shared_lock:
+        client = _shared_sync.get(key)
+        if client is None or client.is_closed:
+            client = _SharedSyncClient(
+                **_client_kwargs(
+                    base_url=base_url,
+                    api_key=api_key,
+                    timeout=timeout,
+                    headers=headers,
+                    transport=None,
+                    follow_redirects=follow_redirects,
+                    sync=True,
+                )
+            )
+            _shared_sync[key] = client
+        return client
+
+
+async def aclose_shared_internal_clients() -> None:
+    """Close the running loop's shared async clients (engine/worker shutdown)."""
+    loop = asyncio.get_running_loop()
+    with _shared_lock:
+        clients = _shared_async.pop(loop, {})
+    for client in clients.values():
+        await client._close_pool()
+
+
+def close_shared_internal_clients() -> None:
+    """Close every shared sync client."""
+    with _shared_lock:
+        clients = list(_shared_sync.values())
+        _shared_sync.clear()
+    for client in clients:
+        client._close_pool()
 
 
 __all__ = [
     "INTERNAL_API_KEY_HEADER",
-    "internal_headers",
+    "KEEPALIVE_EXPIRY_SECONDS",
+    "MAX_CONNECTIONS",
+    "MAX_KEEPALIVE_CONNECTIONS",
+    "aclose_shared_internal_clients",
+    "close_shared_internal_clients",
+    "connection_limits",
+    "http2_enabled",
     "internal_client_async",
     "internal_client_sync",
+    "internal_headers",
+    "shared_internal_client_async",
+    "shared_internal_client_sync",
 ]

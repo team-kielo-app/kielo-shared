@@ -13,6 +13,9 @@ dependencies = [
     "httpx>=0.24",
 ]
 
+[project.optional-dependencies]
+http2 = ["httpx[http2]>=0.24"]
+
 [tool.deptry]
 
 [tool.deptry.per_rule_ignores]
@@ -33,6 +36,7 @@ DEP001 = [
     "asyncpg",
     "fastapi",
     "google",
+    "h2",
     "imageio_ffmpeg",
     "livekit",
     "prometheus_client",
@@ -60,6 +64,8 @@ module = [
     "certifi",
     "fastapi.*",
     "google.*",
+    "h2",
+    "h2.*",
     "httpx",
     "httpx.*",
     "imageio_ffmpeg",
