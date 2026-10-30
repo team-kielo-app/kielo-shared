@@ -473,3 +473,49 @@ def test_estimate_prices_the_failover_model_without_the_store():
     assert llmroute.model_price("gpt-6-luna") == (0.10, 0.50)
     usd = llmroute.estimate_usd("gpt-6-luna", 1_000_000, 1_000_000)
     assert usd == pytest.approx(0.60)
+
+
+def _claude_store():
+    routes = {
+        "items": [
+            {"family": "scene_pack", "model": "claude-haiku-5-5", "thinking_budget": -1},
+            {"family": "juka_hints", "model": "claude-haiku-5-5", "thinking_budget": -1},
+        ]
+    }
+    models = {
+        "items": [
+            {"model": "claude-haiku-5-5", "provider": "anthropic", "input_usd_per_mtok": 0.1, "output_usd_per_mtok": 0.5},
+        ]
+    }
+    return _fake_store(routes, models)
+
+
+def test_a_process_that_declares_no_provider_refuses_a_claude_route(monkeypatch):
+    monkeypatch.setattr(llmroute, "_DRIVABLE", dict(llmroute._DRIVABLE))
+    monkeypatch.setattr(httpx, "get", _claude_store())
+    client = llmroute.RouteClient("http://loc")
+    assert client.resolve("scene_pack", "gemini-default").model == "gemini-default"
+
+
+def test_a_process_that_drives_claude_for_every_family_serves_the_route(monkeypatch):
+    monkeypatch.setattr(llmroute, "_DRIVABLE", dict(llmroute._DRIVABLE))
+    llmroute.allow_providers({"anthropic", "openai"})
+    monkeypatch.setattr(httpx, "get", _claude_store())
+    client = llmroute.RouteClient("http://loc")
+    got = client.resolve("scene_pack", "gemini-default")
+    assert (got.model, got.provider) == ("claude-haiku-5-5", "anthropic")
+    assert llmroute.can_drive("exercise_judge", "openai")
+
+
+def test_a_provider_allowed_for_some_families_stays_refused_for_the_rest(monkeypatch):
+    monkeypatch.setattr(llmroute, "_DRIVABLE", dict(llmroute._DRIVABLE))
+    llmroute.allow_providers({"anthropic"}, families={"scene_pack"})
+    monkeypatch.setattr(httpx, "get", _claude_store())
+    client = llmroute.RouteClient("http://loc")
+    assert client.resolve("scene_pack", "gemini-default").model == "claude-haiku-5-5"
+    assert client.resolve("juka_hints", "gemini-default").model == "gemini-default"
+    assert llmroute.can_drive("juka_live", "openai") and not llmroute.can_drive("scene_pack", "openai")
+
+
+def test_claude_models_are_inferred_as_anthropic():
+    assert llmroute.infer_provider("claude-haiku-5-5") == "anthropic"

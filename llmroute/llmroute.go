@@ -50,10 +50,11 @@ const (
 	routesPath = "/internal/api/v3/localization/llm-routes"
 	modelsPath = "/internal/api/v3/localization/llm-models"
 
-	ProviderGoogle = "google"
-	ProviderOpenAI = "openai"
-	fetchTimeout   = 2 * time.Second
-	maxResponseLen = 1 << 20
+	ProviderGoogle    = "google"
+	ProviderOpenAI    = "openai"
+	ProviderAnthropic = "anthropic"
+	fetchTimeout      = 2 * time.Second
+	maxResponseLen    = 1 << 20
 )
 
 // Route is what a family resolves to.
@@ -72,6 +73,7 @@ type Route struct {
 var providerByPrefix = []struct{ prefix, provider string }{
 	{"gemini-", ProviderGoogle},
 	{"gpt-", ProviderOpenAI},
+	{"claude-", ProviderAnthropic},
 }
 
 // InferProvider names the provider from the model name alone, "" when unknown.
@@ -105,16 +107,61 @@ type row struct {
 }
 
 // OpenAICapableFamilies are the families whose call sites can drive an OpenAI
-// model (the convo agent's routed_llm and LiveKit builder). Every other family
-// (the engine's Gemini client, ingest, the Go Gemini seam, KTV, hints,
-// translation, scenario authoring) can only drive Gemini, so a new family is
-// Gemini-only by default: a route naming another provider for it is refused and
-// the caller's compiled default runs, logged once.
+// model in a process that declares nothing (the convo agent's routed_llm and
+// LiveKit builder). Every process can drive Gemini; one whose call sites can
+// drive more declares it with AllowProviders. A route naming a provider the
+// process cannot drive is refused and the caller's compiled default runs,
+// logged once.
 var OpenAICapableFamilies = map[string]bool{
 	FamilyJukaLive:         true,
 	FamilyJukaLiveFailover: true,
 	FamilyJukaFeedback:     true,
 	FamilyJukaStepCheck:    true,
+}
+
+// familySet is the families a provider can be driven for; all covers every family.
+type familySet struct {
+	all      bool
+	families map[string]bool
+}
+
+var (
+	drivableMu sync.RWMutex
+	drivable   = map[string]familySet{ProviderOpenAI: {families: OpenAICapableFamilies}}
+)
+
+// AllowProviders declares that this process's call sites can drive the
+// providers, for the given families or, with none, for every family. Call it at
+// start-up.
+func AllowProviders(providers []string, families ...string) {
+	drivableMu.Lock()
+	defer drivableMu.Unlock()
+	for _, p := range providers {
+		current := drivable[p]
+		if len(families) == 0 || current.all {
+			drivable[p] = familySet{all: true}
+			continue
+		}
+		next := map[string]bool{}
+		for f := range current.families {
+			next[f] = true
+		}
+		for _, f := range families {
+			next[f] = true
+		}
+		drivable[p] = familySet{families: next}
+	}
+}
+
+// CanDrive reports whether this process can drive the provider for the family.
+func CanDrive(family, provider string) bool {
+	if provider == ProviderGoogle {
+		return true
+	}
+	drivableMu.RLock()
+	defer drivableMu.RUnlock()
+	set := drivable[provider]
+	return set.all || set.families[family]
 }
 
 // maxStale bounds how long a stale copy keeps answering while a refresh runs;
@@ -219,9 +266,9 @@ func (c *Client) servable(family string, r Route) (Route, bool) {
 		c.warnOnce("inferred|"+r.Model, "LLM_ROUTE llm_models never loaded; provider inferred",
 			"model", r.Model, "provider", provider)
 	}
-	if !OpenAICapableFamilies[family] && provider != ProviderGoogle {
+	if !CanDrive(family, provider) {
 		c.warnOnce("provider|"+family+"|"+r.Model,
-			"LLM_ROUTE family can only drive Gemini; route refused, using the compiled default",
+			"LLM_ROUTE family cannot drive this provider here; route refused, using the compiled default",
 			"family", family, "model", r.Model, "provider", provider)
 		return r, false
 	}
