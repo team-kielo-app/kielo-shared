@@ -3,9 +3,11 @@ package llm
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -169,5 +171,73 @@ func TestRoutingRecordsTheErrorOutcome(t *testing.T) {
 		}
 	case <-time.After(2 * time.Second):
 		t.Fatal("usage rollup was not flushed")
+	}
+}
+
+type usageLineSink struct {
+	mu    sync.Mutex
+	lines []string
+}
+
+func (u *usageLineSink) Enabled(context.Context, slog.Level) bool { return true }
+func (u *usageLineSink) Handle(_ context.Context, r slog.Record) error {
+	if strings.HasPrefix(r.Message, "LLM_USAGE ") {
+		u.mu.Lock()
+		u.lines = append(u.lines, r.Message)
+		u.mu.Unlock()
+	}
+	return nil
+}
+func (u *usageLineSink) WithAttrs([]slog.Attr) slog.Handler { return u }
+func (u *usageLineSink) WithGroup(string) slog.Handler      { return u }
+
+func captureUsageLines(t *testing.T) func() []string {
+	t.Helper()
+	sink := &usageLineSink{}
+	prev := slog.Default()
+	slog.SetDefault(slog.New(sink))
+	t.Cleanup(func() { slog.SetDefault(prev) })
+	return func() []string {
+		sink.mu.Lock()
+		defer sink.mu.Unlock()
+		return append([]string(nil), sink.lines...)
+	}
+}
+
+func TestRoutingLogsOneUsageLineNamingTaskRequestedAndEffectiveModel(t *testing.T) {
+	srv := canaryStore(`{"items":[{"family":"refused_family","model":"claude-haiku-5-5","thinking_budget":-1},` +
+		`{"family":"served_family","model":"gemini-3.8-flash","thinking_budget":-1}]}`)
+	defer srv.Close()
+	llmroute.Configure("svc", srv.URL, "")
+	t.Cleanup(func() { llmroute.Configure("", "", "") })
+	lines := captureUsageLines(t)
+	p := WithRouting(&fakeProvider{})
+	if _, err := p.Generate(context.Background(), Request{Prompt: "x", Task: "scene_practice_pack", Model: "gemini-default", Family: "refused_family"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := p.Generate(context.Background(), Request{Prompt: "x", Task: "judge", Model: "d", Family: "served_family"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := WithRouting(failingProvider{}).Generate(context.Background(), Request{Prompt: "x", Model: "gemini-default", Family: "served_family"}); err == nil {
+		t.Fatal("the provider error must come back")
+	}
+	got := lines()
+	if len(got) != 3 {
+		t.Fatalf("want one line per call, got %d: %v", len(got), got)
+	}
+	for i, want := range []string{
+		"LLM_USAGE task=scene_practice_pack service=svc family=refused_family provider=google model=gemini-default " +
+			"requested=claude-haiku-5-5 variant=route in=1000 out=500 thinking=500 usd=",
+		"LLM_USAGE task=judge service=svc family=served_family provider=google model=gemini-3.8-flash " +
+			"requested=gemini-3.8-flash variant=route in=1000 out=500 thinking=500 usd=",
+		"LLM_USAGE task=served_family service=svc family=served_family provider=google model=gemini-3.8-flash " +
+			"requested=gemini-3.8-flash variant=route in=0 out=0 thinking=0 usd=0.000000 latency_ms=",
+	} {
+		if !strings.HasPrefix(got[i], want) {
+			t.Fatalf("line %d = %q, want prefix %q", i, got[i], want)
+		}
+	}
+	if !strings.HasSuffix(got[0], "outcome=ok fallback=1") || !strings.HasSuffix(got[2], "outcome=error fallback=0") {
+		t.Fatalf("outcome and fallback: %q / %q", got[0], got[2])
 	}
 }

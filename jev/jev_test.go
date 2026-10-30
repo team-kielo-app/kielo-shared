@@ -3,8 +3,11 @@ package jev
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -188,5 +191,63 @@ func TestFake(t *testing.T) {
 	got := f.Decide(context.Background(), "s", "t", append(qs, Question{ID: "other"}))
 	if len(got) != 1 || *got["ok"].Confidence != 0.9 || f.Calls != 1 {
 		t.Fatalf("got %v", got)
+	}
+}
+
+type usageSink struct {
+	mu    sync.Mutex
+	lines []string
+}
+
+func (u *usageSink) Enabled(context.Context, slog.Level) bool { return true }
+func (u *usageSink) Handle(_ context.Context, r slog.Record) error {
+	if strings.HasPrefix(r.Message, "LLM_USAGE ") {
+		u.mu.Lock()
+		u.lines = append(u.lines, r.Message)
+		u.mu.Unlock()
+	}
+	return nil
+}
+func (u *usageSink) WithAttrs([]slog.Attr) slog.Handler { return u }
+func (u *usageSink) WithGroup(string) slog.Handler      { return u }
+
+func TestEveryJevCallLogsOneUsageLineWithProviderAndOutcome(t *testing.T) {
+	llmroute.ResetSpend()
+	sink := &usageSink{}
+	prev := slog.Default()
+	slog.SetDefault(slog.New(sink))
+	t.Cleanup(func() { slog.SetDefault(prev) })
+
+	ok := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"model":"jev-1.14.0","usage":{"input_tokens":1000},"answers":{"ok":{"type":"noul","noul":0.9}}}`))
+	}))
+	defer ok.Close()
+	down := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusInternalServerError) }))
+	defer down.Close()
+
+	good := client(ok.URL)
+	good.Model = DefaultModel
+	if got := good.Decide(context.Background(), "exercise_publish", "text", qs); got == nil {
+		t.Fatal("the happy path must answer")
+	}
+	if got := client(down.URL).Decide(context.Background(), "exercise_publish", "text", qs); got != nil {
+		t.Fatalf("want nil, got %v", got)
+	}
+
+	sink.mu.Lock()
+	defer sink.mu.Unlock()
+	if len(sink.lines) != 2 {
+		t.Fatalf("want a line for the answer and one for the failure, got %v", sink.lines)
+	}
+	for i, want := range []string{
+		"family=jev_exercise_publish provider=typesafe model=jev-1.14.0 requested=jev-1.14.0 variant=route in=1000 out=0 thinking=0 usd=0.002000 ",
+		"family=jev_exercise_publish provider=typesafe model=jev-1.14.0 requested=jev-1.14.0 variant=route in=0 out=0 thinking=0 usd=0.000000 ",
+	} {
+		if !strings.Contains(sink.lines[i], want) {
+			t.Fatalf("line %d = %q lacks %q", i, sink.lines[i], want)
+		}
+	}
+	if !strings.HasSuffix(sink.lines[0], "outcome=ok fallback=0") || !strings.HasSuffix(sink.lines[1], "outcome=error fallback=0") {
+		t.Fatalf("outcomes: %q / %q", sink.lines[0], sink.lines[1])
 	}
 }

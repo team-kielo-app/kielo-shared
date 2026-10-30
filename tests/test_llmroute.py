@@ -933,10 +933,18 @@ def test_a_served_route_is_not_a_fallback(monkeypatch, drives_claude):
         llmroute.set_client_for_test(None)
 
 
-# ---- the LLM_CALL line --------------------------------------------------
+# ---- the LLM_USAGE line -------------------------------------------------
 
 
-def test_every_call_logs_one_llm_call_line(monkeypatch, caplog, drives_claude):
+def _usage_lines(caplog):
+    return [
+        r.getMessage()
+        for r in caplog.records
+        if r.getMessage().startswith("LLM_USAGE ")
+    ]
+
+
+def test_every_call_logs_one_llm_usage_line(monkeypatch, caplog, drives_claude):
     client = _canary_client(monkeypatch, share=100)
     monkeypatch.setattr(llmroute, "_service", "kielolearn-engine")
     llmroute.set_client_for_test(client, None)
@@ -951,21 +959,56 @@ def test_every_call_logs_one_llm_call_line(monkeypatch, caplog, drives_claude):
                 thinking_tokens=7,
                 usd=0.00123456,
                 latency_ms=842.9,
+                task="scene_practice_pack",
             )
-        lines = [
-            r.getMessage()
-            for r in caplog.records
-            if r.getMessage().startswith("LLM_CALL ")
-        ]
-        assert lines == [
-            "LLM_CALL service=kielolearn-engine family=scene_pack model=claude-haiku-5-5 provider=anthropic "
-            "variant=candidate in=120 out=45 thinking=7 usd=0.001235 latency_ms=842 outcome=ok fallback=0"
+        assert _usage_lines(caplog) == [
+            (
+                "LLM_USAGE task=scene_practice_pack service=kielolearn-engine family=scene_pack "
+                "provider=anthropic model=claude-haiku-5-5 requested=claude-haiku-5-5 variant=candidate "
+                "in=120 out=45 thinking=7 usd=0.001235 latency_ms=842 outcome=ok fallback=0"
+            )
         ]
     finally:
         llmroute.set_client_for_test(None)
 
 
-def test_the_llm_call_line_names_errors_fallbacks_and_unknowns(monkeypatch, caplog):
+def test_the_task_defaults_to_the_family_and_the_line_needs_no_store(
+    monkeypatch, caplog
+):
+    monkeypatch.setattr(llmroute, "_service", "kielo-cms")
+    llmroute.set_client_for_test(None)
+    with caplog.at_level("INFO", logger="kielo_shared.llmroute"):
+        llmroute.record_call("exercise_judge", "gemini-3.8-flash", usd=0.5)
+    assert _usage_lines(caplog) == [
+        (
+            "LLM_USAGE task=exercise_judge service=kielo-cms family=exercise_judge "
+            "provider=google model=gemini-3.8-flash requested=gemini-3.8-flash variant=route "
+            "in=0 out=0 thinking=0 usd=0.500000 latency_ms=0 outcome=ok fallback=0"
+        )
+    ]
+
+
+def test_the_usage_line_keeps_the_contract_the_log_consumers_parse(
+    monkeypatch, caplog
+):
+    import re
+
+    monkeypatch.setattr(llmroute, "_service", "svc")
+    llmroute.set_client_for_test(None)
+    with caplog.at_level("INFO", logger="kielo_shared.llmroute"):
+        llmroute.record_call(
+            "f", "gemini-3.8-flash", input_tokens=3, output_tokens=4, usd=0.25
+        )
+    (line,) = _usage_lines(caplog)
+    assert line.startswith("LLM_USAGE task=")
+    tally = re.compile(r"LLM_USAGE .*?in=(\d+) out=(\d+) thinking=(\d+) usd=([\d.]+)")
+    assert tally.search(line).groups() == ("3", "4", "0", "0.250000")
+    # The llm_calls metric's label extractors.
+    assert re.search(r"task=([^ ]+)", line).group(1) == "f"
+    assert re.search(r"model=([^ ]+)", line).group(1) == "gemini-3.8-flash"
+
+
+def test_the_llm_usage_line_names_errors_fallbacks_and_unknowns(monkeypatch, caplog):
     monkeypatch.setattr(llmroute, "_service", "")
     llmroute.set_client_for_test(None)
     with caplog.at_level("INFO", logger="kielo_shared.llmroute"):
@@ -973,17 +1016,132 @@ def test_the_llm_call_line_names_errors_fallbacks_and_unknowns(monkeypatch, capl
         llmroute.record_call(
             "f", "gpt-6-luna", outcome="invalid_output", variant="candidate"
         )
-    lines = [
-        r.getMessage() for r in caplog.records if r.getMessage().startswith("LLM_CALL ")
-    ]
+    lines = _usage_lines(caplog)
     assert lines[0] == (
-        "LLM_CALL service=- family=- model=weird_model provider=- variant=route in=0 out=0 thinking=0 "
-        "usd=0.000000 latency_ms=0 outcome=error fallback=1"
+        "LLM_USAGE task=- service=- family=- provider=- model=weird_model requested=weird_model "
+        "variant=route in=0 out=0 thinking=0 usd=0.000000 latency_ms=0 outcome=error fallback=1"
     )
     assert (
-        "provider=openai variant=candidate" in lines[1]
+        "provider=openai model=gpt-6-luna requested=gpt-6-luna variant=candidate" in lines[1]
         and "outcome=invalid_output fallback=0" in lines[1]
     )
+
+
+def test_a_refused_route_logs_what_was_asked_for_and_what_ran(
+    monkeypatch, caplog
+):
+    monkeypatch.setattr(llmroute, "_DRIVABLE", dict(llmroute._DRIVABLE))
+    monkeypatch.setattr(httpx, "get", _claude_store())
+    client = llmroute.RouteClient("http://loc")
+    monkeypatch.setattr(llmroute, "_service", "svc")
+    llmroute.set_client_for_test(client, None)
+    try:
+        client.resolve("scene_pack", "gemini-default")
+        with caplog.at_level("INFO", logger="kielo_shared.llmroute"):
+            llmroute.record_call("scene_pack", "gemini-default", task="scene_practice_pack")
+            llmroute.record_call("scene_pack", "gemini-default", requested="claude-explicit")
+        first, second = _usage_lines(caplog)
+        assert "model=gemini-default requested=claude-haiku-5-5 variant=route" in first
+        assert first.endswith("outcome=ok fallback=1")
+        assert "model=gemini-default requested=claude-explicit " in second
+    finally:
+        llmroute.set_client_for_test(None)
+
+
+def test_each_call_logs_exactly_one_usage_line_with_or_without_a_recorder(
+    monkeypatch, caplog
+):
+    llmroute.set_client_for_test(None, _recorder(monkeypatch))
+    try:
+        with caplog.at_level("INFO", logger="kielo_shared.llmroute"):
+            llmroute.record_call("f", "gemini-3.8-flash")
+            llmroute.record_call("f", "gemini-3.8-flash", error=True)
+        assert len(_usage_lines(caplog)) == 2
+        assert not [
+            r for r in caplog.records if r.getMessage().startswith("LLM_CALL ")
+        ]
+    finally:
+        llmroute.set_client_for_test(None)
+
+
+# ---- flush on shutdown --------------------------------------------------
+
+
+def test_flush_sends_the_pending_rollup_now(monkeypatch):
+    posted = []
+
+    def fake_post(url, json=None, headers=None, timeout=None):
+        posted.append((url, json, headers))
+        return _Resp({})
+
+    monkeypatch.setattr(httpx, "post", fake_post)
+    llmroute.set_client_for_test(None, _recorder(monkeypatch))
+    try:
+        llmroute.record_call("f", "m", usd=0.1, latency_ms=12)
+        llmroute.record_outcome("f", "m", True)
+        assert llmroute.flush() is True
+        (url, body, headers) = posted[0]
+        assert url == "http://loc/internal/api/v3/localization/llm-usage"
+        assert headers == {"X-Internal-API-Key": "k"}
+        (row,) = body["rows"]
+        assert (row["family"], row["model"], row["calls"], row["accepted"]) == (
+            "f",
+            "m",
+            1,
+            1,
+        )
+        assert llmroute.flush() is True  # nothing left: no second post
+        assert len(posted) == 1
+    finally:
+        llmroute.set_client_for_test(None)
+
+
+def test_flush_is_a_no_op_without_a_recorder_or_a_store(monkeypatch):
+    def boom(*a, **kw):
+        raise AssertionError("must not post")
+
+    monkeypatch.setattr(httpx, "post", boom)
+    llmroute.set_client_for_test(None, None)
+    assert llmroute.flush() is True
+    llmroute.set_client_for_test(None, llmroute.UsageRecorder("svc", ""))
+    try:
+        llmroute.record_call("f", "m")
+        assert llmroute.flush() is True
+    finally:
+        llmroute.set_client_for_test(None)
+
+
+def test_flush_reports_failure_never_raises_and_keeps_the_rows(monkeypatch):
+    def down(*a, **kw):
+        raise httpx.ConnectError("down")
+
+    monkeypatch.setattr(httpx, "post", down)
+    rec = _recorder(monkeypatch)
+    llmroute.set_client_for_test(None, rec)
+    try:
+        llmroute.record_call("f", "m", usd=0.2)
+        assert llmroute.flush() is False
+        assert rec.drain()[0]["calls"] == 1
+
+        def explode():
+            raise RuntimeError("bug")
+
+        monkeypatch.setattr(rec, "flush", explode)
+        assert llmroute.flush() is False
+    finally:
+        llmroute.set_client_for_test(None)
+
+
+def test_configure_registers_flush_with_atexit_once(monkeypatch):
+    registered = []
+    monkeypatch.setattr(llmroute, "_atexit_registered", False)
+    monkeypatch.setattr(llmroute.atexit, "register", registered.append)
+    monkeypatch.setattr(llmroute, "_client", None)
+    monkeypatch.setattr(llmroute, "_recorder", None)
+    monkeypatch.setattr(llmroute, "_service", "")
+    llmroute.configure("svc", "")
+    llmroute.configure("svc", "http://loc", "k")
+    assert registered == [llmroute.flush]
 
 
 # ---- capability report --------------------------------------------------

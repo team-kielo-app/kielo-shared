@@ -38,6 +38,8 @@ const (
 	DefaultUSDPerTok = 0.042
 	Path             = "/v1/systemone"
 	FamilyPrefix     = "jev_"
+	// usageProvider names Jev's vendor on the LLM_USAGE line (llm_models has no row for it).
+	usageProvider    = "typesafe"
 	maxResponseBytes = 1 << 20
 )
 
@@ -176,6 +178,14 @@ func FromEnv() *Client {
 	return c
 }
 
+// modelName is the configured model, DefaultModel when none is set.
+func (c *Client) modelName() string {
+	if c.Model == "" {
+		return DefaultModel
+	}
+	return c.Model
+}
+
 // Enabled reports whether a key and base URL are configured (the base URL defaults to TypeSafe's).
 func (c *Client) Enabled() bool {
 	return c != nil && c.APIKey != "" && c.BaseURL != ""
@@ -207,11 +217,17 @@ func (c *Client) Decide(ctx context.Context, site string, state any, questions [
 	res, latency, err := c.post(ctx, state, questions)
 	if err != nil {
 		slog.Warn("jev: call failed", "site", site, "latency_ms", latency.Milliseconds(), "error", err)
+		llmroute.Record(llmroute.Sample{
+			Family: family, Model: c.modelName(), Provider: usageProvider, Latency: latency, Outcome: llmroute.OutcomeError,
+		})
 		return nil
 	}
 	usd := float64(res.Usage.InputTokens) * c.USDPerMTok / 1e6
 	llmroute.Book(family, usd)
-	llmroute.Record(llmroute.Sample{Family: family, Model: res.Model, Latency: latency, InputTokens: res.Usage.InputTokens, USD: usd})
+	llmroute.Record(llmroute.Sample{
+		Family: family, Model: res.Model, Provider: usageProvider, Latency: latency, InputTokens: res.Usage.InputTokens, USD: usd,
+		Outcome: llmroute.OutcomeOK,
+	})
 	slog.Info("jev: decided", "site", site, "model", res.Model, "latency_ms", latency.Milliseconds(), "input_tokens", res.Usage.InputTokens)
 	return res.answers()
 }
@@ -231,11 +247,7 @@ func (c *Client) post(ctx context.Context, state any, questions []Question) (*re
 	for _, q := range questions {
 		wire[q.ID] = wireQuestion(q)
 	}
-	model := c.Model
-	if model == "" {
-		model = DefaultModel
-	}
-	body, err := json.Marshal(request{State: state, Model: model, Questions: wire})
+	body, err := json.Marshal(request{State: state, Model: c.modelName(), Questions: wire})
 	if err != nil {
 		return nil, 0, fmt.Errorf("encode: %w", err)
 	}
