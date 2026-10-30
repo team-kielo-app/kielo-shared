@@ -27,7 +27,7 @@ import random
 import threading
 import time
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any, Callable, Iterable
 
 import httpx
 
@@ -65,13 +65,15 @@ _RESERVOIR = 512
 
 PROVIDER_GOOGLE = "google"
 PROVIDER_OPENAI = "openai"
+PROVIDER_ANTHROPIC = "anthropic"
 
-# Families whose call sites can drive an OpenAI model: the ones served by the
-# convo agent's routed_llm / LiveKit builder. Every other family (the engine's
-# LangChain Gemini client, ingest, the Go Gemini seam, KTV, hints, translation,
-# scenario authoring) can only drive Gemini, so a new family is Gemini-only by
-# default and a route naming another provider for it is refused: the caller's
-# compiled default runs, with one logged line, instead of a misrouted call.
+# Families whose call sites can drive an OpenAI model in a process that declares
+# nothing: the ones served by the convo agent's routed_llm / LiveKit builder.
+# Every process can drive Gemini. A process whose call sites can drive more
+# declares it with allow_providers (the engine's llm_providers drive OpenAI and
+# Claude for every family); a route naming a provider the process cannot drive
+# is refused and the caller's compiled default runs, with one logged line,
+# instead of a misrouted call.
 OPENAI_CAPABLE_FAMILIES = frozenset(
     {
         "juka_live",
@@ -81,11 +83,39 @@ OPENAI_CAPABLE_FAMILIES = frozenset(
     }
 )
 
+# provider -> the families this process can drive it for (None: every family).
+_DRIVABLE: dict[str, frozenset[str] | None] = {PROVIDER_OPENAI: OPENAI_CAPABLE_FAMILIES}
+
+
+def allow_providers(
+    providers: Iterable[str], families: Iterable[str] | None = None
+) -> None:
+    """Declare that this process's call sites can drive `providers`, for
+    `families` or (None) for every family. Call at start-up."""
+    for provider in providers:
+        current = _DRIVABLE.get(provider, frozenset())
+        if families is None or current is None:
+            _DRIVABLE[provider] = None
+        else:
+            _DRIVABLE[provider] = current | frozenset(families)
+
+
+def can_drive(family: str, provider: str) -> bool:
+    if provider == PROVIDER_GOOGLE:
+        return True
+    families = _DRIVABLE.get(provider, frozenset())
+    return families is None or family in families
+
+
 SNAPSHOT_TTL_SECONDS = 7 * 24 * 3600
 
 # Last resort when llm_models has no row for a routed model (store down on a
 # cold start, model not yet allowlisted): the model-name family decides.
-_PROVIDER_BY_PREFIX = (("gemini-", PROVIDER_GOOGLE), ("gpt-", PROVIDER_OPENAI))
+_PROVIDER_BY_PREFIX = (
+    ("gemini-", PROVIDER_GOOGLE),
+    ("gpt-", PROVIDER_OPENAI),
+    ("claude-", PROVIDER_ANTHROPIC),
+)
 
 
 @dataclass(frozen=True)
@@ -234,13 +264,13 @@ class RouteClient:
                 message="LLM_ROUTE llm_models never loaded; model=%s provider inferred=%s",
                 args=(route.model, provider or "unknown"),
             )
-        if family not in OPENAI_CAPABLE_FAMILIES and provider != PROVIDER_GOOGLE:
+        if not can_drive(family, provider):
             self._warn_once(
                 "provider",
                 family,
                 route.model,
-                message="LLM_ROUTE family=%s can only drive Gemini; route model=%s provider=%s refused, using the compiled default",
-                args=(family, route.model, provider or "unknown"),
+                message="LLM_ROUTE family=%s cannot drive provider=%s here; route model=%s refused, using the compiled default",
+                args=(family, provider or "unknown", route.model),
             )
             return None
         return dataclasses.replace(route, provider=provider)

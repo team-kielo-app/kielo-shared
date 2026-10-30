@@ -22,6 +22,10 @@ PRICES: dict[str, tuple[float, float]] = {
     "gpt-4o": (2.50, 10.00),
     "gpt-4o-mini": (0.15, 0.60),
     "gpt-6-luna": (0.10, 0.50),
+    "gpt-6.1-terra": (1.00, 5.00),
+    "gpt-6.1-sol": (2.00, 10.00),
+    # platform.claude.com pricing, 2026-10-30, prompts up to 100K tokens.
+    "claude-haiku-5-5": (0.10, 0.50),
 }
 
 FALLBACK_PRICE: tuple[float, float] = (2.50, 10.00)
