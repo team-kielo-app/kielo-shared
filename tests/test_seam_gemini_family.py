@@ -146,6 +146,28 @@ async def test_stream_records_last_usage(monkeypatch, recorder):
 
 
 @pytest.mark.asyncio
+async def test_a_stream_that_fails_to_open_still_records_one_error_call(
+    monkeypatch, recorder, caplog
+):
+    _route(monkeypatch, "gemini-3.8-flash", -1)
+
+    class _NoStream(_Models):
+        async def generate_content_stream(self, *, model, contents, config=None):
+            raise RuntimeError("refused at open")
+
+    p = GeminiSDKProvider("k", client=_client(_NoStream()), family="ktv_ai")
+    with caplog.at_level("INFO", logger="kielo_shared.llmroute"), pytest.raises(Error):
+        _ = [c async for c in p.generate_stream(Request(prompt="x", task="t"))]
+    assert len(recorder.rows) == 1 and recorder.rows[0][2]["error"] is True
+    (line,) = [
+        r.getMessage()
+        for r in caplog.records
+        if r.getMessage().startswith("LLM_USAGE ")
+    ]
+    assert line.startswith("LLM_USAGE task=t ") and "outcome=error" in line
+
+
+@pytest.mark.asyncio
 async def test_guard_refusal_is_deterministic_and_makes_no_call(monkeypatch, recorder):
     monkeypatch.setenv("ENVIRONMENT", "development")
     monkeypatch.delenv("LLM_ALLOW_PAID_CALLS", raising=False)
@@ -158,7 +180,9 @@ async def test_guard_refusal_is_deterministic_and_makes_no_call(monkeypatch, rec
 
 def _call_lines(caplog):
     return [
-        r.getMessage() for r in caplog.records if r.getMessage().startswith("LLM_CALL ")
+        r.getMessage()
+        for r in caplog.records
+        if r.getMessage().startswith("LLM_USAGE ")
     ]
 
 
@@ -179,9 +203,10 @@ async def test_the_call_records_its_variant_outcome_and_no_fallback(
     kw = recorder.rows[0][2]
     assert (kw["outcome"], kw["fallback"]) == ("ok", False)
     (line,) = _call_lines(caplog)
+    assert line.startswith("LLM_USAGE task=t service=")
     assert (
-        "family=scene_pack model=claude-haiku-5-5 provider=anthropic variant=candidate"
-        in line
+        "family=scene_pack provider=anthropic model=claude-haiku-5-5 "
+        "requested=claude-haiku-5-5 variant=candidate" in line
     )
     assert "outcome=ok fallback=0" in line
 
@@ -203,7 +228,8 @@ async def test_a_refused_route_records_the_default_run_as_a_fallback(
     _, model, kw = recorder.rows[0]
     assert (model, kw["fallback"]) == ("gemini-default", True)
     (line,) = _call_lines(caplog)
-    assert "variant=route" in line and line.endswith("fallback=1")
+    assert "model=gemini-default requested=claude-haiku-5-5 variant=route" in line
+    assert line.endswith("fallback=1")
 
 
 @pytest.mark.asyncio

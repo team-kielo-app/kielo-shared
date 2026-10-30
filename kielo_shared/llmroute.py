@@ -17,13 +17,19 @@ same key always to the same model. ``record_call`` aggregates usage per (service
 family, model) in-process, with the call's outcome and whether the compiled
 default ran in place of a refused route; ``record_outcome`` adds accepted /
 rejected counts for what a caller checked. A daemon thread flushes the rollup to
-the endpoint every few minutes, best effort, and ``allow_providers`` /
-``configure_from_env`` tell localization which providers this service can drive.
+the endpoint every few minutes, best effort, ``flush()`` sends what is pending
+now (``configure`` registers it with ``atexit``; a service with a shutdown hook
+calls it there too), and ``allow_providers`` / ``configure_from_env`` tell
+localization which providers this service can drive.
+
+``record_call`` also writes the one ``LLM_USAGE`` log line every service shares
+(see ``usage_line``), so spend can be read from the logs alone.
 """
 
 from __future__ import annotations
 
 import asyncio
+import atexit
 import calendar
 import dataclasses
 import json
@@ -364,6 +370,13 @@ class RouteClient:
             return False
         # A canary candidate that ran beside a refused route is not a fallback.
         return self._variants.get((family, model)) != VARIANT_CANDIDATE
+
+    def requested_of(self, family: str, model: str) -> str:
+        """The model the store asked for when `model` ran in its place (see
+        fell_back), else `model`: what the call asked for."""
+        if self.fell_back(family, model):
+            return self._refused.get(family) or model
+        return model
 
     def provider_of(self, model: str) -> str:
         """The provider of `model` from the tables already loaded (never fetches)."""
@@ -765,14 +778,34 @@ class UsageRecorder:
 _client: RouteClient | None = None
 _recorder: UsageRecorder | None = None
 _service = ""
+_atexit_registered = False
 
 
 def configure(service: str, base_url: str, internal_api_key: str = "") -> None:
-    """Install the process-wide client + recorder. Empty base_url leaves every family on its default."""
-    global _client, _recorder, _service
+    """Install the process-wide client + recorder. Empty base_url leaves every family on its default.
+    Registers flush() with atexit (once), so a normal exit sends the pending rollup."""
+    global _client, _recorder, _service, _atexit_registered
     _service = service
     _client = RouteClient(base_url, internal_api_key)
     _recorder = UsageRecorder(service, base_url, internal_api_key)
+    if not _atexit_registered:
+        _atexit_registered = True
+        atexit.register(flush)
+
+
+def flush() -> bool:
+    """Send the pending usage rollup now, once, without waiting for the next
+    flush interval. Call it from a shutdown hook; configure() also registers it
+    with atexit. True when nothing is pending or the post was accepted; False
+    when it failed (the rows are dropped with the process). Never raises."""
+    recorder = _recorder
+    if recorder is None or not recorder.enabled:
+        return True
+    try:
+        return recorder.flush()
+    except Exception as exc:
+        logger.warning("LLM_USAGE shutdown flush failed: %s", exc)
+        return False
 
 
 def warm() -> None:
@@ -975,6 +1008,50 @@ def _log_value(value: Any) -> str:
     return "_".join(text.split()) or "-"
 
 
+def usage_line(
+    *,
+    task: str,
+    service: str,
+    family: str,
+    provider: str,
+    model: str,
+    requested: str,
+    variant: str,
+    input_tokens: int,
+    output_tokens: int,
+    thinking_tokens: int,
+    usd: float,
+    latency_ms: float,
+    outcome: str,
+    fallback: bool,
+) -> str:
+    """The one-per-call LLM_USAGE line. Field order is a contract: the
+    ``LLM_USAGE task=`` prefix feeds the llm_calls log metric (label extractors
+    read ``task=`` and ``model=``), and ``in= out= thinking= usd=`` stay
+    contiguous for the regexes that tally spend from log text. ``model`` is the
+    model that ran, ``requested`` the one the route asked for (the same unless
+    the call fell back)."""
+    return (
+        "LLM_USAGE task=%s service=%s family=%s provider=%s model=%s requested=%s "
+        "variant=%s in=%d out=%d thinking=%d usd=%.6f latency_ms=%d outcome=%s fallback=%d"
+    ) % (
+        _log_value(task),
+        _log_value(service),
+        _log_value(family),
+        _log_value(provider),
+        _log_value(model),
+        _log_value(requested),
+        _log_value(variant),
+        int(input_tokens),
+        int(output_tokens),
+        int(thinking_tokens),
+        float(usd),
+        int(latency_ms),
+        outcome,
+        1 if fallback else 0,
+    )
+
+
 def record_call(
     family: str,
     model: str,
@@ -989,16 +1066,20 @@ def record_call(
     outcome: str = OUTCOME_OK,
     fallback: bool | None = None,
     variant: str | None = None,
+    task: str | None = None,
+    requested: str | None = None,
     **_ignored: Any,
 ) -> None:
-    """Add one finished call to the process-wide rollup and log its LLM_CALL line.
-    Never raises.
+    """Add one finished call to the process-wide rollup and log its LLM_USAGE
+    line (one line per call, also when no store is configured). Never raises.
 
     ``outcome`` is ok, error, refused or invalid_output (``error=True`` on an
     otherwise ok call means error). ``fallback`` marks a call that ran the compiled
     default because the route's model was refused; it counts under the model that
-    ran. Left as None, fallback and ``variant`` come from the last resolve of the
-    family in this process."""
+    ran. ``task`` names the call site (default: the family) and ``requested`` the
+    model the route asked for (default: the refused route model on a fallback,
+    else ``model``). Left as None, fallback and ``variant`` come from the last
+    resolve of the family in this process."""
     client = _client
     outcome = _normalize_outcome(outcome, bool(error))
     try:
@@ -1010,26 +1091,33 @@ def record_call(
                 if client is not None
                 else VARIANT_ROUTE
             )
+        if not requested:
+            requested = (
+                client.requested_of(family, model) if client is not None else model
+            )
         provider = (
             client.provider_of(model) if client is not None else infer_provider(model)
         )
         logger.info(
-            "LLM_CALL service=%s family=%s model=%s provider=%s variant=%s in=%d out=%d thinking=%d usd=%.6f latency_ms=%d outcome=%s fallback=%d",
-            _log_value(_service),
-            _log_value(family),
-            _log_value(model),
-            _log_value(provider),
-            _log_value(variant),
-            int(input_tokens),
-            int(output_tokens),
-            int(thinking_tokens),
-            float(usd),
-            int(latency_ms),
-            outcome,
-            1 if fallback else 0,
+            usage_line(
+                task=task or family,
+                service=_service,
+                family=family,
+                provider=provider,
+                model=model,
+                requested=requested,
+                variant=variant,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                thinking_tokens=thinking_tokens,
+                usd=usd,
+                latency_ms=latency_ms,
+                outcome=outcome,
+                fallback=bool(fallback),
+            )
         )
     except Exception as exc:
-        logger.debug("LLM_CALL log skipped: %s", exc)
+        logger.debug("LLM_USAGE log skipped: %s", exc)
     if _recorder is None:
         return
     try:

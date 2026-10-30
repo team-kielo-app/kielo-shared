@@ -83,6 +83,7 @@ class GeminiSDKProvider:
         started: float,
         failed: bool,
         outcome: str = "",
+        task: str = "",
     ) -> None:
         if not self._family:
             return
@@ -107,6 +108,8 @@ class GeminiSDKProvider:
                 or (llmroute.OUTCOME_ERROR if failed else llmroute.OUTCOME_OK),
                 fallback=bool(route.requested),
                 variant=route.variant,
+                requested=route.requested or model,
+                task=task or None,
             )
         except Exception:
             pass
@@ -179,7 +182,7 @@ class GeminiSDKProvider:
         except Error:
             raise
         except Exception as exc:
-            self._record(route, None, started, True)
+            self._record(route, None, started, True, task=request.task)
             raise Error(_classify_genai_exception(exc), exc) from exc
 
         text = getattr(response, "text", None)
@@ -189,6 +192,7 @@ class GeminiSDKProvider:
             started,
             False,
             outcome="" if text else llmroute.OUTCOME_INVALID_OUTPUT,
+            task=request.task,
         )
         if not text:
             raise Error(
@@ -233,6 +237,7 @@ class GeminiSDKProvider:
         except Error:
             raise
         except Exception as exc:
+            self._record(route, None, started, True, task=request.task)
             raise Error(_classify_genai_exception(exc), exc) from exc
 
         try:
@@ -244,9 +249,9 @@ class GeminiSDKProvider:
         except Error:
             raise
         except Exception as exc:
-            self._record(route, usage, started, True)
+            self._record(route, usage, started, True, task=request.task)
             raise Error(_classify_genai_exception(exc), exc) from exc
-        self._record(route, usage, started, False)
+        self._record(route, usage, started, False, task=request.task)
 
 
 def _classify_genai_exception(exc: BaseException) -> ErrorClass:

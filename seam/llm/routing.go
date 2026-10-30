@@ -47,6 +47,7 @@ func (d *RoutingDecorator) Generate(ctx context.Context, req Request) (*Result, 
 	res, err := d.Inner.Generate(ctx, req)
 	sample := llmroute.Sample{
 		Family: req.Family, Model: req.Model, Latency: time.Since(started), Error: err != nil, Fallback: route.Requested != "",
+		Task: req.Task, Provider: route.Provider, Requested: route.Requested, Variant: route.Variant,
 	}
 	if err != nil {
 		sample.Outcome = llmroute.OutcomeError
