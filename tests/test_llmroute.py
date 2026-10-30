@@ -1125,3 +1125,33 @@ def test_resolve_goes_through_an_overridden_route(monkeypatch):
         "route",
         "",
     )
+
+
+def test_a_refresh_that_cannot_decode_the_routes_keeps_the_old_candidates(monkeypatch):
+    good = {
+        "items": [
+            {
+                "family": "scene_pack",
+                "model": "m-a",
+                "thinking_budget": -1,
+                "candidate_model": "m-b",
+                "candidate_thinking_budget": -1,
+                "candidate_share": 100,
+            }
+        ]
+    }
+    bad = {"items": [{"family": "scene_pack", "model": "m-a", "thinking_budget": "x"}]}
+    models = _models("m-a", "m-b")
+    state = {"routes": good}
+
+    def fake_get(url, headers=None, timeout=None):
+        return _Resp(models if url.endswith("/llm-models") else state["routes"])
+
+    monkeypatch.setattr(httpx, "get", fake_get)
+    now = [100.0]
+    client = llmroute.RouteClient("http://loc", ttl=10, clock=lambda: now[0])
+    assert client.resolve("scene_pack", "d", key="k").model == "m-b"
+    state["routes"] = bad
+    now[0] += 60
+    client._refresh()
+    assert client.resolve("scene_pack", "d", key="k").model == "m-b"

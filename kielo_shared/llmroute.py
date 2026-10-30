@@ -495,8 +495,8 @@ class RouteClient:
         try:
             headers = {"X-Internal-API-Key": self._api_key} if self._api_key else {}
             routes_body = self._get_json(_ROUTES_PATH, headers)
-            self._candidates = _decode_candidates(routes_body)
-            self._routes, self._loaded = _decode(routes_body), True
+            routes, candidates = _decode(routes_body), _decode_candidates(routes_body)
+            self._routes, self._candidates, self._loaded = routes, candidates, True
             models_body = None
             try:
                 models_body = self._get_json(_MODELS_PATH, headers)
@@ -546,9 +546,9 @@ class RouteClient:
             snap = self._snapshot_load()
             if not snap:
                 return
-            self._candidates = _decode_candidates(snap.get("routes"))
-            self._routes = _decode(snap.get("routes"))
-            self._loaded = True
+            routes = _decode(snap.get("routes"))
+            candidates = _decode_candidates(snap.get("routes"))
+            self._routes, self._candidates, self._loaded = routes, candidates, True
             if snap.get("models") is not None:
                 self._models = _decode_models(snap["models"])
                 self._models_loaded = bool(self._models)
