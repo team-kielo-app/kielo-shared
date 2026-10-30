@@ -1109,3 +1109,19 @@ def test_a_reporter_thread_that_cannot_start_never_breaks_start_up(
     llmroute.allow_providers({"anthropic"})
     _wait_for_reporter()
     assert len(capability_env) == 1
+
+
+def test_resolve_goes_through_an_overridden_route(monkeypatch):
+    class Stored(llmroute.RouteClient):
+        def route(self, family):
+            return llmroute.Route("stored-model", provider="openai")
+
+    client = Stored("http://stored.invalid")
+    monkeypatch.setattr(httpx, "get", lambda *a, **k: pytest.fail("no fetch expected"))
+    got = client.resolve("juka_hints", "gemini-default")
+    assert (got.model, got.provider, got.variant, got.requested) == (
+        "stored-model",
+        "openai",
+        "route",
+        "",
+    )

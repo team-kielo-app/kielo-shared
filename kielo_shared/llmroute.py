@@ -420,7 +420,8 @@ class RouteClient:
     ) -> Route:
         """The family's route, or the canary candidate for `share` percent of keys
         (stable per `key`; without a key each call draws), or the caller's default."""
-        found, requested = self._lookup(family)
+        found = self.route(family)
+        requested = "" if found is not None else self._refused.get(family, "")
         picked = self._candidate(family)
         if picked is not None and _in_share(family, key, picked[1]):
             route = picked[0]
