@@ -11,8 +11,14 @@ A route also answers WHICH provider serves its model (``Route.provider``): the
 ``llm_models.provider`` of the routed model, fetched alongside the routes. The
 same table prices calls (``model_price`` / ``estimate_usd``).
 
-``record_call`` aggregates usage per (service, family, model) in-process and a
-daemon thread flushes it to the rollup endpoint every few minutes, best effort.
+A route may carry a candidate (model, thinking budget, share): ``resolve`` sends
+``share`` percent of keys to the candidate (``Route.variant == "candidate"``), the
+same key always to the same model. ``record_call`` aggregates usage per (service,
+family, model) in-process, with the call's outcome and whether the compiled
+default ran in place of a refused route; ``record_outcome`` adds accepted /
+rejected counts for what a caller checked. A daemon thread flushes the rollup to
+the endpoint every few minutes, best effort, and ``allow_providers`` /
+``configure_from_env`` tell localization which providers this service can drive.
 """
 
 from __future__ import annotations
@@ -26,6 +32,7 @@ import os
 import random
 import threading
 import time
+import zlib
 from dataclasses import dataclass
 from typing import Any, Callable, Iterable
 
@@ -59,9 +66,26 @@ DEFAULT_FLUSH_SECONDS = 300.0
 _ROUTES_PATH = "/internal/api/v3/localization/llm-routes"
 _MODELS_PATH = "/internal/api/v3/localization/llm-models"
 _USAGE_PATH = "/internal/api/v3/localization/llm-usage"
+_CAPABILITIES_PATH = "/internal/api/v3/localization/llm-capabilities"
+_CAPABILITY_DELAY_SECONDS = 1.0
 _FETCH_TIMEOUT_SECONDS = 2.0
 _RESERVOIR = 512
 
+
+VARIANT_ROUTE = "route"
+VARIANT_CANDIDATE = "candidate"
+
+OUTCOME_OK = "ok"
+OUTCOME_ERROR = "error"
+OUTCOME_REFUSED = "refused"
+OUTCOME_INVALID_OUTPUT = "invalid_output"
+OUTCOMES = frozenset(
+    {OUTCOME_OK, OUTCOME_ERROR, OUTCOME_REFUSED, OUTCOME_INVALID_OUTPUT}
+)
+# A call that returned nothing usable because the provider failed or declined
+# counts under `errors`; invalid_output is the caller's quality verdict and is
+# counted through record_outcome, not here.
+_ERROR_OUTCOMES = frozenset({OUTCOME_ERROR, OUTCOME_REFUSED})
 
 PROVIDER_GOOGLE = "google"
 PROVIDER_OPENAI = "openai"
@@ -91,13 +115,16 @@ def allow_providers(
     providers: Iterable[str], families: Iterable[str] | None = None
 ) -> None:
     """Declare that this process's call sites can drive `providers`, for
-    `families` or (None) for every family. Call at start-up."""
+    `families` or (None) for every family. Call at start-up; the declaration is
+    also reported to localization (a background thread, best effort)."""
+    scoped = None if families is None else frozenset(families)
     for provider in providers:
         current = _DRIVABLE.get(provider, frozenset())
-        if families is None or current is None:
+        if scoped is None or current is None:
             _DRIVABLE[provider] = None
         else:
-            _DRIVABLE[provider] = current | frozenset(families)
+            _DRIVABLE[provider] = current | scoped
+    _queue_capability_report()
 
 
 def can_drive(family: str, provider: str) -> bool:
@@ -124,6 +151,19 @@ class Route:
     thinking_budget: int = THINKING_DEFAULT
     daily_budget_usd: float = 0.0
     provider: str = ""
+    # "route" (the family's model) or "candidate" (the canary model).
+    variant: str = VARIANT_ROUTE
+    # The model the store asked for when it could not be served here (missing,
+    # inactive, provider not drivable) and the compiled default ran instead;
+    # empty otherwise. A call made with such a Route is a fallback.
+    requested: str = ""
+
+
+@dataclass(frozen=True)
+class _Candidate:
+    model: str
+    thinking_budget: int
+    share: int
 
 
 @dataclass(frozen=True)
@@ -178,6 +218,35 @@ def _decode(body: Any) -> dict[str, Route]:
     return out
 
 
+def _decode_candidates(body: Any) -> dict[str, _Candidate]:
+    if isinstance(body, dict) and isinstance(body.get("data"), dict):
+        body = body["data"]
+    out: dict[str, _Candidate] = {}
+    for row in (body or {}).get("items") or []:
+        family = row.get("family")
+        model = (row.get("candidate_model") or "").strip()
+        try:
+            share = int(row.get("candidate_share") or 0)
+            thinking = row.get("candidate_thinking_budget")
+            thinking = THINKING_DEFAULT if thinking is None else int(thinking)
+        except (TypeError, ValueError):
+            continue
+        if not family or not model or share <= 0:
+            continue
+        out[family] = _Candidate(model, thinking, min(share, 100))
+    return out
+
+
+def _in_share(family: str, key: Any, share: int) -> bool:
+    """Whether `key` falls in the candidate's share. A key is stable: the same
+    (family, key) always answers the same. With no key, each call draws."""
+    if share <= 0:
+        return False
+    if key is None or key == "":
+        return random.randrange(100) < share
+    return zlib.crc32(f"{family}:{key}".encode()) % 100 < share
+
+
 class RouteClient:
     def __init__(
         self,
@@ -191,6 +260,9 @@ class RouteClient:
         self._ttl = ttl if ttl > 0 else DEFAULT_TTL_SECONDS
         self._clock = clock
         self._routes: dict[str, Route] = {}
+        self._candidates: dict[str, _Candidate] = {}
+        self._variants: dict[tuple[str, str], str] = {}
+        self._refused: dict[str, str] = {}
         self._models: dict[str, ModelInfo] = {}
         self._models_loaded = False
         self._snapshot_load: Callable[[], dict[str, Any] | None] | None = None
@@ -201,6 +273,7 @@ class RouteClient:
         self._refreshing = False
         self._lock = threading.Lock()
         self._logged: dict[str, Route] = {}
+        self._logged_candidates: dict[str, tuple[str, int, int]] = {}
 
     def set_snapshot_store(
         self,
@@ -219,27 +292,83 @@ class RouteClient:
 
     def route(self, family: str) -> Route | None:
         """The stored route, or None when there is none or it cannot be served
-        (no store, unknown family, model missing/inactive, provider not allowed)."""
+        (no store, unknown family, model missing/inactive, provider not allowed).
+        Always the family's own model: the canary candidate is chosen by resolve."""
+        return self._lookup(family)[0]
+
+    def _lookup(self, family: str) -> tuple[Route | None, str]:
+        """(servable stored route or None, the model the store asked for when it
+        was refused, else "")."""
         if not self._base_url:
-            return None
+            return None, ""
         self._maybe_refresh()
         found = self._routes.get(family)
         if found is None:
-            return None
-        found = self._servable(family, found)
-        if found is None:
-            return None
-        if self._logged.get(family) != found:
-            self._logged[family] = found
+            self._refused.pop(family, None)
+            return None, ""
+        served = self._servable(family, found)
+        if served is None:
+            self._refused[family] = found.model
+            return None, found.model
+        self._refused.pop(family, None)
+        if self._logged.get(family) != served:
+            self._logged[family] = served
             logger.info(
                 "LLM_ROUTE resolved family=%s model=%s provider=%s thinking_budget=%d daily_budget_usd=%.4f",
                 family,
-                found.model,
-                found.provider,
-                found.thinking_budget,
-                found.daily_budget_usd,
+                served.model,
+                served.provider,
+                served.thinking_budget,
+                served.daily_budget_usd,
             )
-        return found
+        return served, ""
+
+    def _candidate(self, family: str) -> tuple[Route, int] | None:
+        """The servable canary candidate and its share, None when the family has
+        none, it is the family's own model, or this process cannot serve it."""
+        cand = self._candidates.get(family)
+        if cand is None:
+            return None
+        row = self._routes.get(family)
+        if row is not None and row.model == cand.model:
+            return None
+        budget = row.daily_budget_usd if row is not None else 0.0
+        served = self._servable(
+            family,
+            Route(cand.model, cand.thinking_budget, budget, variant=VARIANT_CANDIDATE),
+        )
+        if served is None:
+            return None
+        sig = (cand.model, cand.thinking_budget, cand.share)
+        if self._logged_candidates.get(family) != sig:
+            self._logged_candidates[family] = sig
+            logger.info(
+                "LLM_ROUTE candidate family=%s model=%s provider=%s thinking_budget=%d share=%d",
+                family,
+                served.model,
+                served.provider,
+                served.thinking_budget,
+                cand.share,
+            )
+        return served, cand.share
+
+    def variant_of(self, family: str, model: str) -> str:
+        """Which variant served `model` for `family` the last time it was resolved."""
+        return self._variants.get((family, model), VARIANT_ROUTE)
+
+    def fell_back(self, family: str, model: str) -> bool:
+        """True when the store's route for `family` was refused here and `model`
+        is not it: the compiled default ran in its place."""
+        requested = self._refused.get(family)
+        if not requested or requested == model:
+            return False
+        # A canary candidate that ran beside a refused route is not a fallback.
+        return self._variants.get((family, model)) != VARIANT_CANDIDATE
+
+    def provider_of(self, model: str) -> str:
+        """The provider of `model` from the tables already loaded (never fetches)."""
+        info = self._models.get(model)
+        return info.provider if info is not None else infer_provider(model)
 
     def _servable(self, family: str, route: Route) -> Route | None:
         info = self._models.get(route.model)
@@ -287,16 +416,27 @@ class RouteClient:
         default_model: str,
         default_thinking: int = THINKING_DEFAULT,
         default_provider: str = "",
+        key: str | None = None,
     ) -> Route:
-        found = self.route(family)
-        if found is None:
-            return Route(
-                default_model,
-                default_thinking,
-                0.0,
-                default_provider or infer_provider(default_model),
-            )
-        return found
+        """The family's route, or the canary candidate for `share` percent of keys
+        (stable per `key`; without a key each call draws), or the caller's default."""
+        found, requested = self._lookup(family)
+        picked = self._candidate(family)
+        if picked is not None and _in_share(family, key, picked[1]):
+            route = picked[0]
+            self._variants[(family, route.model)] = VARIANT_CANDIDATE
+            return route
+        if found is not None:
+            self._variants[(family, found.model)] = VARIANT_ROUTE
+            return found
+        self._variants[(family, default_model)] = VARIANT_ROUTE
+        return Route(
+            default_model,
+            default_thinking,
+            0.0,
+            default_provider or infer_provider(default_model),
+            requested=requested,
+        )
 
     def _maybe_refresh(self) -> None:
         now = self._clock()
@@ -324,6 +464,23 @@ class RouteClient:
         if self._base_url:
             self._refresh()
 
+    def report_capabilities(self, body: dict[str, Any]) -> bool:
+        """Tell localization which providers this service can drive. Never raises."""
+        if not self._base_url:
+            return False
+        try:
+            headers = {"X-Internal-API-Key": self._api_key} if self._api_key else {}
+            resp = httpx.post(
+                self._base_url + _CAPABILITIES_PATH,
+                json=body,
+                headers=headers,
+                timeout=_FETCH_TIMEOUT_SECONDS,
+            )
+            resp.raise_for_status()
+            return True
+        except (httpx.HTTPError, ValueError):
+            return False
+
     def _get_json(self, path: str, headers: dict[str, str]) -> Any:
         resp = httpx.get(
             self._base_url + path, headers=headers, timeout=_FETCH_TIMEOUT_SECONDS
@@ -337,6 +494,7 @@ class RouteClient:
         try:
             headers = {"X-Internal-API-Key": self._api_key} if self._api_key else {}
             routes_body = self._get_json(_ROUTES_PATH, headers)
+            self._candidates = _decode_candidates(routes_body)
             self._routes, self._loaded = _decode(routes_body), True
             models_body = None
             try:
@@ -387,6 +545,7 @@ class RouteClient:
             snap = self._snapshot_load()
             if not snap:
                 return
+            self._candidates = _decode_candidates(snap.get("routes"))
             self._routes = _decode(snap.get("routes"))
             self._loaded = True
             if snap.get("models") is not None:
@@ -417,6 +576,9 @@ class _Agg:
         "usd",
         "errors",
         "retries",
+        "accepted",
+        "rejected",
+        "fallbacks",
         "lat",
         "seen",
     )
@@ -424,6 +586,7 @@ class _Agg:
     def __init__(self) -> None:
         self.calls = self.inp = self.out = self.thinking = 0
         self.errors = self.retries = self.seen = 0
+        self.accepted = self.rejected = self.fallbacks = 0
         self.usd = 0.0
         self.lat: list[int] = []
 
@@ -470,9 +633,12 @@ class UsageRecorder:
         latency_ms: float = 0.0,
         error: bool = False,
         retries: int = 0,
+        outcome: str = OUTCOME_OK,
+        fallback: bool = False,
     ) -> None:
         if not self.enabled or not family:
             return
+        failed = bool(error) or outcome in _ERROR_OUTCOMES
         hour = int(self._clock() // 3600) * 3600
         with self._lock:
             agg = self._aggs.setdefault((hour, self._service, family, model), _Agg())
@@ -481,7 +647,8 @@ class UsageRecorder:
             agg.out += int(output_tokens)
             agg.thinking += int(thinking_tokens)
             agg.usd += float(usd)
-            agg.errors += 1 if error else 0
+            agg.errors += 1 if failed else 0
+            agg.fallbacks += 1 if fallback else 0
             agg.retries += int(retries)
             agg.seen += 1
             ms = int(latency_ms)
@@ -491,6 +658,22 @@ class UsageRecorder:
                 j = random.randrange(agg.seen)
                 if j < _RESERVOIR:
                     agg.lat[j] = ms
+        self._ensure_thread()
+
+    def record_outcome(
+        self, family: str, model: str, accepted: bool, n: int = 1
+    ) -> None:
+        """Count `n` outputs of `model` for `family` that a check accepted or rejected."""
+        n = int(n)
+        if not self.enabled or not family or not model or n <= 0:
+            return
+        hour = int(self._clock() // 3600) * 3600
+        with self._lock:
+            agg = self._aggs.setdefault((hour, self._service, family, model), _Agg())
+            if accepted:
+                agg.accepted += n
+            else:
+                agg.rejected += n
         self._ensure_thread()
 
     def drain(self) -> list[dict[str, Any]]:
@@ -511,8 +694,12 @@ class UsageRecorder:
                     "usd": round(a.usd, 8),
                     "errors": a.errors,
                     "retries": a.retries,
-                    "latency_ms_p50": _percentile(a.lat, 0.50),
-                    "latency_ms_p95": _percentile(a.lat, 0.95),
+                    "accepted": a.accepted,
+                    "rejected": a.rejected,
+                    "fallbacks": a.fallbacks,
+                    # An outcome-only row has no call to time; None leaves the stored percentiles alone.
+                    "latency_ms_p50": _percentile(a.lat, 0.50) if a.lat else None,
+                    "latency_ms_p95": _percentile(a.lat, 0.95) if a.lat else None,
                 }
             )
         return rows
@@ -550,6 +737,9 @@ class UsageRecorder:
                 agg.usd += r["usd"]
                 agg.errors += r["errors"]
                 agg.retries += r["retries"]
+                agg.accepted += r.get("accepted", 0)
+                agg.rejected += r.get("rejected", 0)
+                agg.fallbacks += r.get("fallbacks", 0)
 
     def _ensure_thread(self) -> None:
         if self._thread is not None and self._thread.is_alive():
@@ -632,12 +822,81 @@ def snapshot_json_store(
 
 
 def configure_from_env(service: str) -> None:
+    """configure() from the environment, then report what this service can drive
+    (once, from a background thread: fire and forget)."""
     key = (
         os.environ.get("KIELO_INTERNAL_API_KEY")
         or os.environ.get("INTERNAL_API_KEY")
         or ""
     )
     configure(service, os.environ.get("LOCALIZATION_SERVICE_URL", ""), key)
+    _queue_capability_report()
+
+
+def capabilities_payload() -> dict[str, Any]:
+    """The body of POST llm-capabilities: google always, plus every provider this
+    process declared (families None = every family)."""
+    providers: list[dict[str, Any]] = [{"provider": PROVIDER_GOOGLE, "families": None}]
+    for provider in sorted(_DRIVABLE):
+        families = _DRIVABLE[provider]
+        if provider == PROVIDER_GOOGLE or (families is not None and not families):
+            continue
+        providers.append(
+            {
+                "provider": provider,
+                "families": None if families is None else sorted(families),
+            }
+        )
+    return {"service": _service, "providers": providers}
+
+
+_capability_lock = threading.Lock()
+_capability_pending = False
+_capability_running = False
+
+
+def _post_capabilities() -> bool:
+    client = _client
+    if client is None or not _service:
+        return False
+    return client.report_capabilities(capabilities_payload())
+
+
+def _capability_loop() -> None:
+    global _capability_pending, _capability_running
+    while True:
+        # Let the start-up declarations (allow_providers after configure) land first.
+        time.sleep(_CAPABILITY_DELAY_SECONDS)
+        with _capability_lock:
+            if not _capability_pending:
+                _capability_running = False
+                return
+            _capability_pending = False
+        try:
+            _post_capabilities()
+        except Exception as exc:  # never let the reporter die
+            logger.warning("LLM_CAPABILITIES report failed: %s", exc)
+
+
+def _queue_capability_report() -> None:
+    """Ask for a capability report; calls close together share one post."""
+    global _capability_pending, _capability_running
+    client = _client
+    if client is None or not client._base_url or not _service:
+        return
+    with _capability_lock:
+        _capability_pending = True
+        if _capability_running:
+            return
+        _capability_running = True
+    try:
+        threading.Thread(
+            target=_capability_loop, daemon=True, name="llm-capabilities"
+        ).start()
+    except RuntimeError as exc:  # no thread to spare: the report is best effort
+        with _capability_lock:
+            _capability_running = False
+        logger.warning("LLM_CAPABILITIES report not started: %s", exc)
 
 
 def set_client_for_test(
@@ -656,8 +915,13 @@ def resolve(
     default_model: str,
     default_thinking: int = THINKING_DEFAULT,
     default_provider: str = "",
+    key: str | None = None,
 ) -> Route:
-    """The family's model, provider and budgets; the default fills a gap (no store, unknown family)."""
+    """The family's model, provider and budgets; the default fills a gap (no store, unknown family).
+
+    While the family runs a canary, ``share`` percent of keys get the candidate
+    (``Route.variant == "candidate"``): pass a stable key (a deck, learner or item
+    id) so one unit always sees one model; with no key each call draws."""
     if _client is None:
         return Route(
             default_model,
@@ -665,7 +929,9 @@ def resolve(
             0.0,
             default_provider or infer_provider(default_model),
         )
-    return _client.resolve(family, default_model, default_thinking, default_provider)
+    return _client.resolve(
+        family, default_model, default_thinking, default_provider, key
+    )
 
 
 def stored_route(family: str) -> Route | None:
@@ -694,11 +960,102 @@ def daily_budget_usd(family: str) -> float:
     return found.daily_budget_usd if found is not None else 0.0
 
 
-def record_call(family: str, model: str, **kwargs: Any) -> None:
-    """Add one finished call to the process-wide rollup. Never raises."""
+def _normalize_outcome(outcome: Any, error: bool) -> str:
+    name = outcome.strip().lower() if isinstance(outcome, str) else OUTCOME_OK
+    if name not in OUTCOMES:
+        name = OUTCOME_OK
+    if error and name == OUTCOME_OK:
+        return OUTCOME_ERROR
+    return name
+
+
+def _log_value(value: Any) -> str:
+    text = str(value if value is not None else "").strip()
+    return "_".join(text.split()) or "-"
+
+
+def record_call(
+    family: str,
+    model: str,
+    *,
+    input_tokens: int = 0,
+    output_tokens: int = 0,
+    thinking_tokens: int = 0,
+    usd: float = 0.0,
+    latency_ms: float = 0.0,
+    error: bool = False,
+    retries: int = 0,
+    outcome: str = OUTCOME_OK,
+    fallback: bool | None = None,
+    variant: str | None = None,
+    **_ignored: Any,
+) -> None:
+    """Add one finished call to the process-wide rollup and log its LLM_CALL line.
+    Never raises.
+
+    ``outcome`` is ok, error, refused or invalid_output (``error=True`` on an
+    otherwise ok call means error). ``fallback`` marks a call that ran the compiled
+    default because the route's model was refused; it counts under the model that
+    ran. Left as None, fallback and ``variant`` come from the last resolve of the
+    family in this process."""
+    client = _client
+    outcome = _normalize_outcome(outcome, bool(error))
+    try:
+        if fallback is None:
+            fallback = client.fell_back(family, model) if client is not None else False
+        if variant is None:
+            variant = (
+                client.variant_of(family, model)
+                if client is not None
+                else VARIANT_ROUTE
+            )
+        provider = (
+            client.provider_of(model) if client is not None else infer_provider(model)
+        )
+        logger.info(
+            "LLM_CALL service=%s family=%s model=%s provider=%s variant=%s in=%d out=%d thinking=%d usd=%.6f latency_ms=%d outcome=%s fallback=%d",
+            _log_value(_service),
+            _log_value(family),
+            _log_value(model),
+            _log_value(provider),
+            _log_value(variant),
+            int(input_tokens),
+            int(output_tokens),
+            int(thinking_tokens),
+            float(usd),
+            int(latency_ms),
+            outcome,
+            1 if fallback else 0,
+        )
+    except Exception as exc:
+        logger.debug("LLM_CALL log skipped: %s", exc)
     if _recorder is None:
         return
     try:
-        _recorder.record(family, model, **kwargs)
+        _recorder.record(
+            family,
+            model,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            thinking_tokens=thinking_tokens,
+            usd=usd,
+            latency_ms=latency_ms,
+            error=error,
+            retries=retries,
+            outcome=outcome,
+            fallback=bool(fallback),
+        )
     except Exception as exc:
         logger.debug("LLM_USAGE record skipped: %s", exc)
+
+
+def record_outcome(family: str, model: str, accepted: bool, n: int = 1) -> None:
+    """Count `n` outputs of `model` for `family` that the caller's own check
+    accepted or rejected (a scene draft that passed its gates, a publish decision).
+    Flushed with usage. Never raises."""
+    if _recorder is None:
+        return
+    try:
+        _recorder.record_outcome(family, model, accepted, n)
+    except Exception as exc:
+        logger.debug("LLM_USAGE outcome skipped: %s", exc)

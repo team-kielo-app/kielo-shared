@@ -59,6 +59,9 @@ type Request struct {
 	// and ThinkingBudget (Model here is then only the compiled default), the
 	// family's daily budget is enforced and the call is rolled up per family.
 	Family string
+	// RouteKey is a stable id (deck, learner or item) for the family's canary: the
+	// same key always gets the same model while a candidate runs. Empty draws per call.
+	RouteKey string
 	// ThinkingBudget is the Gemini thinking token budget. nil or negative
 	// leaves the model's default; 0 turns thinking off.
 	ThinkingBudget *int

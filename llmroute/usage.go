@@ -19,6 +19,14 @@ const (
 	flushTimeout    = 3 * time.Second
 )
 
+// Call outcomes (Sample.Outcome). Empty means OutcomeOK unless Error is set.
+const (
+	OutcomeOK            = "ok"
+	OutcomeError         = "error"
+	OutcomeRefused       = "refused"
+	OutcomeInvalidOutput = "invalid_output"
+)
+
 // Sample is one finished model call.
 type Sample struct {
 	Family         string
@@ -28,8 +36,16 @@ type Sample struct {
 	ThinkingTokens int64
 	USD            float64
 	Latency        time.Duration
-	Error          bool
-	Retries        int64
+	// Error marks a failed call; it is the same as Outcome == OutcomeError.
+	Error   bool
+	Retries int64
+	// Outcome is ok, error, refused or invalid_output. A call that failed or was
+	// refused by the provider counts under errors; invalid_output is the caller's
+	// quality verdict and is counted through RecordOutcome, not here.
+	Outcome string
+	// Fallback marks a call that ran the compiled default because the route's model
+	// was refused (Route.Requested != ""); it counts under the model that ran.
+	Fallback bool
 }
 
 type usageKey struct {
@@ -39,6 +55,7 @@ type usageKey struct {
 
 type usageAgg struct {
 	calls, in, out, thinking, errors, retries int64
+	accepted, rejected, fallbacks             int64
 	usd                                       float64
 	lat                                       []int
 	seen                                      int64
@@ -57,6 +74,9 @@ type UsageRow struct {
 	USD            float64   `json:"usd"`
 	Errors         int64     `json:"errors"`
 	Retries        int64     `json:"retries"`
+	Accepted       int64     `json:"accepted"`
+	Rejected       int64     `json:"rejected"`
+	Fallbacks      int64     `json:"fallbacks"`
 	LatencyMsP50   *int      `json:"latency_ms_p50"`
 	LatencyMsP95   *int      `json:"latency_ms_p95"`
 }
@@ -100,19 +120,18 @@ func (r *Recorder) Record(s Sample) {
 	k := usageKey{hour: r.now().UTC().Truncate(time.Hour), service: r.service, family: s.Family, model: s.Model}
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	a := r.aggs[k]
-	if a == nil {
-		a = &usageAgg{}
-		r.aggs[k] = a
-	}
+	a := r.agg(k)
 	a.calls++
 	a.in += s.InputTokens
 	a.out += s.OutputTokens
 	a.thinking += s.ThinkingTokens
 	a.usd += s.USD
 	a.retries += s.Retries
-	if s.Error {
+	if s.Error || s.Outcome == OutcomeError || s.Outcome == OutcomeRefused {
 		a.errors++
+	}
+	if s.Fallback {
+		a.fallbacks++
 	}
 	ms := int(s.Latency.Milliseconds())
 	a.seen++
@@ -120,6 +139,33 @@ func (r *Recorder) Record(s Sample) {
 		a.lat = append(a.lat, ms)
 	} else if j := r.next() % uint64(a.seen); j < reservoirSize {
 		a.lat[j] = ms
+	}
+}
+
+// agg returns the bucket for k; the caller holds r.mu.
+func (r *Recorder) agg(k usageKey) *usageAgg {
+	a := r.aggs[k]
+	if a == nil {
+		a = &usageAgg{}
+		r.aggs[k] = a
+	}
+	return a
+}
+
+// RecordOutcome counts n outputs of model for family that a caller's own check
+// accepted or rejected (a scene draft that passed its gates, a publish decision).
+func (r *Recorder) RecordOutcome(family, model string, accepted bool, n int64) {
+	if !r.enabled() || family == "" || model == "" || n <= 0 {
+		return
+	}
+	k := usageKey{hour: r.now().UTC().Truncate(time.Hour), service: r.service, family: family, model: model}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	a := r.agg(k)
+	if accepted {
+		a.accepted += n
+	} else {
+		a.rejected += n
 	}
 }
 
@@ -155,13 +201,18 @@ func (r *Recorder) Drain() []UsageRow {
 	r.mu.Unlock()
 	rows := make([]UsageRow, 0, len(aggs))
 	for k, a := range aggs {
-		sort.Ints(a.lat)
-		p50, p95 := percentile(a.lat, 0.50), percentile(a.lat, 0.95)
-		rows = append(rows, UsageRow{
+		row := UsageRow{
 			Hour: k.hour, Service: k.service, Family: k.family, Model: k.model, Calls: a.calls,
 			InputTokens: a.in, OutputTokens: a.out, ThinkingTokens: a.thinking, USD: a.usd,
-			Errors: a.errors, Retries: a.retries, LatencyMsP50: &p50, LatencyMsP95: &p95,
-		})
+			Errors: a.errors, Retries: a.retries, Accepted: a.accepted, Rejected: a.rejected, Fallbacks: a.fallbacks,
+		}
+		// An outcome-only bucket has no call to time; nil leaves the stored percentiles alone.
+		if len(a.lat) > 0 {
+			sort.Ints(a.lat)
+			p50, p95 := percentile(a.lat, 0.50), percentile(a.lat, 0.95)
+			row.LatencyMsP50, row.LatencyMsP95 = &p50, &p95
+		}
+		rows = append(rows, row)
 	}
 	return rows
 }
@@ -212,12 +263,7 @@ func (r *Recorder) restore(rows []UsageRow) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	for _, u := range rows {
-		k := usageKey{hour: u.Hour, service: u.Service, family: u.Family, model: u.Model}
-		a := r.aggs[k]
-		if a == nil {
-			a = &usageAgg{}
-			r.aggs[k] = a
-		}
+		a := r.agg(usageKey{hour: u.Hour, service: u.Service, family: u.Family, model: u.Model})
 		a.calls += u.Calls
 		a.in += u.InputTokens
 		a.out += u.OutputTokens
@@ -225,6 +271,9 @@ func (r *Recorder) restore(rows []UsageRow) {
 		a.usd += u.USD
 		a.errors += u.Errors
 		a.retries += u.Retries
+		a.accepted += u.Accepted
+		a.rejected += u.Rejected
+		a.fallbacks += u.Fallbacks
 	}
 }
 
@@ -274,4 +323,13 @@ func Record(s Sample) {
 	rec := recorder
 	recorderMu.RUnlock()
 	rec.Record(s)
+}
+
+// RecordOutcome counts n accepted or rejected outputs on the process-wide
+// recorder (no-op until StartUsage).
+func RecordOutcome(family, model string, accepted bool, n int64) {
+	recorderMu.RLock()
+	rec := recorder
+	recorderMu.RUnlock()
+	rec.RecordOutcome(family, model, accepted, n)
 }
