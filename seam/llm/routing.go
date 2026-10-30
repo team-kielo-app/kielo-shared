@@ -34,7 +34,7 @@ func (d *RoutingDecorator) Generate(ctx context.Context, req Request) (*Result, 
 	if req.ThinkingBudget != nil {
 		def.ThinkingBudget = *req.ThinkingBudget
 	}
-	route := llmroute.Resolve(ctx, req.Family, def)
+	route := llmroute.ResolveKeyed(ctx, req.Family, def, req.RouteKey)
 	req.Model = route.Model
 	if route.ThinkingBudget >= 0 {
 		b := route.ThinkingBudget
@@ -45,7 +45,12 @@ func (d *RoutingDecorator) Generate(ctx context.Context, req Request) (*Result, 
 	}
 	started := time.Now()
 	res, err := d.Inner.Generate(ctx, req)
-	sample := llmroute.Sample{Family: req.Family, Model: req.Model, Latency: time.Since(started), Error: err != nil}
+	sample := llmroute.Sample{
+		Family: req.Family, Model: req.Model, Latency: time.Since(started), Error: err != nil, Fallback: route.Requested != "",
+	}
+	if err != nil {
+		sample.Outcome = llmroute.OutcomeError
+	}
 	if res != nil {
 		sample.InputTokens, sample.OutputTokens, sample.ThinkingTokens = res.InputTokens, res.OutputTokens, res.ThinkingTokens
 		sample.USD = llmroute.EstimateUSD(req.Model, res.InputTokens, res.OutputTokens, res.ThinkingTokens)

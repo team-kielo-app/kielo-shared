@@ -7,16 +7,27 @@
 // refreshes at most every TTL (default 30s). When the store cannot be reached the
 // last good copy keeps answering; with no copy at all, or a nil / unconfigured
 // client, the caller's compiled default is returned (fail-open).
+//
+// A route may carry a canary candidate (model, thinking budget, share). ResolveKeyed
+// sends share percent of keys to the candidate (Route.Variant == VariantCandidate),
+// the same key always to the same model. Recorder samples carry each call's
+// outcome and whether the compiled default ran in place of a refused route, and
+// RecordOutcome counts what a caller's own check accepted or rejected. Configure
+// and AllowProviders tell localization which providers this service can drive.
 package llmroute
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"hash/crc32"
 	"io"
 	"log/slog"
+	"math/rand/v2"
 	"net/http"
 	"os"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -47,8 +58,14 @@ const (
 
 	DefaultTTL = 30 * time.Second
 
-	routesPath = "/internal/api/v3/localization/llm-routes"
-	modelsPath = "/internal/api/v3/localization/llm-models"
+	routesPath       = "/internal/api/v3/localization/llm-routes"
+	modelsPath       = "/internal/api/v3/localization/llm-models"
+	capabilitiesPath = "/internal/api/v3/localization/llm-capabilities"
+
+	// VariantRoute is the family's own model; VariantCandidate the canary model.
+	// An empty Variant means VariantRoute.
+	VariantRoute     = "route"
+	VariantCandidate = "candidate"
 
 	ProviderGoogle    = "google"
 	ProviderOpenAI    = "openai"
@@ -66,6 +83,13 @@ type Route struct {
 	// Provider is llm_models.provider of Model ("google", "openai"); empty
 	// when neither the store nor the model name says.
 	Provider string
+	// Variant is VariantCandidate when the canary candidate was picked, else
+	// VariantRoute (empty on a compiled default).
+	Variant string
+	// Requested is the model the store asked for when it could not be served here
+	// (missing, inactive, provider not drivable) and the compiled default came back
+	// instead; empty otherwise. A call made with such a Route is a fallback.
+	Requested string
 }
 
 // providerByPrefix is the last resort when llm_models has no row for a routed
@@ -104,6 +128,31 @@ type row struct {
 	Model          string   `json:"model"`
 	ThinkingBudget int      `json:"thinking_budget"`
 	DailyBudgetUSD *float64 `json:"daily_budget_usd"`
+	// Candidate fields are decoded loosely: a malformed one drops that
+	// candidate, never the route table.
+	CandidateModel          string `json:"candidate_model"`
+	CandidateThinkingBudget any    `json:"candidate_thinking_budget"`
+	CandidateShare          any    `json:"candidate_share"`
+}
+
+// candidate is a route's canary: share percent of keys run model.
+type candidate struct {
+	model    string
+	thinking int
+	share    int
+}
+
+type routeTable struct {
+	routes     map[string]Route
+	candidates map[string]candidate
+}
+
+func wholeNumber(v any) (int, bool) {
+	f, ok := v.(float64)
+	if !ok || f != float64(int(f)) {
+		return 0, false
+	}
+	return int(f), true
 }
 
 // OpenAICapableFamilies are the families whose call sites can drive an OpenAI
@@ -134,6 +183,11 @@ var (
 // providers, for the given families or, with none, for every family. Call it at
 // start-up.
 func AllowProviders(providers []string, families ...string) {
+	allowProviders(providers, families)
+	queueCapabilityReport()
+}
+
+func allowProviders(providers, families []string) {
 	drivableMu.Lock()
 	defer drivableMu.Unlock()
 	for _, p := range providers {
@@ -170,6 +224,7 @@ const maxStale = 5 * time.Minute
 
 type tables struct {
 	routes       map[string]Route
+	candidates   map[string]candidate
 	models       map[string]modelInfo
 	modelsLoaded bool
 }
@@ -210,24 +265,70 @@ func NewClient(baseURL, internalAPIKey string, ttl time.Duration) *Client {
 
 // Resolve answers the route for family; def fills any gap (no store, unknown
 // family, empty model, a model that is missing or inactive in llm_models, a
-// provider the family cannot drive). It never returns an error.
+// provider the family cannot drive). While the family runs a canary, each call
+// draws whether it gets the candidate; use ResolveKeyed to keep one unit on one
+// model. It never returns an error.
 func (c *Client) Resolve(ctx context.Context, family string, def Route) Route {
+	return c.ResolveKeyed(ctx, family, def, "")
+}
+
+// ResolveKeyed is Resolve with a stable key (a deck, learner or item id): while
+// the family runs a canary, crc32(family + ":" + key) % 100 < share picks the
+// candidate, so a key always sees one model. An empty key draws per call.
+func (c *Client) ResolveKeyed(ctx context.Context, family string, def Route, key string) Route {
 	if c == nil || c.baseURL == "" {
 		return def
 	}
 	if def.Provider == "" {
 		def.Provider = InferProvider(def.Model)
 	}
-	got, ok := c.snapshot(ctx).routes[family]
-	if !ok || strings.TrimSpace(got.Model) == "" {
-		return def
+	data := c.snapshot(ctx)
+	got, have := data.routes[family]
+	have = have && strings.TrimSpace(got.Model) != ""
+	served, ok, requested := Route{}, false, ""
+	if have {
+		if served, ok = c.servable(family, got); !ok {
+			requested = got.Model
+		}
 	}
-	got, ok = c.servable(family, got)
+	if cand, share, picked := c.candidateRoute(family, data, got, have); picked && inShare(family, key, share) {
+		return cand
+	}
 	if !ok {
+		def.Requested = requested
 		return def
 	}
-	c.noteChange(family, got)
-	return got
+	served.Variant = VariantRoute
+	c.noteChange(family, served)
+	return served
+}
+
+// candidateRoute is the family's servable canary and its share; ok is false when
+// there is none, it is the family's own model, or this process cannot drive it.
+func (c *Client) candidateRoute(family string, data tables, base Route, haveBase bool) (route Route, share int, ok bool) {
+	cand, found := data.candidates[family]
+	if !found || cand.share <= 0 || (haveBase && base.Model == cand.model) {
+		return Route{}, 0, false
+	}
+	served, ok := c.servable(family, Route{
+		Model: cand.model, ThinkingBudget: cand.thinking, DailyBudgetUSD: base.DailyBudgetUSD, Variant: VariantCandidate,
+	})
+	if !ok {
+		return Route{}, 0, false
+	}
+	c.noteCandidate(family, served, cand.share)
+	return served, cand.share, true
+}
+
+// inShare reports whether key falls in a candidate's share percent.
+func inShare(family, key string, share int) bool {
+	if share <= 0 {
+		return false
+	}
+	if key == "" {
+		return rand.IntN(100) < share //nolint:gosec // a canary draw, not a security decision
+	}
+	return int(crc32.ChecksumIEEE([]byte(family+":"+key))%100) < share
 }
 
 func (c *Client) warnOnce(key, msg string, args ...any) {
@@ -313,7 +414,7 @@ func (c *Client) snapshot(ctx context.Context) tables {
 func (c *Client) refresh(done chan struct{}) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*fetchTimeout)
 	defer cancel()
-	routes, err := c.fetch(ctx)
+	table, err := c.fetch(ctx)
 	var models map[string]modelInfo
 	var merr error
 	if err == nil {
@@ -323,7 +424,7 @@ func (c *Client) refresh(done chan struct{}) {
 	// Stamp failures too so an outage costs one 2s fetch per TTL, not one per call.
 	c.fetchedAt = c.now()
 	if err == nil {
-		c.data.routes = routes
+		c.data.routes, c.data.candidates = table.routes, table.candidates
 		c.loaded = true
 		// An empty table is not a table: it must not refuse every route.
 		if merr == nil && len(models) > 0 {
@@ -344,6 +445,18 @@ func (c *Client) noteChange(family string, r Route) {
 	if !seen || prev != sig {
 		slog.Info("LLM_ROUTE resolved", "family", family, "model", r.Model, "provider", r.Provider,
 			"thinking_budget", r.ThinkingBudget, "daily_budget_usd", r.DailyBudgetUSD)
+	}
+}
+
+func (c *Client) noteCandidate(family string, r Route, share int) {
+	sig := fmt.Sprintf("%s|%s|%d|%d", r.Model, r.Provider, r.ThinkingBudget, share)
+	c.mu.Lock()
+	prev, seen := c.logged["candidate|"+family]
+	c.logged["candidate|"+family] = sig
+	c.mu.Unlock()
+	if !seen || prev != sig {
+		slog.Info("LLM_ROUTE candidate", "family", family, "model", r.Model, "provider", r.Provider,
+			"thinking_budget", r.ThinkingBudget, "share", share)
 	}
 }
 
@@ -370,10 +483,10 @@ func (c *Client) get(ctx context.Context, path, what string) ([]byte, error) {
 	return body, nil
 }
 
-func (c *Client) fetch(ctx context.Context) (map[string]Route, error) {
+func (c *Client) fetch(ctx context.Context) (routeTable, error) {
 	body, err := c.get(ctx, routesPath, "llm-routes")
 	if err != nil {
-		return nil, err
+		return routeTable{}, err
 	}
 	return decodeRoutes(body)
 }
@@ -410,7 +523,7 @@ func decodeModels(body []byte) (map[string]modelInfo, error) {
 	return out, nil
 }
 
-func decodeRoutes(body []byte) (map[string]Route, error) {
+func decodeRoutes(body []byte) (routeTable, error) {
 	var env struct {
 		Items []row `json:"items"`
 		Data  *struct {
@@ -418,21 +531,41 @@ func decodeRoutes(body []byte) (map[string]Route, error) {
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(body, &env); err != nil {
-		return nil, err
+		return routeTable{}, err
 	}
 	items := env.Items
 	if env.Data != nil {
 		items = env.Data.Items
 	}
-	out := make(map[string]Route, len(items))
+	out := routeTable{routes: make(map[string]Route, len(items)), candidates: map[string]candidate{}}
 	for _, r := range items {
 		route := Route{Model: r.Model, ThinkingBudget: r.ThinkingBudget, Provider: r.Provider}
 		if r.DailyBudgetUSD != nil {
 			route.DailyBudgetUSD = *r.DailyBudgetUSD
 		}
-		out[r.Family] = route
+		out.routes[r.Family] = route
+		if cand, ok := r.candidate(); ok {
+			out.candidates[r.Family] = cand
+		}
 	}
 	return out, nil
+}
+
+func (r row) candidate() (candidate, bool) {
+	model := strings.TrimSpace(r.CandidateModel)
+	share, ok := wholeNumber(r.CandidateShare)
+	if model == "" || !ok || share <= 0 {
+		return candidate{}, false
+	}
+	thinking := ThinkingDefault
+	if r.CandidateThinkingBudget != nil {
+		if t, ok := wholeNumber(r.CandidateThinkingBudget); ok {
+			thinking = t
+		} else {
+			return candidate{}, false
+		}
+	}
+	return candidate{model: model, thinking: thinking, share: min(share, 100)}, true
 }
 
 var (
@@ -442,12 +575,14 @@ var (
 )
 
 // Configure installs the process-wide client and service name used by Resolve
-// and the usage recorder. Empty baseURL leaves every family on its default.
+// and the usage recorder, then reports what this service can drive (a background
+// goroutine, best effort). Empty baseURL leaves every family on its default.
 func Configure(service, baseURL, internalAPIKey string) {
 	defaultMu.Lock()
-	defer defaultMu.Unlock()
 	defaultClient = NewClient(baseURL, internalAPIKey, DefaultTTL)
 	defaultSvc = service
+	defaultMu.Unlock()
+	queueCapabilityReport()
 }
 
 // ConfigureFromEnv is Configure with LOCALIZATION_SERVICE_URL and INTERNAL_API_KEY.
@@ -468,13 +603,139 @@ func Service() string {
 
 // Resolve answers the route for family through the process-wide client.
 func Resolve(ctx context.Context, family string, def Route) Route {
+	return ResolveKeyed(ctx, family, def, "")
+}
+
+// ResolveKeyed is Resolve with a stable key for canary selection (see Client.ResolveKeyed).
+func ResolveKeyed(ctx context.Context, family string, def Route, key string) Route {
 	defaultMu.RLock()
 	c := defaultClient
 	defaultMu.RUnlock()
-	return c.Resolve(ctx, family, def)
+	return c.ResolveKeyed(ctx, family, def, key)
 }
 
 // Model is Resolve(...).Model with the compiled default for the model name.
 func Model(ctx context.Context, family, defaultModel string) string {
 	return Resolve(ctx, family, Route{Model: defaultModel, ThinkingBudget: ThinkingDefault}).Model
+}
+
+type capabilityProvider struct {
+	Provider string   `json:"provider"`
+	Families []string `json:"families"`
+}
+
+type capabilityReport struct {
+	Service   string               `json:"service"`
+	Providers []capabilityProvider `json:"providers"`
+}
+
+// capabilities is the body of POST llm-capabilities: google always (every
+// family), plus every provider this process declared (nil families = every family).
+func capabilities(service string) capabilityReport {
+	drivableMu.RLock()
+	defer drivableMu.RUnlock()
+	providers := []capabilityProvider{{Provider: ProviderGoogle}}
+	names := make([]string, 0, len(drivable))
+	for name := range drivable {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		set := drivable[name]
+		if name == ProviderGoogle || (!set.all && len(set.families) == 0) {
+			continue
+		}
+		p := capabilityProvider{Provider: name}
+		if !set.all {
+			p.Families = make([]string, 0, len(set.families))
+			for f := range set.families {
+				p.Families = append(p.Families, f)
+			}
+			sort.Strings(p.Families)
+		}
+		providers = append(providers, p)
+	}
+	return capabilityReport{Service: service, Providers: providers}
+}
+
+// ReportCapabilities posts what this service can drive to kielo-localization.
+func (c *Client) ReportCapabilities(ctx context.Context, service string) error {
+	if c == nil || c.baseURL == "" || service == "" {
+		return nil
+	}
+	body, err := json.Marshal(capabilities(service))
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+capabilitiesPath, bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if c.apiKey != "" {
+		req.Header.Set("X-Internal-API-Key", c.apiKey)
+	}
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, maxResponseLen))
+	if resp.StatusCode >= http.StatusMultipleChoices {
+		return fmt.Errorf("llm-capabilities: status %d", resp.StatusCode)
+	}
+	return nil
+}
+
+var (
+	capabilityDelay = time.Second
+	capabilityMu    sync.Mutex
+	capabilityDirty bool
+	capabilityBusy  bool
+)
+
+// queueCapabilityReport asks for a capability report; calls close together
+// (Configure, then AllowProviders at start-up) share one post, made after a short
+// delay on a goroutine. Fire and forget: a failure is only logged.
+func queueCapabilityReport() {
+	defaultMu.RLock()
+	c, service := defaultClient, defaultSvc
+	defaultMu.RUnlock()
+	if c == nil || c.baseURL == "" || service == "" {
+		return
+	}
+	capabilityMu.Lock()
+	capabilityDirty = true
+	if capabilityBusy {
+		capabilityMu.Unlock()
+		return
+	}
+	capabilityBusy = true
+	capabilityMu.Unlock()
+	go reportCapabilities()
+}
+
+func reportCapabilities() {
+	for {
+		capabilityMu.Lock()
+		delay := capabilityDelay
+		capabilityMu.Unlock()
+		time.Sleep(delay)
+		capabilityMu.Lock()
+		if !capabilityDirty {
+			capabilityBusy = false
+			capabilityMu.Unlock()
+			return
+		}
+		capabilityDirty = false
+		capabilityMu.Unlock()
+		defaultMu.RLock()
+		c, service := defaultClient, defaultSvc
+		defaultMu.RUnlock()
+		ctx, cancel := context.WithTimeout(context.Background(), 2*fetchTimeout)
+		if err := c.ReportCapabilities(ctx, service); err != nil {
+			slog.Warn("LLM_CAPABILITIES report failed", "err", err)
+		}
+		cancel()
+	}
 }
