@@ -116,6 +116,18 @@ def reset_budget(token: Token) -> None:
     _active_budget.reset(token)
 
 
+def detach_budget() -> None:
+    """Stop counting this task's seam work against the request that spawned it.
+
+    A task created with asyncio.create_task copies the request context, so it
+    shares the request's counters by reference and anything it records before
+    the middleware snapshots leaks into the response headers. Detached,
+    post-response work (the support-locale autotranslate fan-out) calls this
+    first; it only rebinds the task's own context copy.
+    """
+    _active_budget.set(None)
+
+
 def budget_from_context() -> Optional[_BudgetCounters]:
     """Return the active counters, or None if no budget is wired."""
     return _active_budget.get()

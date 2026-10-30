@@ -380,3 +380,31 @@ async def test_middleware_swallows_callback_errors():
     # Response succeeded despite background callback failure.
     assert resp.status_code == 200
     await asyncio.wait_for(callback_done.wait(), timeout=2.0)
+
+
+@pytest.mark.asyncio
+async def test_autotranslate_work_is_not_counted_in_the_request_budget():
+    from kielo_shared.localization.budget import BudgetKind, record_budget
+    from kielo_shared.middleware.localization_budget import (
+        HEADER_OVERRIDES,
+        LocalizationBudgetMiddleware,
+    )
+
+    done = asyncio.Event()
+
+    async def callback(items, locale):
+        for _ in items:
+            record_budget(BudgetKind.OVERRIDE_LOOKUP, 1)
+        done.set()
+
+    app = _build_app_with_autotranslate(
+        _StubSession(rows=[]),
+        resolve_locale=lambda req: "vi",
+        autotranslate_callback=callback,
+    )
+    app.add_middleware(LocalizationBudgetMiddleware)
+
+    resp = await _drive_async(app, "/trigger?missing=Learn,Reinforce,Practice&lang=vi")
+    await asyncio.wait_for(done.wait(), timeout=2.0)
+
+    assert resp.headers[HEADER_OVERRIDES] == "0"
