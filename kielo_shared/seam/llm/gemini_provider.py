@@ -54,6 +54,11 @@ class GeminiSDKProvider:
         default = request.model or self._default_model
         if not self._family:
             return llmroute.Route(default)
+        # A stable key (request.metadata["route_key"]: deck, learner or item id)
+        # keeps one unit on one model while the family runs a canary.
+        key = (request.metadata or {}).get("route_key")
+        if key:
+            return llmroute.resolve(self._family, default, key=str(key))
         return llmroute.resolve(self._family, default)
 
     def _config(self, request: Request, thinking_budget: int) -> Any:
@@ -71,10 +76,18 @@ class GeminiSDKProvider:
         )
         return config
 
-    def _record(self, model: str, usage: Any, started: float, failed: bool) -> None:
+    def _record(
+        self,
+        route: "llmroute.Route",
+        usage: Any,
+        started: float,
+        failed: bool,
+        outcome: str = "",
+    ) -> None:
         if not self._family:
             return
         try:
+            model = route.model
             tin = int(getattr(usage, "prompt_token_count", 0) or 0)
             tout = int(getattr(usage, "candidates_token_count", 0) or 0)
             think = int(getattr(usage, "thoughts_token_count", 0) or 0)
@@ -90,6 +103,10 @@ class GeminiSDKProvider:
                 usd=usd,
                 latency_ms=(time.perf_counter() - started) * 1000,
                 error=failed,
+                outcome=outcome
+                or (llmroute.OUTCOME_ERROR if failed else llmroute.OUTCOME_OK),
+                fallback=bool(route.requested),
+                variant=route.variant,
             )
         except Exception:
             pass
@@ -162,11 +179,17 @@ class GeminiSDKProvider:
         except Error:
             raise
         except Exception as exc:
-            self._record(model, None, started, True)
+            self._record(route, None, started, True)
             raise Error(_classify_genai_exception(exc), exc) from exc
 
-        self._record(model, getattr(response, "usage_metadata", None), started, False)
         text = getattr(response, "text", None)
+        self._record(
+            route,
+            getattr(response, "usage_metadata", None),
+            started,
+            False,
+            outcome="" if text else llmroute.OUTCOME_INVALID_OUTPUT,
+        )
         if not text:
             raise Error(
                 ErrorClass.EMPTY_RESPONSE,
@@ -221,9 +244,9 @@ class GeminiSDKProvider:
         except Error:
             raise
         except Exception as exc:
-            self._record(model, usage, started, True)
+            self._record(route, usage, started, True)
             raise Error(_classify_genai_exception(exc), exc) from exc
-        self._record(model, usage, started, False)
+        self._record(route, usage, started, False)
 
 
 def _classify_genai_exception(exc: BaseException) -> ErrorClass:

@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/team-kielo-app/kielo-shared/llmroute"
 )
@@ -53,5 +54,120 @@ func TestGeminiPayloadThinkingBudget(t *testing.T) {
 	}
 	if _, ok := buildGeminiPayload(Request{Prompt: "x", ThinkingBudget: &def})["generationConfig"]; ok {
 		t.Fatal("budget -1 must leave the default")
+	}
+}
+
+func canaryStore(routes string) *httptest.Server {
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/llm-models") {
+			_, _ = w.Write([]byte(`{"items":[{"model":"gemini-3.8-flash","provider":"google"},{"model":"gemini-3.5-flash","provider":"google"},` +
+				`{"model":"claude-haiku-5-5","provider":"anthropic"}]}`))
+			return
+		}
+		_, _ = w.Write([]byte(routes))
+	}))
+}
+
+func TestRoutingKeepsOneKeyOnOneModelWhileACanaryRuns(t *testing.T) {
+	srv := canaryStore(`{"items":[{"family":"canary_family","model":"gemini-3.8-flash","thinking_budget":-1,` +
+		`"candidate_model":"gemini-3.5-flash","candidate_thinking_budget":0,"candidate_share":50}]}`)
+	defer srv.Close()
+	llmroute.Configure("svc", srv.URL, "")
+	t.Cleanup(func() { llmroute.Configure("", "", "") })
+	inner := &fakeProvider{}
+	p := WithRouting(inner)
+	// crc32("canary_family:<key>") % 100 decides; the keys below sit on both sides of 50.
+	seen := map[string]map[string]bool{}
+	for i := 0; i < 40; i++ {
+		key := "deck-" + string(rune('a'+i%20))
+		if _, err := p.Generate(context.Background(), Request{Prompt: "x", Model: "compiled", Family: "canary_family", RouteKey: key}); err != nil {
+			t.Fatal(err)
+		}
+		if seen[key] == nil {
+			seen[key] = map[string]bool{}
+		}
+		seen[key][inner.last.Model] = true
+	}
+	models := map[string]bool{}
+	for key, ms := range seen {
+		if len(ms) != 1 {
+			t.Fatalf("key %s saw several models: %v", key, ms)
+		}
+		for m := range ms {
+			models[m] = true
+		}
+	}
+	if !models["gemini-3.8-flash"] || !models["gemini-3.5-flash"] || len(models) != 2 {
+		t.Fatalf("a 50%% canary over 20 keys should use both models, got %v", models)
+	}
+}
+
+func TestRoutingRecordsAFallbackWhenTheRouteIsRefused(t *testing.T) {
+	srv := canaryStore(`{"items":[{"family":"refused_family","model":"claude-haiku-5-5","thinking_budget":-1}]}`)
+	defer srv.Close()
+	llmroute.Configure("svc", srv.URL, "")
+	t.Cleanup(func() { llmroute.Configure("", "", "") })
+	posted := make(chan string, 8)
+	usage := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+		buf := make([]byte, 1<<16)
+		n, _ := r.Body.Read(buf)
+		posted <- string(buf[:n])
+	}))
+	defer usage.Close()
+	ctx, stop := context.WithCancel(context.Background())
+	llmroute.StartUsage(ctx, usage.URL, "", 20*time.Millisecond)
+	defer stop()
+
+	inner := &fakeProvider{}
+	if _, err := WithRouting(inner).Generate(context.Background(), Request{Prompt: "x", Model: "gemini-default", Family: "refused_family"}); err != nil {
+		t.Fatal(err)
+	}
+	if inner.last.Model != "gemini-default" {
+		t.Fatalf("a refused route must run the compiled default, got %q", inner.last.Model)
+	}
+	select {
+	case body := <-posted:
+		for _, want := range []string{`"model":"gemini-default"`, `"fallbacks":1`, `"errors":0`} {
+			if !strings.Contains(body, want) {
+				t.Fatalf("usage body %s lacks %s", body, want)
+			}
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("usage rollup was not flushed")
+	}
+}
+
+type failingProvider struct{}
+
+func (failingProvider) Generate(context.Context, Request) (*Result, error) {
+	return nil, &Error{Class: ErrorClassServerError, Err: errors.New("boom")}
+}
+
+func TestRoutingRecordsTheErrorOutcome(t *testing.T) {
+	srv := canaryStore(`{"items":[{"family":"failing_family","model":"gemini-3.8-flash","thinking_budget":-1}]}`)
+	defer srv.Close()
+	llmroute.Configure("svc", srv.URL, "")
+	t.Cleanup(func() { llmroute.Configure("", "", "") })
+	posted := make(chan string, 8)
+	usage := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+		buf := make([]byte, 1<<16)
+		n, _ := r.Body.Read(buf)
+		posted <- string(buf[:n])
+	}))
+	defer usage.Close()
+	ctx, stop := context.WithCancel(context.Background())
+	llmroute.StartUsage(ctx, usage.URL, "", 20*time.Millisecond)
+	defer stop()
+
+	if _, err := WithRouting(failingProvider{}).Generate(context.Background(), Request{Prompt: "x", Model: "d", Family: "failing_family"}); err == nil {
+		t.Fatal("the provider error must come back")
+	}
+	select {
+	case body := <-posted:
+		if !strings.Contains(body, `"errors":1`) || !strings.Contains(body, `"fallbacks":0`) {
+			t.Fatalf("usage body = %s", body)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("usage rollup was not flushed")
 	}
 }

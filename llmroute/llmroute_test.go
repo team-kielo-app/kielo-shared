@@ -2,8 +2,11 @@ package llmroute
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -377,5 +380,463 @@ func TestAllowProvidersDecidesWhichRoutesAProcessServes(t *testing.T) {
 	}
 	if InferProvider("claude-haiku-5-5") != ProviderAnthropic {
 		t.Fatal("claude- prefix")
+	}
+}
+
+const canaryModels = `{"items":[` +
+	`{"model":"gemini-3.8-flash","provider":"google"},` +
+	`{"model":"gemini-3.5-flash","provider":"google"},` +
+	`{"model":"claude-haiku-5-5","provider":"anthropic"}]}`
+
+func canaryRoutes(route, candidate string, thinking, share any) string {
+	return fmt.Sprintf(`{"items":[{"family":"scene_pack","model":%q,"thinking_budget":768,"daily_budget_usd":2.5,`+
+		`"candidate_model":%q,"candidate_thinking_budget":%v,"candidate_share":%v}]}`, route, candidate, thinking, share)
+}
+
+func canaryClient(t *testing.T, routes string) *Client {
+	t.Helper()
+	srv := modelsAndRoutes(canaryModels, routes, http.StatusOK)
+	t.Cleanup(srv.Close)
+	return NewClient(srv.URL, "", time.Minute)
+}
+
+func withDrivable(t *testing.T, next map[string]familySet) {
+	t.Helper()
+	drivableMu.Lock()
+	saved := drivable
+	drivable = next
+	drivableMu.Unlock()
+	t.Cleanup(func() {
+		drivableMu.Lock()
+		drivable = saved
+		drivableMu.Unlock()
+	})
+}
+
+func defaultDrivable() map[string]familySet {
+	return map[string]familySet{ProviderOpenAI: {families: OpenAICapableFamilies}}
+}
+
+var canaryDef = Route{Model: "compiled", ThinkingBudget: -1}
+
+func TestACandidateShareIsPickedByAStableHashOfTheKey(t *testing.T) {
+	c := canaryClient(t, canaryRoutes("gemini-3.8-flash", "gemini-3.5-flash", 0, 50))
+	ctx := context.Background()
+	// crc32("scene_pack:<key>") % 100, the same vector the Python client pins.
+	for key, want := range map[string]string{"deck-1": VariantCandidate, "deck-2": VariantRoute, "deck-3": VariantCandidate, "deck-4": VariantRoute} {
+		for range 3 {
+			if got := c.ResolveKeyed(ctx, "scene_pack", canaryDef, key); got.Variant != want {
+				t.Fatalf("key %s: variant %q, want %q", key, got.Variant, want)
+			}
+		}
+	}
+	cand := c.ResolveKeyed(ctx, "scene_pack", canaryDef, "deck-1")
+	if cand.Model != "gemini-3.5-flash" || cand.Provider != ProviderGoogle || cand.ThinkingBudget != 0 || cand.DailyBudgetUSD != 2.5 {
+		t.Fatalf("candidate route = %+v", cand)
+	}
+	inc := c.ResolveKeyed(ctx, "scene_pack", canaryDef, "deck-2")
+	if inc.Model != "gemini-3.8-flash" || inc.ThinkingBudget != 768 || inc.Requested != "" {
+		t.Fatalf("incumbent route = %+v", inc)
+	}
+}
+
+func TestTheHashIsCrc32OfFamilyColonKey(t *testing.T) {
+	for _, tc := range []struct {
+		family, key string
+		bucket      int
+	}{{"scene_pack", "deck-1", 15}, {"scene_pack", "ünï-ключ", 6}, {"exercise_judge", "ex-42", 9}} {
+		if !inShare(tc.family, tc.key, tc.bucket+1) || inShare(tc.family, tc.key, tc.bucket) {
+			t.Fatalf("%s:%s must hash to bucket %d", tc.family, tc.key, tc.bucket)
+		}
+	}
+	if inShare("f", "k", 0) || inShare("f", "", 0) || !inShare("f", "k", 100) {
+		t.Fatal("share 0 sends nothing and 100 sends every key")
+	}
+}
+
+func TestAShareIsHonouredAcrossKeysAndDraws(t *testing.T) {
+	c := canaryClient(t, canaryRoutes("gemini-3.8-flash", "gemini-3.5-flash", -1, 20))
+	ctx := context.Background()
+	keyed, drawn := 0, 0
+	for i := range 2000 {
+		if c.ResolveKeyed(ctx, "scene_pack", canaryDef, fmt.Sprintf("item-%d", i)).Variant == VariantCandidate {
+			keyed++
+		}
+		if c.Resolve(ctx, "scene_pack", canaryDef).Variant == VariantCandidate {
+			drawn++
+		}
+	}
+	for name, n := range map[string]int{"keyed": keyed, "drawn": drawn} {
+		if n < 300 || n > 500 {
+			t.Fatalf("%s: %d of 2000 went to a 20%% candidate", name, n)
+		}
+	}
+}
+
+func TestShareZeroAndHundred(t *testing.T) {
+	ctx := context.Background()
+	none := canaryClient(t, canaryRoutes("gemini-3.8-flash", "gemini-3.5-flash", -1, 0))
+	all := canaryClient(t, canaryRoutes("gemini-3.8-flash", "gemini-3.5-flash", -1, 100))
+	for i := range 50 {
+		key := fmt.Sprintf("k%d", i)
+		if none.ResolveKeyed(ctx, "scene_pack", canaryDef, key).Variant == VariantCandidate || none.Resolve(ctx, "scene_pack", canaryDef).Variant == VariantCandidate {
+			t.Fatal("share 0 must never pick the candidate")
+		}
+		if all.ResolveKeyed(ctx, "scene_pack", canaryDef, key).Variant != VariantCandidate || all.Resolve(ctx, "scene_pack", canaryDef).Variant != VariantCandidate {
+			t.Fatal("share 100 must always pick the candidate")
+		}
+	}
+}
+
+func TestACandidateThisProcessCannotDriveNeverRuns(t *testing.T) {
+	withDrivable(t, defaultDrivable())
+	c := canaryClient(t, canaryRoutes("gemini-3.8-flash", "claude-haiku-5-5", -1, 100))
+	for i := range 20 {
+		got := c.ResolveKeyed(context.Background(), "scene_pack", canaryDef, fmt.Sprintf("k%d", i))
+		if got.Model != "gemini-3.8-flash" || got.Variant != VariantRoute {
+			t.Fatalf("an undrivable candidate must fall to the route, got %+v", got)
+		}
+	}
+	AllowProviders([]string{ProviderAnthropic}, "scene_pack")
+	if got := c.ResolveKeyed(context.Background(), "scene_pack", canaryDef, "k"); got.Model != "claude-haiku-5-5" || got.Provider != ProviderAnthropic || got.Variant != VariantCandidate {
+		t.Fatalf("a drivable Claude candidate must run, got %+v", got)
+	}
+}
+
+func TestACandidateMissingFromTheRegistryOrEqualToTheRouteIsIgnored(t *testing.T) {
+	ctx := context.Background()
+	ghost := canaryClient(t, canaryRoutes("gemini-3.8-flash", "no-such-model", -1, 100))
+	if got := ghost.ResolveKeyed(ctx, "scene_pack", canaryDef, "k"); got.Model != "gemini-3.8-flash" || got.Variant != VariantRoute {
+		t.Fatalf("ghost candidate: %+v", got)
+	}
+	same := canaryClient(t, canaryRoutes("gemini-3.8-flash", "gemini-3.8-flash", -1, 100))
+	if got := same.ResolveKeyed(ctx, "scene_pack", canaryDef, "k"); got.Variant != VariantRoute {
+		t.Fatalf("a candidate equal to the route is no canary: %+v", got)
+	}
+}
+
+func TestAMalformedCandidateDoesNotBreakTheRouteTable(t *testing.T) {
+	srv := modelsAndRoutes(canaryModels, `{"items":[`+
+		`{"family":"a","model":"gemini-3.8-flash","candidate_model":"gemini-3.5-flash","candidate_share":"lots"},`+
+		`{"family":"b","model":"gemini-3.8-flash","candidate_model":"gemini-3.5-flash","candidate_share":250},`+
+		`{"family":"c","model":"gemini-3.8-flash","candidate_model":null,"candidate_share":50},`+
+		`{"family":"d","model":"gemini-3.8-flash","candidate_model":"gemini-3.5-flash","candidate_share":50,"candidate_thinking_budget":"x"},`+
+		`{"family":"e","model":"gemini-3.8-flash"}]}`, http.StatusOK)
+	defer srv.Close()
+	c := NewClient(srv.URL, "", time.Minute)
+	ctx := context.Background()
+	for family, want := range map[string]string{"a": VariantRoute, "b": VariantCandidate, "c": VariantRoute, "d": VariantRoute, "e": VariantRoute} {
+		got := c.ResolveKeyed(ctx, family, canaryDef, "k")
+		if got.Model == "compiled" || got.Variant != want {
+			t.Fatalf("family %s: %+v, want variant %s from the table", family, got, want)
+		}
+	}
+}
+
+func TestARefusedRouteReturnsTheDefaultWithTheRequestedModel(t *testing.T) {
+	withDrivable(t, defaultDrivable())
+	c := canaryClient(t, canaryRoutes("claude-haiku-5-5", "gemini-3.5-flash", -1, 40))
+	ctx := context.Background()
+	var cand, def int
+	for i := range 200 {
+		got := c.ResolveKeyed(ctx, "scene_pack", canaryDef, fmt.Sprintf("k%d", i))
+		switch got.Variant {
+		case VariantCandidate:
+			cand++
+		default:
+			def++
+			if got.Model != "compiled" || got.Requested != "claude-haiku-5-5" {
+				t.Fatalf("refused route: want the default asking for claude-haiku-5-5, got %+v", got)
+			}
+		}
+	}
+	if cand == 0 || def == 0 {
+		t.Fatalf("a candidate still runs beside a refused route: candidate=%d default=%d", cand, def)
+	}
+	if got := c.Resolve(ctx, "unknown", canaryDef); got != canaryDef {
+		t.Fatalf("a family with no row returns the default untouched, got %+v", got)
+	}
+}
+
+func TestResolveStaysTheRouteWhenThereIsNoCandidate(t *testing.T) {
+	srv := modelsAndRoutes(canaryModels, `{"items":[{"family":"scene_pack","model":"gemini-3.8-flash"}]}`, http.StatusOK)
+	defer srv.Close()
+	got := NewClient(srv.URL, "", time.Minute).ResolveKeyed(context.Background(), "scene_pack", canaryDef, "deck-1")
+	if got.Model != "gemini-3.8-flash" || got.Variant != VariantRoute || got.Requested != "" {
+		t.Fatalf("route = %+v", got)
+	}
+}
+
+func TestTheProcessWideResolveKeyedUsesTheConfiguredClient(t *testing.T) {
+	srv := modelsAndRoutes(canaryModels, canaryRoutes("gemini-3.8-flash", "gemini-3.5-flash", -1, 50), http.StatusOK)
+	defer srv.Close()
+	resetCapabilityState(t)
+	Configure("svc", srv.URL, "")
+	if got := ResolveKeyed(context.Background(), "scene_pack", canaryDef, "deck-1"); got.Variant != VariantCandidate {
+		t.Fatalf("deck-1 is in a 50%% share: %+v", got)
+	}
+	if got := ResolveKeyed(context.Background(), "scene_pack", canaryDef, "deck-2"); got.Variant != VariantRoute {
+		t.Fatalf("deck-2 is outside a 50%% share: %+v", got)
+	}
+	if got := Resolve(context.Background(), "unknown", canaryDef); got != canaryDef {
+		t.Fatalf("Resolve keeps working: %+v", got)
+	}
+}
+
+func TestRecorderCountsOutcomesFallbacksAcceptedAndRejected(t *testing.T) {
+	rec := NewRecorder("svc", "http://unused", "")
+	rec.Record(Sample{Family: "f", Model: "m", Latency: 10 * time.Millisecond})
+	rec.Record(Sample{Family: "f", Model: "m", Latency: 10 * time.Millisecond, Outcome: OutcomeError})
+	rec.Record(Sample{Family: "f", Model: "m", Latency: 10 * time.Millisecond, Outcome: OutcomeRefused})
+	rec.Record(Sample{Family: "f", Model: "m", Latency: 10 * time.Millisecond, Outcome: OutcomeInvalidOutput})
+	rec.Record(Sample{Family: "f", Model: "m", Latency: 10 * time.Millisecond, Error: true})
+	rec.Record(Sample{Family: "f", Model: "m", Latency: 10 * time.Millisecond, Fallback: true})
+	rec.Record(Sample{Family: "f", Model: "default", Latency: 10 * time.Millisecond, Fallback: true})
+	rec.RecordOutcome("f", "m", true, 1)
+	rec.RecordOutcome("f", "m", true, 3)
+	rec.RecordOutcome("f", "m", false, 2)
+	rec.RecordOutcome("f", "m", true, 0)
+	rec.RecordOutcome("f", "m", true, -4)
+	rec.RecordOutcome("", "m", true, 1)
+	rec.RecordOutcome("f", "", true, 1)
+	rows := map[string]UsageRow{}
+	for _, r := range rec.Drain() {
+		rows[r.Model] = r
+	}
+	m := rows["m"]
+	if m.Calls != 6 || m.Errors != 3 || m.Fallbacks != 1 || m.Accepted != 4 || m.Rejected != 2 {
+		t.Fatalf("model m row = %+v", m)
+	}
+	if d := rows["default"]; d.Calls != 1 || d.Fallbacks != 1 || d.Accepted != 0 {
+		t.Fatalf("a fallback counts under the model that ran: %+v", d)
+	}
+}
+
+func TestAnOutcomeOnlyRowSendsNoLatencyAndTheWireCarriesTheCounters(t *testing.T) {
+	rec := NewRecorder("svc", "http://unused", "")
+	rec.RecordOutcome("f", "m", false, 1)
+	rows := rec.Drain()
+	if len(rows) != 1 || rows[0].Calls != 0 || rows[0].Rejected != 1 || rows[0].LatencyMsP50 != nil || rows[0].LatencyMsP95 != nil {
+		t.Fatalf("outcome-only row = %+v", rows)
+	}
+	wire, err := json.Marshal(rows[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{`"accepted":0`, `"rejected":1`, `"fallbacks":0`, `"latency_ms_p50":null`} {
+		if !strings.Contains(string(wire), want) {
+			t.Fatalf("wire %s lacks %s", wire, want)
+		}
+	}
+	NewRecorder("svc", "", "").RecordOutcome("f", "m", true, 1)
+	(*Recorder)(nil).RecordOutcome("f", "m", true, 1)
+}
+
+func TestAFailedFlushKeepsOutcomesAndFallbacks(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusInternalServerError) }))
+	defer srv.Close()
+	rec := NewRecorder("svc", srv.URL, "")
+	rec.Record(Sample{Family: "f", Model: "m", Fallback: true})
+	rec.RecordOutcome("f", "m", true, 2)
+	rec.RecordOutcome("f", "m", false, 1)
+	if err := rec.Flush(context.Background()); err == nil {
+		t.Fatal("a 500 must fail the flush")
+	}
+	rows := rec.Drain()
+	if len(rows) != 1 || rows[0].Calls != 1 || rows[0].Accepted != 2 || rows[0].Rejected != 1 || rows[0].Fallbacks != 1 {
+		t.Fatalf("restored rows = %+v", rows)
+	}
+}
+
+func TestTheProcessWideRecordOutcomeReachesTheRecorder(t *testing.T) {
+	RecordOutcome("f", "m", true, 1)
+	rec := NewRecorder("svc", "http://unused", "")
+	recorderMu.Lock()
+	saved := recorder
+	recorder = rec
+	recorderMu.Unlock()
+	t.Cleanup(func() {
+		recorderMu.Lock()
+		recorder = saved
+		recorderMu.Unlock()
+	})
+	RecordOutcome("f", "m", true, 2)
+	Record(Sample{Family: "f", Model: "m", Fallback: true})
+	rows := rec.Drain()
+	if len(rows) != 1 || rows[0].Accepted != 2 || rows[0].Fallbacks != 1 {
+		t.Fatalf("rows = %+v", rows)
+	}
+}
+
+type capabilityPosts struct {
+	mu     sync.Mutex
+	bodies []capabilityReport
+	keys   []string
+	paths  []string
+}
+
+func (p *capabilityPosts) snapshot() []capabilityReport {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return append([]capabilityReport(nil), p.bodies...)
+}
+
+func capabilityServer(t *testing.T, status int) (*httptest.Server, *capabilityPosts) {
+	t.Helper()
+	posts := &capabilityPosts{}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			_, _ = w.Write([]byte(`{"items":[]}`))
+			return
+		}
+		var body capabilityReport
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		posts.mu.Lock()
+		posts.bodies = append(posts.bodies, body)
+		posts.keys = append(posts.keys, r.Header.Get("X-Internal-API-Key"))
+		posts.paths = append(posts.paths, r.URL.Path)
+		posts.mu.Unlock()
+		w.WriteHeader(status)
+	}))
+	t.Cleanup(srv.Close)
+	return srv, posts
+}
+
+func waitCapabilityIdle(t *testing.T) {
+	t.Helper()
+	deadline := time.Now().Add(3 * time.Second)
+	for time.Now().Before(deadline) {
+		capabilityMu.Lock()
+		busy := capabilityBusy
+		capabilityMu.Unlock()
+		if !busy {
+			return
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	t.Fatal("capability reporter did not finish")
+}
+
+func resetCapabilityState(t *testing.T) {
+	t.Helper()
+	withDrivable(t, defaultDrivable())
+	capabilityMu.Lock()
+	savedDelay := capabilityDelay
+	capabilityDelay = 50 * time.Millisecond
+	capabilityMu.Unlock()
+	t.Cleanup(func() {
+		waitCapabilityIdle(t)
+		capabilityMu.Lock()
+		capabilityDelay = savedDelay
+		capabilityMu.Unlock()
+		defaultMu.Lock()
+		defaultClient, defaultSvc = nil, ""
+		defaultMu.Unlock()
+	})
+}
+
+func TestCapabilitiesAlwaysListGoogleAndWhatWasDeclared(t *testing.T) {
+	withDrivable(t, defaultDrivable())
+	body := capabilities("svc")
+	if body.Service != "svc" || body.Providers[0].Provider != ProviderGoogle || body.Providers[0].Families != nil {
+		t.Fatalf("google first, every family: %+v", body)
+	}
+	if len(body.Providers) != 2 || body.Providers[1].Provider != ProviderOpenAI || len(body.Providers[1].Families) != len(OpenAICapableFamilies) {
+		t.Fatalf("a process that declares nothing reports the OpenAI default: %+v", body)
+	}
+	AllowProviders([]string{ProviderAnthropic}, "scene_pack", "exercise_judge")
+	anth := capabilities("svc").Providers[1]
+	if anth.Provider != ProviderAnthropic || strings.Join(anth.Families, ",") != "exercise_judge,scene_pack" {
+		t.Fatalf("scoped claude: %+v", anth)
+	}
+	AllowProviders([]string{ProviderAnthropic, ProviderOpenAI})
+	wire, _ := json.Marshal(capabilities("svc"))
+	if got := string(wire); got != `{"service":"svc","providers":[{"provider":"google","families":null},{"provider":"anthropic","families":null},{"provider":"openai","families":null}]}` {
+		t.Fatalf("wire = %s", got)
+	}
+}
+
+func TestConfigurePostsTheCapabilitiesOnceFromABackgroundGoroutine(t *testing.T) {
+	resetCapabilityState(t)
+	srv, posts := capabilityServer(t, http.StatusOK)
+	Configure("kielo-convo", srv.URL, "secret")
+	if len(posts.snapshot()) != 0 {
+		t.Fatal("the report must not block Configure")
+	}
+	AllowProviders([]string{ProviderAnthropic}) // declared right after start-up
+	waitCapabilityIdle(t)
+	got := posts.snapshot()
+	if len(got) != 1 {
+		t.Fatalf("calls close together share one post, got %d", len(got))
+	}
+	if got[0].Service != "kielo-convo" || posts.keys[0] != "secret" || posts.paths[0] != capabilitiesPath {
+		t.Fatalf("post = %+v key=%s path=%s", got[0], posts.keys[0], posts.paths[0])
+	}
+	names := []string{}
+	for _, p := range got[0].Providers {
+		names = append(names, p.Provider)
+	}
+	if strings.Join(names, ",") != "google,anthropic,openai" {
+		t.Fatalf("providers = %v", names)
+	}
+}
+
+func TestDeclaringProvidersLaterSendsAFreshReport(t *testing.T) {
+	resetCapabilityState(t)
+	srv, posts := capabilityServer(t, http.StatusOK)
+	Configure("svc", srv.URL, "")
+	AllowProviders([]string{ProviderAnthropic}, "scene_pack")
+	waitCapabilityIdle(t)
+	AllowProviders([]string{ProviderAnthropic})
+	waitCapabilityIdle(t)
+	got := posts.snapshot()
+	if len(got) != 2 {
+		t.Fatalf("want two reports, got %d", len(got))
+	}
+	families := func(r capabilityReport) []string {
+		for _, p := range r.Providers {
+			if p.Provider == ProviderAnthropic {
+				return p.Families
+			}
+		}
+		return []string{"missing"}
+	}
+	if strings.Join(families(got[0]), ",") != "scene_pack" || families(got[1]) != nil {
+		t.Fatalf("anthropic families = %v then %v", families(got[0]), families(got[1]))
+	}
+}
+
+func TestNoCapabilityReportWithoutAStoreOrAService(t *testing.T) {
+	resetCapabilityState(t)
+	srv, posts := capabilityServer(t, http.StatusOK)
+	Configure("svc", "", "")
+	AllowProviders([]string{ProviderAnthropic})
+	Configure("", srv.URL, "")
+	AllowProviders([]string{ProviderAnthropic})
+	time.Sleep(200 * time.Millisecond)
+	capabilityMu.Lock()
+	busy := capabilityBusy
+	capabilityMu.Unlock()
+	if busy || len(posts.snapshot()) != 0 {
+		t.Fatalf("nothing to report to: busy=%v posts=%d", busy, len(posts.snapshot()))
+	}
+}
+
+func TestAFailingCapabilityPostIsSwallowed(t *testing.T) {
+	resetCapabilityState(t)
+	srv, posts := capabilityServer(t, http.StatusInternalServerError)
+	Configure("svc", srv.URL, "")
+	waitCapabilityIdle(t)
+	if len(posts.snapshot()) != 1 {
+		t.Fatal("the post was attempted once")
+	}
+	if err := NewClient(srv.URL, "", 0).ReportCapabilities(context.Background(), "svc"); err == nil {
+		t.Fatal("a 500 is an error to the explicit caller")
+	}
+	if err := NewClient("", "", 0).ReportCapabilities(context.Background(), "svc"); err != nil {
+		t.Fatal("no store means nothing to report")
+	}
+	if err := (*Client)(nil).ReportCapabilities(context.Background(), "svc"); err != nil {
+		t.Fatal("nil client is a no-op")
 	}
 }
