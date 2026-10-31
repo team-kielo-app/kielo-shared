@@ -15,6 +15,7 @@ dependencies = [
 
 [project.optional-dependencies]
 http2 = ["httpx[http2]>=0.24"]
+anthropic = ["anthropic>=1.0,<2"]
 
 [tool.deptry]
 
@@ -33,6 +34,7 @@ http2 = ["httpx[http2]>=0.24"]
 # CLI tools, lightweight workers) skip the cost entirely.
 DEP001 = [
     "aiohttp",
+    "anthropic",
     "asyncpg",
     "fastapi",
     "google",
@@ -60,6 +62,8 @@ explicit_package_bases = true
 module = [
     "aiohttp",
     "aiohttp.*",
+    "anthropic",
+    "anthropic.*",
     "asyncpg",
     "certifi",
     "fastapi.*",
