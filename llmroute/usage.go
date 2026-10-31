@@ -359,8 +359,10 @@ func (r *Recorder) Run(ctx context.Context, gap time.Duration) {
 			cancel()
 			return
 		case <-t.C:
-			if err := r.Flush(ctx); err != nil {
-				slog.Warn("LLM_USAGE flush failed", "err", err)
+			// A tick racing shutdown flushes with a cancelled ctx; the final flush above covers it.
+			// The message must not start with "LLM_USAGE ": that prefix is the per-call usage line.
+			if err := r.Flush(ctx); err != nil && ctx.Err() == nil {
+				slog.Warn("llmroute: usage flush failed", "err", err)
 			}
 		}
 	}
