@@ -772,7 +772,7 @@ class UsageRecorder:
             try:
                 self.flush()
             except Exception as exc:  # never let the flusher die
-                logger.warning("LLM_USAGE flush failed: %s", exc)
+                logger.warning("llmroute: usage flush failed: %s", exc)
 
 
 _client: RouteClient | None = None
