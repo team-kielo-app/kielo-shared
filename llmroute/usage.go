@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"sort"
@@ -46,6 +47,69 @@ type Sample struct {
 	// Fallback marks a call that ran the compiled default because the route's model
 	// was refused (Route.Requested != ""); it counts under the model that ran.
 	Fallback bool
+
+	// The fields below only shape the LLM_USAGE log line; the rollup ignores them.
+
+	// Task names the call site; empty means Family.
+	Task string
+	// Provider is the provider of Model (Route.Provider); empty means InferProvider(Model).
+	Provider string
+	// Requested is the model the route asked for (Route.Requested on a fallback);
+	// empty means Model, the call ran what it asked for.
+	Requested string
+	// Variant is VariantRoute or VariantCandidate (Route.Variant); empty means VariantRoute.
+	Variant string
+}
+
+// UsageLine renders the one-per-call LLM_USAGE line, the same text the Python
+// llmroute writes:
+//
+//	LLM_USAGE task= service= family= provider= model= requested= variant= in= out= thinking= usd= latency_ms= outcome= fallback=
+//
+// The field order is a contract. The "LLM_USAGE task=" prefix feeds the llm_calls
+// log metric, whose label extractors read task= and model=, and "in= out=
+// thinking= usd=" stay contiguous for the tools that tally spend from log text.
+// Values never contain spaces ("-" when empty) and usd is fixed-point, never 1e-05.
+func UsageLine(service string, s Sample) string {
+	outcome := s.Outcome
+	switch outcome {
+	case OutcomeOK, OutcomeError, OutcomeRefused, OutcomeInvalidOutput:
+	default:
+		outcome = OutcomeOK
+	}
+	if s.Error && outcome == OutcomeOK {
+		outcome = OutcomeError
+	}
+	task, provider, requested, variant := s.Task, s.Provider, s.Requested, s.Variant
+	if task == "" {
+		task = s.Family
+	}
+	if provider == "" {
+		provider = InferProvider(s.Model)
+	}
+	if requested == "" {
+		requested = s.Model
+	}
+	if variant == "" {
+		variant = VariantRoute
+	}
+	fallback := 0
+	if s.Fallback {
+		fallback = 1
+	}
+	return fmt.Sprintf(
+		"LLM_USAGE task=%s service=%s family=%s provider=%s model=%s requested=%s variant=%s "+
+			"in=%d out=%d thinking=%d usd=%.6f latency_ms=%d outcome=%s fallback=%d",
+		logValue(task), logValue(service), logValue(s.Family), logValue(provider), logValue(s.Model), logValue(requested),
+		logValue(variant), s.InputTokens, s.OutputTokens, s.ThinkingTokens, s.USD, s.Latency.Milliseconds(), outcome, fallback,
+	)
+}
+
+func logValue(v string) string {
+	if v = strings.Join(strings.Fields(v), "_"); v != "" {
+		return v
+	}
+	return "-"
 }
 
 type usageKey struct {
@@ -317,12 +381,27 @@ func StartUsage(ctx context.Context, baseURL, internalAPIKey string, gap time.Du
 	go rec.Run(ctx, gap)
 }
 
-// Record adds one call to the process-wide recorder (no-op until StartUsage).
+// Record logs the call's one LLM_USAGE line (see UsageLine), with or without a
+// store, and adds it to the process-wide recorder (a no-op until StartUsage).
 func Record(s Sample) {
+	slog.Info(UsageLine(Service(), s))
 	recorderMu.RLock()
 	rec := recorder
 	recorderMu.RUnlock()
 	rec.Record(s)
+}
+
+// FlushUsage posts the pending usage rollup now and waits for the answer, bounded
+// by ctx (and the recorder's own 3 s client timeout). Call it from the shutdown
+// path after the last model call: StartUsage's final flush runs on a goroutine
+// that nothing waits for, so a process that exits right after canceling its
+// context can lose the last interval. A failed post keeps the rows for the next
+// flush and returns the error. A no-op until StartUsage.
+func FlushUsage(ctx context.Context) error {
+	recorderMu.RLock()
+	rec := recorder
+	recorderMu.RUnlock()
+	return rec.Flush(ctx)
 }
 
 // RecordOutcome counts n accepted or rejected outputs on the process-wide
