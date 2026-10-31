@@ -1,9 +1,10 @@
 """kielo_shared.seam.llm — Python LLM seam.
 
 Mirror of `kielo-shared/seam/llm/` (Go). Phase D+3 vertical slice
-covers Gemini via the `google.genai` SDK. Same scope discipline as
-the TTS/STT seams — providers do ONE thing: turn a prompt into raw
-text. Caching, retry, validation stay in the caller.
+covers Gemini via the `google.genai` SDK; OpenAI chat and Anthropic
+(Claude, optional `anthropic` extra) providers sit beside it. Same
+scope discipline as the TTS/STT seams — providers do ONE thing: turn a
+prompt into raw text. Caching, retry, validation stay in the caller.
 
 Distinct from `kielo_shared.llm` (the older registry-based engine
 seam). The `kielo_shared.llm` package owns OpenAI + complex
@@ -36,21 +37,33 @@ from kielo_shared.seam.llm.types import (
     StreamingProvider,
     class_of,
 )
+from kielo_shared.seam.llm.anthropic_provider import (
+    AnthropicChatProvider,
+    ProviderStopped,
+    ProviderUnavailable,
+    claude_effort,
+    strip_json_fence,
+)
 from kielo_shared.seam.llm.gemini_provider import GeminiSDKProvider
 from kielo_shared.seam.llm.openai_provider import OpenAIChatProvider
 from kielo_shared.seam.llm.metrics import MetricsDecorator, with_metrics
 
 
 __all__ = [
+    "AnthropicChatProvider",
     "Error",
     "ErrorClass",
     "GeminiSDKProvider",
     "MetricsDecorator",
     "OpenAIChatProvider",
     "Provider",
+    "ProviderStopped",
+    "ProviderUnavailable",
     "Request",
     "Result",
     "StreamingProvider",
     "class_of",
+    "claude_effort",
+    "strip_json_fence",
     "with_metrics",
 ]
