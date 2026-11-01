@@ -1,9 +1,11 @@
 package middleware
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
+	stdlog "log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -193,5 +195,25 @@ func TestDefaultCodeForStatus(t *testing.T) {
 		if got := defaultCodeForStatus(tc.status); got != tc.want {
 			t.Errorf("defaultCodeForStatus(%d) = %q, want %q", tc.status, got, tc.want)
 		}
+	}
+}
+
+func TestLogInternalError_LineCarriesTheRequestTrace(t *testing.T) {
+	var buf bytes.Buffer
+	out, flags := stdlog.Writer(), stdlog.Flags()
+	stdlog.SetOutput(&buf)
+	stdlog.SetFlags(0)
+	t.Cleanup(func() { stdlog.SetOutput(out); stdlog.SetFlags(flags) })
+
+	tc := observe.New()
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req = req.WithContext(observe.WithContext(req.Context(), tc))
+	c := echo.New().NewContext(req, httptest.NewRecorder())
+
+	_ = LogInternalError(c, errors.New("pq: boom"), "GetFoo %s failed", "abc")
+
+	want := "GetFoo abc failed trace_id=" + tc.TraceID + "\n  underlying error: pq: boom trace_id=" + tc.TraceID + "\n"
+	if buf.String() != want {
+		t.Fatalf("log = %q, want %q", buf.String(), want)
 	}
 }

@@ -3,7 +3,6 @@ package middleware
 import (
 	"context"
 	"errors"
-	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -11,6 +10,7 @@ import (
 	"github.com/labstack/echo/v4"
 
 	kerrors "github.com/team-kielo-app/kielo-shared/errors"
+	obslog "github.com/team-kielo-app/kielo-shared/observe/log"
 )
 
 // RouteDeadline sets the deadline for every path that starts with Prefix.
@@ -50,7 +50,7 @@ func RequestDeadline(cfg RequestDeadlineConfig) echo.MiddlewareFunc {
 			if !errors.Is(ctx.Err(), context.DeadlineExceeded) {
 				return err
 			}
-			log.Printf("WARN: REQUEST_DEADLINE_EXCEEDED method=%s path=%s timeout=%s", req.Method, c.Path(), timeout)
+			obslog.Printf(req.Context(), "WARN: REQUEST_DEADLINE_EXCEEDED method=%s path=%s timeout=%s", req.Method, c.Path(), timeout)
 			if c.Response().Committed {
 				return err
 			}
