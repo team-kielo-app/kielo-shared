@@ -73,6 +73,29 @@ DEFAULT_HANDLER_TIMEOUT_SECONDS = 300.0
 PullHandler = Callable[["Message", dict[str, Any]], Awaitable[None]]
 
 
+async def _with_publisher_trace(
+    coro: "Coroutine[Any, Any, None]", attributes: Any
+) -> None:
+    """Runs the handler under the publisher's trace (a child span of it), so its log
+    lines carry the trace_id of the request that published the message. The
+    handler runs on the service's loop, not this callback thread: the trace is set
+    there, inside the task."""
+    from kielo_shared.trace import (
+        child_span,
+        extract_trace_attributes,
+        reset_current_trace_context,
+        set_current_trace_context,
+    )
+
+    producer = extract_trace_attributes(attributes) if attributes else None
+    token = set_current_trace_context(child_span(producer)) if producer else None
+    try:
+        await coro
+    finally:
+        if token is not None:
+            reset_current_trace_context(token)
+
+
 def process_pull_message(
     *,
     message: "Message",
@@ -145,7 +168,7 @@ def process_pull_message(
     # typed explicitly so callers don't get Any.
     coro = cast("Coroutine[Any, Any, None]", handler(message, payload))
     future: concurrent.futures.Future[None] = asyncio.run_coroutine_threadsafe(
-        coro, loop
+        _with_publisher_trace(coro, getattr(message, "attributes", None) or {}), loop
     )
     try:
         future.result(timeout=handler_timeout)

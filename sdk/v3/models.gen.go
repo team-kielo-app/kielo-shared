@@ -17689,7 +17689,7 @@ type GetApiV3DictionaryLookupParams struct {
 	// ContextSentence Contextual sentence to disambiguate dictionary / translation lookups.
 	ContextSentence *string `form:"context_sentence,omitempty" json:"context_sentence,omitempty"`
 
-	// Source Where the learner met the word (article_reader, dictionary, kielotv, exercise); stamped on the word.viewed learning event.
+	// Source Where the learner met the word (article_reader, dictionary, kielotv, exercise, conversation); stamped on the word.viewed learning event.
 	Source *string `form:"source,omitempty" json:"source,omitempty"`
 
 	// LearningLanguageCode Two-letter ISO 639-1 code for the language being learned (per ADR-006 §3.83).
