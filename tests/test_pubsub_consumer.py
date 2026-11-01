@@ -264,3 +264,28 @@ def test_handler_completes_synchronously_in_callback_thread(
     # Should have waited at least the sleep duration.
     assert elapsed >= 0.04
     msg.ack.assert_called_once()
+
+
+def test_the_handler_runs_under_the_publishers_trace(background_loop, _reset_prom_state):
+    from kielo_shared.trace import (
+        current_trace_context,
+        inject_trace_attributes,
+        new_trace_context,
+    )
+
+    producer = new_trace_context()
+    msg = _make_message(b'{"k": "v"}')
+    msg.attributes = {}
+    inject_trace_attributes(msg.attributes, producer)
+    seen: list = []
+
+    async def _handler(message, payload):
+        seen.append(current_trace_context())
+
+    process_pull_message(message=msg, handler=_handler, loop=background_loop, service="test-svc", topic_label="t")
+    assert seen[0].trace_id == producer.trace_id, "the publisher's trace, so its lines carry the same trace_id"
+    assert seen[0].span_id != producer.span_id, "a child span for this hop"
+
+    plain = _make_message(b'{"k": "v"}')
+    process_pull_message(message=plain, handler=_handler, loop=background_loop, service="test-svc", topic_label="t")
+    assert seen[1].trace_id != producer.trace_id, "no trace attributes: whatever the loop has, never the last message's"

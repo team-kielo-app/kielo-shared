@@ -27,12 +27,15 @@
 package httputil
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/labstack/echo/v4"
+
+	"github.com/team-kielo-app/kielo-shared/observe"
 )
 
 // SlowRequestOptions configures the SlowRequestLogger middleware.
@@ -116,14 +119,12 @@ func SlowRequestLogger(opts SlowRequestOptions) echo.MiddlewareFunc {
 			if status == 0 {
 				status = http.StatusOK
 			}
-			log.Printf(
-				"[slow] %s %s durationMs=%d budget=%dms status=%d",
-				req.Method,
-				req.URL.Path,
-				elapsed.Milliseconds(),
-				thresholdMs,
-				status,
-			)
+			msg := fmt.Sprintf("[slow] %s %s durationMs=%d budget=%dms status=%d",
+				req.Method, req.URL.Path, elapsed.Milliseconds(), thresholdMs, status)
+			if tc, ok := observe.FromContext(req.Context()); ok && !tc.IsZero() {
+				msg += " trace_id=" + tc.TraceID
+			}
+			log.Print(msg)
 			return err
 		}
 	}
