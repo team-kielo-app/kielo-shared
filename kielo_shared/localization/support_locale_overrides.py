@@ -332,10 +332,13 @@ def register_missing(resource_id: str, english_source: str, lang: str) -> None:
         prefetch was scoped to a different locale; firing translate
         for this would create an orphaned row).
 
-    Template-placeholder strings (`text` containing `{`) are also
-    skipped — LLM-translating templates without breaking `{}` semantics
-    is fragile and only worth ~6 strings; admin manual authoring is
-    the right path for those.
+    Template strings (`Practice {}`, `Review: {name}`) are registered
+    like any other source: the triple carries the raw template. Keeping
+    the `{...}` placeholders intact through the translation is the
+    callback's job (mask them, translate, check they all came back),
+    because only the service that owns the translation seam knows how
+    its model treats them. A callback that cannot do that must drop the
+    item rather than persist a row with a broken placeholder.
 
     Mutates the set in place — see the _missing_cv definition comment
     for why.
@@ -343,9 +346,6 @@ def register_missing(resource_id: str, english_source: str, lang: str) -> None:
     english_source = (english_source or "").strip()
     resource_id = (resource_id or "").strip()
     if not lang or lang == "en" or not english_source or not resource_id:
-        return
-    # Skip templates — see docstring.
-    if "{" in english_source:
         return
     # Only register for the locale this request's prefetch is scoped
     # to. Cross-locale auto-translate from a single request would be
