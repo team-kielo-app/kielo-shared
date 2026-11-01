@@ -340,14 +340,16 @@ def test_register_missing_skips_empty_english_source():
     assert consume_missing() == set()
 
 
-def test_register_missing_skips_template_strings():
-    """LLM-translating template placeholders ({}) without breaking
-    semantics is fragile. Skip for first pass — admin manual authoring
-    is the right path for the ~6 templated strings."""
+def test_register_missing_accepts_template_strings():
+    """Templates reach the autotranslate callback with their raw
+    placeholders; masking and validating them is the callback's job."""
     set_overrides_for_request("vi", {})
     register_missing(_key("Practice {}"), "Practice {}", "vi")
     register_missing(_key("Hello {name}"), "Hello {name}", "vi")
-    assert consume_missing() == set()
+    assert consume_missing() == {
+        (_key("Practice {}"), "Practice {}", "vi"),
+        (_key("Hello {name}"), "Hello {name}", "vi"),
+    }
 
 
 def test_register_missing_skips_when_locale_mismatch():
