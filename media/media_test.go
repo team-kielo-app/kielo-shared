@@ -145,3 +145,19 @@ func TestSocialPostVideoProfile(t *testing.T) {
 		t.Fatalf("SocialPost alias = %q %v", got.Key, ok)
 	}
 }
+
+// Carousel slides and their sound are public and kept as uploaded: Buffer and
+// the KTV toolbox fetch them anonymously, and Instagram takes JPEG only.
+func TestSocialPostCarouselProfiles(t *testing.T) {
+	img, ok := ProfileFor("social-post-image")
+	if !ok || !img.PassThrough || img.Access != AccessPublic || img.Retention != (RetentionPolicy{}) {
+		t.Fatalf("social-post-image = %+v %v", img, ok)
+	}
+	if len(img.AllowedMimes) != 1 || img.AllowedMimes[0] != "image/jpeg" {
+		t.Fatalf("image mimes = %v, want JPEG only", img.AllowedMimes)
+	}
+	aud, ok := ProfileFor("social-post-audio")
+	if !ok || !aud.PassThrough || aud.Access != AccessPublic {
+		t.Fatalf("social-post-audio = %+v %v", aud, ok)
+	}
+}

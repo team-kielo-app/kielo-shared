@@ -276,6 +276,31 @@ var profiles = map[string]MediaProfile{
 		Retention: RetentionPolicy{},
 		GDPR:      GDPRClass{SubjectFrom: "none", DedupAcrossSubjects: true},
 	},
+	"social-post-image": {
+		// Slides of a social carousel (Instagram carousel, TikTok photo post) and the
+		// stills of its slideshow video. Instagram takes JPEG only, so the upload's
+		// exact bytes are kept and served publicly for Buffer to fetch.
+		Key:            "social-post-image",
+		PathPrefix:     "social-posts/images",
+		AllowedMimes:   []string{"image/jpeg"},
+		MaxUploadBytes: 30 * mib,
+		PassThrough:    true,
+		Access:         AccessPublic,
+		Retention:      RetentionPolicy{},
+		GDPR:           GDPRClass{SubjectFrom: "none", DedupAcrossSubjects: true},
+	},
+	"social-post-audio": {
+		// The sound of a social carousel's slideshow video, mixed in by the KTV
+		// toolbox. Kept as uploaded; the toolbox's ffmpeg reads any of these.
+		Key:            "social-post-audio",
+		PathPrefix:     "social-posts/audio",
+		AllowedMimes:   []string{"audio/mpeg", "audio/mp4", "audio/x-m4a", "audio/aac", "audio/wav", "audio/x-wav"},
+		MaxUploadBytes: 50 * mib,
+		PassThrough:    true,
+		Access:         AccessPublic,
+		Retention:      RetentionPolicy{},
+		GDPR:           GDPRClass{SubjectFrom: "none", DedupAcrossSubjects: true},
+	},
 	"kielotv-audio": {
 		Key: "kielotv-audio", EntityType: EntityTypeKieloTVAudio,
 		PathPrefix: "kielotv", IncludeEntityID: true,
