@@ -119,3 +119,45 @@ func TestEffectiveClientHost_SkipsBlankXForwardedHeader(t *testing.T) {
 	req.Header.Set("X-Forwarded-Host", "   ")
 	assert.Equal(t, "direct.example.com", EffectiveClientHost(req))
 }
+
+// Social post videos are fetched by Buffer from a public URL: a public
+// progressive mp4 "main" rendition plus a poster frame, never reaped.
+func TestSocialPostVideoProfile(t *testing.T) {
+	p, ok := ProfileFor("social-post-video")
+	if !ok {
+		t.Fatal("social-post-video profile missing")
+	}
+	if p.Access != AccessPublic {
+		t.Fatalf("access = %v, want public (Buffer fetches the file anonymously)", p.Access)
+	}
+	if p.Retention != (RetentionPolicy{}) {
+		t.Fatalf("retention = %+v, want keep forever", p.Retention)
+	}
+	var main, preview bool
+	for _, v := range p.Variants {
+		main = main || (v.Name == "main" && v.Format == "mp4" && v.MaxShortSide == 1080)
+		preview = preview || (v.Name == "preview" && v.Format == "webp")
+	}
+	if !main || !preview {
+		t.Fatalf("variants = %+v, want main mp4 (1080 short side) and webp preview", p.Variants)
+	}
+	if got, ok := ProfileForRelatedEntity("SocialPost"); !ok || got.Key != "social-post-video" {
+		t.Fatalf("SocialPost alias = %q %v", got.Key, ok)
+	}
+}
+
+// Carousel slides and their sound are public and kept as uploaded: Buffer and
+// the KTV toolbox fetch them anonymously, and Instagram takes JPEG only.
+func TestSocialPostCarouselProfiles(t *testing.T) {
+	img, ok := ProfileFor("social-post-image")
+	if !ok || !img.PassThrough || img.Access != AccessPublic || img.Retention != (RetentionPolicy{}) {
+		t.Fatalf("social-post-image = %+v %v", img, ok)
+	}
+	if len(img.AllowedMimes) != 1 || img.AllowedMimes[0] != "image/jpeg" {
+		t.Fatalf("image mimes = %v, want JPEG only", img.AllowedMimes)
+	}
+	aud, ok := ProfileFor("social-post-audio")
+	if !ok || !aud.PassThrough || aud.Access != AccessPublic {
+		t.Fatalf("social-post-audio = %+v %v", aud, ok)
+	}
+}

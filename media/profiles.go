@@ -258,6 +258,49 @@ var profiles = map[string]MediaProfile{
 		Retention: RetentionPolicy{},
 		GDPR:      GDPRClass{SubjectFrom: "none", DedupAcrossSubjects: true},
 	},
+	"social-post-video": {
+		// Videos an admin uploads for a social post (admin → Growth → Social posts,
+		// T-khanh-pey). Buffer fetches the post's video from a public URL, so the
+		// "main" rendition is a progressive H.264/AAC mp4 (iPhone HEVC .mov
+		// normalized) on the public bucket, with a poster frame for the calendar.
+		// Kept indefinitely: a scheduled or published post links to it.
+		Key:            "social-post-video",
+		PathPrefix:     "social-posts",
+		AllowedMimes:   []string{"video/mp4", "video/quicktime"},
+		MaxUploadBytes: 250 * mib,
+		Variants: []VariantSpec{
+			{Name: "preview", MaxWidth: 540, Format: "webp"},
+			{Name: "main", MaxShortSide: 1080, MaxFps: 30, Format: "mp4"},
+		},
+		Access:    AccessPublic,
+		Retention: RetentionPolicy{},
+		GDPR:      GDPRClass{SubjectFrom: "none", DedupAcrossSubjects: true},
+	},
+	"social-post-image": {
+		// Slides of a social carousel (Instagram carousel, TikTok photo post) and the
+		// stills of its slideshow video. Instagram takes JPEG only, so the upload's
+		// exact bytes are kept and served publicly for Buffer to fetch.
+		Key:            "social-post-image",
+		PathPrefix:     "social-posts/images",
+		AllowedMimes:   []string{"image/jpeg"},
+		MaxUploadBytes: 30 * mib,
+		PassThrough:    true,
+		Access:         AccessPublic,
+		Retention:      RetentionPolicy{},
+		GDPR:           GDPRClass{SubjectFrom: "none", DedupAcrossSubjects: true},
+	},
+	"social-post-audio": {
+		// The sound of a social carousel's slideshow video, mixed in by the KTV
+		// toolbox. Kept as uploaded; the toolbox's ffmpeg reads any of these.
+		Key:            "social-post-audio",
+		PathPrefix:     "social-posts/audio",
+		AllowedMimes:   []string{"audio/mpeg", "audio/mp4", "audio/x-m4a", "audio/aac", "audio/wav", "audio/x-wav"},
+		MaxUploadBytes: 50 * mib,
+		PassThrough:    true,
+		Access:         AccessPublic,
+		Retention:      RetentionPolicy{},
+		GDPR:           GDPRClass{SubjectFrom: "none", DedupAcrossSubjects: true},
+	},
 	"kielotv-audio": {
 		Key: "kielotv-audio", EntityType: EntityTypeKieloTVAudio,
 		PathPrefix: "kielotv", IncludeEntityID: true,
@@ -480,6 +523,7 @@ var relatedEntityAliases = map[string]string{
 	"FeedbackMessage":    "support-attachment",
 	"KTVWorkflowVariant": "kielotv-workflow-variant",
 	"AppAsset":           "app-asset",
+	"SocialPost":         "social-post-video",
 }
 
 // ProfileForRelatedEntity resolves a profile from a related_entity_type wire
