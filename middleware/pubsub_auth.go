@@ -1,11 +1,11 @@
 package middleware
 
 import (
-	"log"
 	"net/http"
 	"strings"
 
 	"github.com/labstack/echo/v4"
+	obslog "github.com/team-kielo-app/kielo-shared/observe/log"
 	"github.com/team-kielo-app/kielo-shared/observe/pubsubutil"
 )
 
@@ -41,19 +41,19 @@ func PubSubAuth(cfg PubSubAuthConfig) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			if cfg.Skip {
-				log.Println("WARN: Skipping Pub/Sub auth verification (SKIP_PUBSUB_AUTH=true)")
+				obslog.Println(c.Request().Context(), "WARN: Skipping Pub/Sub auth verification (SKIP_PUBSUB_AUTH=true)")
 				return next(c)
 			}
 
 			authHeader := c.Request().Header.Get("Authorization")
 			tokenString, ok := strings.CutPrefix(authHeader, "Bearer ")
 			if !ok || tokenString == "" {
-				log.Printf("ERROR: Missing or invalid Authorization header for Pub/Sub request")
+				obslog.Printf(c.Request().Context(), "ERROR: Missing or invalid Authorization header for Pub/Sub request")
 				return echo.NewHTTPError(http.StatusUnauthorized, "Missing or invalid authorization")
 			}
 
 			if _, err := pubsubutil.VerifyPubSubJWT(c.Request().Context(), tokenString, cfg.Audience); err != nil {
-				log.Printf("ERROR: Invalid JWT token for Pub/Sub request: %v", err)
+				obslog.Printf(c.Request().Context(), "ERROR: Invalid JWT token for Pub/Sub request: %v", err)
 				return echo.NewHTTPError(http.StatusUnauthorized, "Invalid token")
 			}
 			return next(c)

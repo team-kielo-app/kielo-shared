@@ -39,6 +39,9 @@ func RequestTracing() echo.MiddlewareFunc {
 			// Store in Echo context (accessible via c.Get)
 			c.Set(echoTraceContextKey, tc)
 
+			// c.Logger().Infof(...) lines carry the trace too.
+			withTracedLogger(c, tc.TraceID)
+
 			c.Response().Before(func() {
 				if latestTC, ok := observe.FromContext(c.Request().Context()); ok {
 					observe.InjectHeaders(c.Response().Header(), latestTC)

@@ -131,7 +131,11 @@ def spawn_background_task_lazy(
         return None
 
     coro = coro_factory()
-    if target_loop.is_running():
+    try:
+        on_target_loop = asyncio.get_running_loop() is target_loop
+    except RuntimeError:
+        on_target_loop = False
+    if on_target_loop:
         # We're already on the target loop's thread — `run_coroutine_threadsafe`
         # would deadlock. Schedule directly.
         return spawn_background_task(coro, name=name, service=service)

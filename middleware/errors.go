@@ -4,13 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"log"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
 
 	kerrors "github.com/team-kielo-app/kielo-shared/errors"
 	"github.com/team-kielo-app/kielo-shared/observe"
+	obslog "github.com/team-kielo-app/kielo-shared/observe/log"
 )
 
 // LogInternalError logs the underlying err with operator-facing context
@@ -32,9 +32,9 @@ func LogInternalError(c echo.Context, err error, format string, args ...any) *ec
 	// need the underlying detail. Format and args first so call sites
 	// can include path/user/id context (which is more useful than the
 	// raw error alone).
-	log.Printf(format, args...)
+	obslog.Printf(c.Request().Context(), format, args...)
 	if err != nil {
-		log.Printf("  underlying error: %v", err)
+		obslog.Printf(c.Request().Context(), "  underlying error: %v", err)
 	}
 	return echo.NewHTTPError(500, "internal server error")
 }
