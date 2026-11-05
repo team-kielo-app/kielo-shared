@@ -232,7 +232,11 @@ func TestMembers_GoldenSQLPerCondition(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			q, err := def(tt.cond).Members(1)
 			require.NoError(t, err)
-			assert.Equal(t, "SELECT u.id FROM users.users u WHERE "+realSQL+" AND "+tt.wantSQL, q.SQL)
+			base := realSQL + " AND "
+			if tt.cond.Field == "kielo_team" {
+				base = ""
+			}
+			assert.Equal(t, "SELECT u.id FROM users.users u WHERE "+base+tt.wantSQL, q.SQL)
 			assert.Equal(t, tt.wantArgs, q.Args)
 		})
 	}
@@ -401,4 +405,15 @@ func TestCatalogListsAreNeverNullInJSON(t *testing.T) {
 	if strings.Contains(string(raw), `"options":null`) || strings.Contains(string(raw), `"ops":null`) {
 		t.Fatalf("the admin editor reads options[0]; a null list crashed it: %s", raw)
 	}
+}
+
+func TestTeamAudienceSkipsTheRealLearnerBase(t *testing.T) {
+	team, err := def(cond("kielo_team", "is", `true`)).Count(1)
+	require.NoError(t, err)
+	assert.NotContains(t, team.SQL, "learner_class_v1")
+	assert.Contains(t, team.SQL, "@kielo.app")
+
+	learners, err := def(cond("push_enabled", "is", `true`)).Count(1)
+	require.NoError(t, err)
+	assert.Contains(t, learners.SQL, "learner_class_v1", "every other audience is real learners only")
 }
