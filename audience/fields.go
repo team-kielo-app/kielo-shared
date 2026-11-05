@@ -22,7 +22,7 @@ type fieldDef struct {
 
 var fieldOrder = []string{
 	"platform", "support_language", "learning_language", "signed_up", "last_active", "plus", "plus_ends",
-	"paywall_viewed", "used_feature", "email_marketing", "push_enabled", "campaign",
+	"paywall_viewed", "used_feature", "email_marketing", "push_enabled", "campaign", "kielo_team",
 }
 
 var languageCode = regexp.MustCompile(`^[a-z]{2,3}(-[a-z0-9]{2,8})?$`)
@@ -140,6 +140,16 @@ var fieldDefs = map[string]fieldDef{
 			Value: ValueBool,
 		},
 		parse: parsePushEnabled,
+	},
+	"kielo_team": {
+		spec: FieldSpec{
+			Field: "kielo_team", Label: "Kielo team account",
+			Help: "Accounts with an @kielo.app address, such as the sandbox account. " +
+				"Use it to try an experiment or a campaign on the team before learners see it.",
+			Ops:   []OpSpec{{Op: "is", Label: "is"}},
+			Value: ValueBool,
+		},
+		parse: parseKieloTeam,
 	},
 	"campaign": {
 		spec: FieldSpec{
@@ -384,6 +394,15 @@ func parsePushEnabled(f fieldDef, _ string, raw json.RawMessage) (compiled, erro
 		return "EXISTS (SELECT 1 FROM users.push_tokens pt WHERE pt.user_id = u.id) " +
 			"AND NOT EXISTS (SELECT 1 FROM users.device_preferences dp WHERE dp.user_id = u.id " +
 			"AND COALESCE(dp.notifications->'push'->>'enabled', dp.notifications->>'enabled') = 'false')"
+	}, nil
+}
+
+func parseKieloTeam(f fieldDef, _ string, raw json.RawMessage) (compiled, error) {
+	if err := requireTrue(f, raw); err != nil {
+		return nil, err
+	}
+	return func(*builder) string {
+		return "lower(btrim(u.email)) LIKE '%@kielo.app'"
 	}, nil
 }
 
