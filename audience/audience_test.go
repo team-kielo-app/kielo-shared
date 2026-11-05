@@ -209,6 +209,11 @@ func TestMembers_GoldenSQLPerCondition(t *testing.T) {
 			nil,
 		},
 		{
+			"kielo_team", cond("kielo_team", "is", `true`),
+			"lower(btrim(u.email)) LIKE '%@kielo.app'",
+			nil,
+		},
+		{
 			"campaign shown", cond("campaign", "shown_within_days", `{"campaign_id":"`+campaignID+`","days":14}`),
 			"EXISTS (SELECT 1 FROM users.discount_campaign_events dce WHERE dce.user_id = u.id " +
 				"AND dce.campaign_id = $1::uuid AND dce.event = $2::text AND NOT dce.sandbox " +
@@ -347,7 +352,7 @@ func TestCatalog_Complete(t *testing.T) {
 	for _, name := range fieldOrder {
 		assert.True(t, seen[name], name)
 	}
-	assert.Len(t, fieldOrder, 12)
+	assert.Len(t, fieldOrder, 13)
 }
 
 func TestCatalog_OptionsMatchWhatValidateAccepts(t *testing.T) {
