@@ -21,7 +21,7 @@ import time
 from typing import Awaitable, Callable
 
 from kielo_shared.localization.openai_provider import (
-    _BATCH_SYSTEM,
+    batch_system_prompt,
     _BATCH_USER,
     _context_rule,
     _language_name,
@@ -156,8 +156,8 @@ class GeminiProvider:
             ],
             ensure_ascii=False,
         )
-        system_prompt = _BATCH_SYSTEM.format(
-            source_lang=source_lang, target_lang=target_lang
+        system_prompt = batch_system_prompt(
+            (items[i].role for i in sendable_idx), source_lang, target_lang
         )
         # Same contract as OpenAIProvider: an item that carries sense evidence
         # ("bank" under the Finnish term `pankki`) must reach the model with it,
