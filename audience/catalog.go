@@ -33,6 +33,12 @@ const (
 	ValueBool         = "bool"
 )
 
+var accountOptions = []Option{
+	{Value: "registered", Label: "Registered (email or social sign-in)"},
+	{Value: "guest", Label: "Guest (no sign-in yet)"},
+	{Value: "any", Label: "Registered or guest"},
+}
+
 var platformOptions = []Option{
 	{Value: "ios", Label: "iPhone and iPad"},
 	{Value: "android", Label: "Android"},
