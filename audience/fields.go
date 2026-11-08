@@ -126,8 +126,10 @@ var fieldDefs = map[string]fieldDef{
 	"used_feature": {
 		spec: FieldSpec{
 			Field: "used_feature", Label: "Used a feature",
-			Help:    "Learners who used this part of Kielo in this time.",
-			Ops:     []OpSpec{{Op: "within_days", Label: "in the last"}},
+			Help: "Learners who used this part of Kielo in this time, or did not. Lessons counts finished practice " +
+				"sessions, so \"Lessons, not in the last 1 day\" with \"Signed up in the last 1 day\" is a new learner " +
+				"who has not finished session one.",
+			Ops:     []OpSpec{{Op: "within_days", Label: "in the last"}, {Op: "not_within_days", Label: "not in the last"}},
 			Value:   ValueFeatureDays,
 			Options: featureOptions,
 		},
@@ -380,7 +382,7 @@ func parsePaywallViewed(f fieldDef, _ string, raw json.RawMessage) (compiled, er
 	}, nil
 }
 
-func parseUsedFeature(f fieldDef, _ string, raw json.RawMessage) (compiled, error) {
+func parseUsedFeature(f fieldDef, op string, raw json.RawMessage) (compiled, error) {
 	var v struct {
 		Feature string `json:"feature"`
 		Days    int    `json:"days"`
@@ -396,8 +398,12 @@ func parseUsedFeature(f fieldDef, _ string, raw json.RawMessage) (compiled, erro
 	if err != nil {
 		return nil, err
 	}
+	not := ""
+	if op == "not_within_days" {
+		not = "NOT "
+	}
 	return func(b *builder) string {
-		return "EXISTS (SELECT 1 FROM users.feature_usage fu WHERE fu.user_id = u.id " +
+		return not + "EXISTS (SELECT 1 FROM users.feature_usage fu WHERE fu.user_id = u.id " +
 			"AND fu.feature = " + b.arg(key) + "::text AND fu.usage_count > 0 " +
 			"AND fu.period_start >= (now() - make_interval(days => " + b.arg(days) + "::int))::date)"
 	}, nil

@@ -193,6 +193,12 @@ func TestMembers_GoldenSQLPerCondition(t *testing.T) {
 			[]any{"ai_conversations", 7},
 		},
 		{
+			"used_feature lessons not", cond("used_feature", "not_within_days", `{"feature":"lessons","days":1}`),
+			"NOT EXISTS (SELECT 1 FROM users.feature_usage fu WHERE fu.user_id = u.id AND fu.feature = $1::text AND fu.usage_count > 0 " +
+				"AND fu.period_start >= (now() - make_interval(days => $2::int))::date)",
+			[]any{"exercises_completed", 1},
+		},
+		{
 			"email_marketing", cond("email_marketing", "is", `true`),
 			"u.newsletter_consent IS TRUE AND btrim(u.email) <> '' " +
 				"AND lower(u.email) NOT LIKE '%@guest.kielo.invalid' AND lower(btrim(u.email)) NOT LIKE '%@kielo.app' " +
