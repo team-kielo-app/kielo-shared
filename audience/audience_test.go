@@ -356,7 +356,7 @@ func TestCatalog_Complete(t *testing.T) {
 	for _, name := range fieldOrder {
 		assert.True(t, seen[name], name)
 	}
-	assert.Len(t, fieldOrder, 13)
+	assert.Len(t, fieldOrder, 14)
 }
 
 func TestCatalog_OptionsMatchWhatValidateAccepts(t *testing.T) {
@@ -382,8 +382,12 @@ func TestCatalog_OpsAllCompile(t *testing.T) {
 		ValueFeatureDays: `{"feature":"juka","days":5}`, ValueCampaignDays: `{"campaign_id":"` + campaignID + `","days":5}`, ValueBool: `true`,
 	}
 	for _, f := range Catalog() {
+		value := values[f.Value]
+		if f.Value == ValuePlusState && len(f.Options) > 0 {
+			value = fmt.Sprintf("%q", f.Options[0].Value) // a single choice from the field's own list
+		}
 		for _, op := range f.Ops {
-			require.NoError(t, def(cond(f.Field, op.Op, values[f.Value])).Validate(), "%s/%s", f.Field, op.Op)
+			require.NoError(t, def(cond(f.Field, op.Op, value)).Validate(), "%s/%s", f.Field, op.Op)
 		}
 	}
 }
@@ -416,4 +420,27 @@ func TestTeamAudienceSkipsTheRealLearnerBase(t *testing.T) {
 	learners, err := def(cond("push_enabled", "is", `true`)).Count(1)
 	require.NoError(t, err)
 	assert.Contains(t, learners.SQL, "learner_class_v1", "every other audience is real learners only")
+}
+
+func TestMembers_AccountConditionAdmitsGuests(t *testing.T) {
+	def := func(account string) Definition {
+		return Definition{Version: 1, All: []Condition{{Field: "account", Op: "is", Value: json.RawMessage(`"` + account + `"`)}}}
+	}
+	q, err := def("guest").Members(1)
+	require.NoError(t, err)
+	assert.Contains(t, q.SQL, "lc.class IN ('real', 'guest')")
+	assert.Contains(t, q.SQL, "lc_a.class IN ('guest')")
+	assert.NotContains(t, q.SQL, "lc.class = 'real'")
+
+	q, err = def("any").Members(1)
+	require.NoError(t, err)
+	assert.Contains(t, q.SQL, "lc_a.class IN ('real', 'guest')")
+
+	q, err = Definition{Version: 1}.Members(1)
+	require.NoError(t, err)
+	assert.Contains(t, q.SQL, "lc.class = 'real'", "without an account condition an audience stays registered-only")
+	assert.NotContains(t, q.SQL, "'guest'")
+
+	_, err = def("staff").Members(1)
+	assert.Error(t, err)
 }
