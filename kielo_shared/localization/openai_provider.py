@@ -326,7 +326,9 @@ _BATCH_TAIL = (
 _BATCH_SYSTEM = _BATCH_HEAD + "".join(_BATCH_ROLE_RULES.values()) + _BATCH_TAIL
 
 
-def batch_system_prompt(roles: Iterable[str], source_lang: str, target_lang: str) -> str:
+def batch_system_prompt(
+    roles: Iterable[str], source_lang: str, target_lang: str
+) -> str:
     """The batch system prompt with the rules of the roles the batch holds.
     The plain rules (titles, address, grammar terms) are ~480 tokens; a
     gloss-only batch, most of the warm traffic, never needs them."""
