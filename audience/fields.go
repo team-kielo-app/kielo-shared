@@ -21,8 +21,8 @@ type fieldDef struct {
 }
 
 var fieldOrder = []string{
-	"platform", "support_language", "learning_language", "signed_up", "last_active", "plus", "plus_ends",
-	"paywall_viewed", "used_feature", "email_marketing", "push_enabled", "campaign",
+	"account", "platform", "support_language", "learning_language", "signed_up", "last_active", "plus", "plus_ends",
+	"paywall_viewed", "used_feature", "email_marketing", "push_enabled", "campaign", "kielo_team",
 }
 
 var languageCode = regexp.MustCompile(`^[a-z]{2,3}(-[a-z0-9]{2,8})?$`)
@@ -36,6 +36,17 @@ var featureKeys = map[string]string{
 }
 
 var fieldDefs = map[string]fieldDef{
+	"account": {
+		spec: FieldSpec{
+			Field: "account", Label: "Account",
+			Help: "Whether the learner has signed in. Without this condition an audience holds registered learners " +
+				"only; most new learners start as guests.",
+			Ops:     []OpSpec{{Op: "is", Label: "is"}},
+			Value:   ValuePlusState,
+			Options: accountOptions,
+		},
+		parse: parseAccount,
+	},
 	"platform": {
 		spec: FieldSpec{
 			Field: "platform", Label: "Platform",
@@ -115,8 +126,10 @@ var fieldDefs = map[string]fieldDef{
 	"used_feature": {
 		spec: FieldSpec{
 			Field: "used_feature", Label: "Used a feature",
-			Help:    "Learners who used this part of Kielo in this time.",
-			Ops:     []OpSpec{{Op: "within_days", Label: "in the last"}},
+			Help: "Learners who used this part of Kielo in this time, or did not. Lessons counts finished practice " +
+				"sessions, so \"Lessons, not in the last 1 day\" with \"Signed up in the last 1 day\" is a new learner " +
+				"who has not finished session one.",
+			Ops:     []OpSpec{{Op: "within_days", Label: "in the last"}, {Op: "not_within_days", Label: "not in the last"}},
 			Value:   ValueFeatureDays,
 			Options: featureOptions,
 		},
@@ -140,6 +153,16 @@ var fieldDefs = map[string]fieldDef{
 			Value: ValueBool,
 		},
 		parse: parsePushEnabled,
+	},
+	"kielo_team": {
+		spec: FieldSpec{
+			Field: "kielo_team", Label: "Kielo team account",
+			Help: "Accounts with an @kielo.app address, such as the sandbox account. " +
+				"Use it to try an experiment or a campaign on the team before learners see it.",
+			Ops:   []OpSpec{{Op: "is", Label: "is"}},
+			Value: ValueBool,
+		},
+		parse: parseKieloTeam,
 	},
 	"campaign": {
 		spec: FieldSpec{
@@ -303,6 +326,25 @@ var plusStates = map[string]string{
 	"none":         plusSQLNone,
 }
 
+var accountClasses = map[string]string{
+	"registered": "'real'",
+	"guest":      "'guest'",
+	"any":        "'real', 'guest'",
+}
+
+func parseAccount(f fieldDef, _ string, raw json.RawMessage) (compiled, error) {
+	var account string
+	if err := decodeStrict(raw, &account); err != nil {
+		return nil, fmt.Errorf("%s needs one choice from the list", f.spec.Label)
+	}
+	classes, ok := accountClasses[account]
+	if !ok {
+		return nil, fmt.Errorf("%s does not have a choice called %q", f.spec.Label, account)
+	}
+	sql := "EXISTS (SELECT 1 FROM users.learner_class_v1 lc_a WHERE lc_a.user_id = u.id AND lc_a.class IN (" + classes + "))"
+	return func(*builder) string { return sql }, nil
+}
+
 func parsePlus(f fieldDef, _ string, raw json.RawMessage) (compiled, error) {
 	var state string
 	if err := decodeStrict(raw, &state); err != nil {
@@ -340,7 +382,7 @@ func parsePaywallViewed(f fieldDef, _ string, raw json.RawMessage) (compiled, er
 	}, nil
 }
 
-func parseUsedFeature(f fieldDef, _ string, raw json.RawMessage) (compiled, error) {
+func parseUsedFeature(f fieldDef, op string, raw json.RawMessage) (compiled, error) {
 	var v struct {
 		Feature string `json:"feature"`
 		Days    int    `json:"days"`
@@ -356,8 +398,12 @@ func parseUsedFeature(f fieldDef, _ string, raw json.RawMessage) (compiled, erro
 	if err != nil {
 		return nil, err
 	}
+	not := ""
+	if op == "not_within_days" {
+		not = "NOT "
+	}
 	return func(b *builder) string {
-		return "EXISTS (SELECT 1 FROM users.feature_usage fu WHERE fu.user_id = u.id " +
+		return not + "EXISTS (SELECT 1 FROM users.feature_usage fu WHERE fu.user_id = u.id " +
 			"AND fu.feature = " + b.arg(key) + "::text AND fu.usage_count > 0 " +
 			"AND fu.period_start >= (now() - make_interval(days => " + b.arg(days) + "::int))::date)"
 	}, nil
@@ -384,6 +430,15 @@ func parsePushEnabled(f fieldDef, _ string, raw json.RawMessage) (compiled, erro
 		return "EXISTS (SELECT 1 FROM users.push_tokens pt WHERE pt.user_id = u.id) " +
 			"AND NOT EXISTS (SELECT 1 FROM users.device_preferences dp WHERE dp.user_id = u.id " +
 			"AND COALESCE(dp.notifications->'push'->>'enabled', dp.notifications->>'enabled') = 'false')"
+	}, nil
+}
+
+func parseKieloTeam(f fieldDef, _ string, raw json.RawMessage) (compiled, error) {
+	if err := requireTrue(f, raw); err != nil {
+		return nil, err
+	}
+	return func(*builder) string {
+		return "lower(btrim(u.email)) LIKE '%@kielo.app'"
 	}, nil
 }
 

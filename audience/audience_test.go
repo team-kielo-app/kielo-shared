@@ -193,6 +193,12 @@ func TestMembers_GoldenSQLPerCondition(t *testing.T) {
 			[]any{"ai_conversations", 7},
 		},
 		{
+			"used_feature lessons not", cond("used_feature", "not_within_days", `{"feature":"lessons","days":1}`),
+			"NOT EXISTS (SELECT 1 FROM users.feature_usage fu WHERE fu.user_id = u.id AND fu.feature = $1::text AND fu.usage_count > 0 " +
+				"AND fu.period_start >= (now() - make_interval(days => $2::int))::date)",
+			[]any{"exercises_completed", 1},
+		},
+		{
 			"email_marketing", cond("email_marketing", "is", `true`),
 			"u.newsletter_consent IS TRUE AND btrim(u.email) <> '' " +
 				"AND lower(u.email) NOT LIKE '%@guest.kielo.invalid' AND lower(btrim(u.email)) NOT LIKE '%@kielo.app' " +
@@ -206,6 +212,11 @@ func TestMembers_GoldenSQLPerCondition(t *testing.T) {
 			"EXISTS (SELECT 1 FROM users.push_tokens pt WHERE pt.user_id = u.id) " +
 				"AND NOT EXISTS (SELECT 1 FROM users.device_preferences dp WHERE dp.user_id = u.id " +
 				"AND COALESCE(dp.notifications->'push'->>'enabled', dp.notifications->>'enabled') = 'false')",
+			nil,
+		},
+		{
+			"kielo_team", cond("kielo_team", "is", `true`),
+			"lower(btrim(u.email)) LIKE '%@kielo.app'",
 			nil,
 		},
 		{
@@ -227,7 +238,11 @@ func TestMembers_GoldenSQLPerCondition(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			q, err := def(tt.cond).Members(1)
 			require.NoError(t, err)
-			assert.Equal(t, "SELECT u.id FROM users.users u WHERE "+realSQL+" AND "+tt.wantSQL, q.SQL)
+			base := realSQL + " AND "
+			if tt.cond.Field == "kielo_team" {
+				base = ""
+			}
+			assert.Equal(t, "SELECT u.id FROM users.users u WHERE "+base+tt.wantSQL, q.SQL)
 			assert.Equal(t, tt.wantArgs, q.Args)
 		})
 	}
@@ -347,7 +362,7 @@ func TestCatalog_Complete(t *testing.T) {
 	for _, name := range fieldOrder {
 		assert.True(t, seen[name], name)
 	}
-	assert.Len(t, fieldOrder, 12)
+	assert.Len(t, fieldOrder, 14)
 }
 
 func TestCatalog_OptionsMatchWhatValidateAccepts(t *testing.T) {
@@ -373,8 +388,12 @@ func TestCatalog_OpsAllCompile(t *testing.T) {
 		ValueFeatureDays: `{"feature":"juka","days":5}`, ValueCampaignDays: `{"campaign_id":"` + campaignID + `","days":5}`, ValueBool: `true`,
 	}
 	for _, f := range Catalog() {
+		value := values[f.Value]
+		if f.Value == ValuePlusState && len(f.Options) > 0 {
+			value = fmt.Sprintf("%q", f.Options[0].Value) // a single choice from the field's own list
+		}
 		for _, op := range f.Ops {
-			require.NoError(t, def(cond(f.Field, op.Op, values[f.Value])).Validate(), "%s/%s", f.Field, op.Op)
+			require.NoError(t, def(cond(f.Field, op.Op, value)).Validate(), "%s/%s", f.Field, op.Op)
 		}
 	}
 }
@@ -396,4 +415,38 @@ func TestCatalogListsAreNeverNullInJSON(t *testing.T) {
 	if strings.Contains(string(raw), `"options":null`) || strings.Contains(string(raw), `"ops":null`) {
 		t.Fatalf("the admin editor reads options[0]; a null list crashed it: %s", raw)
 	}
+}
+
+func TestTeamAudienceSkipsTheRealLearnerBase(t *testing.T) {
+	team, err := def(cond("kielo_team", "is", `true`)).Count(1)
+	require.NoError(t, err)
+	assert.NotContains(t, team.SQL, "learner_class_v1")
+	assert.Contains(t, team.SQL, "@kielo.app")
+
+	learners, err := def(cond("push_enabled", "is", `true`)).Count(1)
+	require.NoError(t, err)
+	assert.Contains(t, learners.SQL, "learner_class_v1", "every other audience is real learners only")
+}
+
+func TestMembers_AccountConditionAdmitsGuests(t *testing.T) {
+	def := func(account string) Definition {
+		return Definition{Version: 1, All: []Condition{{Field: "account", Op: "is", Value: json.RawMessage(`"` + account + `"`)}}}
+	}
+	q, err := def("guest").Members(1)
+	require.NoError(t, err)
+	assert.Contains(t, q.SQL, "lc.class IN ('real', 'guest')")
+	assert.Contains(t, q.SQL, "lc_a.class IN ('guest')")
+	assert.NotContains(t, q.SQL, "lc.class = 'real'")
+
+	q, err = def("any").Members(1)
+	require.NoError(t, err)
+	assert.Contains(t, q.SQL, "lc_a.class IN ('real', 'guest')")
+
+	q, err = Definition{Version: 1}.Members(1)
+	require.NoError(t, err)
+	assert.Contains(t, q.SQL, "lc.class = 'real'", "without an account condition an audience stays registered-only")
+	assert.NotContains(t, q.SQL, "'guest'")
+
+	_, err = def("staff").Members(1)
+	assert.Error(t, err)
 }

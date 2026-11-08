@@ -23,7 +23,7 @@ import logging
 import re
 import time
 import unicodedata
-from typing import Awaitable, Callable
+from typing import Awaitable, Callable, Iterable
 
 from kielo_shared.locale_constants import LANGUAGE_DISPLAY_NAMES
 from kielo_shared.localization.types import (
@@ -283,33 +283,59 @@ def _role_prompt(role: str, lang: str) -> str:
     return _PLAIN_PROMPT.format(lang=lang)
 
 
-_BATCH_SYSTEM = (
+_BATCH_HEAD = (
     "You are a translation engine for a language-learning platform. "
     "You will receive a JSON array of items to translate from {source_lang} "
     "to {target_lang}. Each item has an 'id', a 'role' (plain | gloss | "
     "html), and 'text'. Apply the role-specific translation rules:\n"
-    "- plain: natural prose; preserve embedded learning-language material "
-    "exactly (learning-language words, inflected forms, quoted "
-    "learning-language examples, grammar markers like case suffixes). "
-    "Quoted or parenthesised {source_lang} — glosses and translations — is "
-    "{source_lang} content: translate it into {target_lang} and keep the "
-    "quotes. "
-    + _TITLE_RULE.replace("{lang}", "{target_lang}")
-    + " "
-    + _ADDRESS_RULE.replace("{lang}", "{target_lang}")
-    + " "
-    + _TERM_RULE.replace("{lang}", "{target_lang}")
-    + " "
-    "No commentary.\n"
-    "- gloss: short glossary; output ONLY {target_lang}. Do not output "
-    "{source_lang} or any other language. Preserve slashes, semicolons, "
-    "and commas that separate senses.\n"
-    "- html: preserve every HTML tag and attribute exactly; translate "
-    "only the visible text. Output must remain valid HTML.\n"
+)
+
+_BATCH_ROLE_RULES = {
+    "plain": (
+        "- plain: natural prose; preserve embedded learning-language material "
+        "exactly (learning-language words, inflected forms, quoted "
+        "learning-language examples, grammar markers like case suffixes). "
+        "Quoted or parenthesised {source_lang} — glosses and translations — is "
+        "{source_lang} content: translate it into {target_lang} and keep the "
+        "quotes. "
+        + _TITLE_RULE.replace("{lang}", "{target_lang}")
+        + " "
+        + _ADDRESS_RULE.replace("{lang}", "{target_lang}")
+        + " "
+        + _TERM_RULE.replace("{lang}", "{target_lang}")
+        + " "
+        "No commentary.\n"
+    ),
+    "gloss": (
+        "- gloss: short glossary; output ONLY {target_lang}. Do not output "
+        "{source_lang} or any other language. Preserve slashes, semicolons, "
+        "and commas that separate senses.\n"
+    ),
+    "html": (
+        "- html: preserve every HTML tag and attribute exactly; translate "
+        "only the visible text. Output must remain valid HTML.\n"
+    ),
+}
+
+_BATCH_TAIL = (
     "Return ONLY a JSON array of objects with 'id' and 'text' keys, in the "
     "same order as the input. No markdown, no commentary, no prose outside "
     "the JSON."
 )
+
+_BATCH_SYSTEM = _BATCH_HEAD + "".join(_BATCH_ROLE_RULES.values()) + _BATCH_TAIL
+
+
+def batch_system_prompt(roles: Iterable[str], source_lang: str, target_lang: str) -> str:
+    """The batch system prompt with the rules of the roles the batch holds.
+    The plain rules (titles, address, grammar terms) are ~480 tokens; a
+    gloss-only batch, most of the warm traffic, never needs them."""
+    present = {r if r in _BATCH_ROLE_RULES else "plain" for r in roles} or {"plain"}
+    rules = "".join(text for role, text in _BATCH_ROLE_RULES.items() if role in present)
+    return (_BATCH_HEAD + rules + _BATCH_TAIL).format(
+        source_lang=source_lang, target_lang=target_lang
+    )
+
 
 _BATCH_USER = "{payload}"
 
@@ -484,8 +510,8 @@ class OpenAIProvider:
             ensure_ascii=False,
         )
 
-        system_prompt = _BATCH_SYSTEM.format(
-            source_lang=source_lang, target_lang=target_lang
+        system_prompt = batch_system_prompt(
+            (items[i].role for i in sendable_indices), source_lang, target_lang
         )
         if any(item.context for item in items):
             system_prompt += "\n" + _context_rule([i.context for i in items])

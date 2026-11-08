@@ -15,6 +15,10 @@ type Query struct {
 
 const realLearner = "EXISTS (SELECT 1 FROM users.learner_class_v1 lc WHERE lc.user_id = u.id AND lc.class = 'real')"
 
+// anyLearner also admits guests. It is the base only when the definition has an account condition, which then
+// says which of the two it wants; without one an audience keeps to registered learners, as it always has.
+const anyLearner = "EXISTS (SELECT 1 FROM users.learner_class_v1 lc WHERE lc.user_id = u.id AND lc.class IN ('real', 'guest'))"
+
 type builder struct {
 	first int
 	args  []any
@@ -34,7 +38,17 @@ func (d Definition) where(firstArg int) (sql string, args []any, err error) {
 	}
 	b := &builder{first: firstArg}
 	parts := make([]string, 0, len(d.All)+1)
-	parts = append(parts, realLearner)
+	// Every audience is real learners, except one that asks for the team: the
+	// sandbox and staff accounts are classed staff, so the base would empty it.
+	if !d.targetsTeam() {
+		base := realLearner
+		for _, c := range d.All {
+			if c.Field == "account" {
+				base = anyLearner
+			}
+		}
+		parts = append(parts, base)
+	}
 	for _, c := range d.All {
 		cond, cerr := c.compile()
 		if cerr != nil {
@@ -75,4 +89,13 @@ func (d Definition) Member(userArg, firstArg int) (Query, error) {
 	}
 	sql := "SELECT EXISTS (SELECT 1 FROM users.users u WHERE u.id = $" + strconv.Itoa(userArg) + "::uuid AND " + where + ")"
 	return Query{SQL: sql, Args: args}, nil
+}
+
+func (d Definition) targetsTeam() bool {
+	for _, c := range d.All {
+		if c.Field == "kielo_team" {
+			return true
+		}
+	}
+	return false
 }
