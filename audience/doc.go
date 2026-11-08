@@ -14,7 +14,7 @@
 //	plus               is               never_paid | paid_before | paid_active | promo_active | any_active | none
 //	plus_ends          within_days                          N
 //	paywall_viewed     within_days                          N (saw the paywall and has not bought since)
-//	used_feature       within_days                          {"feature":"juka|ktv|reader|lessons","days":N}
+//	used_feature       within_days | not_within_days        {"feature":"juka|ktv|reader|lessons","days":N}
 //	email_marketing    is               true
 //	push_enabled       is               true
 //	campaign           clicked_within_days | shown_within_days   {"campaign_id":"<uuid>","days":N}
