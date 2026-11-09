@@ -14,12 +14,15 @@ import (
 
 func TestGeminiJSONProvider_HappyPath(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Provider must POST to .../<model>:generateContent with key in query string.
+		// Provider must POST to .../<model>:generateContent with the key in a header.
 		if !strings.HasSuffix(r.URL.Path, ":generateContent") {
 			t.Errorf("expected :generateContent suffix, got %s", r.URL.Path)
 		}
-		if r.URL.Query().Get("key") != "test-key" {
-			t.Errorf("expected key=test-key, got %s", r.URL.Query().Get("key"))
+		if got := r.Header.Get("x-goog-api-key"); got != "test-key" {
+			t.Errorf("expected x-goog-api-key=test-key, got %q", got)
+		}
+		if r.URL.RawQuery != "" {
+			t.Errorf("expected no query string, got %q", r.URL.RawQuery)
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{
@@ -81,6 +84,27 @@ func TestGeminiJSONProvider_HTTP4xxClassifiedAsClientError(t *testing.T) {
 	_, err := p.Generate(context.Background(), llm.Request{Prompt: "x", Task: "convo_hint"})
 	if got := llm.ClassOf(err); got != llm.ErrorClassClientError {
 		t.Errorf("ClassOf = %q, want http_4xx", got)
+	}
+}
+
+func TestGeminiJSONProvider_TransportErrorDoesNotCarryTheKey(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		time.Sleep(200 * time.Millisecond)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	p := llm.NewGeminiJSONProvider("secret-key-value", srv.Client())
+	p.Endpoint = srv.URL
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	_, err := p.Generate(ctx, llm.Request{Prompt: "x", Task: "convo_hint"})
+	if err == nil {
+		t.Fatal("expected a transport error from a cancelled request")
+	}
+	if strings.Contains(err.Error(), "secret-key-value") {
+		t.Errorf("the error text carries the API key: %s", err.Error())
 	}
 }
 
