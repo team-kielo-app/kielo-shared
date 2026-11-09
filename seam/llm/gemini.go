@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
@@ -82,13 +81,16 @@ func (p *GeminiJSONProvider) Generate(ctx context.Context, req Request) (*Result
 	if endpoint == "" {
 		endpoint = "https://generativelanguage.googleapis.com/v1beta/models"
 	}
-	endpoint = strings.TrimRight(endpoint, "/") + "/" + model + ":generateContent?key=" + url.QueryEscape(p.APIKey)
+	endpoint = strings.TrimRight(endpoint, "/") + "/" + model + ":generateContent"
 
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(body))
 	if err != nil {
 		return nil, &Error{Class: ErrorClassMarshal, Err: err}
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
+	// The key travels in a header: net/http puts the request URL in every
+	// transport error, and callers log those errors.
+	httpReq.Header.Set("x-goog-api-key", p.APIKey)
 
 	started := time.Now()
 	resp, err := p.HTTPClient.Do(httpReq)
