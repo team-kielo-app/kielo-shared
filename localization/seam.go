@@ -319,17 +319,23 @@ func (s *Seam) batchResolveCached(ctx context.Context, refs []SourceRef, targetL
 	RecordBudget(ctx, BudgetKindCacheGet, 1)
 	cacheHits := s.batchCacheGet(ctx, remaining)
 	remaining2 := remaining[:0]
+	var stale []residueEntry
 	for _, r := range remaining {
 		entry, ok := cacheHits[r.key]
 		if !ok {
 			remaining2 = append(remaining2, r)
 			continue
 		}
-		if s.resolveBatchCacheHit(ctx, r, target, entry, out) {
+		served, isStale := s.resolveBatchCacheHit(ctx, r, target, entry, out)
+		if isStale {
+			stale = append(stale, r)
+		}
+		if served {
 			continue
 		}
 		remaining2 = append(remaining2, r)
 	}
+	s.kickoffSWRBatch(ctx, stale, target)
 	remaining2 = s.resolvePersistedBatch(ctx, remaining2, target, out)
 	return out, remaining2
 }
@@ -437,30 +443,32 @@ type residueEntry struct {
 	known string
 }
 
+// resolveBatchCacheHit serves one cache hit of a batch read. stale reports a
+// value past its fresh window: it is served, and the caller refreshes every
+// stale hit of the batch together (kickoffSWRBatch).
 func (s *Seam) resolveBatchCacheHit(
 	ctx context.Context,
 	r residueEntry,
 	target string,
 	entry CacheEntry,
 	out []string,
-) bool {
+) (served, stale bool) {
 	if entry.Value == guardRejectionSentinel {
 		out[r.idx] = r.ref.SourceText
 		s.metrics.Record(ctx, r.ref.Namespace, target, "guard_rejection_cache_hit")
-		return true
+		return true, false
 	}
 	if entry.Age <= s.freshTTL {
 		out[r.idx] = entry.Value
 		s.metrics.Record(ctx, r.ref.Namespace, target, "cache_hit")
-		return true
+		return true, false
 	}
 	if entry.Age <= s.freshTTL+s.staleTTL {
-		s.kickoffSWR(ctx, r.ref, target, r.key)
 		out[r.idx] = entry.Value
 		s.metrics.Record(ctx, r.ref.Namespace, target, "cache_swr")
-		return true
+		return true, true
 	}
-	return false
+	return false, false
 }
 
 // batchOverrideLookup issues either one BatchOverrideStore.BatchLookup
@@ -762,6 +770,111 @@ func (s *Seam) kickoffSWR(ctx context.Context, ref SourceRef, target, cacheKey s
 		defer cancel()
 		s.callProvider(bgCtx, ref, target, cacheKey)
 	})
+}
+
+// kickoffSWRBatch refreshes the stale hits of one batch read in one
+// background pass with one provider call. One refresh per key (kickoffSWR)
+// sent a page of 20 scene descriptions as 20 single-text calls inside 60 ms:
+// the engine instance takes 10 requests at once, so Cloud Run started two
+// more instances and a call rode a cold start for ~28 s, about 20 times a day
+// (prod 2026-11-09..11). Keys another refresh already holds are left to it.
+func (s *Seam) kickoffSWRBatch(ctx context.Context, stale []residueEntry, target string) {
+	owned := make([]residueEntry, 0, len(stale))
+	for _, r := range stale {
+		if _, loaded := s.swrInFlight.LoadOrStore(r.key, struct{}{}); !loaded {
+			owned = append(owned, r)
+		}
+	}
+	if len(owned) == 0 {
+		return
+	}
+	safego.Go("localization_seam_swr", func() {
+		defer func() {
+			for _, r := range owned {
+				s.swrInFlight.Delete(r.key)
+			}
+		}()
+		bgCtx, cancel := context.WithTimeout(DetachBudget(context.WithoutCancel(ctx)), 30*time.Second)
+		defer cancel()
+		s.refreshStaleBatch(bgCtx, owned, target)
+	})
+}
+
+// refreshStaleBatch is callProvider for many keys: a usable persisted row
+// refills the cache, the rest go to the provider as one batch, and each answer
+// passes the guard before it is cached and persisted. Like the single-key
+// refresh it records failures only; the read that found the values stale
+// already counted them as cache_swr.
+func (s *Seam) refreshStaleBatch(ctx context.Context, stale []residueEntry, target string) {
+	entries := stale
+	if s.persisted != nil {
+		rows := s.batchPersistedLookup(ctx, stale, target)
+		entries = make([]residueEntry, 0, len(stale))
+		refill := make(map[string]string)
+		for _, r := range stale {
+			row, ok := rows[OverrideBatchKey(r.ref.Namespace, r.ref.SourceID, r.ref.SourceVersion)]
+			if ok && usablePersisted(r.ref, row) {
+				refill[r.key] = row
+				continue
+			}
+			if ok {
+				r.known = row
+			}
+			entries = append(entries, r)
+		}
+		s.cacheWrite(ctx, refill)
+	}
+	if len(entries) == 0 {
+		return
+	}
+	fail := func(cause string) {
+		for _, r := range entries {
+			s.metrics.Record(ctx, r.ref.Namespace, target, "provider_error")
+		}
+		logTranslationFallback("provider_error", entries[0].ref.Namespace, "swr_batch", target, len(entries), cause)
+	}
+	provider, err := s.registry.Resolve(TierASupportLocale, target)
+	if err != nil {
+		fail(fmt.Sprintf("registry_resolve: %v", err))
+		return
+	}
+	items, expand := dedupeBatchItems(entries)
+	providerResults, err := provider.TranslateBatch(ctx, items, TranslateOptions{
+		SourceLocale: TierASupportLocale,
+		TargetLocale: target,
+	})
+	if err != nil || len(providerResults) != len(items) {
+		fail(providerFailureCause(err, fmt.Sprintf("result_count_mismatch: got %d want %d",
+			len(providerResults), len(items))))
+		return
+	}
+	results := expand(providerResults)
+	writeSet := make(map[string]string, len(entries))
+	rejectionSet := make(map[string]string)
+	persistList := make([]persistItem, 0, len(entries))
+	for i, r := range entries {
+		value := strings.TrimSpace(results[i].Text)
+		if value == "" {
+			s.metrics.Record(ctx, r.ref.Namespace, target, "empty_translation")
+			logTranslationFallback("empty_translation", r.ref.Namespace, r.ref.SourceID, target, 1, "")
+			continue
+		}
+		if s.guard.IsSuspicious(r.ref.SourceText, value, target) {
+			s.metrics.Record(ctx, r.ref.Namespace, target, "guard_rejected")
+			logTranslationFallback("guard_rejected", r.ref.Namespace, r.ref.SourceID, target, 1, "")
+			rejectionSet[r.key] = guardRejectionSentinel
+			continue
+		}
+		writeSet[r.key] = value
+		if r.known != value {
+			persistList = append(persistList, persistItem{ref: r.ref, value: value})
+		}
+	}
+	s.writeCache(ctx, writeSet)
+	s.cacheGuardRejections(ctx, rejectionSet)
+	for _, p := range persistList {
+		_ = s.persister.Persist(ctx, p.ref, target, p.value)
+	}
 }
 
 // callProvider routes through the registry, applies the suspicious-
