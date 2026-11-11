@@ -21,6 +21,7 @@ var realWorldSpellings = map[string]string{
 	"srp": "sr", "tha": "th", "vie": "vi", "nld": "nl", "dut": "nl",
 	"por": "pt", "hun": "hu", "fas": "fa", "per": "fa",
 	"som": "so", "sqi": "sq", "alb": "sq", "nep": "ne",
+	"est": "et", "ron": "ro", "rum": "ro",
 
 	// Macrolanguage members observed or plausible from real devices.
 	"arb": "ar", "ars": "ar", "cmn": "zh",
@@ -57,7 +58,7 @@ func TestUnsupportedLanguagesAreNotSilentlyFolded(t *testing.T) {
 	// genuinely unsupported — the fix is to stop doing the translation work,
 	// NOT to alias it onto something else. (fa failed the same way until
 	// Persian became a support language, 2026-10-26.)
-	for _, code := range []string{"cs", "ces", "cze", "et", "est", "he", "id"} {
+	for _, code := range []string{"cs", "ces", "cze", "sl", "slv", "he", "id"} {
 		if IsSupportedSupportLanguage(code) {
 			t.Errorf("IsSupportedSupportLanguage(%q) = true; folding must not "+
 				"claim support for a language with no authored content", code)
