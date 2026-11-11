@@ -6576,22 +6576,23 @@ type Exit struct {
 
 // Experiment defines model for Experiment.
 type Experiment struct {
-	Arms       []ExperimentArm   `json:"arms"`
-	AudienceId *uuid.UUID        `json:"audience_id,omitempty"`
-	CreatedAt  time.Time         `json:"created_at"`
-	Decision   *string           `json:"decision,omitempty"`
-	Hypothesis string            `json:"hypothesis"`
-	Id         uuid.UUID         `json:"id"`
-	Key        string            `json:"key"`
-	Name       string            `json:"name"`
-	Platforms  []string          `json:"platforms"`
-	StartedAt  *time.Time        `json:"started_at,omitempty"`
-	Status     string            `json:"status"`
-	StoppedAt  *time.Time        `json:"stopped_at,omitempty"`
-	Summary    ExperimentSummary `json:"summary"`
-	Surface    string            `json:"surface"`
-	TrafficPct int               `json:"traffic_pct"`
-	UpdatedAt  time.Time         `json:"updated_at"`
+	Arms          []ExperimentArm   `json:"arms"`
+	AudienceId    *uuid.UUID        `json:"audience_id,omitempty"`
+	CreatedAt     time.Time         `json:"created_at"`
+	Decision      *string           `json:"decision,omitempty"`
+	Hypothesis    string            `json:"hypothesis"`
+	Id            uuid.UUID         `json:"id"`
+	Key           string            `json:"key"`
+	MinAppVersion *string           `json:"min_app_version,omitempty"`
+	Name          string            `json:"name"`
+	Platforms     []string          `json:"platforms"`
+	StartedAt     *time.Time        `json:"started_at,omitempty"`
+	Status        string            `json:"status"`
+	StoppedAt     *time.Time        `json:"stopped_at,omitempty"`
+	Summary       ExperimentSummary `json:"summary"`
+	Surface       string            `json:"surface"`
+	TrafficPct    int               `json:"traffic_pct"`
+	UpdatedAt     time.Time         `json:"updated_at"`
 }
 
 // ExperimentArm defines model for ExperimentArm.
@@ -6665,14 +6666,15 @@ type ExperimentVsControl struct {
 
 // ExperimentWrite defines model for ExperimentWrite.
 type ExperimentWrite struct {
-	Arms       *[]ExperimentArm `json:"arms,omitempty"`
-	AudienceId interface{}      `json:"audience_id"`
-	Decision   *string          `json:"decision,omitempty"`
-	Hypothesis *string          `json:"hypothesis,omitempty"`
-	Key        *string          `json:"key,omitempty"`
-	Name       *string          `json:"name,omitempty"`
-	Platforms  *[]string        `json:"platforms,omitempty"`
-	TrafficPct *int             `json:"traffic_pct,omitempty"`
+	Arms          *[]ExperimentArm `json:"arms,omitempty"`
+	AudienceId    interface{}      `json:"audience_id"`
+	Decision      *string          `json:"decision,omitempty"`
+	Hypothesis    *string          `json:"hypothesis,omitempty"`
+	Key           *string          `json:"key,omitempty"`
+	MinAppVersion *string          `json:"min_app_version,omitempty"`
+	Name          *string          `json:"name,omitempty"`
+	Platforms     *[]string        `json:"platforms,omitempty"`
+	TrafficPct    *int             `json:"traffic_pct,omitempty"`
 }
 
 // FeatureCheckAndIncrementResponse defines model for FeatureCheckAndIncrementResponse.
@@ -6997,6 +6999,13 @@ type FetchDynamicTranslationsRequest struct {
 // FetchDynamicTranslationsResponse defines model for FetchDynamicTranslationsResponse.
 type FetchDynamicTranslationsResponse struct {
 	Items []DynamicTranslationLocalization `json:"items"`
+}
+
+// FieldLimit defines model for FieldLimit.
+type FieldLimit struct {
+	Field    string `json:"field"`
+	Limit    int    `json:"limit"`
+	Required bool   `json:"required"`
 }
 
 // FieldSpec defines model for FieldSpec.
@@ -11354,6 +11363,18 @@ type OwnerSummary struct {
 	Owner  string              `json:"owner"`
 }
 
+// PageEvent defines model for PageEvent.
+type PageEvent struct {
+	Badge          *string   `json:"badge,omitempty"`
+	EndAt          string    `json:"end_at"`
+	Priority       *string   `json:"priority,omitempty"`
+	PublishStartAt *string   `json:"publish_start_at,omitempty"`
+	Purpose        *string   `json:"purpose,omitempty"`
+	ReferenceName  string    `json:"reference_name"`
+	StartAt        string    `json:"start_at"`
+	Territories    *[]string `json:"territories,omitempty"`
+}
+
 // Paradigm defines model for Paradigm.
 type Paradigm struct {
 	Headers []string      `json:"headers"`
@@ -13344,6 +13365,14 @@ type RunRow struct {
 	TriggeredBy    *string     `json:"triggered_by,omitempty"`
 }
 
+// SafeArea defines model for SafeArea.
+type SafeArea struct {
+	H int `json:"h"`
+	W int `json:"w"`
+	X int `json:"x"`
+	Y int `json:"y"`
+}
+
 // SaveItemRequest defines model for SaveItemRequest.
 type SaveItemRequest struct {
 	ItemId       string                  `json:"item_id"`
@@ -13570,16 +13599,20 @@ type ScheduledCommunicationListResponse struct {
 
 // ScreenshotTarget defines model for ScreenshotTarget.
 type ScreenshotTarget struct {
-	AlternativeTo *string `json:"alternative_to,omitempty"`
-	Height        int     `json:"height"`
-	Id            string  `json:"id"`
-	Label         string  `json:"label"`
-	MaxCount      int     `json:"max_count"`
-	MinCount      int     `json:"min_count"`
-	Required      bool    `json:"required"`
-	Store         string  `json:"store"`
-	StoreSlot     string  `json:"store_slot"`
-	Width         int     `json:"width"`
+	AlternativeTo *string   `json:"alternative_to,omitempty"`
+	Height        int       `json:"height"`
+	Id            string    `json:"id"`
+	Label         string    `json:"label"`
+	Layout        string    `json:"layout"`
+	MaxCount      int       `json:"max_count"`
+	MinCount      int       `json:"min_count"`
+	OptIn         *bool     `json:"opt_in,omitempty"`
+	Required      bool      `json:"required"`
+	SafeArea      *SafeArea `json:"safe_area,omitempty"`
+	Scene         *string   `json:"scene,omitempty"`
+	Store         string    `json:"store"`
+	StoreSlot     string    `json:"store_slot"`
+	Width         int       `json:"width"`
 }
 
 // SearchExcerpt defines model for SearchExcerpt.
@@ -15932,9 +15965,59 @@ type SingletonStorageOverview struct {
 	Data StorageOverview `json:"data"`
 }
 
+// SingletonStoragePruneResponse defines model for SingletonStoragePruneResponse.
+type SingletonStoragePruneResponse struct {
+	Data StoragePruneResponse `json:"data"`
+}
+
 // SingletonStorageUntrackedPage defines model for SingletonStorageUntrackedPage.
 type SingletonStorageUntrackedPage struct {
 	Data StorageUntrackedPage `json:"data"`
+}
+
+// SingletonStorageUsageResponse defines model for SingletonStorageUsageResponse.
+type SingletonStorageUsageResponse struct {
+	Data StorageUsageResponse `json:"data"`
+}
+
+// SingletonStorePage defines model for SingletonStorePage.
+type SingletonStorePage struct {
+	Data StorePage `json:"data"`
+}
+
+// SingletonStorePageListResponse defines model for SingletonStorePageListResponse.
+type SingletonStorePageListResponse struct {
+	Data StorePageListResponse `json:"data"`
+}
+
+// SingletonStorePageReviewStatus defines model for SingletonStorePageReviewStatus.
+type SingletonStorePageReviewStatus struct {
+	Data StorePageReviewStatus `json:"data"`
+}
+
+// SingletonStorePageText defines model for SingletonStorePageText.
+type SingletonStorePageText struct {
+	Data StorePageText `json:"data"`
+}
+
+// SingletonStorePageTextLimitsResponse defines model for SingletonStorePageTextLimitsResponse.
+type SingletonStorePageTextLimitsResponse struct {
+	Data StorePageTextLimitsResponse `json:"data"`
+}
+
+// SingletonStorePageTextListResponse defines model for SingletonStorePageTextListResponse.
+type SingletonStorePageTextListResponse struct {
+	Data StorePageTextListResponse `json:"data"`
+}
+
+// SingletonStorePublishRun defines model for SingletonStorePublishRun.
+type SingletonStorePublishRun struct {
+	Data StorePublishRun `json:"data"`
+}
+
+// SingletonStorePublishRunListResponse defines model for SingletonStorePublishRunListResponse.
+type SingletonStorePublishRunListResponse struct {
+	Data StorePublishRunListResponse `json:"data"`
 }
 
 // SingletonStoreReview defines model for SingletonStoreReview.
@@ -15950,6 +16033,11 @@ type SingletonStoreReviewListResponse struct {
 // SingletonStoreReviewReplyPreview defines model for SingletonStoreReviewReplyPreview.
 type SingletonStoreReviewReplyPreview struct {
 	Data StoreReviewReplyPreview `json:"data"`
+}
+
+// SingletonStoreScreenshotApproveResponse defines model for SingletonStoreScreenshotApproveResponse.
+type SingletonStoreScreenshotApproveResponse struct {
+	Data StoreScreenshotApproveResponse `json:"data"`
 }
 
 // SingletonStoreScreenshotAsset defines model for SingletonStoreScreenshotAsset.
@@ -15975,11 +16063,6 @@ type SingletonStoreScreenshotExportListResponse struct {
 // SingletonStoreScreenshotLocaleListResponse defines model for SingletonStoreScreenshotLocaleListResponse.
 type SingletonStoreScreenshotLocaleListResponse struct {
 	Data StoreScreenshotLocaleListResponse `json:"data"`
-}
-
-// SingletonStoreScreenshotPublishRun defines model for SingletonStoreScreenshotPublishRun.
-type SingletonStoreScreenshotPublishRun struct {
-	Data StoreScreenshotPublishRun `json:"data"`
 }
 
 // SingletonStoreScreenshotSet defines model for SingletonStoreScreenshotSet.
@@ -16012,6 +16095,11 @@ type SingletonStoreScreenshotTargetListResponse struct {
 	Data StoreScreenshotTargetListResponse `json:"data"`
 }
 
+// SingletonStoreScreenshotTranslateResponse defines model for SingletonStoreScreenshotTranslateResponse.
+type SingletonStoreScreenshotTranslateResponse struct {
+	Data StoreScreenshotTranslateResponse `json:"data"`
+}
+
 // SingletonStoreScreenshotValidationResponse defines model for SingletonStoreScreenshotValidationResponse.
 type SingletonStoreScreenshotValidationResponse struct {
 	Data StoreScreenshotValidationResponse `json:"data"`
@@ -16025,6 +16113,11 @@ type SingletonStoreSyncPreview struct {
 // SingletonStoreSyncState defines model for SingletonStoreSyncState.
 type SingletonStoreSyncState struct {
 	Data StoreSyncState `json:"data"`
+}
+
+// SingletonStringItem defines model for SingletonStringItem.
+type SingletonStringItem struct {
+	Data StringItem `json:"data"`
 }
 
 // SingletonStudyList defines model for SingletonStudyList.
@@ -16844,6 +16937,12 @@ type StorageClassMoveResult struct {
 	Outcomes []StorageMoveOutcome `json:"outcomes"`
 }
 
+// StorageCount defines model for StorageCount.
+type StorageCount struct {
+	Assets int `json:"assets"`
+	Bytes  int `json:"bytes"`
+}
+
 // StorageDeleteObjectsRequest defines model for StorageDeleteObjectsRequest.
 type StorageDeleteObjectsRequest struct {
 	Bucket  string   `json:"bucket"`
@@ -16932,6 +17031,26 @@ type StorageOperation struct {
 	Status      string      `json:"status"`
 }
 
+// StorageOrphanObject defines model for StorageOrphanObject.
+type StorageOrphanObject struct {
+	Bucket     string     `json:"bucket"`
+	ObjectName string     `json:"object_name"`
+	SizeBytes  int        `json:"size_bytes"`
+	UpdatedAt  *time.Time `json:"updated_at,omitempty"`
+}
+
+// StorageOrphans defines model for StorageOrphans.
+type StorageOrphans struct {
+	Available        bool                  `json:"available"`
+	Bytes            int                   `json:"bytes"`
+	InventoryAt      *time.Time            `json:"inventory_at,omitempty"`
+	Items            []StorageOrphanObject `json:"items"`
+	Note             *string               `json:"note,omitempty"`
+	Objects          int                   `json:"objects"`
+	UntrackedBytes   int                   `json:"untracked_bytes"`
+	UntrackedObjects int                   `json:"untracked_objects"`
+}
+
 // StorageOverview defines model for StorageOverview.
 type StorageOverview struct {
 	ClassMoves           []StorageMovePlanRow  `json:"class_moves"`
@@ -16941,6 +17060,61 @@ type StorageOverview struct {
 	Operations           []StorageOperation    `json:"operations"`
 	Targets              map[string]string     `json:"targets"`
 	UnmanagedAssets      []StorageUnmanagedRow `json:"unmanaged_assets"`
+}
+
+// StoragePruneItem defines model for StoragePruneItem.
+type StoragePruneItem struct {
+	AssetId  uuid.UUID `json:"asset_id"`
+	Bytes    int       `json:"bytes"`
+	Failed   *bool     `json:"failed,omitempty"`
+	Kind     string    `json:"kind"`
+	Locale   *string   `json:"locale,omitempty"`
+	Reason   string    `json:"reason"`
+	Slot     *int      `json:"slot,omitempty"`
+	Snapshot *int      `json:"snapshot,omitempty"`
+	TargetId *string   `json:"target_id,omitempty"`
+}
+
+// StoragePruneRequest defines model for StoragePruneRequest.
+type StoragePruneRequest struct {
+	DryRun     *bool `json:"dry_run,omitempty"`
+	GraceHours *int  `json:"grace_hours,omitempty"`
+}
+
+// StoragePruneResponse defines model for StoragePruneResponse.
+type StoragePruneResponse struct {
+	DryRun       bool               `json:"dry_run"`
+	Failed       int                `json:"failed"`
+	Kept         StorageCount       `json:"kept"`
+	Release      []StoragePruneItem `json:"release"`
+	ReleaseBytes int                `json:"release_bytes"`
+	Released     int                `json:"released"`
+	SetId        uuid.UUID          `json:"set_id"`
+}
+
+// StorageSetUsage defines model for StorageSetUsage.
+type StorageSetUsage struct {
+	ArchivedAt *time.Time             `json:"archived_at,omitempty"`
+	Exports    StorageCount           `json:"exports"`
+	Name       string                 `json:"name"`
+	Pinned     StorageCount           `json:"pinned"`
+	PurgeAfter *time.Time             `json:"purge_after,omitempty"`
+	Released   StorageCount           `json:"released"`
+	SetId      uuid.UUID              `json:"set_id"`
+	Slug       string                 `json:"slug"`
+	Snapshots  []StorageSnapshotUsage `json:"snapshots"`
+	Sources    StorageCount           `json:"sources"`
+	Total      StorageCount           `json:"total"`
+}
+
+// StorageSnapshotUsage defines model for StorageSnapshotUsage.
+type StorageSnapshotUsage struct {
+	Exports       StorageCount `json:"exports"`
+	Latest        bool         `json:"latest"`
+	Pinned        bool         `json:"pinned"`
+	Released      StorageCount `json:"released"`
+	RunReferenced bool         `json:"run_referenced"`
+	Version       int          `json:"version"`
 }
 
 // StorageUnmanagedRow defines model for StorageUnmanagedRow.
@@ -16957,11 +17131,145 @@ type StorageUntrackedPage struct {
 	Total   int             `json:"total"`
 }
 
+// StorageUsageResponse defines model for StorageUsageResponse.
+type StorageUsageResponse struct {
+	Orphans StorageOrphans    `json:"orphans"`
+	Sets    []StorageSetUsage `json:"sets"`
+	Totals  StorageCount      `json:"totals"`
+}
+
 // StoreLocaleMapping defines model for StoreLocaleMapping.
 type StoreLocaleMapping struct {
 	AppStore   []string `json:"app_store"`
 	GooglePlay []string `json:"google_play"`
 	Locale     string   `json:"locale"`
+}
+
+// StorePage defines model for StorePage.
+type StorePage struct {
+	ArchivedAt       *time.Time `json:"archived_at,omitempty"`
+	CreatedAt        time.Time  `json:"created_at"`
+	CreatedBy        *uuid.UUID `json:"created_by,omitempty"`
+	DeepLink         *string    `json:"deep_link,omitempty"`
+	Event            *PageEvent `json:"event,omitempty"`
+	Keywords         []string   `json:"keywords"`
+	Kind             string     `json:"kind"`
+	LearningLanguage *string    `json:"learning_language,omitempty"`
+	Name             string     `json:"name"`
+	PageId           uuid.UUID  `json:"page_id"`
+	RemoteId         *string    `json:"remote_id,omitempty"`
+	SetId            *uuid.UUID `json:"set_id,omitempty"`
+	Store            string     `json:"store"`
+	UpdatedAt        time.Time  `json:"updated_at"`
+}
+
+// StorePageCreateRequest defines model for StorePageCreateRequest.
+type StorePageCreateRequest struct {
+	DeepLink         *string    `json:"deep_link,omitempty"`
+	Event            *PageEvent `json:"event,omitempty"`
+	Keywords         *[]string  `json:"keywords,omitempty"`
+	Kind             string     `json:"kind"`
+	LearningLanguage *string    `json:"learning_language,omitempty"`
+	Name             string     `json:"name"`
+	SetId            *uuid.UUID `json:"set_id,omitempty"`
+	Store            string     `json:"store"`
+}
+
+// StorePageListResponse defines model for StorePageListResponse.
+type StorePageListResponse struct {
+	Items []StorePageSummary `json:"items"`
+}
+
+// StorePageReviewStatus defines model for StorePageReviewStatus.
+type StorePageReviewStatus struct {
+	Detail      *string `json:"detail,omitempty"`
+	Manual      bool    `json:"manual"`
+	State       string  `json:"state"`
+	Submittable bool    `json:"submittable"`
+}
+
+// StorePageRunBrief defines model for StorePageRunBrief.
+type StorePageRunBrief struct {
+	CreatedAt  time.Time  `json:"created_at"`
+	DryRun     bool       `json:"dry_run"`
+	FinishedAt *time.Time `json:"finished_at,omitempty"`
+	RunId      uuid.UUID  `json:"run_id"`
+	Snapshot   int        `json:"snapshot"`
+	Status     string     `json:"status"`
+}
+
+// StorePageSummary defines model for StorePageSummary.
+type StorePageSummary struct {
+	StorePage       StorePage          `json:"StorePage"`
+	ApprovedCount   int                `json:"approved_count"`
+	LastRun         *StorePageRunBrief `json:"last_run,omitempty"`
+	LocalesWithText int                `json:"locales_with_text"`
+	SetName         *string            `json:"set_name,omitempty"`
+}
+
+// StorePageText defines model for StorePageText.
+type StorePageText struct {
+	Fields    map[string]string `json:"fields"`
+	Locale    string            `json:"locale"`
+	PageId    uuid.UUID         `json:"page_id"`
+	Status    string            `json:"status"`
+	UpdatedAt *time.Time        `json:"updated_at,omitempty"`
+	UpdatedBy *uuid.UUID        `json:"updated_by,omitempty"`
+}
+
+// StorePageTextLimitsResponse defines model for StorePageTextLimitsResponse.
+type StorePageTextLimitsResponse struct {
+	Fields []FieldLimit `json:"fields"`
+	Kind   string       `json:"kind"`
+	Store  string       `json:"store"`
+}
+
+// StorePageTextListResponse defines model for StorePageTextListResponse.
+type StorePageTextListResponse struct {
+	Items []StorePageText `json:"items"`
+}
+
+// StorePageTextPutRequest defines model for StorePageTextPutRequest.
+type StorePageTextPutRequest struct {
+	Fields map[string]string `json:"fields"`
+}
+
+// StorePageUpdateRequest defines model for StorePageUpdateRequest.
+type StorePageUpdateRequest struct {
+	DeepLink         *string    `json:"deep_link,omitempty"`
+	Event            *PageEvent `json:"event,omitempty"`
+	Keywords         *[]string  `json:"keywords,omitempty"`
+	LearningLanguage *string    `json:"learning_language,omitempty"`
+	Name             *string    `json:"name,omitempty"`
+	RemoteId         *string    `json:"remote_id,omitempty"`
+	SetId            *string    `json:"set_id,omitempty"`
+}
+
+// StorePublishRun defines model for StorePublishRun.
+type StorePublishRun struct {
+	CreatedAt  time.Time   `json:"created_at"`
+	CreatedBy  *uuid.UUID  `json:"created_by,omitempty"`
+	DryRun     bool        `json:"dry_run"`
+	FinishedAt *time.Time  `json:"finished_at,omitempty"`
+	Locales    []string    `json:"locales"`
+	PageId     uuid.UUID   `json:"page_id"`
+	Plan       interface{} `json:"plan"`
+	Result     interface{} `json:"result"`
+	RunId      uuid.UUID   `json:"run_id"`
+	Snapshot   int         `json:"snapshot"`
+	Status     string      `json:"status"`
+}
+
+// StorePublishRunCreateRequest defines model for StorePublishRunCreateRequest.
+type StorePublishRunCreateRequest struct {
+	DryRun   *bool     `json:"dry_run,omitempty"`
+	Locales  *[]string `json:"locales,omitempty"`
+	Snapshot int       `json:"snapshot"`
+}
+
+// StorePublishRunListResponse defines model for StorePublishRunListResponse.
+type StorePublishRunListResponse struct {
+	Items []StorePublishRun `json:"items"`
 }
 
 // StoreReview defines model for StoreReview.
@@ -17035,6 +17343,17 @@ type StoreReviewSyncStatus struct {
 	Store         string     `json:"store"`
 }
 
+// StoreScreenshotApproveRequest defines model for StoreScreenshotApproveRequest.
+type StoreScreenshotApproveRequest struct {
+	Locale string `json:"locale"`
+}
+
+// StoreScreenshotApproveResponse defines model for StoreScreenshotApproveResponse.
+type StoreScreenshotApproveResponse struct {
+	Approved int    `json:"approved"`
+	Locale   string `json:"locale"`
+}
+
 // StoreScreenshotAsset defines model for StoreScreenshotAsset.
 type StoreScreenshotAsset struct {
 	AssetId   uuid.UUID      `json:"asset_id"`
@@ -17085,41 +17404,6 @@ type StoreScreenshotLocaleListResponse struct {
 	Items []StoreLocaleMapping `json:"items"`
 }
 
-// StoreScreenshotPublishItem defines model for StoreScreenshotPublishItem.
-type StoreScreenshotPublishItem struct {
-	Action      string  `json:"action"`
-	Error       *string `json:"error,omitempty"`
-	Locale      string  `json:"locale"`
-	Slot        int     `json:"slot"`
-	Status      string  `json:"status"`
-	Store       string  `json:"store"`
-	StoreLocale string  `json:"store_locale"`
-	TargetId    string  `json:"target_id"`
-}
-
-// StoreScreenshotPublishRun defines model for StoreScreenshotPublishRun.
-type StoreScreenshotPublishRun struct {
-	CreatedAt  time.Time                    `json:"created_at"`
-	CreatedBy  *uuid.UUID                   `json:"created_by,omitempty"`
-	DryRun     bool                         `json:"dry_run"`
-	FinishedAt *time.Time                   `json:"finished_at,omitempty"`
-	Items      []StoreScreenshotPublishItem `json:"items"`
-	Locales    []string                     `json:"locales"`
-	RunId      uuid.UUID                    `json:"run_id"`
-	SetId      uuid.UUID                    `json:"set_id"`
-	Snapshot   int                          `json:"snapshot"`
-	Status     string                       `json:"status"`
-	Stores     []string                     `json:"stores"`
-}
-
-// StoreScreenshotPublishRunCreateRequest defines model for StoreScreenshotPublishRunCreateRequest.
-type StoreScreenshotPublishRunCreateRequest struct {
-	DryRun   *bool    `json:"dry_run,omitempty"`
-	Locales  []string `json:"locales"`
-	Snapshot int      `json:"snapshot"`
-	Stores   []string `json:"stores"`
-}
-
 // StoreScreenshotSet defines model for StoreScreenshotSet.
 type StoreScreenshotSet struct {
 	ArchivedAt     *time.Time `json:"archived_at,omitempty"`
@@ -17157,6 +17441,7 @@ type StoreScreenshotSnapshot struct {
 	CreatedAt time.Time   `json:"created_at"`
 	CreatedBy *uuid.UUID  `json:"created_by,omitempty"`
 	Document  interface{} `json:"document"`
+	Pinned    bool        `json:"pinned"`
 	SetId     uuid.UUID   `json:"set_id"`
 	Version   int         `json:"version"`
 }
@@ -17171,8 +17456,21 @@ type StoreScreenshotSnapshotListResponse struct {
 	Items []StoreScreenshotSnapshot `json:"items"`
 }
 
+// StoreScreenshotSnapshotPinRequest defines model for StoreScreenshotSnapshotPinRequest.
+type StoreScreenshotSnapshotPinRequest struct {
+	Pinned bool `json:"pinned"`
+}
+
+// StoreScreenshotStringEditRequest defines model for StoreScreenshotStringEditRequest.
+type StoreScreenshotStringEditRequest struct {
+	Key    string `json:"key"`
+	Locale string `json:"locale"`
+	Text   string `json:"text"`
+}
+
 // StoreScreenshotStringsResponse defines model for StoreScreenshotStringsResponse.
 type StoreScreenshotStringsResponse struct {
+	Items   []StringItem      `json:"items"`
 	Locale  string            `json:"locale"`
 	Missing []string          `json:"missing"`
 	SetId   uuid.UUID         `json:"set_id"`
@@ -17182,6 +17480,24 @@ type StoreScreenshotStringsResponse struct {
 // StoreScreenshotTargetListResponse defines model for StoreScreenshotTargetListResponse.
 type StoreScreenshotTargetListResponse struct {
 	Items []ScreenshotTarget `json:"items"`
+}
+
+// StoreScreenshotTranslateLocaleResult defines model for StoreScreenshotTranslateLocaleResult.
+type StoreScreenshotTranslateLocaleResult struct {
+	Failed     []string `json:"failed"`
+	Locale     string   `json:"locale"`
+	Translated int      `json:"translated"`
+}
+
+// StoreScreenshotTranslateRequest defines model for StoreScreenshotTranslateRequest.
+type StoreScreenshotTranslateRequest struct {
+	Locales []string `json:"locales"`
+}
+
+// StoreScreenshotTranslateResponse defines model for StoreScreenshotTranslateResponse.
+type StoreScreenshotTranslateResponse struct {
+	Results []StoreScreenshotTranslateLocaleResult `json:"results"`
+	SetId   uuid.UUID                              `json:"set_id"`
 }
 
 // StoreScreenshotValidationResponse defines model for StoreScreenshotValidationResponse.
@@ -17264,6 +17580,14 @@ type StreakInfoV3 struct {
 	GraceDayUsed      bool    `json:"grace_day_used"`
 	LastActivityDate  *string `json:"last_activity_date,omitempty"`
 	LongestStreakDays int     `json:"longest_streak_days"`
+}
+
+// StringItem defines model for StringItem.
+type StringItem struct {
+	Key        string `json:"key"`
+	SourceText string `json:"source_text"`
+	Status     string `json:"status"`
+	Text       string `json:"text"`
 }
 
 // StudyList defines model for StudyList.
@@ -17952,6 +18276,20 @@ type TTSRejudgeResponse struct {
 	Language string           `json:"language"`
 	Passing  int              `json:"passing"`
 	Standing int              `json:"standing"`
+}
+
+// TTSReviewFlagRequest Send one live clip to the review screen, with what it sounds like.
+type TTSReviewFlagRequest struct {
+	AudioJobType string    `json:"audio_job_type"`
+	EntityId     uuid.UUID `json:"entity_id"`
+	Heard        *string   `json:"heard,omitempty"`
+	Language     string    `json:"language"`
+	RequestedBy  *string   `json:"requested_by,omitempty"`
+}
+
+// TTSReviewFlagResponse defines model for TTSReviewFlagResponse.
+type TTSReviewFlagResponse struct {
+	ReviewId uuid.UUID `json:"review_id"`
 }
 
 // TTSReviewResult What happened to the clip: replaced is the only outcome that changed it.
@@ -21789,7 +22127,7 @@ type GetApiV3StoreScreenshotsSetsSetIdStringsParams struct {
 	// Locale Kielo base locale code
 	Locale string `form:"locale" json:"locale"`
 
-	// IncludeDrafts Also use draft translations, for preview
+	// IncludeDrafts Also use unapproved translations, for preview
 	IncludeDrafts *bool `form:"include_drafts,omitempty" json:"include_drafts,omitempty"`
 }
 
@@ -24014,6 +24352,18 @@ type PostApiV3SitePostsJSONRequestBody = SitePostRequest
 // PatchApiV3SitePostsPostIdJSONRequestBody defines body for PatchApiV3SitePostsPostId for application/json ContentType.
 type PatchApiV3SitePostsPostIdJSONRequestBody = SitePostRequest
 
+// PostApiV3StoreScreenshotsPagesJSONRequestBody defines body for PostApiV3StoreScreenshotsPages for application/json ContentType.
+type PostApiV3StoreScreenshotsPagesJSONRequestBody = StorePageCreateRequest
+
+// PatchApiV3StoreScreenshotsPagesPageIdJSONRequestBody defines body for PatchApiV3StoreScreenshotsPagesPageId for application/json ContentType.
+type PatchApiV3StoreScreenshotsPagesPageIdJSONRequestBody = StorePageUpdateRequest
+
+// PostApiV3StoreScreenshotsPagesPageIdPublishRunsJSONRequestBody defines body for PostApiV3StoreScreenshotsPagesPageIdPublishRuns for application/json ContentType.
+type PostApiV3StoreScreenshotsPagesPageIdPublishRunsJSONRequestBody = StorePublishRunCreateRequest
+
+// PutApiV3StoreScreenshotsPagesPageIdTextsLocaleJSONRequestBody defines body for PutApiV3StoreScreenshotsPagesPageIdTextsLocale for application/json ContentType.
+type PutApiV3StoreScreenshotsPagesPageIdTextsLocaleJSONRequestBody = StorePageTextPutRequest
+
 // PostApiV3StoreScreenshotsSetsJSONRequestBody defines body for PostApiV3StoreScreenshotsSets for application/json ContentType.
 type PostApiV3StoreScreenshotsSetsJSONRequestBody = StoreScreenshotSetCreateRequest
 
@@ -24023,11 +24373,23 @@ type PatchApiV3StoreScreenshotsSetsSetIdJSONRequestBody = StoreScreenshotSetUpda
 // PutApiV3StoreScreenshotsSetsSetIdDraftJSONRequestBody defines body for PutApiV3StoreScreenshotsSetsSetIdDraft for application/json ContentType.
 type PutApiV3StoreScreenshotsSetsSetIdDraftJSONRequestBody = StoreScreenshotDraftSaveRequest
 
-// PostApiV3StoreScreenshotsSetsSetIdPublishRunsJSONRequestBody defines body for PostApiV3StoreScreenshotsSetsSetIdPublishRuns for application/json ContentType.
-type PostApiV3StoreScreenshotsSetsSetIdPublishRunsJSONRequestBody = StoreScreenshotPublishRunCreateRequest
-
 // PostApiV3StoreScreenshotsSetsSetIdSnapshotsJSONRequestBody defines body for PostApiV3StoreScreenshotsSetsSetIdSnapshots for application/json ContentType.
 type PostApiV3StoreScreenshotsSetsSetIdSnapshotsJSONRequestBody = StoreScreenshotSnapshotCreateRequest
+
+// PatchApiV3StoreScreenshotsSetsSetIdSnapshotsVersionJSONRequestBody defines body for PatchApiV3StoreScreenshotsSetsSetIdSnapshotsVersion for application/json ContentType.
+type PatchApiV3StoreScreenshotsSetsSetIdSnapshotsVersionJSONRequestBody = StoreScreenshotSnapshotPinRequest
+
+// PostApiV3StoreScreenshotsSetsSetIdStoragePruneJSONRequestBody defines body for PostApiV3StoreScreenshotsSetsSetIdStoragePrune for application/json ContentType.
+type PostApiV3StoreScreenshotsSetsSetIdStoragePruneJSONRequestBody = StoragePruneRequest
+
+// PutApiV3StoreScreenshotsSetsSetIdStringsJSONRequestBody defines body for PutApiV3StoreScreenshotsSetsSetIdStrings for application/json ContentType.
+type PutApiV3StoreScreenshotsSetsSetIdStringsJSONRequestBody = StoreScreenshotStringEditRequest
+
+// PostApiV3StoreScreenshotsSetsSetIdStringsApproveJSONRequestBody defines body for PostApiV3StoreScreenshotsSetsSetIdStringsApprove for application/json ContentType.
+type PostApiV3StoreScreenshotsSetsSetIdStringsApproveJSONRequestBody = StoreScreenshotApproveRequest
+
+// PostApiV3StoreScreenshotsSetsSetIdTranslationsJSONRequestBody defines body for PostApiV3StoreScreenshotsSetsSetIdTranslations for application/json ContentType.
+type PostApiV3StoreScreenshotsSetsSetIdTranslationsJSONRequestBody = StoreScreenshotTranslateRequest
 
 // PostApiV3SubscriptionsCancelJSONRequestBody defines body for PostApiV3SubscriptionsCancel for application/json ContentType.
 type PostApiV3SubscriptionsCancelJSONRequestBody = CancelSubscriptionRequest
@@ -24430,6 +24792,9 @@ type PostTtsPreviewInternalTtsAdminPreviewPostJSONRequestBody = TTSAdminPreviewR
 
 // PostTtsRegenerateInternalTtsAdminRegeneratePostJSONRequestBody defines body for PostTtsRegenerateInternalTtsAdminRegeneratePost for application/json ContentType.
 type PostTtsRegenerateInternalTtsAdminRegeneratePostJSONRequestBody = TTSAdminRegenerateRequest
+
+// PostTtsReviewFlagInternalTtsAdminReviewFlagPostJSONRequestBody defines body for PostTtsReviewFlagInternalTtsAdminReviewFlagPost for application/json ContentType.
+type PostTtsReviewFlagInternalTtsAdminReviewFlagPostJSONRequestBody = TTSReviewFlagRequest
 
 // PostTtsReviewRejudgeInternalTtsAdminReviewRejudgePostJSONRequestBody defines body for PostTtsReviewRejudgeInternalTtsAdminReviewRejudgePost for application/json ContentType.
 type PostTtsReviewRejudgeInternalTtsAdminReviewRejudgePostJSONRequestBody = TTSRejudgeRequest
