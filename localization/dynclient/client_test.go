@@ -97,7 +97,7 @@ func TestUpsert_RefusesUnsupportedLanguageWithoutCallingServer(t *testing.T) {
 	defer srv.Close()
 
 	c := New(srv.URL, "key", nil)
-	for _, code := range []string{"et", "cs", "sl", ""} {
+	for _, code := range []string{"el", "cs", "sl", ""} {
 		_, err := c.Upsert(context.Background(), UpsertRequest{
 			ResourceType: "ui.string", ResourceID: "x", LanguageCode: code,
 			TranslatedText: "t", SourceVersion: "v",
