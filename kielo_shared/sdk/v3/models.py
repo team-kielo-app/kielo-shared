@@ -3972,6 +3972,12 @@ class FetchDynamicTranslationsResponse(BaseModel):
     items: list[DynamicTranslationLocalization]
 
 
+class FieldLimit(BaseModel):
+    field: str
+    limit: int
+    required: bool
+
+
 class FillInTheBlankExercise(BaseModel):
     answer_form: AnswerForm | None = None
     cache_entry_id: str | None = Field(None, title="Cache Entry Id")
@@ -7065,6 +7071,17 @@ class OwnerSummary(BaseModel):
     owner: str
 
 
+class PageEvent(BaseModel):
+    badge: str | None = None
+    end_at: str
+    priority: str | None = None
+    publish_start_at: str | None = None
+    purpose: str | None = None
+    reference_name: str
+    start_at: str
+    territories: list[str] | None = None
+
+
 class ParadigmRow(DictionaryParadigmRow):
     pass
 
@@ -8515,6 +8532,13 @@ class RunRow(BaseModel):
     triggered_by: str | None = None
 
 
+class SafeArea(BaseModel):
+    h: int
+    w: int
+    x: int
+    y: int
+
+
 class SaveItemRequest(BaseModel):
     item_id: str
     item_type: str
@@ -8738,9 +8762,13 @@ class ScreenshotTarget(BaseModel):
     height: int
     id: str
     label: str
+    layout: str
     max_count: int
     min_count: int
+    opt_in: bool | None = None
     required: bool
+    safe_area: SafeArea | None = None
+    scene: str | None = None
     store: str
     store_slot: str
     width: int
@@ -10407,6 +10435,11 @@ class StorageClassMoveRequest(BaseModel):
     profile: str | None = None
 
 
+class StorageCount(BaseModel):
+    assets: int
+    bytes: int
+
+
 class StorageDeleteObjectsRequest(BaseModel):
     bucket: str
     objects: list[str]
@@ -10475,6 +10508,60 @@ class StorageOperation(BaseModel):
     status: str
 
 
+class StorageOrphanObject(BaseModel):
+    bucket: str
+    object_name: str
+    size_bytes: int
+    updated_at: AwareDatetime | None = None
+
+
+class StorageOrphans(BaseModel):
+    available: bool
+    bytes: int
+    inventory_at: AwareDatetime | None = None
+    items: list[StorageOrphanObject]
+    note: str | None = None
+    objects: int
+    untracked_bytes: int
+    untracked_objects: int
+
+
+class StoragePruneItem(BaseModel):
+    asset_id: UUID_aliased
+    bytes: int
+    failed: bool | None = None
+    kind: str
+    locale: str | None = None
+    reason: str
+    slot: int | None = None
+    snapshot: int | None = None
+    target_id: str | None = None
+
+
+class StoragePruneRequest(BaseModel):
+    dry_run: bool | None = None
+    grace_hours: int | None = None
+
+
+class StoragePruneResponse(BaseModel):
+    dry_run: bool
+    failed: int
+    kept: StorageCount
+    release: list[StoragePruneItem]
+    release_bytes: int
+    released: int
+    set_id: UUID_aliased
+
+
+class StorageSnapshotUsage(BaseModel):
+    exports: StorageCount
+    latest: bool
+    pinned: bool
+    released: StorageCount
+    run_referenced: bool
+    version: int
+
+
 class StorageUnmanagedRow(BaseModel):
     assets: int
     bucket: str
@@ -10491,6 +10578,115 @@ class StoreLocaleMapping(BaseModel):
     app_store: list[str]
     google_play: list[str]
     locale: str
+
+
+class StorePage(BaseModel):
+    archived_at: AwareDatetime | None = None
+    created_at: AwareDatetime
+    created_by: UUID_aliased | None = None
+    deep_link: str | None = None
+    event: PageEvent | None = None
+    keywords: list[str]
+    kind: str
+    learning_language: str | None = None
+    name: str
+    page_id: UUID_aliased
+    remote_id: str | None = None
+    set_id: UUID_aliased | None = None
+    store: str
+    updated_at: AwareDatetime
+
+
+class StorePageCreateRequest(BaseModel):
+    deep_link: str | None = None
+    event: PageEvent | None = None
+    keywords: list[str] | None = None
+    kind: str
+    learning_language: str | None = None
+    name: str
+    set_id: UUID_aliased | None = None
+    store: str
+
+
+class StorePageReviewStatus(BaseModel):
+    detail: str | None = None
+    manual: bool
+    state: str
+    submittable: bool
+
+
+class StorePageRunBrief(BaseModel):
+    created_at: AwareDatetime
+    dry_run: bool
+    finished_at: AwareDatetime | None = None
+    run_id: UUID_aliased
+    snapshot: int
+    status: str
+
+
+class StorePageSummary(BaseModel):
+    StorePage_1: StorePage = Field(..., alias="StorePage")
+    approved_count: int
+    last_run: StorePageRunBrief | None = None
+    locales_with_text: int
+    set_name: str | None = None
+
+
+class StorePageText(BaseModel):
+    fields: dict[str, str]
+    locale: str
+    page_id: UUID_aliased
+    status: str
+    updated_at: AwareDatetime | None = None
+    updated_by: UUID_aliased | None = None
+
+
+class StorePageTextLimitsResponse(BaseModel):
+    fields: list[FieldLimit]
+    kind: str
+    store: str
+
+
+class StorePageTextListResponse(BaseModel):
+    items: list[StorePageText]
+
+
+class StorePageTextPutRequest(BaseModel):
+    fields: dict[str, str]
+
+
+class StorePageUpdateRequest(BaseModel):
+    deep_link: str | None = None
+    event: PageEvent | None = None
+    keywords: list[str] | None = None
+    learning_language: str | None = None
+    name: str | None = None
+    remote_id: str | None = None
+    set_id: str | None = None
+
+
+class StorePublishRun(BaseModel):
+    created_at: AwareDatetime
+    created_by: UUID_aliased | None = None
+    dry_run: bool
+    finished_at: AwareDatetime | None = None
+    locales: list[str]
+    page_id: UUID_aliased
+    plan: Any
+    result: Any
+    run_id: UUID_aliased
+    snapshot: int
+    status: str
+
+
+class StorePublishRunCreateRequest(BaseModel):
+    dry_run: bool | None = None
+    locales: list[str] | None = None
+    snapshot: int
+
+
+class StorePublishRunListResponse(BaseModel):
+    items: list[StorePublishRun]
 
 
 class StoreReview(BaseModel):
@@ -10549,6 +10745,15 @@ class StoreReviewSyncStatus(BaseModel):
     store: str
 
 
+class StoreScreenshotApproveRequest(BaseModel):
+    locale: str
+
+
+class StoreScreenshotApproveResponse(BaseModel):
+    approved: int
+    locale: str
+
+
 class StoreScreenshotAsset(BaseModel):
     asset_id: UUID_aliased
     bytes: int
@@ -10593,38 +10798,6 @@ class StoreScreenshotLocaleListResponse(BaseModel):
     items: list[StoreLocaleMapping]
 
 
-class StoreScreenshotPublishItem(BaseModel):
-    action: str
-    error: str | None = None
-    locale: str
-    slot: int
-    status: str
-    store: str
-    store_locale: str
-    target_id: str
-
-
-class StoreScreenshotPublishRun(BaseModel):
-    created_at: AwareDatetime
-    created_by: UUID_aliased | None = None
-    dry_run: bool
-    finished_at: AwareDatetime | None = None
-    items: list[StoreScreenshotPublishItem]
-    locales: list[str]
-    run_id: UUID_aliased
-    set_id: UUID_aliased
-    snapshot: int
-    status: str
-    stores: list[str]
-
-
-class StoreScreenshotPublishRunCreateRequest(BaseModel):
-    dry_run: bool | None = None
-    locales: list[str]
-    snapshot: int
-    stores: list[str]
-
-
 class StoreScreenshotSet(BaseModel):
     archived_at: AwareDatetime | None = None
     created_at: AwareDatetime
@@ -10657,6 +10830,7 @@ class StoreScreenshotSnapshot(BaseModel):
     created_at: AwareDatetime
     created_by: UUID_aliased | None = None
     document: Any
+    pinned: bool
     set_id: UUID_aliased
     version: int
 
@@ -10669,15 +10843,33 @@ class StoreScreenshotSnapshotListResponse(BaseModel):
     items: list[StoreScreenshotSnapshot]
 
 
-class StoreScreenshotStringsResponse(BaseModel):
+class StoreScreenshotSnapshotPinRequest(BaseModel):
+    pinned: bool
+
+
+class StoreScreenshotStringEditRequest(BaseModel):
+    key: str
     locale: str
-    missing: list[str]
-    set_id: UUID_aliased
-    strings: dict[str, str]
+    text: str
 
 
 class StoreScreenshotTargetListResponse(BaseModel):
     items: list[ScreenshotTarget]
+
+
+class StoreScreenshotTranslateLocaleResult(BaseModel):
+    failed: list[str]
+    locale: str
+    translated: int
+
+
+class StoreScreenshotTranslateRequest(BaseModel):
+    locales: list[str]
+
+
+class StoreScreenshotTranslateResponse(BaseModel):
+    results: list[StoreScreenshotTranslateLocaleResult]
+    set_id: UUID_aliased
 
 
 class StoreScreenshotValidationResponse(BaseModel):
@@ -10741,6 +10933,13 @@ class StreakInfo(BaseModel):
 
 class StreakInfoV3(StreakInfo):
     pass
+
+
+class StringItem(BaseModel):
+    key: str
+    source_text: str
+    status: str
+    text: str
 
 
 class StudyList(BaseModel):
@@ -11228,6 +11427,18 @@ class TTSRejudgeResponse(BaseModel):
     language: str = Field(..., title="Language")
     passing: int = Field(..., title="Passing")
     standing: int = Field(..., title="Standing")
+
+
+class TTSReviewFlagRequest(BaseModel):
+    audio_job_type: str = Field(..., title="Audio Job Type")
+    entity_id: UUID_aliased = Field(..., title="Entity Id")
+    heard: constr(max_length=200) | None = Field("", title="Heard")
+    language: constr(min_length=2, max_length=8) = Field(..., title="Language")
+    requested_by: constr(max_length=200) | None = Field("admin", title="Requested By")
+
+
+class TTSReviewFlagResponse(BaseModel):
+    review_id: UUID_aliased = Field(..., title="Review Id")
 
 
 class Outcome(StrEnum):
@@ -14787,8 +14998,40 @@ class SingletonStorageFinalizeResult(BaseModel):
     data: StorageFinalizeResult
 
 
+class SingletonStoragePruneResponse(BaseModel):
+    data: StoragePruneResponse
+
+
 class SingletonStorageUntrackedPage(BaseModel):
     data: StorageUntrackedPage
+
+
+class SingletonStorePage(BaseModel):
+    data: StorePage
+
+
+class SingletonStorePageReviewStatus(BaseModel):
+    data: StorePageReviewStatus
+
+
+class SingletonStorePageText(BaseModel):
+    data: StorePageText
+
+
+class SingletonStorePageTextLimitsResponse(BaseModel):
+    data: StorePageTextLimitsResponse
+
+
+class SingletonStorePageTextListResponse(BaseModel):
+    data: StorePageTextListResponse
+
+
+class SingletonStorePublishRun(BaseModel):
+    data: StorePublishRun
+
+
+class SingletonStorePublishRunListResponse(BaseModel):
+    data: StorePublishRunListResponse
 
 
 class SingletonStoreReview(BaseModel):
@@ -14797,6 +15040,10 @@ class SingletonStoreReview(BaseModel):
 
 class SingletonStoreReviewReplyPreview(BaseModel):
     data: StoreReviewReplyPreview
+
+
+class SingletonStoreScreenshotApproveResponse(BaseModel):
+    data: StoreScreenshotApproveResponse
 
 
 class SingletonStoreScreenshotAsset(BaseModel):
@@ -14819,10 +15066,6 @@ class SingletonStoreScreenshotLocaleListResponse(BaseModel):
     data: StoreScreenshotLocaleListResponse
 
 
-class SingletonStoreScreenshotPublishRun(BaseModel):
-    data: StoreScreenshotPublishRun
-
-
 class SingletonStoreScreenshotSet(BaseModel):
     data: StoreScreenshotSet
 
@@ -14839,12 +15082,12 @@ class SingletonStoreScreenshotSnapshotListResponse(BaseModel):
     data: StoreScreenshotSnapshotListResponse
 
 
-class SingletonStoreScreenshotStringsResponse(BaseModel):
-    data: StoreScreenshotStringsResponse
-
-
 class SingletonStoreScreenshotTargetListResponse(BaseModel):
     data: StoreScreenshotTargetListResponse
+
+
+class SingletonStoreScreenshotTranslateResponse(BaseModel):
+    data: StoreScreenshotTranslateResponse
 
 
 class SingletonStoreScreenshotValidationResponse(BaseModel):
@@ -14853,6 +15096,10 @@ class SingletonStoreScreenshotValidationResponse(BaseModel):
 
 class SingletonStoreSyncState(BaseModel):
     data: StoreSyncState
+
+
+class SingletonStringItem(BaseModel):
+    data: StringItem
 
 
 class SingletonStudyList(BaseModel):
@@ -15182,6 +15429,30 @@ class StorageOverview(BaseModel):
     unmanaged_assets: list[StorageUnmanagedRow]
 
 
+class StorageSetUsage(BaseModel):
+    archived_at: AwareDatetime | None = None
+    exports: StorageCount
+    name: str
+    pinned: StorageCount
+    purge_after: AwareDatetime | None = None
+    released: StorageCount
+    set_id: UUID_aliased
+    slug: str
+    snapshots: list[StorageSnapshotUsage]
+    sources: StorageCount
+    total: StorageCount
+
+
+class StorageUsageResponse(BaseModel):
+    orphans: StorageOrphans
+    sets: list[StorageSetUsage]
+    totals: StorageCount
+
+
+class StorePageListResponse(BaseModel):
+    items: list[StorePageSummary]
+
+
 class StoreReviewListResponse(BaseModel):
     items: list[StoreReview]
     languages: list[str]
@@ -15189,6 +15460,14 @@ class StoreReviewListResponse(BaseModel):
     sync: list[StoreReviewSyncStatus]
     total: int
     versions: list[str]
+
+
+class StoreScreenshotStringsResponse(BaseModel):
+    items: list[StringItem]
+    locale: str
+    missing: list[str]
+    set_id: UUID_aliased
+    strings: dict[str, str]
 
 
 class StoreSyncPreview(BaseModel):
@@ -15966,6 +16245,7 @@ class ExperimentWrite(BaseModel):
     decision: str | None = None
     hypothesis: str | None = None
     key: str | None = None
+    min_app_version: str | None = None
     name: str | None = None
     platforms: list[str] | None = None
     traffic_pct: int | None = None
@@ -16304,8 +16584,20 @@ class SingletonStorageOverview(BaseModel):
     data: StorageOverview
 
 
+class SingletonStorageUsageResponse(BaseModel):
+    data: StorageUsageResponse
+
+
+class SingletonStorePageListResponse(BaseModel):
+    data: StorePageListResponse
+
+
 class SingletonStoreReviewListResponse(BaseModel):
     data: StoreReviewListResponse
+
+
+class SingletonStoreScreenshotStringsResponse(BaseModel):
+    data: StoreScreenshotStringsResponse
 
 
 class SingletonStoreSyncPreview(BaseModel):
@@ -16489,6 +16781,7 @@ class Experiment(BaseModel):
     hypothesis: str
     id: UUID_aliased
     key: str
+    min_app_version: str | None = None
     name: str
     platforms: list[str]
     started_at: AwareDatetime | None = None
