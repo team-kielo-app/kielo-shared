@@ -6532,6 +6532,7 @@ type ExerciseStateStatus string
 // ExerciseSubmission defines model for ExerciseSubmission.
 type ExerciseSubmission struct {
 	ExerciseId        uuid.UUID   `json:"exercise_id"`
+	LookedUp          *[]string   `json:"looked_up,omitempty"`
 	ResponseTimeMs    *int        `json:"response_time_ms"`
 	Skipped           *bool       `json:"skipped,omitempty"`
 	SubmissionId      *string     `json:"submission_id"`
