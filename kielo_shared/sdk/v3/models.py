@@ -8395,6 +8395,18 @@ class RoadmapLessonSummaryV3(BaseModel):
     title: str | None = None
 
 
+class Kind2(StrEnum):
+    word = "word"
+    grammar = "grammar"
+
+
+class RoadmapLessonTargetItem(BaseModel):
+    gloss: str | None = Field(None, title="Gloss")
+    item_id: UUID_aliased = Field(..., title="Item Id")
+    kind: Kind2 = Field(..., title="Kind")
+    term: str = Field(..., title="Term")
+
+
 class RoadmapLessonUpsertRequest(BaseModel):
     category: str
     cefr_level: str | None = None
@@ -11708,6 +11720,7 @@ class TopicListsForWordResponseKielolearnEngine(BaseModel):
 
 class TrackListItem(BaseModel):
     audience: str | None = Field(None, title="Audience")
+    cefr_levels: list[str] | None = Field(None, title="Cefr Levels")
     chapter_count: int | None = Field(0, title="Chapter Count")
     color_hex: str | None = Field(None, title="Color Hex")
     description: str | None = Field(None, title="Description")
@@ -14540,6 +14553,7 @@ class RoadmapLessonDetailResponse(BaseModel):
     )
     progress: RoadmapLessonProgressSnapshot
     state: State = Field(..., title="State")
+    targets: list[RoadmapLessonTargetItem] | None = Field(None, title="Targets")
     thumbnail_media_id: UUID_aliased | None = Field(None, title="Thumbnail Media Id")
     thumbnail_url: str | None = Field(None, title="Thumbnail Url")
     title: str = Field(..., title="Title")
@@ -15676,6 +15690,7 @@ class TrackRoadmapLevel(BaseModel):
     completed_chapter_count: int | None = Field(0, title="Completed Chapter Count")
     icon_emoji: str | None = Field(None, title="Icon Emoji")
     id: UUID_aliased = Field(..., title="Id")
+    placed_past: bool | None = Field(False, title="Placed Past")
     progress_percent: float | None = Field(0.0, title="Progress Percent")
     status: Status15 = Field(..., title="Status")
     thumbnail_media_id: UUID_aliased | None = Field(None, title="Thumbnail Media Id")

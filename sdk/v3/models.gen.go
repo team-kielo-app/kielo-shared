@@ -533,6 +533,12 @@ const (
 	RoadmapLessonListItemStateCompleted RoadmapLessonListItemState = "completed"
 )
 
+// Defines values for RoadmapLessonTargetItemKind.
+const (
+	RoadmapLessonTargetItemKindGrammar RoadmapLessonTargetItemKind = "grammar"
+	RoadmapLessonTargetItemKindWord    RoadmapLessonTargetItemKind = "word"
+)
+
 // Defines values for RoadmapLessonUpsertRequestKielolearnEngineDifficultyLevel.
 const (
 	RoadmapLessonUpsertRequestKielolearnEngineDifficultyLevelAdvanced     RoadmapLessonUpsertRequestKielolearnEngineDifficultyLevel = "advanced"
@@ -789,9 +795,9 @@ const (
 
 // Defines values for GetConversationFocusKlearnApiV3ConversationFocusGetParamsOriginKind.
 const (
-	GetConversationFocusKlearnApiV3ConversationFocusGetParamsOriginKindConcept GetConversationFocusKlearnApiV3ConversationFocusGetParamsOriginKind = "concept"
-	GetConversationFocusKlearnApiV3ConversationFocusGetParamsOriginKindLesson  GetConversationFocusKlearnApiV3ConversationFocusGetParamsOriginKind = "lesson"
-	GetConversationFocusKlearnApiV3ConversationFocusGetParamsOriginKindWord    GetConversationFocusKlearnApiV3ConversationFocusGetParamsOriginKind = "word"
+	Concept GetConversationFocusKlearnApiV3ConversationFocusGetParamsOriginKind = "concept"
+	Lesson  GetConversationFocusKlearnApiV3ConversationFocusGetParamsOriginKind = "lesson"
+	Word    GetConversationFocusKlearnApiV3ConversationFocusGetParamsOriginKind = "word"
 )
 
 // Defines values for GetSurfaceNextStepsKlearnApiV3NextStepsGetParamsSourceKind.
@@ -13083,6 +13089,7 @@ type RoadmapLessonDetailResponse struct {
 	PracticeTargetSource     *RoadmapLessonDetailResponsePracticeTargetSource `json:"practice_target_source,omitempty"`
 	Progress                 RoadmapLessonProgressSnapshot                    `json:"progress"`
 	State                    RoadmapLessonDetailResponseState                 `json:"state"`
+	Targets                  *[]RoadmapLessonTargetItem                       `json:"targets,omitempty"`
 	ThumbnailMediaId         *uuid.UUID                                       `json:"thumbnail_media_id"`
 	ThumbnailUrl             *string                                          `json:"thumbnail_url"`
 	Title                    string                                           `json:"title"`
@@ -13193,6 +13200,17 @@ type RoadmapLessonSummaryV3 struct {
 	ThumbnailUrl             *string                  `json:"thumbnail_url,omitempty"`
 	Title                    *string                  `json:"title,omitempty"`
 }
+
+// RoadmapLessonTargetItem defines model for RoadmapLessonTargetItem.
+type RoadmapLessonTargetItem struct {
+	Gloss  *string                     `json:"gloss"`
+	ItemId uuid.UUID                   `json:"item_id"`
+	Kind   RoadmapLessonTargetItemKind `json:"kind"`
+	Term   string                      `json:"term"`
+}
+
+// RoadmapLessonTargetItemKind defines model for RoadmapLessonTargetItem.Kind.
+type RoadmapLessonTargetItemKind string
 
 // RoadmapLessonUpsertRequest defines model for RoadmapLessonUpsertRequest.
 type RoadmapLessonUpsertRequest struct {
@@ -18625,6 +18643,7 @@ type TopicListsForWordResponseKielolearnEngine struct {
 // TrackListItem defines model for TrackListItem.
 type TrackListItem struct {
 	Audience         *string    `json:"audience"`
+	CefrLevels       *[]string  `json:"cefr_levels,omitempty"`
 	ChapterCount     *int       `json:"chapter_count,omitempty"`
 	ColorHex         *string    `json:"color_hex"`
 	Description      *string    `json:"description"`
@@ -18685,6 +18704,7 @@ type TrackRoadmapLevel struct {
 	CompletedChapterCount *int                    `json:"completed_chapter_count,omitempty"`
 	IconEmoji             *string                 `json:"icon_emoji"`
 	Id                    uuid.UUID               `json:"id"`
+	PlacedPast            *bool                   `json:"placed_past,omitempty"`
 	ProgressPercent       *float32                `json:"progress_percent,omitempty"`
 	Status                TrackRoadmapLevelStatus `json:"status"`
 	ThumbnailMediaId      *uuid.UUID              `json:"thumbnail_media_id"`
