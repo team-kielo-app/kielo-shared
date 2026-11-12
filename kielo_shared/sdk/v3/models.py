@@ -7181,6 +7181,22 @@ class PartnerPayoutList(BaseModel):
     payouts: list[PartnerPayout]
 
 
+class PathStep(BaseModel):
+    chapter_id: UUID_aliased | None = Field(None, title="Chapter Id")
+    chapter_title: str | None = Field(None, title="Chapter Title")
+    kind: str | None = Field(None, title="Kind")
+    lesson_id: UUID_aliased = Field(..., title="Lesson Id")
+    starts_new_chapter: bool | None = Field(False, title="Starts New Chapter")
+
+
+class PathStepV3(BaseModel):
+    chapter_id: str | None = None
+    chapter_title: str | None = None
+    kind: str | None = None
+    lesson_id: str
+    starts_new_chapter: bool
+
+
 class PauseSessionResponse(BaseModel):
     deadline_at_ms: int
     extended: bool
@@ -14201,6 +14217,7 @@ class NextStepRecommendation(BaseModel):
     item_ids: list[UUID_aliased] | None = Field(None, title="Item Ids")
     item_type: ItemTypeFk | None = Field(None, title="Item Type")
     launch_params: RecommendationLaunchParams | None = None
+    path_step: PathStep | None = None
     rationale: str | None = Field(None, title="Rationale")
     session_mode: str | None = Field(None, title="Session Mode")
     subtitle: str | None = Field(None, title="Subtitle")
@@ -14219,6 +14236,7 @@ class NextStepRecommendationV3(BaseModel):
     item_ids: list[str] | None = None
     item_type: str | None = None
     launch_params: RecommendationLaunchParamsV3 | None = None
+    path_step: PathStepV3 | None = None
     rationale: str | None = None
     session_mode: str | None = None
     subtitle: str | None = None

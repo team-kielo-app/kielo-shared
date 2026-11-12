@@ -795,16 +795,17 @@ const (
 
 // Defines values for GetConversationFocusKlearnApiV3ConversationFocusGetParamsOriginKind.
 const (
-	Concept GetConversationFocusKlearnApiV3ConversationFocusGetParamsOriginKind = "concept"
-	Lesson  GetConversationFocusKlearnApiV3ConversationFocusGetParamsOriginKind = "lesson"
-	Word    GetConversationFocusKlearnApiV3ConversationFocusGetParamsOriginKind = "word"
+	GetConversationFocusKlearnApiV3ConversationFocusGetParamsOriginKindConcept GetConversationFocusKlearnApiV3ConversationFocusGetParamsOriginKind = "concept"
+	GetConversationFocusKlearnApiV3ConversationFocusGetParamsOriginKindLesson  GetConversationFocusKlearnApiV3ConversationFocusGetParamsOriginKind = "lesson"
+	GetConversationFocusKlearnApiV3ConversationFocusGetParamsOriginKindWord    GetConversationFocusKlearnApiV3ConversationFocusGetParamsOriginKind = "word"
 )
 
 // Defines values for GetSurfaceNextStepsKlearnApiV3NextStepsGetParamsSourceKind.
 const (
-	Article      GetSurfaceNextStepsKlearnApiV3NextStepsGetParamsSourceKind = "article"
-	Conversation GetSurfaceNextStepsKlearnApiV3NextStepsGetParamsSourceKind = "conversation"
-	KtvVideo     GetSurfaceNextStepsKlearnApiV3NextStepsGetParamsSourceKind = "ktv_video"
+	GetSurfaceNextStepsKlearnApiV3NextStepsGetParamsSourceKindArticle      GetSurfaceNextStepsKlearnApiV3NextStepsGetParamsSourceKind = "article"
+	GetSurfaceNextStepsKlearnApiV3NextStepsGetParamsSourceKindConversation GetSurfaceNextStepsKlearnApiV3NextStepsGetParamsSourceKind = "conversation"
+	GetSurfaceNextStepsKlearnApiV3NextStepsGetParamsSourceKindKtvVideo     GetSurfaceNextStepsKlearnApiV3NextStepsGetParamsSourceKind = "ktv_video"
+	GetSurfaceNextStepsKlearnApiV3NextStepsGetParamsSourceKindLesson       GetSurfaceNextStepsKlearnApiV3NextStepsGetParamsSourceKind = "lesson"
 )
 
 // AICandidate defines model for AICandidate.
@@ -10752,6 +10753,7 @@ type NextStepRecommendation struct {
 	ItemIds         *[]uuid.UUID                    `json:"item_ids,omitempty"`
 	ItemType        *NextStepRecommendationItemType `json:"item_type"`
 	LaunchParams    *RecommendationLaunchParams     `json:"launch_params"`
+	PathStep        *PathStep                       `json:"path_step"`
 	Rationale       *string                         `json:"rationale"`
 	SessionMode     *string                         `json:"session_mode"`
 	Subtitle        *string                         `json:"subtitle"`
@@ -10783,6 +10785,7 @@ type NextStepRecommendationV3 struct {
 	ItemIds         *[]string                     `json:"item_ids,omitempty"`
 	ItemType        *string                       `json:"item_type,omitempty"`
 	LaunchParams    *RecommendationLaunchParamsV3 `json:"launch_params,omitempty"`
+	PathStep        *PathStepV3                   `json:"path_step,omitempty"`
 	Rationale       *string                       `json:"rationale,omitempty"`
 	SessionMode     *string                       `json:"session_mode,omitempty"`
 	Subtitle        *string                       `json:"subtitle,omitempty"`
@@ -11525,6 +11528,25 @@ type PartnerPayoutActionRequest struct {
 // PartnerPayoutList defines model for PartnerPayoutList.
 type PartnerPayoutList struct {
 	Payouts []PartnerPayout `json:"payouts"`
+}
+
+// PathStep Where a roadmap_lesson card points: the learner's next lesson of the
+// track, named in the support language, and whether it opens a new chapter.
+type PathStep struct {
+	ChapterId        *uuid.UUID `json:"chapter_id"`
+	ChapterTitle     *string    `json:"chapter_title"`
+	Kind             *string    `json:"kind"`
+	LessonId         uuid.UUID  `json:"lesson_id"`
+	StartsNewChapter *bool      `json:"starts_new_chapter,omitempty"`
+}
+
+// PathStepV3 defines model for PathStepV3.
+type PathStepV3 struct {
+	ChapterId        *string `json:"chapter_id,omitempty"`
+	ChapterTitle     *string `json:"chapter_title,omitempty"`
+	Kind             *string `json:"kind,omitempty"`
+	LessonId         string  `json:"lesson_id"`
+	StartsNewChapter bool    `json:"starts_new_chapter"`
 }
 
 // PauseSessionResponse defines model for PauseSessionResponse.
@@ -21641,10 +21663,10 @@ type GetApiV3MeLearningItemsParams struct {
 
 // GetApiV3MeNextStepsParams defines parameters for GetApiV3MeNextSteps.
 type GetApiV3MeNextStepsParams struct {
-	// SourceKind article, ktv_video or conversation
+	// SourceKind article, ktv_video, conversation or lesson
 	SourceKind string `form:"source_kind" json:"source_kind"`
 
-	// SourceId Content entry id (article, video) or scenario id
+	// SourceId Content entry id (article, video), scenario id or roadmap lesson id
 	SourceId string `form:"source_id" json:"source_id"`
 
 	// Supports Comma list of card kinds this client can launch, e.g. article_pack. Omitted: only the original kinds.
