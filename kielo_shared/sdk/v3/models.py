@@ -3678,6 +3678,7 @@ class ExerciseState(BaseModel):
 
 class ExerciseSubmission(BaseModel):
     exercise_id: UUID_aliased = Field(..., title="Exercise Id")
+    looked_up: list[str] | None = Field(None, max_length=20, title="Looked Up")
     response_time_ms: int | None = Field(None, title="Response Time Ms")
     skipped: bool | None = Field(False, title="Skipped")
     submission_id: str | None = Field(None, title="Submission Id")
