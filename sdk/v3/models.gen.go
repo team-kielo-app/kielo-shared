@@ -23365,6 +23365,11 @@ type GetConversationFocusKlearnApiV3ConversationFocusGetParams struct {
 // GetConversationFocusKlearnApiV3ConversationFocusGetParamsOriginKind defines parameters for GetConversationFocusKlearnApiV3ConversationFocusGet.
 type GetConversationFocusKlearnApiV3ConversationFocusGetParamsOriginKind string
 
+// ListPublishedTracksKlearnApiV3CurriculumTracksGetParams defines parameters for ListPublishedTracksKlearnApiV3CurriculumTracksGet.
+type ListPublishedTracksKlearnApiV3CurriculumTracksGetParams struct {
+	UserId *uuid.UUID `form:"user_id,omitempty" json:"user_id,omitempty"`
+}
+
 // GetTrackRoadmapKlearnApiV3CurriculumTracksTrackIdRoadmapGetParams defines parameters for GetTrackRoadmapKlearnApiV3CurriculumTracksTrackIdRoadmapGet.
 type GetTrackRoadmapKlearnApiV3CurriculumTracksTrackIdRoadmapGetParams struct {
 	UserId uuid.UUID `form:"user_id" json:"user_id"`
