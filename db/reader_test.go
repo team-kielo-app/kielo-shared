@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -142,3 +143,14 @@ func TestReader_NilAndClose(t *testing.T) {
 	assert.Nil(t, r.Pool(context.Background()))
 	r.Close()
 }
+
+// A read-only repository holds this where it held a pool.
+type readQuerier interface {
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+}
+
+var (
+	_ readQuerier = (*Reader)(nil)
+	_ readQuerier = (*pgxpool.Pool)(nil)
+)
