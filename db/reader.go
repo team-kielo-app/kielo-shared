@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -187,6 +188,17 @@ func (r *Reader) replicaUsable(ctx context.Context) bool {
 	r.healthy = usable
 	r.checkedAt = r.now()
 	return usable
+}
+
+// Query runs a read on the pool Pool hands out, so a read-only repository can
+// hold a Reader where it held a pool.
+func (r *Reader) Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error) {
+	return r.Pool(ctx).Query(ctx, sql, args...)
+}
+
+// QueryRow is Query for a single row.
+func (r *Reader) QueryRow(ctx context.Context, sql string, args ...any) pgx.Row {
+	return r.Pool(ctx).QueryRow(ctx, sql, args...)
 }
 
 // Close closes the replica pool. The primary belongs to its owner.
