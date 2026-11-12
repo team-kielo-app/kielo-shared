@@ -2926,6 +2926,37 @@ type ChangeEmailRequest struct {
 	NewEmail     string `json:"new_email"`
 }
 
+// ChapterTestOutOffer defines model for ChapterTestOutOffer.
+type ChapterTestOutOffer struct {
+	AttemptsLeft  *int    `json:"attempts_left,omitempty"`
+	Available     *bool   `json:"available,omitempty"`
+	PassPercent   *int    `json:"pass_percent,omitempty"`
+	QuestionCount *int    `json:"question_count,omitempty"`
+	Reason        *string `json:"reason"`
+}
+
+// ChapterTestOutResult defines model for ChapterTestOutResult.
+type ChapterTestOutResult struct {
+	AttemptsLeft   int        `json:"attempts_left"`
+	Correct        int        `json:"correct"`
+	LessonsMarked  *int       `json:"lessons_marked,omitempty"`
+	PassPercent    int        `json:"pass_percent"`
+	Passed         bool       `json:"passed"`
+	ResumeLessonId *uuid.UUID `json:"resume_lesson_id"`
+	Total          int        `json:"total"`
+}
+
+// ChapterTestOutResultV3 defines model for ChapterTestOutResultV3.
+type ChapterTestOutResultV3 struct {
+	AttemptsLeft   int     `json:"attempts_left"`
+	Correct        int     `json:"correct"`
+	LessonsMarked  int     `json:"lessons_marked"`
+	PassPercent    int     `json:"pass_percent"`
+	Passed         bool    `json:"passed"`
+	ResumeLessonId *string `json:"resume_lesson_id,omitempty"`
+	Total          int     `json:"total"`
+}
+
 // CheckAndAwardRequest defines model for CheckAndAwardRequest.
 type CheckAndAwardRequest struct {
 	AchievementCode string  `json:"achievement_code"`
@@ -14276,6 +14307,11 @@ type SingletonCardCheckoutStatus struct {
 	Data CardCheckoutStatus `json:"data"`
 }
 
+// SingletonChapterTestOutResultV3 defines model for SingletonChapterTestOutResultV3.
+type SingletonChapterTestOutResultV3 struct {
+	Data ChapterTestOutResultV3 `json:"data"`
+}
+
 // SingletonCheckAndAwardResponse defines model for SingletonCheckAndAwardResponse.
 type SingletonCheckAndAwardResponse struct {
 	Data CheckAndAwardResponse `json:"data"`
@@ -18695,6 +18731,8 @@ type TrackRoadmapChapter struct {
 	LessonCount          *int                      `json:"lesson_count,omitempty"`
 	Lessons              *[]TrackRoadmapLesson     `json:"lessons,omitempty"`
 	Status               TrackRoadmapChapterStatus `json:"status"`
+	TestOut              *ChapterTestOutOffer      `json:"test_out,omitempty"`
+	TestedOutLessonCount *int                      `json:"tested_out_lesson_count,omitempty"`
 	ThumbnailMediaId     *uuid.UUID                `json:"thumbnail_media_id"`
 	ThumbnailUrl         *string                   `json:"thumbnail_url"`
 	Title                string                    `json:"title"`
@@ -22021,6 +22059,18 @@ type GetApiV3RecommendationCampaignsCampaignIdRunsParams struct {
 	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
+// PostApiV3RoadmapChaptersChapterIdTestOutParams defines parameters for PostApiV3RoadmapChaptersChapterIdTestOut.
+type PostApiV3RoadmapChaptersChapterIdTestOutParams struct {
+	// SupportLanguageCode Two-letter ISO 639-1 code for translated UI strings (per ADR-006 §3.83).
+	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
+}
+
+// PostApiV3RoadmapChaptersChapterIdTestOutSessionIdFinishParams defines parameters for PostApiV3RoadmapChaptersChapterIdTestOutSessionIdFinish.
+type PostApiV3RoadmapChaptersChapterIdTestOutSessionIdFinishParams struct {
+	// SupportLanguageCode Two-letter ISO 639-1 code for translated UI strings (per ADR-006 §3.83).
+	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
+}
+
 // PostApiV3RoadmapFirstSentenceSpeechEvaluateParams defines parameters for PostApiV3RoadmapFirstSentenceSpeechEvaluate.
 type PostApiV3RoadmapFirstSentenceSpeechEvaluateParams struct {
 	// ExpectedText The line the learner was asked to say
@@ -23499,6 +23549,18 @@ type AdminListRoadmapLessonsKlearnApiV3RoadmapAdminLessonsGetParams struct {
 type AdminGenerateRoadmapLessonKlearnApiV3RoadmapAdminLessonsGeneratePostParams struct {
 	// LearningLanguageCode Target learning language for the generated lesson (e.g. 'fi', 'sv'). REQUIRED — the admin-ui interceptor (http.ts) stamps this from the workspace dropdown. Empty/missing surfaces as 422 rather than silently letting the LLM invent a language.
 	LearningLanguageCode string `form:"learning_language_code" json:"learning_language_code"`
+}
+
+// StartChapterTestOutKlearnApiV3RoadmapChaptersChapterIdTestOutPostParams defines parameters for StartChapterTestOutKlearnApiV3RoadmapChaptersChapterIdTestOutPost.
+type StartChapterTestOutKlearnApiV3RoadmapChaptersChapterIdTestOutPostParams struct {
+	// UserId The ID of the user
+	UserId uuid.UUID `form:"user_id" json:"user_id"`
+}
+
+// FinishChapterTestOutKlearnApiV3RoadmapChaptersChapterIdTestOutSessionIdFinishPostParams defines parameters for FinishChapterTestOutKlearnApiV3RoadmapChaptersChapterIdTestOutSessionIdFinishPost.
+type FinishChapterTestOutKlearnApiV3RoadmapChaptersChapterIdTestOutSessionIdFinishPostParams struct {
+	// UserId The ID of the user
+	UserId uuid.UUID `form:"user_id" json:"user_id"`
 }
 
 // EvaluateFirstSentenceSpeechKlearnApiV3RoadmapFirstSentenceSpeechEvaluatePostParams defines parameters for EvaluateFirstSentenceSpeechKlearnApiV3RoadmapFirstSentenceSpeechEvaluatePost.

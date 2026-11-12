@@ -1337,6 +1337,34 @@ class ChangeEmailRequest(BaseModel):
     new_email: str
 
 
+class ChapterTestOutOffer(BaseModel):
+    attempts_left: int | None = Field(0, title="Attempts Left")
+    available: bool | None = Field(False, title="Available")
+    pass_percent: int | None = Field(0, title="Pass Percent")
+    question_count: int | None = Field(0, title="Question Count")
+    reason: str | None = Field(None, title="Reason")
+
+
+class ChapterTestOutResult(BaseModel):
+    attempts_left: int = Field(..., title="Attempts Left")
+    correct: int = Field(..., title="Correct")
+    lessons_marked: int | None = Field(0, title="Lessons Marked")
+    pass_percent: int = Field(..., title="Pass Percent")
+    passed: bool = Field(..., title="Passed")
+    resume_lesson_id: UUID_aliased | None = Field(None, title="Resume Lesson Id")
+    total: int = Field(..., title="Total")
+
+
+class ChapterTestOutResultV3(BaseModel):
+    attempts_left: int
+    correct: int
+    lessons_marked: int
+    pass_percent: int
+    passed: bool
+    resume_lesson_id: str | None = None
+    total: int
+
+
 class CheckAndAwardRequest(BaseModel):
     achievement_code: str
     event_id: str | None = None
@@ -9195,6 +9223,10 @@ class SingletonCardCheckoutStatus(BaseModel):
     data: CardCheckoutStatus
 
 
+class SingletonChapterTestOutResultV3(BaseModel):
+    data: ChapterTestOutResultV3
+
+
 class SingletonCheckAndAwardResponse(BaseModel):
     data: CheckAndAwardResponse
 
@@ -15696,6 +15728,8 @@ class TrackRoadmapChapter(BaseModel):
     lesson_count: int | None = Field(0, title="Lesson Count")
     lessons: list[TrackRoadmapLesson] | None = Field(None, title="Lessons")
     status: Status15 = Field(..., title="Status")
+    test_out: ChapterTestOutOffer | None = None
+    tested_out_lesson_count: int | None = Field(0, title="Tested Out Lesson Count")
     thumbnail_media_id: UUID_aliased | None = Field(None, title="Thumbnail Media Id")
     thumbnail_url: str | None = Field(None, title="Thumbnail Url")
     title: str = Field(..., title="Title")
