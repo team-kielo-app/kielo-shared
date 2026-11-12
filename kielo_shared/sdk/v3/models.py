@@ -10622,6 +10622,8 @@ class StorePageRunBrief(BaseModel):
     run_id: UUID_aliased
     snapshot: int
     status: str
+    changes: int
+    blocked: bool
 
 
 class StorePageSummary(BaseModel):
@@ -10630,6 +10632,7 @@ class StorePageSummary(BaseModel):
     last_run: StorePageRunBrief | None = None
     locales_with_text: int
     set_name: str | None = None
+    last_publish: StorePageRunBrief | None = None
 
 
 class StorePageText(BaseModel):

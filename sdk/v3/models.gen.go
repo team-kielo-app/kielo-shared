@@ -17190,6 +17190,8 @@ type StorePageReviewStatus struct {
 
 // StorePageRunBrief defines model for StorePageRunBrief.
 type StorePageRunBrief struct {
+	Blocked    bool       `json:"blocked"`
+	Changes    int        `json:"changes"`
 	CreatedAt  time.Time  `json:"created_at"`
 	DryRun     bool       `json:"dry_run"`
 	FinishedAt *time.Time `json:"finished_at,omitempty"`
@@ -17202,6 +17204,7 @@ type StorePageRunBrief struct {
 type StorePageSummary struct {
 	StorePage       StorePage          `json:"StorePage"`
 	ApprovedCount   int                `json:"approved_count"`
+	LastPublish     *StorePageRunBrief `json:"last_publish,omitempty"`
 	LastRun         *StorePageRunBrief `json:"last_run,omitempty"`
 	LocalesWithText int                `json:"locales_with_text"`
 	SetName         *string            `json:"set_name,omitempty"`
@@ -22122,6 +22125,12 @@ type PostApiV3StoreScreenshotsSetsSetIdAssetsParams struct {
 	FileName *string `form:"file_name,omitempty" json:"file_name,omitempty"`
 }
 
+// GetApiV3StoreScreenshotsSetsSetIdAssetsAssetIdContentParams defines parameters for GetApiV3StoreScreenshotsSetsSetIdAssetsAssetIdContent.
+type GetApiV3StoreScreenshotsSetsSetIdAssetsAssetIdContentParams struct {
+	// W Preview width in pixels, 64 to 640; omit for the original bytes
+	W *int `form:"w,omitempty" json:"w,omitempty"`
+}
+
 // GetApiV3StoreScreenshotsSetsSetIdStringsParams defines parameters for GetApiV3StoreScreenshotsSetsSetIdStrings.
 type GetApiV3StoreScreenshotsSetsSetIdStringsParams struct {
 	// Locale Kielo base locale code
@@ -24867,6 +24876,9 @@ type HandlePracticePrepareInternalWorkerHandlePracticePreparePostJSONRequestBody
 
 // HandlePrepareInternalWorkerHandlePreparePostJSONRequestBody defines body for HandlePrepareInternalWorkerHandlePreparePost for application/json ContentType.
 type HandlePrepareInternalWorkerHandlePreparePostJSONRequestBody = PubSubMessage
+
+// HandleRunPrefetchInternalWorkerHandleRunPrefetchPostJSONRequestBody defines body for HandleRunPrefetchInternalWorkerHandleRunPrefetchPost for application/json ContentType.
+type HandleRunPrefetchInternalWorkerHandleRunPrefetchPostJSONRequestBody = PubSubMessage
 
 // HandleTopicListGenerationInternalWorkerHandleTopicListGenerationPostJSONRequestBody defines body for HandleTopicListGenerationInternalWorkerHandleTopicListGenerationPost for application/json ContentType.
 type HandleTopicListGenerationInternalWorkerHandleTopicListGenerationPostJSONRequestBody = PubSubMessage
