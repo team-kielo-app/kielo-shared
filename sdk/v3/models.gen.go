@@ -21835,12 +21835,24 @@ type GetApiV3MeSavedItemsParams struct {
 
 	// ItemIds Optional comma-separated item ids; returns exactly those saved items (no pagination)
 	ItemIds *string `form:"item_ids,omitempty" json:"item_ids,omitempty"`
+
+	// Include Opt-in item types hidden by default, comma-separated (RoadmapLesson)
+	Include *string `form:"include,omitempty" json:"include,omitempty"`
+}
+
+// GetApiV3MeSavedItemsCountsParams defines parameters for GetApiV3MeSavedItemsCounts.
+type GetApiV3MeSavedItemsCountsParams struct {
+	// Include Opt-in item types hidden by default, comma-separated (RoadmapLesson)
+	Include *string `form:"include,omitempty" json:"include,omitempty"`
 }
 
 // GetApiV3MeSavedItemsDashboardParams defines parameters for GetApiV3MeSavedItemsDashboard.
 type GetApiV3MeSavedItemsDashboardParams struct {
 	// SupportLanguageCode Two-letter ISO 639-1 code for translated UI strings (per ADR-006 §3.83).
 	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
+
+	// Include Opt-in item types hidden by default, comma-separated (RoadmapLesson)
+	Include *string `form:"include,omitempty" json:"include,omitempty"`
 }
 
 // GetApiV3MeStudyListsParams defines parameters for GetApiV3MeStudyLists.
