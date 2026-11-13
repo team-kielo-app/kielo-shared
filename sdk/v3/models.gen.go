@@ -7166,6 +7166,15 @@ type FirstSceneLine struct {
 	Sentence    string             `json:"sentence"`
 }
 
+// FirstSceneVideo defines model for FirstSceneVideo.
+type FirstSceneVideo struct {
+	DurationS int    `json:"duration_s"`
+	LineCount int    `json:"line_count"`
+	Reason    string `json:"reason"`
+	Title     string `json:"title"`
+	VideoId   string `json:"video_id"`
+}
+
 // FirstSentenceSpeechResponse defines model for FirstSentenceSpeechResponse.
 type FirstSentenceSpeechResponse struct {
 	Similarity float32 `json:"similarity"`
@@ -9013,6 +9022,26 @@ type KieloTVPipelineStep struct {
 	Detail *string `json:"detail,omitempty"`
 	Key    string  `json:"key"`
 	State  string  `json:"state"`
+}
+
+// KieloTVPracticeAnswer defines model for KieloTVPracticeAnswer.
+type KieloTVPracticeAnswer struct {
+	AnsweredAt string  `json:"answered_at"`
+	BaseWordId *string `json:"base_word_id,omitempty"`
+	Chosen     string  `json:"chosen"`
+	Correct    bool    `json:"correct"`
+	LineIndex  int     `json:"line_index"`
+	Word       string  `json:"word"`
+}
+
+// KieloTVPracticeAnswersAccepted defines model for KieloTVPracticeAnswersAccepted.
+type KieloTVPracticeAnswersAccepted struct {
+	Accepted int `json:"accepted"`
+}
+
+// KieloTVPracticeAnswersRequest defines model for KieloTVPracticeAnswersRequest.
+type KieloTVPracticeAnswersRequest struct {
+	Answers []KieloTVPracticeAnswer `json:"answers"`
 }
 
 // KieloTVToolboxJobState defines model for KieloTVToolboxJobState.
@@ -11402,6 +11431,15 @@ type OmorfiResponse struct {
 	Paradigm *OmorfiParadigm `json:"paradigm"`
 }
 
+// OnboardingFirstScene defines model for OnboardingFirstScene.
+type OnboardingFirstScene struct {
+	DurationS int    `json:"duration_s"`
+	LineCount int    `json:"line_count"`
+	Reason    string `json:"reason"`
+	Title     string `json:"title"`
+	VideoId   string `json:"video_id"`
+}
+
 // OpSpec defines model for OpSpec.
 type OpSpec struct {
 	Label string `json:"label"`
@@ -11885,6 +11923,32 @@ type PostSummary struct {
 	Title             string     `json:"title"`
 	TranslatedLocales []string   `json:"translated_locales"`
 	UpdatedAt         time.Time  `json:"updated_at"`
+}
+
+// PracticeAnswer defines model for PracticeAnswer.
+type PracticeAnswer struct {
+	AnsweredAt      time.Time `json:"answered_at"`
+	BaseWordId      uuid.UUID `json:"base_word_id"`
+	Chosen          *string   `json:"chosen,omitempty"`
+	ContextSentence *string   `json:"context_sentence,omitempty"`
+	Correct         bool      `json:"correct"`
+	LineIndex       int       `json:"line_index"`
+	Word            string    `json:"word"`
+}
+
+// PracticeAnswersRequest defines model for PracticeAnswersRequest.
+type PracticeAnswersRequest struct {
+	Answers []PracticeAnswer `json:"answers"`
+	VideoId uuid.UUID        `json:"video_id"`
+}
+
+// PracticeAnswersResult defines model for PracticeAnswersResult.
+type PracticeAnswersResult struct {
+	Duplicates *int `json:"duplicates,omitempty"`
+	Failed     *int `json:"failed,omitempty"`
+	Queued     *int `json:"queued,omitempty"`
+	Signalled  *int `json:"signalled,omitempty"`
+	Skipped    *int `json:"skipped,omitempty"`
 }
 
 // PracticeContext defines model for PracticeContext.
@@ -15066,6 +15130,11 @@ type SingletonFeedbackMessageList struct {
 	Data FeedbackMessageList `json:"data"`
 }
 
+// SingletonFirstSceneVideo defines model for SingletonFirstSceneVideo.
+type SingletonFirstSceneVideo struct {
+	Data FirstSceneVideo `json:"data"`
+}
+
 // SingletonForgotPasswordResponse defines model for SingletonForgotPasswordResponse.
 type SingletonForgotPasswordResponse struct {
 	Data ForgotPasswordResponse `json:"data"`
@@ -15659,6 +15728,11 @@ type SingletonOfferCohortList struct {
 // SingletonOfferCohortResults defines model for SingletonOfferCohortResults.
 type SingletonOfferCohortResults struct {
 	Data OfferCohortResults `json:"data"`
+}
+
+// SingletonOnboardingFirstScene defines model for SingletonOnboardingFirstScene.
+type SingletonOnboardingFirstScene struct {
+	Data OnboardingFirstScene `json:"data"`
 }
 
 // SingletonParagraphTranslationResponse defines model for SingletonParagraphTranslationResponse.
@@ -19648,10 +19722,13 @@ type UserProfile struct {
 
 	// OnboardingCompletedAt When setup finished. Sent as null when the account still owes setup, and always present on servers that know the field, so an absent key means an older server. (Plain string, not a [string, null] type array: the Go SDK generator cannot resolve type arrays.)
 	OnboardingCompletedAt *time.Time `json:"onboarding_completed_at,omitempty"`
-	OnboardingVariant     *string    `json:"onboarding_variant,omitempty"`
-	ReminderHour          *int       `json:"reminder_hour,omitempty"`
-	StreakGraceUsedOn     *string    `json:"streak_grace_used_on,omitempty"`
-	SupportLanguageCode   *string    `json:"support_language_code,omitempty"`
+
+	// OnboardingFirstExperience Arm of the first-experience test: scene or control. Server-assigned, sticky per learner; control for everyone while the test is off.
+	OnboardingFirstExperience *string `json:"onboarding_first_experience,omitempty"`
+	OnboardingVariant         *string `json:"onboarding_variant,omitempty"`
+	ReminderHour              *int    `json:"reminder_hour,omitempty"`
+	StreakGraceUsedOn         *string `json:"streak_grace_used_on,omitempty"`
+	SupportLanguageCode       *string `json:"support_language_code,omitempty"`
 
 	// SupportLanguageSource Sweep VVV: write-source classifier for users.users.support_language_code. 8 canonical values.
 	SupportLanguageSource *UserProfileSupportLanguageSource `json:"support_language_source,omitempty"`
@@ -19700,11 +19777,14 @@ type UserProfileUserService struct {
 	Name                  *string    `json:"name,omitempty"`
 	NewsletterConsent     *bool      `json:"newsletter_consent,omitempty"`
 	OnboardingCompletedAt *time.Time `json:"onboarding_completed_at,omitempty"`
-	OnboardingVariant     *string    `json:"onboarding_variant,omitempty"`
-	ReminderHour          *int       `json:"reminder_hour,omitempty"`
-	StreakGraceUsedOn     *time.Time `json:"streak_grace_used_on,omitempty"`
-	SupportLanguageCode   *string    `json:"support_language_code,omitempty"`
-	SupportLanguageSource *string    `json:"support_language_source,omitempty"`
+
+	// OnboardingFirstExperience Arm of the first-experience test: scene or control. Server-assigned, sticky per learner; control for everyone while the test is off.
+	OnboardingFirstExperience *string    `json:"onboarding_first_experience,omitempty"`
+	OnboardingVariant         *string    `json:"onboarding_variant,omitempty"`
+	ReminderHour              *int       `json:"reminder_hour,omitempty"`
+	StreakGraceUsedOn         *time.Time `json:"streak_grace_used_on,omitempty"`
+	SupportLanguageCode       *string    `json:"support_language_code,omitempty"`
+	SupportLanguageSource     *string    `json:"support_language_source,omitempty"`
 }
 
 // UserProgress defines model for UserProgress.
@@ -21362,6 +21442,12 @@ type GetApiV3KielotvParams struct {
 	Status *string `form:"status,omitempty" json:"status,omitempty"`
 }
 
+// GetApiV3KielotvFirstSceneParams defines parameters for GetApiV3KielotvFirstScene.
+type GetApiV3KielotvFirstSceneParams struct {
+	// SupportLanguageCode Localization target
+	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
+}
+
 // GetApiV3KielotvRecommendationsParams defines parameters for GetApiV3KielotvRecommendations.
 type GetApiV3KielotvRecommendationsParams struct {
 	// FormatType Filter recommendations by KieloTV format type.
@@ -21801,6 +21887,9 @@ type GetApiV3MeDailyChallengeParams struct {
 
 	// LearningLanguageCode Two-letter ISO 639-1 code for the language being learned (per ADR-006 §3.83).
 	LearningLanguageCode *string `form:"learning_language_code,omitempty" json:"learning_language_code,omitempty"`
+
+	// SceneVideoId Session one built from this KieloTV scene (onboarding first-scene arm)
+	SceneVideoId *string `form:"scene_video_id,omitempty" json:"scene_video_id,omitempty"`
 }
 
 // GetApiV3MeInAppNudgesParams defines parameters for GetApiV3MeInAppNudges.
@@ -22137,6 +22226,15 @@ type PostApiV3NotificationsParams struct {
 type PostApiV3NotificationsBroadcastParams struct {
 	// IdempotencyKey Stable semantic key reused when retrying the same operator action.
 	IdempotencyKey string `json:"Idempotency-Key"`
+}
+
+// GetApiV3OnboardingFirstSceneParams defines parameters for GetApiV3OnboardingFirstScene.
+type GetApiV3OnboardingFirstSceneParams struct {
+	// SupportLanguageCode Two-letter ISO 639-1 code for translated UI strings (per ADR-006 §3.83).
+	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
+
+	// LearningLanguageCode Two-letter ISO 639-1 code for the language being learned (per ADR-006 §3.83).
+	LearningLanguageCode *string `form:"learning_language_code,omitempty" json:"learning_language_code,omitempty"`
 }
 
 // GetApiV3PlacementItemsParams defines parameters for GetApiV3PlacementItems.
@@ -24308,6 +24406,9 @@ type PatchApiV3JourneysIdJSONRequestBody = JourneyRequest
 // PostApiV3KielotvJSONRequestBody defines body for PostApiV3Kielotv for application/json ContentType.
 type PostApiV3KielotvJSONRequestBody = KieloTVVideoUpsertRequest
 
+// PostApiV3KielotvVideosVideoIdPracticeAnswersJSONRequestBody defines body for PostApiV3KielotvVideosVideoIdPracticeAnswers for application/json ContentType.
+type PostApiV3KielotvVideosVideoIdPracticeAnswersJSONRequestBody = KieloTVPracticeAnswersRequest
+
 // PatchApiV3KielotvVideoIdJSONRequestBody defines body for PatchApiV3KielotvVideoId for application/json ContentType.
 type PatchApiV3KielotvVideoIdJSONRequestBody = KieloTVVideoUpsertRequest
 
@@ -25048,6 +25149,9 @@ type UpdateGrammarConceptScheduleInternalKlearnUsersUserIdGrammarConceptGrammarC
 
 // UpdateItemLearningStatusInternalKlearnUsersUserIdItemsItemTypeItemIdLearningStatusPostJSONRequestBody defines body for UpdateItemLearningStatusInternalKlearnUsersUserIdItemsItemTypeItemIdLearningStatusPost for application/json ContentType.
 type UpdateItemLearningStatusInternalKlearnUsersUserIdItemsItemTypeItemIdLearningStatusPostJSONRequestBody = LearningStatusUpdateRequest
+
+// PostPracticeAnswersInternalKlearnUsersUserIdKielotvPracticeAnswersPostJSONRequestBody defines body for PostPracticeAnswersInternalKlearnUsersUserIdKielotvPracticeAnswersPost for application/json ContentType.
+type PostPracticeAnswersInternalKlearnUsersUserIdKielotvPracticeAnswersPostJSONRequestBody = PracticeAnswersRequest
 
 // UpdateUserProgressInternalKlearnUsersUserIdProgressPostJSONRequestBody defines body for UpdateUserProgressInternalKlearnUsersUserIdProgressPost for application/json ContentType.
 type UpdateUserProgressInternalKlearnUsersUserIdProgressPostJSONRequestBody UpdateUserProgressInternalKlearnUsersUserIdProgressPostJSONBody
