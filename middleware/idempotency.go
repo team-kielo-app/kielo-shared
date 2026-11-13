@@ -54,6 +54,11 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+// idempotencyRedisTimeout bounds every Redis call the middleware makes. Redis
+// is one VM; when it is down or hung a mutation must carry on unguarded in
+// well under a second instead of waiting on the client's own timeouts.
+const idempotencyRedisTimeout = 300 * time.Millisecond
+
 // IdempotencyOptions configures the middleware. Zero values are valid:
 // ResponseTTL defaults to 24h, LockTTL to 30s, KeyMaxLen to 255.
 type IdempotencyOptions struct {
@@ -250,17 +255,22 @@ func handleIdempotentRequest(c echo.Context, next echo.HandlerFunc, o resolvedId
 	routeSig := method + " " + c.Path()
 	redisKey := buildIdempotencyKey(routeSig, subject, rawKey)
 
-	ctx, cancel := context.WithTimeout(c.Request().Context(), 2*time.Second)
-	defer cancel()
-
-	// SetNX with the lock sentinel. ok=true means winning request,
-	// runs the handler. Otherwise somebody else got there first.
+	ctx, cancel := context.WithTimeout(c.Request().Context(), idempotencyRedisTimeout)
 	ok, err := o.rdb.SetNX(ctx, redisKey, "lock", o.lockTTL).Result()
-	if err == nil && ok {
+	cancel()
+	if err != nil {
+		// Redis unavailable — fail open rather than blocking real
+		// traffic on infra issues.
+		return next(c)
+	}
+	if ok {
 		return runAndCache(c, next, o.rdb, redisKey, o.responseTTL)
 	}
 
-	return replayCachedIdempotentResponse(ctx, c, next, o.rdb, redisKey)
+	// Somebody else got there first.
+	replayCtx, replayCancel := context.WithTimeout(c.Request().Context(), idempotencyRedisTimeout)
+	defer replayCancel()
+	return replayCachedIdempotentResponse(replayCtx, c, next, o.rdb, redisKey)
 }
 
 func replayCachedIdempotentResponse(
@@ -320,7 +330,7 @@ func runAndCache(
 	err := next(c)
 
 	if capture.passThrough || capture.hijacked {
-		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), idempotencyRedisTimeout)
 		defer cancel()
 		_ = rdb.Del(ctx, redisKey).Err()
 		return err
@@ -358,14 +368,14 @@ func runAndCache(
 			}
 		}
 		if data, mErr := json.Marshal(stored); mErr == nil {
-			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), idempotencyRedisTimeout)
 			defer cancel()
 			_ = rdb.Set(ctx, redisKey, data, ttl).Err()
 		}
 	} else {
 		// Release the lock so the client can immediately retry past
 		// the failure with the same key.
-		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), idempotencyRedisTimeout)
 		defer cancel()
 		_ = rdb.Del(ctx, redisKey).Err()
 	}

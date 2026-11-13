@@ -18,6 +18,10 @@ import (
 	"github.com/team-kielo-app/kielo-shared/localization"
 )
 
+// opTimeout bounds every Redis call so a down or hung Redis degrades to a
+// cache miss quickly whatever timeouts the caller's client carries.
+const opTimeout = 500 * time.Millisecond
+
 // Cache adapts a redis.Cmdable to localization.Cache.
 //
 // Storage shape: each translation occupies one key. The cached value is
@@ -54,6 +58,8 @@ func New(client redisv9.Cmdable, totalTTL time.Duration) *Cache {
 // (key exists but has no TTL, indicating a corrupted entry — better to
 // re-translate than to serve unbounded stale data).
 func (c *Cache) Get(ctx context.Context, key string) (localization.CacheEntry, bool) {
+	ctx, cancel := context.WithTimeout(ctx, opTimeout)
+	defer cancel()
 	pipe := c.client.Pipeline()
 	getCmd := pipe.Get(ctx, key)
 	pttlCmd := pipe.PTTL(ctx, key)
@@ -82,6 +88,8 @@ func (c *Cache) Get(ctx context.Context, key string) (localization.CacheEntry, b
 // (freshTTL + staleTTL); we honor it directly. SET with EX is one
 // command, no pipeline needed.
 func (c *Cache) Set(ctx context.Context, key, value string, ttl time.Duration) error {
+	ctx, cancel := context.WithTimeout(ctx, opTimeout)
+	defer cancel()
 	if ttl <= 0 {
 		ttl = c.totalTTL
 	}
@@ -110,6 +118,8 @@ func (c *Cache) BatchGet(ctx context.Context, keys []string) map[string]localiza
 	if len(keys) == 0 {
 		return out
 	}
+	ctx, cancel := context.WithTimeout(ctx, opTimeout)
+	defer cancel()
 	// Phase 1: MGET all values in one command.
 	values, err := c.client.MGet(ctx, keys...).Result()
 	if err != nil {
@@ -174,6 +184,8 @@ func (c *Cache) BatchSet(ctx context.Context, entries map[string]string, ttl tim
 	if ttl <= 0 {
 		ttl = c.totalTTL
 	}
+	ctx, cancel := context.WithTimeout(ctx, opTimeout)
+	defer cancel()
 	pipe := c.client.Pipeline()
 	for k, v := range entries {
 		pipe.Set(ctx, k, v, ttl)

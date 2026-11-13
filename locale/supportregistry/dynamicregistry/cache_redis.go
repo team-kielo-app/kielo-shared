@@ -14,6 +14,8 @@ import (
 // with the NUL byte). Lookup compares against this exact string.
 const negativeSentinel = "\x00neg"
 
+const redisOpTimeout = 500 * time.Millisecond
+
 // RedisCache is a small Redis-backed Cache implementation for
 // dynamicregistry. Distinct from kielo-shared/localization/cacheredis
 // because the SWR/age semantics that cache implements aren't useful
@@ -38,6 +40,8 @@ func (c *RedisCache) Get(ctx context.Context, key string) (value string, isOverr
 	if c == nil || c.client == nil {
 		return "", false, false
 	}
+	ctx, cancel := context.WithTimeout(ctx, redisOpTimeout)
+	defer cancel()
 	value, err := c.client.Get(ctx, key).Result()
 	if err != nil {
 		if errors.Is(err, redisv9.Nil) {
@@ -60,6 +64,8 @@ func (c *RedisCache) Set(ctx context.Context, key, value string, ttl time.Durati
 	if ttl <= 0 {
 		ttl = DefaultHitTTL
 	}
+	ctx, cancel := context.WithTimeout(ctx, redisOpTimeout)
+	defer cancel()
 	return c.client.Set(ctx, key, value, ttl).Err()
 }
 
@@ -72,6 +78,8 @@ func (c *RedisCache) SetNegative(ctx context.Context, key string, ttl time.Durat
 	if ttl <= 0 {
 		ttl = DefaultMissTTL
 	}
+	ctx, cancel := context.WithTimeout(ctx, redisOpTimeout)
+	defer cancel()
 	return c.client.Set(ctx, key, negativeSentinel, ttl).Err()
 }
 
