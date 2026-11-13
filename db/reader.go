@@ -112,7 +112,7 @@ func NewReader(primary *pgxpool.Pool, primaryDSN string) *Reader {
 		log.Printf("INFO: DB_REPLICA_READS is on but reads stay on the primary: %v", err)
 		return r
 	}
-	cfg, err := PoolConfig(dsn, PoolOptions{})
+	cfg, err := PoolConfig(dsn, PoolOptions{QueryRole: "replica"})
 	if err != nil {
 		log.Printf("WARN: replica pool config failed, reads stay on the primary: %v", err)
 		return r
@@ -121,6 +121,9 @@ func NewReader(primary *pgxpool.Pool, primaryDSN string) *Reader {
 	// there is no pooler in front of it: a few per instance, none held idle.
 	cfg.MaxConns = EnvInt32("PGX_REPLICA_MAX_CONNS", defaultReplicaMaxConns)
 	cfg.MinConns = 0
+	if cfg.ConnConfig.RuntimeParams["application_name"] == "" {
+		cfg.ConnConfig.RuntimeParams["application_name"] = resolveQueryApp("")
+	}
 	cfg.MaxConnIdleTime = replicaIdleTime
 	pool, err := pgxpool.NewWithConfig(context.Background(), cfg)
 	if err != nil {
