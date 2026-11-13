@@ -17,7 +17,7 @@ func TestReplicaDSN_PlanetScaleUsesTheDirectPortAndTheReplicaUser(t *testing.T) 
 	require.NoError(t, err)
 	assert.Equal(t, "postgresql://pscale_api_abc.xyz%7Creplica:pw@eu-west1-1.horizon.psdb.cloud:5432/postgres?sslmode=verify-full", got)
 
-	cfg, err := pgxpool.ParseConfig(got)
+	cfg, err := pgxpool.ParseConfig(got) // prodpool:ok parses the DSN, never connects
 	require.NoError(t, err)
 	assert.Equal(t, "pscale_api_abc.xyz|replica", cfg.ConnConfig.User)
 	assert.Equal(t, uint16(5432), cfg.ConnConfig.Port)
@@ -50,7 +50,7 @@ func TestReplicaDSN_AnExplicitURLWins(t *testing.T) {
 
 func lazyPool(t *testing.T) *pgxpool.Pool {
 	t.Helper()
-	cfg, err := pgxpool.ParseConfig("postgres://x:y@127.0.0.1:1/db")
+	cfg, err := pgxpool.ParseConfig("postgres://x:y@127.0.0.1:1/db") // prodpool:ok closed DSN, the pool never dials
 	require.NoError(t, err)
 	cfg.MinConns = 0
 	pool, err := pgxpool.NewWithConfig(context.Background(), cfg)
