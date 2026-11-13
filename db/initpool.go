@@ -19,6 +19,13 @@ type PoolOptions struct {
 	// fall through to 25 / 2.
 	MaxConns int32
 	MinConns int32
+
+	// Service and QueryRole fill the app / role of the Insights query tag
+	// (querytag.go). Zero values resolve the service from DB_QUERY_APP,
+	// metrics.SetServiceName, K_SERVICE or the binary name, and the role from
+	// DB_QUERY_ROLE or "primary". DB_QUERY_TAGS=0 turns the tag off.
+	Service   string
+	QueryRole string
 }
 
 // Default pool sizes — chosen for a single Cloud Run instance servicing
@@ -109,5 +116,6 @@ func PoolConfig(dataSourceName string, opts PoolOptions) (*pgxpool.Config, error
 		cfg.ConnConfig.ConnectTimeout = connectTimeout
 	}
 	cfg.ConnConfig.DialFunc = newDialer().DialContext
+	installQueryTags(&cfg.ConnConfig.Config, opts.Service, opts.QueryRole)
 	return cfg, nil
 }
