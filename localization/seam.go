@@ -800,30 +800,35 @@ func (s *Seam) kickoffSWRBatch(ctx context.Context, stale []residueEntry, target
 	})
 }
 
+func (s *Seam) refillStaleBatch(ctx context.Context, stale []residueEntry, target string) []residueEntry {
+	if s.persisted == nil {
+		return stale
+	}
+	rows := s.batchPersistedLookup(ctx, stale, target)
+	entries := make([]residueEntry, 0, len(stale))
+	refill := make(map[string]string)
+	for _, r := range stale {
+		row, ok := rows[OverrideBatchKey(r.ref.Namespace, r.ref.SourceID, r.ref.SourceVersion)]
+		if ok && usablePersisted(r.ref, row) {
+			refill[r.key] = row
+			continue
+		}
+		if ok {
+			r.known = row
+		}
+		entries = append(entries, r)
+	}
+	s.cacheWrite(ctx, refill)
+	return entries
+}
+
 // refreshStaleBatch is callProvider for many keys: a usable persisted row
 // refills the cache, the rest go to the provider as one batch, and each answer
 // passes the guard before it is cached and persisted. Like the single-key
 // refresh it records failures only; the read that found the values stale
 // already counted them as cache_swr.
 func (s *Seam) refreshStaleBatch(ctx context.Context, stale []residueEntry, target string) {
-	entries := stale
-	if s.persisted != nil {
-		rows := s.batchPersistedLookup(ctx, stale, target)
-		entries = make([]residueEntry, 0, len(stale))
-		refill := make(map[string]string)
-		for _, r := range stale {
-			row, ok := rows[OverrideBatchKey(r.ref.Namespace, r.ref.SourceID, r.ref.SourceVersion)]
-			if ok && usablePersisted(r.ref, row) {
-				refill[r.key] = row
-				continue
-			}
-			if ok {
-				r.known = row
-			}
-			entries = append(entries, r)
-		}
-		s.cacheWrite(ctx, refill)
-	}
+	entries := s.refillStaleBatch(ctx, stale, target)
 	if len(entries) == 0 {
 		return
 	}

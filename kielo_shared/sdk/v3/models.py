@@ -1337,6 +1337,34 @@ class ChangeEmailRequest(BaseModel):
     new_email: str
 
 
+class ChapterTestOutOffer(BaseModel):
+    attempts_left: int | None = Field(0, title="Attempts Left")
+    available: bool | None = Field(False, title="Available")
+    pass_percent: int | None = Field(0, title="Pass Percent")
+    question_count: int | None = Field(0, title="Question Count")
+    reason: str | None = Field(None, title="Reason")
+
+
+class ChapterTestOutResult(BaseModel):
+    attempts_left: int = Field(..., title="Attempts Left")
+    correct: int = Field(..., title="Correct")
+    lessons_marked: int | None = Field(0, title="Lessons Marked")
+    pass_percent: int = Field(..., title="Pass Percent")
+    passed: bool = Field(..., title="Passed")
+    resume_lesson_id: UUID_aliased | None = Field(None, title="Resume Lesson Id")
+    total: int = Field(..., title="Total")
+
+
+class ChapterTestOutResultV3(BaseModel):
+    attempts_left: int
+    correct: int
+    lessons_marked: int
+    pass_percent: int
+    passed: bool
+    resume_lesson_id: str | None = None
+    total: int
+
+
 class CheckAndAwardRequest(BaseModel):
     achievement_code: str
     event_id: str | None = None
@@ -3678,6 +3706,7 @@ class ExerciseState(BaseModel):
 
 class ExerciseSubmission(BaseModel):
     exercise_id: UUID_aliased = Field(..., title="Exercise Id")
+    looked_up: list[str] | None = Field(None, max_length=20, title="Looked Up")
     response_time_ms: int | None = Field(None, title="Response Time Ms")
     skipped: bool | None = Field(False, title="Skipped")
     submission_id: str | None = Field(None, title="Submission Id")
@@ -7180,6 +7209,22 @@ class PartnerPayoutList(BaseModel):
     payouts: list[PartnerPayout]
 
 
+class PathStep(BaseModel):
+    chapter_id: UUID_aliased | None = Field(None, title="Chapter Id")
+    chapter_title: str | None = Field(None, title="Chapter Title")
+    kind: str | None = Field(None, title="Kind")
+    lesson_id: UUID_aliased = Field(..., title="Lesson Id")
+    starts_new_chapter: bool | None = Field(False, title="Starts New Chapter")
+
+
+class PathStepV3(BaseModel):
+    chapter_id: str | None = None
+    chapter_title: str | None = None
+    kind: str | None = None
+    lesson_id: str
+    starts_new_chapter: bool
+
+
 class PauseSessionResponse(BaseModel):
     deadline_at_ms: int
     extended: bool
@@ -8394,6 +8439,18 @@ class RoadmapLessonSummaryV3(BaseModel):
     title: str | None = None
 
 
+class Kind2(StrEnum):
+    word = "word"
+    grammar = "grammar"
+
+
+class RoadmapLessonTargetItem(BaseModel):
+    gloss: str | None = Field(None, title="Gloss")
+    item_id: UUID_aliased = Field(..., title="Item Id")
+    kind: Kind2 = Field(..., title="Kind")
+    term: str = Field(..., title="Term")
+
+
 class RoadmapLessonUpsertRequest(BaseModel):
     category: str
     cefr_level: str | None = None
@@ -9164,6 +9221,10 @@ class SingletonCancelSubscriptionResponse(BaseModel):
 
 class SingletonCardCheckoutStatus(BaseModel):
     data: CardCheckoutStatus
+
+
+class SingletonChapterTestOutResultV3(BaseModel):
+    data: ChapterTestOutResultV3
 
 
 class SingletonCheckAndAwardResponse(BaseModel):
@@ -10622,6 +10683,8 @@ class StorePageRunBrief(BaseModel):
     run_id: UUID_aliased
     snapshot: int
     status: str
+    changes: int
+    blocked: bool
 
 
 class StorePageSummary(BaseModel):
@@ -10630,6 +10693,7 @@ class StorePageSummary(BaseModel):
     last_run: StorePageRunBrief | None = None
     locales_with_text: int
     set_name: str | None = None
+    last_publish: StorePageRunBrief | None = None
 
 
 class StorePageText(BaseModel):
@@ -11704,6 +11768,7 @@ class TopicListsForWordResponseKielolearnEngine(BaseModel):
 
 class TrackListItem(BaseModel):
     audience: str | None = Field(None, title="Audience")
+    cefr_levels: list[str] | None = Field(None, title="Cefr Levels")
     chapter_count: int | None = Field(0, title="Chapter Count")
     color_hex: str | None = Field(None, title="Color Hex")
     description: str | None = Field(None, title="Description")
@@ -14184,6 +14249,7 @@ class NextStepRecommendation(BaseModel):
     item_ids: list[UUID_aliased] | None = Field(None, title="Item Ids")
     item_type: ItemTypeFk | None = Field(None, title="Item Type")
     launch_params: RecommendationLaunchParams | None = None
+    path_step: PathStep | None = None
     rationale: str | None = Field(None, title="Rationale")
     session_mode: str | None = Field(None, title="Session Mode")
     subtitle: str | None = Field(None, title="Subtitle")
@@ -14202,6 +14268,7 @@ class NextStepRecommendationV3(BaseModel):
     item_ids: list[str] | None = None
     item_type: str | None = None
     launch_params: RecommendationLaunchParamsV3 | None = None
+    path_step: PathStepV3 | None = None
     rationale: str | None = None
     session_mode: str | None = None
     subtitle: str | None = None
@@ -14536,6 +14603,7 @@ class RoadmapLessonDetailResponse(BaseModel):
     )
     progress: RoadmapLessonProgressSnapshot
     state: State = Field(..., title="State")
+    targets: list[RoadmapLessonTargetItem] | None = Field(None, title="Targets")
     thumbnail_media_id: UUID_aliased | None = Field(None, title="Thumbnail Media Id")
     thumbnail_url: str | None = Field(None, title="Thumbnail Url")
     title: str = Field(..., title="Title")
@@ -15660,6 +15728,8 @@ class TrackRoadmapChapter(BaseModel):
     lesson_count: int | None = Field(0, title="Lesson Count")
     lessons: list[TrackRoadmapLesson] | None = Field(None, title="Lessons")
     status: Status15 = Field(..., title="Status")
+    test_out: ChapterTestOutOffer | None = None
+    tested_out_lesson_count: int | None = Field(0, title="Tested Out Lesson Count")
     thumbnail_media_id: UUID_aliased | None = Field(None, title="Thumbnail Media Id")
     thumbnail_url: str | None = Field(None, title="Thumbnail Url")
     title: str = Field(..., title="Title")
@@ -15672,6 +15742,7 @@ class TrackRoadmapLevel(BaseModel):
     completed_chapter_count: int | None = Field(0, title="Completed Chapter Count")
     icon_emoji: str | None = Field(None, title="Icon Emoji")
     id: UUID_aliased = Field(..., title="Id")
+    placed_past: bool | None = Field(False, title="Placed Past")
     progress_percent: float | None = Field(0.0, title="Progress Percent")
     status: Status15 = Field(..., title="Status")
     thumbnail_media_id: UUID_aliased | None = Field(None, title="Thumbnail Media Id")

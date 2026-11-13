@@ -533,6 +533,12 @@ const (
 	RoadmapLessonListItemStateCompleted RoadmapLessonListItemState = "completed"
 )
 
+// Defines values for RoadmapLessonTargetItemKind.
+const (
+	RoadmapLessonTargetItemKindGrammar RoadmapLessonTargetItemKind = "grammar"
+	RoadmapLessonTargetItemKindWord    RoadmapLessonTargetItemKind = "word"
+)
+
 // Defines values for RoadmapLessonUpsertRequestKielolearnEngineDifficultyLevel.
 const (
 	RoadmapLessonUpsertRequestKielolearnEngineDifficultyLevelAdvanced     RoadmapLessonUpsertRequestKielolearnEngineDifficultyLevel = "advanced"
@@ -796,9 +802,10 @@ const (
 
 // Defines values for GetSurfaceNextStepsKlearnApiV3NextStepsGetParamsSourceKind.
 const (
-	Article      GetSurfaceNextStepsKlearnApiV3NextStepsGetParamsSourceKind = "article"
-	Conversation GetSurfaceNextStepsKlearnApiV3NextStepsGetParamsSourceKind = "conversation"
-	KtvVideo     GetSurfaceNextStepsKlearnApiV3NextStepsGetParamsSourceKind = "ktv_video"
+	GetSurfaceNextStepsKlearnApiV3NextStepsGetParamsSourceKindArticle      GetSurfaceNextStepsKlearnApiV3NextStepsGetParamsSourceKind = "article"
+	GetSurfaceNextStepsKlearnApiV3NextStepsGetParamsSourceKindConversation GetSurfaceNextStepsKlearnApiV3NextStepsGetParamsSourceKind = "conversation"
+	GetSurfaceNextStepsKlearnApiV3NextStepsGetParamsSourceKindKtvVideo     GetSurfaceNextStepsKlearnApiV3NextStepsGetParamsSourceKind = "ktv_video"
+	GetSurfaceNextStepsKlearnApiV3NextStepsGetParamsSourceKindLesson       GetSurfaceNextStepsKlearnApiV3NextStepsGetParamsSourceKind = "lesson"
 )
 
 // AICandidate defines model for AICandidate.
@@ -2917,6 +2924,37 @@ type ChallengeTheme struct {
 type ChangeEmailRequest struct {
 	CurrentEmail string `json:"current_email"`
 	NewEmail     string `json:"new_email"`
+}
+
+// ChapterTestOutOffer defines model for ChapterTestOutOffer.
+type ChapterTestOutOffer struct {
+	AttemptsLeft  *int    `json:"attempts_left,omitempty"`
+	Available     *bool   `json:"available,omitempty"`
+	PassPercent   *int    `json:"pass_percent,omitempty"`
+	QuestionCount *int    `json:"question_count,omitempty"`
+	Reason        *string `json:"reason"`
+}
+
+// ChapterTestOutResult defines model for ChapterTestOutResult.
+type ChapterTestOutResult struct {
+	AttemptsLeft   int        `json:"attempts_left"`
+	Correct        int        `json:"correct"`
+	LessonsMarked  *int       `json:"lessons_marked,omitempty"`
+	PassPercent    int        `json:"pass_percent"`
+	Passed         bool       `json:"passed"`
+	ResumeLessonId *uuid.UUID `json:"resume_lesson_id"`
+	Total          int        `json:"total"`
+}
+
+// ChapterTestOutResultV3 defines model for ChapterTestOutResultV3.
+type ChapterTestOutResultV3 struct {
+	AttemptsLeft   int     `json:"attempts_left"`
+	Correct        int     `json:"correct"`
+	LessonsMarked  int     `json:"lessons_marked"`
+	PassPercent    int     `json:"pass_percent"`
+	Passed         bool    `json:"passed"`
+	ResumeLessonId *string `json:"resume_lesson_id,omitempty"`
+	Total          int     `json:"total"`
 }
 
 // CheckAndAwardRequest defines model for CheckAndAwardRequest.
@@ -6532,6 +6570,7 @@ type ExerciseStateStatus string
 // ExerciseSubmission defines model for ExerciseSubmission.
 type ExerciseSubmission struct {
 	ExerciseId        uuid.UUID   `json:"exercise_id"`
+	LookedUp          *[]string   `json:"looked_up,omitempty"`
 	ResponseTimeMs    *int        `json:"response_time_ms"`
 	Skipped           *bool       `json:"skipped,omitempty"`
 	SubmissionId      *string     `json:"submission_id"`
@@ -10745,6 +10784,7 @@ type NextStepRecommendation struct {
 	ItemIds         *[]uuid.UUID                    `json:"item_ids,omitempty"`
 	ItemType        *NextStepRecommendationItemType `json:"item_type"`
 	LaunchParams    *RecommendationLaunchParams     `json:"launch_params"`
+	PathStep        *PathStep                       `json:"path_step"`
 	Rationale       *string                         `json:"rationale"`
 	SessionMode     *string                         `json:"session_mode"`
 	Subtitle        *string                         `json:"subtitle"`
@@ -10776,6 +10816,7 @@ type NextStepRecommendationV3 struct {
 	ItemIds         *[]string                     `json:"item_ids,omitempty"`
 	ItemType        *string                       `json:"item_type,omitempty"`
 	LaunchParams    *RecommendationLaunchParamsV3 `json:"launch_params,omitempty"`
+	PathStep        *PathStepV3                   `json:"path_step,omitempty"`
 	Rationale       *string                       `json:"rationale,omitempty"`
 	SessionMode     *string                       `json:"session_mode,omitempty"`
 	Subtitle        *string                       `json:"subtitle,omitempty"`
@@ -11518,6 +11559,25 @@ type PartnerPayoutActionRequest struct {
 // PartnerPayoutList defines model for PartnerPayoutList.
 type PartnerPayoutList struct {
 	Payouts []PartnerPayout `json:"payouts"`
+}
+
+// PathStep Where a roadmap_lesson card points: the learner's next lesson of the
+// track, named in the support language, and whether it opens a new chapter.
+type PathStep struct {
+	ChapterId        *uuid.UUID `json:"chapter_id"`
+	ChapterTitle     *string    `json:"chapter_title"`
+	Kind             *string    `json:"kind"`
+	LessonId         uuid.UUID  `json:"lesson_id"`
+	StartsNewChapter *bool      `json:"starts_new_chapter,omitempty"`
+}
+
+// PathStepV3 defines model for PathStepV3.
+type PathStepV3 struct {
+	ChapterId        *string `json:"chapter_id,omitempty"`
+	ChapterTitle     *string `json:"chapter_title,omitempty"`
+	Kind             *string `json:"kind,omitempty"`
+	LessonId         string  `json:"lesson_id"`
+	StartsNewChapter bool    `json:"starts_new_chapter"`
 }
 
 // PauseSessionResponse defines model for PauseSessionResponse.
@@ -13082,6 +13142,7 @@ type RoadmapLessonDetailResponse struct {
 	PracticeTargetSource     *RoadmapLessonDetailResponsePracticeTargetSource `json:"practice_target_source,omitempty"`
 	Progress                 RoadmapLessonProgressSnapshot                    `json:"progress"`
 	State                    RoadmapLessonDetailResponseState                 `json:"state"`
+	Targets                  *[]RoadmapLessonTargetItem                       `json:"targets,omitempty"`
 	ThumbnailMediaId         *uuid.UUID                                       `json:"thumbnail_media_id"`
 	ThumbnailUrl             *string                                          `json:"thumbnail_url"`
 	Title                    string                                           `json:"title"`
@@ -13192,6 +13253,17 @@ type RoadmapLessonSummaryV3 struct {
 	ThumbnailUrl             *string                  `json:"thumbnail_url,omitempty"`
 	Title                    *string                  `json:"title,omitempty"`
 }
+
+// RoadmapLessonTargetItem defines model for RoadmapLessonTargetItem.
+type RoadmapLessonTargetItem struct {
+	Gloss  *string                     `json:"gloss"`
+	ItemId uuid.UUID                   `json:"item_id"`
+	Kind   RoadmapLessonTargetItemKind `json:"kind"`
+	Term   string                      `json:"term"`
+}
+
+// RoadmapLessonTargetItemKind defines model for RoadmapLessonTargetItem.Kind.
+type RoadmapLessonTargetItemKind string
 
 // RoadmapLessonUpsertRequest defines model for RoadmapLessonUpsertRequest.
 type RoadmapLessonUpsertRequest struct {
@@ -14233,6 +14305,11 @@ type SingletonCaptions struct {
 // SingletonCardCheckoutStatus defines model for SingletonCardCheckoutStatus.
 type SingletonCardCheckoutStatus struct {
 	Data CardCheckoutStatus `json:"data"`
+}
+
+// SingletonChapterTestOutResultV3 defines model for SingletonChapterTestOutResultV3.
+type SingletonChapterTestOutResultV3 struct {
+	Data ChapterTestOutResultV3 `json:"data"`
 }
 
 // SingletonCheckAndAwardResponse defines model for SingletonCheckAndAwardResponse.
@@ -17190,6 +17267,8 @@ type StorePageReviewStatus struct {
 
 // StorePageRunBrief defines model for StorePageRunBrief.
 type StorePageRunBrief struct {
+	Blocked    bool       `json:"blocked"`
+	Changes    int        `json:"changes"`
 	CreatedAt  time.Time  `json:"created_at"`
 	DryRun     bool       `json:"dry_run"`
 	FinishedAt *time.Time `json:"finished_at,omitempty"`
@@ -17202,6 +17281,7 @@ type StorePageRunBrief struct {
 type StorePageSummary struct {
 	StorePage       StorePage          `json:"StorePage"`
 	ApprovedCount   int                `json:"approved_count"`
+	LastPublish     *StorePageRunBrief `json:"last_publish,omitempty"`
 	LastRun         *StorePageRunBrief `json:"last_run,omitempty"`
 	LocalesWithText int                `json:"locales_with_text"`
 	SetName         *string            `json:"set_name,omitempty"`
@@ -18621,6 +18701,7 @@ type TopicListsForWordResponseKielolearnEngine struct {
 // TrackListItem defines model for TrackListItem.
 type TrackListItem struct {
 	Audience         *string    `json:"audience"`
+	CefrLevels       *[]string  `json:"cefr_levels,omitempty"`
 	ChapterCount     *int       `json:"chapter_count,omitempty"`
 	ColorHex         *string    `json:"color_hex"`
 	Description      *string    `json:"description"`
@@ -18650,6 +18731,8 @@ type TrackRoadmapChapter struct {
 	LessonCount          *int                      `json:"lesson_count,omitempty"`
 	Lessons              *[]TrackRoadmapLesson     `json:"lessons,omitempty"`
 	Status               TrackRoadmapChapterStatus `json:"status"`
+	TestOut              *ChapterTestOutOffer      `json:"test_out,omitempty"`
+	TestedOutLessonCount *int                      `json:"tested_out_lesson_count,omitempty"`
 	ThumbnailMediaId     *uuid.UUID                `json:"thumbnail_media_id"`
 	ThumbnailUrl         *string                   `json:"thumbnail_url"`
 	Title                string                    `json:"title"`
@@ -18681,6 +18764,7 @@ type TrackRoadmapLevel struct {
 	CompletedChapterCount *int                    `json:"completed_chapter_count,omitempty"`
 	IconEmoji             *string                 `json:"icon_emoji"`
 	Id                    uuid.UUID               `json:"id"`
+	PlacedPast            *bool                   `json:"placed_past,omitempty"`
 	ProgressPercent       *float32                `json:"progress_percent,omitempty"`
 	Status                TrackRoadmapLevelStatus `json:"status"`
 	ThumbnailMediaId      *uuid.UUID              `json:"thumbnail_media_id"`
@@ -21617,10 +21701,10 @@ type GetApiV3MeLearningItemsParams struct {
 
 // GetApiV3MeNextStepsParams defines parameters for GetApiV3MeNextSteps.
 type GetApiV3MeNextStepsParams struct {
-	// SourceKind article, ktv_video or conversation
+	// SourceKind article, ktv_video, conversation or lesson
 	SourceKind string `form:"source_kind" json:"source_kind"`
 
-	// SourceId Content entry id (article, video) or scenario id
+	// SourceId Content entry id (article, video), scenario id or roadmap lesson id
 	SourceId string `form:"source_id" json:"source_id"`
 
 	// Supports Comma list of card kinds this client can launch, e.g. article_pack. Omitted: only the original kinds.
@@ -21811,12 +21895,24 @@ type GetApiV3MeSavedItemsParams struct {
 
 	// ItemIds Optional comma-separated item ids; returns exactly those saved items (no pagination)
 	ItemIds *string `form:"item_ids,omitempty" json:"item_ids,omitempty"`
+
+	// Include Opt-in item types hidden by default, comma-separated (RoadmapLesson)
+	Include *string `form:"include,omitempty" json:"include,omitempty"`
+}
+
+// GetApiV3MeSavedItemsCountsParams defines parameters for GetApiV3MeSavedItemsCounts.
+type GetApiV3MeSavedItemsCountsParams struct {
+	// Include Opt-in item types hidden by default, comma-separated (RoadmapLesson)
+	Include *string `form:"include,omitempty" json:"include,omitempty"`
 }
 
 // GetApiV3MeSavedItemsDashboardParams defines parameters for GetApiV3MeSavedItemsDashboard.
 type GetApiV3MeSavedItemsDashboardParams struct {
 	// SupportLanguageCode Two-letter ISO 639-1 code for translated UI strings (per ADR-006 §3.83).
 	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
+
+	// Include Opt-in item types hidden by default, comma-separated (RoadmapLesson)
+	Include *string `form:"include,omitempty" json:"include,omitempty"`
 }
 
 // GetApiV3MeStudyListsParams defines parameters for GetApiV3MeStudyLists.
@@ -21961,6 +22057,18 @@ type PostApiV3RecommendationCampaignsCampaignIdPreviewParams struct {
 type GetApiV3RecommendationCampaignsCampaignIdRunsParams struct {
 	// Limit Legacy offset-pagination limit. Prefer page_size on new routes.
 	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// PostApiV3RoadmapChaptersChapterIdTestOutParams defines parameters for PostApiV3RoadmapChaptersChapterIdTestOut.
+type PostApiV3RoadmapChaptersChapterIdTestOutParams struct {
+	// SupportLanguageCode Two-letter ISO 639-1 code for translated UI strings (per ADR-006 §3.83).
+	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
+}
+
+// PostApiV3RoadmapChaptersChapterIdTestOutSessionIdFinishParams defines parameters for PostApiV3RoadmapChaptersChapterIdTestOutSessionIdFinish.
+type PostApiV3RoadmapChaptersChapterIdTestOutSessionIdFinishParams struct {
+	// SupportLanguageCode Two-letter ISO 639-1 code for translated UI strings (per ADR-006 §3.83).
+	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
 }
 
 // PostApiV3RoadmapFirstSentenceSpeechEvaluateParams defines parameters for PostApiV3RoadmapFirstSentenceSpeechEvaluate.
@@ -22120,6 +22228,12 @@ type PostApiV3StoreScreenshotsSetsSetIdAssetsParams struct {
 
 	// FileName Original file name, for display
 	FileName *string `form:"file_name,omitempty" json:"file_name,omitempty"`
+}
+
+// GetApiV3StoreScreenshotsSetsSetIdAssetsAssetIdContentParams defines parameters for GetApiV3StoreScreenshotsSetsSetIdAssetsAssetIdContent.
+type GetApiV3StoreScreenshotsSetsSetIdAssetsAssetIdContentParams struct {
+	// W Preview width in pixels, 64 to 640; omit for the original bytes
+	W *int `form:"w,omitempty" json:"w,omitempty"`
 }
 
 // GetApiV3StoreScreenshotsSetsSetIdStringsParams defines parameters for GetApiV3StoreScreenshotsSetsSetIdStrings.
@@ -23355,6 +23469,11 @@ type GetConversationFocusKlearnApiV3ConversationFocusGetParams struct {
 // GetConversationFocusKlearnApiV3ConversationFocusGetParamsOriginKind defines parameters for GetConversationFocusKlearnApiV3ConversationFocusGet.
 type GetConversationFocusKlearnApiV3ConversationFocusGetParamsOriginKind string
 
+// ListPublishedTracksKlearnApiV3CurriculumTracksGetParams defines parameters for ListPublishedTracksKlearnApiV3CurriculumTracksGet.
+type ListPublishedTracksKlearnApiV3CurriculumTracksGetParams struct {
+	UserId *uuid.UUID `form:"user_id,omitempty" json:"user_id,omitempty"`
+}
+
 // GetTrackRoadmapKlearnApiV3CurriculumTracksTrackIdRoadmapGetParams defines parameters for GetTrackRoadmapKlearnApiV3CurriculumTracksTrackIdRoadmapGet.
 type GetTrackRoadmapKlearnApiV3CurriculumTracksTrackIdRoadmapGetParams struct {
 	UserId uuid.UUID `form:"user_id" json:"user_id"`
@@ -23430,6 +23549,18 @@ type AdminListRoadmapLessonsKlearnApiV3RoadmapAdminLessonsGetParams struct {
 type AdminGenerateRoadmapLessonKlearnApiV3RoadmapAdminLessonsGeneratePostParams struct {
 	// LearningLanguageCode Target learning language for the generated lesson (e.g. 'fi', 'sv'). REQUIRED — the admin-ui interceptor (http.ts) stamps this from the workspace dropdown. Empty/missing surfaces as 422 rather than silently letting the LLM invent a language.
 	LearningLanguageCode string `form:"learning_language_code" json:"learning_language_code"`
+}
+
+// StartChapterTestOutKlearnApiV3RoadmapChaptersChapterIdTestOutPostParams defines parameters for StartChapterTestOutKlearnApiV3RoadmapChaptersChapterIdTestOutPost.
+type StartChapterTestOutKlearnApiV3RoadmapChaptersChapterIdTestOutPostParams struct {
+	// UserId The ID of the user
+	UserId uuid.UUID `form:"user_id" json:"user_id"`
+}
+
+// FinishChapterTestOutKlearnApiV3RoadmapChaptersChapterIdTestOutSessionIdFinishPostParams defines parameters for FinishChapterTestOutKlearnApiV3RoadmapChaptersChapterIdTestOutSessionIdFinishPost.
+type FinishChapterTestOutKlearnApiV3RoadmapChaptersChapterIdTestOutSessionIdFinishPostParams struct {
+	// UserId The ID of the user
+	UserId uuid.UUID `form:"user_id" json:"user_id"`
 }
 
 // EvaluateFirstSentenceSpeechKlearnApiV3RoadmapFirstSentenceSpeechEvaluatePostParams defines parameters for EvaluateFirstSentenceSpeechKlearnApiV3RoadmapFirstSentenceSpeechEvaluatePost.
@@ -24867,6 +24998,9 @@ type HandlePracticePrepareInternalWorkerHandlePracticePreparePostJSONRequestBody
 
 // HandlePrepareInternalWorkerHandlePreparePostJSONRequestBody defines body for HandlePrepareInternalWorkerHandlePreparePost for application/json ContentType.
 type HandlePrepareInternalWorkerHandlePreparePostJSONRequestBody = PubSubMessage
+
+// HandleRunPrefetchInternalWorkerHandleRunPrefetchPostJSONRequestBody defines body for HandleRunPrefetchInternalWorkerHandleRunPrefetchPost for application/json ContentType.
+type HandleRunPrefetchInternalWorkerHandleRunPrefetchPostJSONRequestBody = PubSubMessage
 
 // HandleTopicListGenerationInternalWorkerHandleTopicListGenerationPostJSONRequestBody defines body for HandleTopicListGenerationInternalWorkerHandleTopicListGenerationPost for application/json ContentType.
 type HandleTopicListGenerationInternalWorkerHandleTopicListGenerationPostJSONRequestBody = PubSubMessage
