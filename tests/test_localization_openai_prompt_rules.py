@@ -129,3 +129,31 @@ def test_every_support_language_is_named_in_the_prompt(code: str) -> None:
 
 def test_italian_is_named_not_left_as_the_word_it() -> None:
     assert op._language_name("it-IT") == "Italian"
+
+
+@pytest.mark.parametrize(
+    "code,name",
+    [("et", "Estonian"), ("ko", "Korean"), ("bn", "Bengali"), ("hu", "Hungarian")],
+)
+def test_every_prompt_states_the_output_language_and_bars_the_course_language(
+    code: str, name: str
+) -> None:
+    """Prod 2026-11-13: titles of a Finnish course asked for et/ko/bn/hu came back
+    Finnish. The target must be named, the course language barred as output."""
+    assert op._language_name(code) == name
+    batch = op.batch_system_prompt(["plain"], "English", name)
+    assert f"translate from English to {name}" in batch.replace("items to ", "")
+    assert f"must be written in {name}" in batch
+    assert f"write every translation in {name} and nothing else" in batch
+    assert "do not translate into Finnish or Swedish" in batch
+    for role in ("plain", "html"):
+        single = op._role_prompt(role, name)
+        assert f"write every translation in {name} and nothing else" in single
+        assert "do not translate into Finnish or Swedish" in single
+    gloss = op._role_prompt("gloss", name)
+    assert f"Output only the target language ({name})" in gloss
+
+
+def test_a_finnish_target_is_not_told_to_avoid_finnish() -> None:
+    plain = op._role_prompt("plain", "Finnish")
+    assert "unless Finnish is that language" in plain
