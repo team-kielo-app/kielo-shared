@@ -2537,6 +2537,24 @@ type BatchTranslationItem struct {
 	Value            string  `json:"value"`
 }
 
+// Beat defines model for Beat.
+type Beat struct {
+	Available bool       `json:"available"`
+	Done      bool       `json:"done"`
+	Kind      string     `json:"kind"`
+	Locked    bool       `json:"locked"`
+	Minutes   int        `json:"minutes"`
+	Target    BeatTarget `json:"target"`
+}
+
+// BeatTarget defines model for BeatTarget.
+type BeatTarget struct {
+	LessonId   *string  `json:"lesson_id,omitempty"`
+	ScenarioId *string  `json:"scenario_id,omitempty"`
+	VideoId    *string  `json:"video_id,omitempty"`
+	WordIds    []string `json:"word_ids"`
+}
+
 // BehavioralEventCreate Request body for POST /events/behavioral. Distinct type so that
 // the endpoint signature is self-documenting: `user_id` is sourced
 // from the `X-User-ID` header (a different request layer), and is
@@ -4587,28 +4605,30 @@ type ConversationDrillCorrection struct {
 
 // ConversationFocusResponse defines model for ConversationFocusResponse.
 type ConversationFocusResponse struct {
-	Covered      *int      `json:"covered,omitempty"`
-	CoveredTerms *[]string `json:"covered_terms,omitempty"`
-	ExampleForms *[]string `json:"example_forms,omitempty"`
-	ExampleLine  *string   `json:"example_line"`
-	FocusItemIds *[]string `json:"focus_item_ids,omitempty"`
-	FocusTerms   *[]string `json:"focus_terms,omitempty"`
-	OriginId     string    `json:"origin_id"`
-	OriginKind   string    `json:"origin_kind"`
-	ScenarioId   *string   `json:"scenario_id"`
+	Covered       *int      `json:"covered,omitempty"`
+	CoveredTerms  *[]string `json:"covered_terms,omitempty"`
+	ExampleForms  *[]string `json:"example_forms,omitempty"`
+	ExampleLine   *string   `json:"example_line"`
+	FocusItemIds  *[]string `json:"focus_item_ids,omitempty"`
+	FocusTerms    *[]string `json:"focus_terms,omitempty"`
+	OriginId      string    `json:"origin_id"`
+	OriginKind    string    `json:"origin_kind"`
+	ScenarioId    *string   `json:"scenario_id"`
+	ScenarioTitle *string   `json:"scenario_title"`
 }
 
 // ConversationForOrigin defines model for ConversationForOrigin.
 type ConversationForOrigin struct {
-	Covered      int      `json:"covered"`
-	CoveredTerms []string `json:"covered_terms"`
-	ExampleForms []string `json:"example_forms"`
-	ExampleLine  *string  `json:"example_line,omitempty"`
-	FocusItemIds []string `json:"focus_item_ids"`
-	FocusTerms   []string `json:"focus_terms"`
-	OriginId     string   `json:"origin_id"`
-	OriginKind   string   `json:"origin_kind"`
-	ScenarioId   *string  `json:"scenario_id,omitempty"`
+	Covered       int      `json:"covered"`
+	CoveredTerms  []string `json:"covered_terms"`
+	ExampleForms  []string `json:"example_forms"`
+	ExampleLine   *string  `json:"example_line,omitempty"`
+	FocusItemIds  []string `json:"focus_item_ids"`
+	FocusTerms    []string `json:"focus_terms"`
+	OriginId      string   `json:"origin_id"`
+	OriginKind    string   `json:"origin_kind"`
+	ScenarioId    *string  `json:"scenario_id,omitempty"`
+	ScenarioTitle *string  `json:"scenario_title,omitempty"`
 }
 
 // ConversationHistory defines model for ConversationHistory.
@@ -16165,6 +16185,16 @@ type SingletonSitePostList struct {
 	Data SitePostList `json:"data"`
 }
 
+// SingletonSituation defines model for SingletonSituation.
+type SingletonSituation struct {
+	Data Situation `json:"data"`
+}
+
+// SingletonSituationMap defines model for SingletonSituationMap.
+type SingletonSituationMap struct {
+	Data SituationMap `json:"data"`
+}
+
 // SingletonSocialHoldResponse defines model for SingletonSocialHoldResponse.
 type SingletonSocialHoldResponse struct {
 	Data SocialHoldResponse `json:"data"`
@@ -16896,6 +16926,120 @@ type SitePostSummary struct {
 // SiteTranslationSweepRequest defines model for SiteTranslationSweepRequest.
 type SiteTranslationSweepRequest struct {
 	Limit *int `json:"limit"`
+}
+
+// Situation defines model for Situation.
+type Situation struct {
+	Beats         []Beat  `json:"beats"`
+	ChapterId     string  `json:"chapter_id"`
+	Done          bool    `json:"done"`
+	Free          bool    `json:"free"`
+	Level         *string `json:"level,omitempty"`
+	LifeArea      string  `json:"life_area"`
+	LifeAreaTitle string  `json:"life_area_title"`
+	NextBeat      *string `json:"next_beat,omitempty"`
+	Title         string  `json:"title"`
+}
+
+// SituationBeatResponse defines model for SituationBeatResponse.
+type SituationBeatResponse struct {
+	Available *bool                        `json:"available,omitempty"`
+	Done      *bool                        `json:"done,omitempty"`
+	Kind      string                       `json:"kind"`
+	Locked    *bool                        `json:"locked,omitempty"`
+	Minutes   *int                         `json:"minutes,omitempty"`
+	Target    *SituationBeatTargetResponse `json:"target,omitempty"`
+}
+
+// SituationBeatTargetResponse defines model for SituationBeatTargetResponse.
+type SituationBeatTargetResponse struct {
+	LessonId   *string   `json:"lesson_id"`
+	ScenarioId *string   `json:"scenario_id"`
+	VideoId    *string   `json:"video_id"`
+	WordIds    *[]string `json:"word_ids,omitempty"`
+}
+
+// SituationMap defines model for SituationMap.
+type SituationMap struct {
+	Done   int                 `json:"done"`
+	Groups []SituationMapGroup `json:"groups"`
+	Total  int                 `json:"total"`
+}
+
+// SituationMapGroup defines model for SituationMapGroup.
+type SituationMapGroup struct {
+	Done     int                 `json:"done"`
+	Levels   []SituationMapLevel `json:"levels"`
+	LifeArea string              `json:"life_area"`
+	Title    string              `json:"title"`
+	Total    int                 `json:"total"`
+}
+
+// SituationMapGroupResponse defines model for SituationMapGroupResponse.
+type SituationMapGroupResponse struct {
+	Done     *int                         `json:"done,omitempty"`
+	Levels   *[]SituationMapLevelResponse `json:"levels,omitempty"`
+	LifeArea string                       `json:"life_area"`
+	Title    string                       `json:"title"`
+	Total    *int                         `json:"total,omitempty"`
+}
+
+// SituationMapLevel defines model for SituationMapLevel.
+type SituationMapLevel struct {
+	Done       int                `json:"done"`
+	Level      *string            `json:"level,omitempty"`
+	Situations []SituationSummary `json:"situations"`
+	Total      int                `json:"total"`
+}
+
+// SituationMapLevelResponse defines model for SituationMapLevelResponse.
+type SituationMapLevelResponse struct {
+	Done       *int                        `json:"done,omitempty"`
+	Level      *string                     `json:"level"`
+	Situations *[]SituationSummaryResponse `json:"situations,omitempty"`
+	Total      *int                        `json:"total,omitempty"`
+}
+
+// SituationMapResponse defines model for SituationMapResponse.
+type SituationMapResponse struct {
+	Done   *int                         `json:"done,omitempty"`
+	Groups *[]SituationMapGroupResponse `json:"groups,omitempty"`
+	Total  *int                         `json:"total,omitempty"`
+}
+
+// SituationResponse defines model for SituationResponse.
+type SituationResponse struct {
+	Beats         *[]SituationBeatResponse `json:"beats,omitempty"`
+	ChapterId     string                   `json:"chapter_id"`
+	Done          *bool                    `json:"done,omitempty"`
+	Free          *bool                    `json:"free,omitempty"`
+	Level         *string                  `json:"level"`
+	LifeArea      string                   `json:"life_area"`
+	LifeAreaTitle string                   `json:"life_area_title"`
+	NextBeat      *string                  `json:"next_beat"`
+	Title         string                   `json:"title"`
+}
+
+// SituationSummary defines model for SituationSummary.
+type SituationSummary struct {
+	BeatsDone map[string]bool `json:"beats_done"`
+	ChapterId string          `json:"chapter_id"`
+	Current   bool            `json:"current"`
+	Done      bool            `json:"done"`
+	Free      bool            `json:"free"`
+	Level     *string         `json:"level,omitempty"`
+	Title     string          `json:"title"`
+}
+
+// SituationSummaryResponse defines model for SituationSummaryResponse.
+type SituationSummaryResponse struct {
+	BeatsDone *map[string]bool `json:"beats_done,omitempty"`
+	ChapterId string           `json:"chapter_id"`
+	Current   *bool            `json:"current,omitempty"`
+	Done      *bool            `json:"done,omitempty"`
+	Free      *bool            `json:"free,omitempty"`
+	Level     *string          `json:"level"`
+	Title     string           `json:"title"`
 }
 
 // SocialChannel defines model for SocialChannel.
@@ -22153,6 +22297,18 @@ type GetApiV3MeSavedItemsDashboardParams struct {
 	Include *string `form:"include,omitempty" json:"include,omitempty"`
 }
 
+// GetApiV3MeSituationsParams defines parameters for GetApiV3MeSituations.
+type GetApiV3MeSituationsParams struct {
+	// SupportLanguageCode Two-letter ISO 639-1 code for translated UI strings (per ADR-006 §3.83).
+	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
+}
+
+// GetApiV3MeSituationsCurrentParams defines parameters for GetApiV3MeSituationsCurrent.
+type GetApiV3MeSituationsCurrentParams struct {
+	// SupportLanguageCode Two-letter ISO 639-1 code for translated UI strings (per ADR-006 §3.83).
+	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
+}
+
 // GetApiV3MeStudyListsParams defines parameters for GetApiV3MeStudyLists.
 type GetApiV3MeStudyListsParams struct {
 	// ContainsWordId Optional UUID of a base word; lists carry a contains_word flag
@@ -23902,6 +24058,16 @@ type StartWordClusterSessionKlearnApiV3SessionsWordClusterPostParams struct {
 
 // CreateReviewMissesSessionKlearnApiV3SessionsSessionIdReviewMissesPostJSONBody defines parameters for CreateReviewMissesSessionKlearnApiV3SessionsSessionIdReviewMissesPost.
 type CreateReviewMissesSessionKlearnApiV3SessionsSessionIdReviewMissesPostJSONBody = ReviewMissesRequest
+
+// GetSituationMapKlearnApiV3SituationsGetParams defines parameters for GetSituationMapKlearnApiV3SituationsGet.
+type GetSituationMapKlearnApiV3SituationsGetParams struct {
+	UserId uuid.UUID `form:"user_id" json:"user_id"`
+}
+
+// GetCurrentSituationKlearnApiV3SituationsCurrentGetParams defines parameters for GetCurrentSituationKlearnApiV3SituationsCurrentGet.
+type GetCurrentSituationKlearnApiV3SituationsCurrentGetParams struct {
+	UserId uuid.UUID `form:"user_id" json:"user_id"`
+}
 
 // GetContextualMicroDrillKlearnApiV3SuggestionsContextualMicroDrillGetParams defines parameters for GetContextualMicroDrillKlearnApiV3SuggestionsContextualMicroDrillGet.
 type GetContextualMicroDrillKlearnApiV3SuggestionsContextualMicroDrillGetParams struct {
