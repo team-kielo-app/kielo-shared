@@ -1060,6 +1060,13 @@ class BatchTranslationItem(BaseModel):
     value: str
 
 
+class BeatTarget(BaseModel):
+    lesson_id: str | None = None
+    scenario_id: str | None = None
+    video_id: str | None = None
+    word_ids: list[str]
+
+
 class BehavioralEventCreate(BaseModel):
     event_type: str = Field(..., title="Event Type")
     item_id: str | None = Field(None, title="Item Id")
@@ -2411,6 +2418,7 @@ class ConversationFocusResponse(BaseModel):
     origin_id: str = Field(..., title="Origin Id")
     origin_kind: str = Field(..., title="Origin Kind")
     scenario_id: str | None = Field(None, title="Scenario Id")
+    scenario_title: str | None = Field(None, title="Scenario Title")
 
 
 class ConversationForOrigin(BaseModel):
@@ -2423,6 +2431,7 @@ class ConversationForOrigin(BaseModel):
     origin_id: str
     origin_kind: str
     scenario_id: str | None = None
+    scenario_title: str | None = None
 
 
 class ConversationHistory(BaseModel):
@@ -10442,6 +10451,33 @@ class SiteTranslationSweepRequest(BaseModel):
     limit: conint(ge=0, le=500) | None = Field(None, title="Limit")
 
 
+class SituationBeatTargetResponse(BaseModel):
+    lesson_id: str | None = Field(None, title="Lesson Id")
+    scenario_id: str | None = Field(None, title="Scenario Id")
+    video_id: str | None = Field(None, title="Video Id")
+    word_ids: list[str] | None = Field(None, title="Word Ids")
+
+
+class SituationSummary(BaseModel):
+    beats_done: dict[str, bool]
+    chapter_id: str
+    current: bool
+    done: bool
+    free: bool
+    level: str | None = None
+    title: str
+
+
+class SituationSummaryResponse(BaseModel):
+    beats_done: dict[str, bool] | None = Field(None, title="Beats Done")
+    chapter_id: str = Field(..., title="Chapter Id")
+    current: bool | None = Field(False, title="Current")
+    done: bool | None = Field(False, title="Done")
+    free: bool | None = Field(True, title="Free")
+    level: str | None = Field(None, title="Level")
+    title: str = Field(..., title="Title")
+
+
 class SocialChannel(BaseModel):
     connected: bool
     id: str
@@ -13168,6 +13204,15 @@ class BatchScheduleUpdateRequest(BaseModel):
     updates: list[ScheduleUpdateItem] = Field(..., title="Updates")
 
 
+class Beat(BaseModel):
+    available: bool
+    done: bool
+    kind: str
+    locked: bool
+    minutes: int
+    target: BeatTarget
+
+
 class BrowseScenariosResponse(BaseModel):
     facets: BrowseScenariosFacets
     items: list[ScenarioListItem]
@@ -15593,6 +15638,53 @@ class SitePostList(BaseModel):
     total: int
 
 
+class Situation(BaseModel):
+    beats: list[Beat]
+    chapter_id: str
+    done: bool
+    free: bool
+    level: str | None = None
+    life_area: str
+    life_area_title: str
+    next_beat: str | None = None
+    title: str
+
+
+class SituationBeatResponse(BaseModel):
+    available: bool | None = Field(True, title="Available")
+    done: bool | None = Field(False, title="Done")
+    kind: str = Field(..., title="Kind")
+    locked: bool | None = Field(False, title="Locked")
+    minutes: int | None = Field(1, title="Minutes")
+    target: SituationBeatTargetResponse | None = None
+
+
+class SituationMapLevel(BaseModel):
+    done: int
+    level: str | None = None
+    situations: list[SituationSummary]
+    total: int
+
+
+class SituationMapLevelResponse(BaseModel):
+    done: int | None = Field(0, title="Done")
+    level: str | None = Field(None, title="Level")
+    situations: list[SituationSummaryResponse] | None = Field(None, title="Situations")
+    total: int | None = Field(0, title="Total")
+
+
+class SituationResponse(BaseModel):
+    beats: list[SituationBeatResponse] | None = Field(None, title="Beats")
+    chapter_id: str = Field(..., title="Chapter Id")
+    done: bool | None = Field(False, title="Done")
+    free: bool | None = Field(True, title="Free")
+    level: str | None = Field(None, title="Level")
+    life_area: str = Field(..., title="Life Area")
+    life_area_title: str = Field(..., title="Life Area Title")
+    next_beat: str | None = Field(None, title="Next Beat")
+    title: str = Field(..., title="Title")
+
+
 class SocialPost(BaseModel):
     audio_media_id: UUID_aliased | None = None
     audio_url: str
@@ -16820,6 +16912,10 @@ class SingletonSitePostList(BaseModel):
     data: SitePostList
 
 
+class SingletonSituation(BaseModel):
+    data: Situation
+
+
 class SingletonSocialPost(BaseModel):
     data: SocialPost
 
@@ -16922,6 +17018,28 @@ class SingletonWebIngestRun(BaseModel):
 
 class SingletonWebIngestRunList(BaseModel):
     data: list[WebIngestRun]
+
+
+class SituationMapGroup(BaseModel):
+    done: int
+    levels: list[SituationMapLevel]
+    life_area: str
+    title: str
+    total: int
+
+
+class SituationMapGroupResponse(BaseModel):
+    done: int | None = Field(0, title="Done")
+    levels: list[SituationMapLevelResponse] | None = Field(None, title="Levels")
+    life_area: str = Field(..., title="Life Area")
+    title: str = Field(..., title="Title")
+    total: int | None = Field(0, title="Total")
+
+
+class SituationMapResponse(BaseModel):
+    done: int | None = Field(0, title="Done")
+    groups: list[SituationMapGroupResponse] | None = Field(None, title="Groups")
+    total: int | None = Field(0, title="Total")
 
 
 class Template(BaseModel):
@@ -17093,6 +17211,16 @@ class SingletonJourneyTemplatesResponse(BaseModel):
 
 class SingletonKTVStudioLibrary(BaseModel):
     data: KTVStudioLibrary
+
+
+class SituationMap(BaseModel):
+    done: int
+    groups: list[SituationMapGroup]
+    total: int
+
+
+class SingletonSituationMap(BaseModel):
+    data: SituationMap
 
 
 EmailCopy.model_rebuild()
