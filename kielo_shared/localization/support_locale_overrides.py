@@ -55,12 +55,14 @@ Wire-up:
 
 from __future__ import annotations
 
+import asyncio
 import contextvars
 import hashlib
 import logging
 import time
-from typing import Optional, Protocol
+from typing import Any, Optional, Protocol
 
+from kielo_shared import db_replica
 from kielo_shared.resource_types import UI_STRING
 
 logger = logging.getLogger(__name__)
@@ -129,11 +131,46 @@ _PREFETCH_QUERY = """
 # rows directly.
 
 
+async def _run_prefetch(
+    factory: Any, text: Any, resource_type: str, locale: str
+) -> list:
+    async with factory() as session:
+        result = await session.execute(
+            text(_PREFETCH_QUERY),
+            {"resource_type": resource_type, "language_code": locale},
+        )
+        return list(result.fetchall())
+
+
+async def _fetch_rows(
+    session_factory: _AsyncSessionFactory,
+    text: Any,
+    resource_type: str,
+    locale: str,
+    replica: Optional[db_replica.Replica],
+) -> list:
+    """The replica when the service opted in (DB_REPLICA_READS) and it
+    answers; the primary otherwise. Only this SELECT ever goes to the replica."""
+    if replica is not None and replica.usable():
+        try:
+            rows = await asyncio.wait_for(
+                _run_prefetch(replica.session, text, resource_type, locale),
+                db_replica.CONNECT_TIMEOUT_S * 2,
+            )
+        except Exception as exc:
+            replica.mark_down(exc)
+        else:
+            replica.mark_up()
+            return rows
+    return await _run_prefetch(session_factory, text, resource_type, locale)
+
+
 async def prefetch_overrides_for_locale(
     session_factory: _AsyncSessionFactory,
     locale: str,
     *,
     resource_type: str = _OVERRIDES_RESOURCE_TYPE,
+    replica: Optional[db_replica.Replica] = None,
 ) -> dict[str, tuple[str, str]]:
     """Fetch all override rows for `(resource_type, locale)`.
 
@@ -148,6 +185,11 @@ async def prefetch_overrides_for_locale(
 
     DB failures degrade to `{}` (logged) so a localization.dynamic_translations
     outage falls through to seed values rather than crashing requests.
+
+    With DB_REPLICA_READS on (see `kielo_shared.db_replica`) the read goes to
+    a replica: overrides are written by the localization service and admins
+    and a few seconds of lag is fine. A replica that fails falls back to
+    `session_factory` (the primary) and is retried a minute later.
     """
     if not locale or locale == "en":
         return {}
@@ -168,12 +210,13 @@ async def prefetch_overrides_for_locale(
         return {}
 
     try:
-        async with session_factory() as session:
-            result = await session.execute(
-                text(_PREFETCH_QUERY),
-                {"resource_type": resource_type, "language_code": locale},
-            )
-            rows = result.fetchall()
+        rows = await _fetch_rows(
+            session_factory,
+            text,
+            resource_type,
+            locale,
+            replica or db_replica.process_replica(),
+        )
     except Exception:
         # silent-degrade-allow: an empty override map means 'no admin overrides', which is the documented default — the static seed still applies.
         logger.exception(
