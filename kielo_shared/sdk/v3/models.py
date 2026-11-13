@@ -4062,6 +4062,14 @@ class FirstSceneLine(BaseModel):
     sentence: str
 
 
+class FirstSceneVideo(BaseModel):
+    duration_s: int
+    line_count: int
+    reason: str
+    title: str
+    video_id: str
+
+
 class FirstSentenceSpeechResponse(BaseModel):
     similarity: float = Field(..., title="Similarity")
     transcript: str = Field(..., title="Transcript")
@@ -5336,6 +5344,23 @@ class KieloTVPipelineStep(BaseModel):
     detail: str | None = None
     key: str
     state: str
+
+
+class KieloTVPracticeAnswer(BaseModel):
+    answered_at: str
+    base_word_id: str | None = None
+    chosen: str
+    correct: bool
+    line_index: int
+    word: str
+
+
+class KieloTVPracticeAnswersAccepted(BaseModel):
+    accepted: int
+
+
+class KieloTVPracticeAnswersRequest(BaseModel):
+    answers: list[KieloTVPracticeAnswer]
 
 
 class KieloTVToolboxJobState(BaseModel):
@@ -7093,6 +7118,10 @@ class OmorfiParadigmRow(BaseModel):
     label: str = Field(..., title="Label")
 
 
+class OnboardingFirstScene(FirstSceneVideo):
+    pass
+
+
 class OpSpec(BaseModel):
     label: str
     op: str
@@ -7476,6 +7505,33 @@ class PostSummary(BaseModel):
     title: str
     translated_locales: list[str]
     updated_at: AwareDatetime
+
+
+class PracticeAnswer(BaseModel):
+    answered_at: AwareDatetime = Field(..., title="Answered At")
+    base_word_id: UUID_aliased = Field(..., title="Base Word Id")
+    chosen: constr(max_length=100) | None = Field("", title="Chosen")
+    context_sentence: constr(max_length=600) | None = Field(
+        "", title="Context Sentence"
+    )
+    correct: bool = Field(..., title="Correct")
+    line_index: conint(ge=0) = Field(..., title="Line Index")
+    word: constr(min_length=1, max_length=100) = Field(..., title="Word")
+
+
+class PracticeAnswersRequest(BaseModel):
+    answers: list[PracticeAnswer] = Field(
+        ..., max_length=50, min_length=1, title="Answers"
+    )
+    video_id: UUID_aliased = Field(..., title="Video Id")
+
+
+class PracticeAnswersResult(BaseModel):
+    duplicates: int | None = Field(0, title="Duplicates")
+    failed: int | None = Field(0, title="Failed")
+    queued: int | None = Field(0, title="Queued")
+    signalled: int | None = Field(0, title="Signalled")
+    skipped: int | None = Field(0, title="Skipped")
 
 
 class PracticeContext(BaseModel):
@@ -9660,6 +9716,10 @@ class SingletonFeedbackListResponse(BaseModel):
     data: FeedbackListResponse
 
 
+class SingletonFirstSceneVideo(BaseModel):
+    data: FirstSceneVideo
+
+
 class SingletonForgotPasswordResponse(BaseModel):
     data: ForgotPasswordResponse
 
@@ -9994,6 +10054,10 @@ class SingletonOfferCohortChangeList(BaseModel):
 
 class SingletonOfferCohortList(BaseModel):
     data: OfferCohortList
+
+
+class SingletonOnboardingFirstScene(BaseModel):
+    data: OnboardingFirstScene
 
 
 class SingletonPartner(BaseModel):
@@ -12460,6 +12524,10 @@ class UserProfileUserService(BaseModel):
     name: str | None = None
     newsletter_consent: bool | None = None
     onboarding_completed_at: AwareDatetime | None = None
+    onboarding_first_experience: str | None = Field(
+        None,
+        description="Arm of the first-experience test: scene or control. Server-assigned, sticky per learner; control for everyone while the test is off.",
+    )
     onboarding_variant: str | None = None
     reminder_hour: int | None = None
     streak_grace_used_on: AwareDatetime | None = None
@@ -16001,6 +16069,10 @@ class UserProfile(BaseModel):
     onboarding_completed_at: AwareDatetime | None = Field(
         None,
         description="When setup finished. Sent as null when the account still owes setup, and always present on servers that know the field, so an absent key means an older server. (Plain string, not a [string, null] type array: the Go SDK generator cannot resolve type arrays.)",
+    )
+    onboarding_first_experience: str | None = Field(
+        None,
+        description="Arm of the first-experience test: scene or control. Server-assigned, sticky per learner; control for everyone while the test is off.",
     )
     onboarding_variant: str | None = None
     reminder_hour: int | None = None
