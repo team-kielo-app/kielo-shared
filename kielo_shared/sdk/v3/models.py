@@ -4062,6 +4062,14 @@ class FirstSceneLine(BaseModel):
     sentence: str
 
 
+class FirstSceneVideo(BaseModel):
+    duration_s: int
+    line_count: int
+    reason: str
+    title: str
+    video_id: str
+
+
 class FirstSentenceSpeechResponse(BaseModel):
     similarity: float = Field(..., title="Similarity")
     transcript: str = Field(..., title="Transcript")
@@ -7093,6 +7101,10 @@ class OmorfiParadigmRow(BaseModel):
     label: str = Field(..., title="Label")
 
 
+class OnboardingFirstScene(FirstSceneVideo):
+    pass
+
+
 class OpSpec(BaseModel):
     label: str
     op: str
@@ -9660,6 +9672,10 @@ class SingletonFeedbackListResponse(BaseModel):
     data: FeedbackListResponse
 
 
+class SingletonFirstSceneVideo(BaseModel):
+    data: FirstSceneVideo
+
+
 class SingletonForgotPasswordResponse(BaseModel):
     data: ForgotPasswordResponse
 
@@ -9994,6 +10010,10 @@ class SingletonOfferCohortChangeList(BaseModel):
 
 class SingletonOfferCohortList(BaseModel):
     data: OfferCohortList
+
+
+class SingletonOnboardingFirstScene(BaseModel):
+    data: OnboardingFirstScene
 
 
 class SingletonPartner(BaseModel):
@@ -12460,6 +12480,10 @@ class UserProfileUserService(BaseModel):
     name: str | None = None
     newsletter_consent: bool | None = None
     onboarding_completed_at: AwareDatetime | None = None
+    onboarding_first_experience: str | None = Field(
+        None,
+        description="Arm of the first-experience test: scene or control. Server-assigned, sticky per learner; control for everyone while the test is off.",
+    )
     onboarding_variant: str | None = None
     reminder_hour: int | None = None
     streak_grace_used_on: AwareDatetime | None = None
@@ -16001,6 +16025,10 @@ class UserProfile(BaseModel):
     onboarding_completed_at: AwareDatetime | None = Field(
         None,
         description="When setup finished. Sent as null when the account still owes setup, and always present on servers that know the field, so an absent key means an older server. (Plain string, not a [string, null] type array: the Go SDK generator cannot resolve type arrays.)",
+    )
+    onboarding_first_experience: str | None = Field(
+        None,
+        description="Arm of the first-experience test: scene or control. Server-assigned, sticky per learner; control for everyone while the test is off.",
     )
     onboarding_variant: str | None = None
     reminder_hour: int | None = None
