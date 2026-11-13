@@ -15,6 +15,12 @@ const (
 	APIKeyHeaderScopes = "APIKeyHeader.Scopes"
 )
 
+// Defines values for BriefTargetType.
+const (
+	BriefTargetTypeBaseWord       BriefTargetType = "BaseWord"
+	BriefTargetTypeGrammarConcept BriefTargetType = "GrammarConcept"
+)
+
 // Defines values for ChallengeSectionSectionType.
 const (
 	ChallengeSectionSectionTypeIntroduce ChallengeSectionSectionType = "introduce"
@@ -121,14 +127,14 @@ const (
 
 // Defines values for CreateCustomDeckRequestExerciseTypes.
 const (
-	ContextMatching           CreateCustomDeckRequestExerciseTypes = "context_matching"
-	FillInTheBlank            CreateCustomDeckRequestExerciseTypes = "fill_in_the_blank"
-	Flashcard                 CreateCustomDeckRequestExerciseTypes = "flashcard"
-	IdentifyTheConcept        CreateCustomDeckRequestExerciseTypes = "identify_the_concept"
-	ListeningComprehension    CreateCustomDeckRequestExerciseTypes = "listening_comprehension"
-	MultipleChoiceTranslation CreateCustomDeckRequestExerciseTypes = "multiple_choice_translation"
-	SentenceConstruction      CreateCustomDeckRequestExerciseTypes = "sentence_construction"
-	SpellingChallenge         CreateCustomDeckRequestExerciseTypes = "spelling_challenge"
+	CreateCustomDeckRequestExerciseTypesContextMatching           CreateCustomDeckRequestExerciseTypes = "context_matching"
+	CreateCustomDeckRequestExerciseTypesFillInTheBlank            CreateCustomDeckRequestExerciseTypes = "fill_in_the_blank"
+	CreateCustomDeckRequestExerciseTypesFlashcard                 CreateCustomDeckRequestExerciseTypes = "flashcard"
+	CreateCustomDeckRequestExerciseTypesIdentifyTheConcept        CreateCustomDeckRequestExerciseTypes = "identify_the_concept"
+	CreateCustomDeckRequestExerciseTypesListeningComprehension    CreateCustomDeckRequestExerciseTypes = "listening_comprehension"
+	CreateCustomDeckRequestExerciseTypesMultipleChoiceTranslation CreateCustomDeckRequestExerciseTypes = "multiple_choice_translation"
+	CreateCustomDeckRequestExerciseTypesSentenceConstruction      CreateCustomDeckRequestExerciseTypes = "sentence_construction"
+	CreateCustomDeckRequestExerciseTypesSpellingChallenge         CreateCustomDeckRequestExerciseTypes = "spelling_challenge"
 )
 
 // Defines values for CreateCustomDeckRequestIntent.
@@ -310,6 +316,37 @@ const (
 	LearningSessionKielolearnEngineSessionTypeDailyChallenge LearningSessionKielolearnEngineSessionType = "daily_challenge"
 	LearningSessionKielolearnEngineSessionTypeExerciseDeck   LearningSessionKielolearnEngineSessionType = "exercise_deck"
 	LearningSessionKielolearnEngineSessionTypeMicroDrill     LearningSessionKielolearnEngineSessionType = "micro_drill"
+)
+
+// Defines values for LessonDraftRequestDifficultyLevel.
+const (
+	LessonDraftRequestDifficultyLevelAdvanced     LessonDraftRequestDifficultyLevel = "advanced"
+	LessonDraftRequestDifficultyLevelBeginner     LessonDraftRequestDifficultyLevel = "beginner"
+	LessonDraftRequestDifficultyLevelIntermediate LessonDraftRequestDifficultyLevel = "intermediate"
+)
+
+// Defines values for LessonDraftRequestStepTypes.
+const (
+	LessonDraftRequestStepTypesBranchingDialogue      LessonDraftRequestStepTypes = "branching_dialogue"
+	LessonDraftRequestStepTypesCategorization         LessonDraftRequestStepTypes = "categorization"
+	LessonDraftRequestStepTypesExplanation            LessonDraftRequestStepTypes = "explanation"
+	LessonDraftRequestStepTypesFillBlank              LessonDraftRequestStepTypes = "fill_blank"
+	LessonDraftRequestStepTypesInfoCard               LessonDraftRequestStepTypes = "info_card"
+	LessonDraftRequestStepTypesListenRepeat           LessonDraftRequestStepTypes = "listen_repeat"
+	LessonDraftRequestStepTypesListeningComprehension LessonDraftRequestStepTypes = "listening_comprehension"
+	LessonDraftRequestStepTypesMatchPairs             LessonDraftRequestStepTypes = "match_pairs"
+	LessonDraftRequestStepTypesQuiz                   LessonDraftRequestStepTypes = "quiz"
+	LessonDraftRequestStepTypesScenarioPrompt         LessonDraftRequestStepTypes = "scenario_prompt"
+	LessonDraftRequestStepTypesSentenceBuilder        LessonDraftRequestStepTypes = "sentence_builder"
+	LessonDraftRequestStepTypesSentenceTransformation LessonDraftRequestStepTypes = "sentence_transformation"
+	LessonDraftRequestStepTypesSpotError              LessonDraftRequestStepTypes = "spot_error"
+	LessonDraftRequestStepTypesTrueFalse              LessonDraftRequestStepTypes = "true_false"
+)
+
+// Defines values for LessonDraftResponseReview.
+const (
+	LessonDraftResponseReviewDone    LessonDraftResponseReview = "done"
+	LessonDraftResponseReviewSkipped LessonDraftResponseReview = "skipped"
 )
 
 // Defines values for LevelCheckResponseDirection.
@@ -541,9 +578,9 @@ const (
 
 // Defines values for RoadmapLessonUpsertRequestKielolearnEngineDifficultyLevel.
 const (
-	RoadmapLessonUpsertRequestKielolearnEngineDifficultyLevelAdvanced     RoadmapLessonUpsertRequestKielolearnEngineDifficultyLevel = "advanced"
-	RoadmapLessonUpsertRequestKielolearnEngineDifficultyLevelBeginner     RoadmapLessonUpsertRequestKielolearnEngineDifficultyLevel = "beginner"
-	RoadmapLessonUpsertRequestKielolearnEngineDifficultyLevelIntermediate RoadmapLessonUpsertRequestKielolearnEngineDifficultyLevel = "intermediate"
+	Advanced     RoadmapLessonUpsertRequestKielolearnEngineDifficultyLevel = "advanced"
+	Beginner     RoadmapLessonUpsertRequestKielolearnEngineDifficultyLevel = "beginner"
+	Intermediate RoadmapLessonUpsertRequestKielolearnEngineDifficultyLevel = "intermediate"
 )
 
 // Defines values for SavedCollectionPracticeRequestIntent.
@@ -703,12 +740,12 @@ const (
 
 // Defines values for TopicListStatusResponseJobStatus.
 const (
-	Failed       TopicListStatusResponseJobStatus = "failed"
-	PreviewReady TopicListStatusResponseJobStatus = "preview_ready"
-	Published    TopicListStatusResponseJobStatus = "published"
-	Publishing   TopicListStatusResponseJobStatus = "publishing"
-	Queued       TopicListStatusResponseJobStatus = "queued"
-	Running      TopicListStatusResponseJobStatus = "running"
+	TopicListStatusResponseJobStatusFailed       TopicListStatusResponseJobStatus = "failed"
+	TopicListStatusResponseJobStatusPreviewReady TopicListStatusResponseJobStatus = "preview_ready"
+	TopicListStatusResponseJobStatusPublished    TopicListStatusResponseJobStatus = "published"
+	TopicListStatusResponseJobStatusPublishing   TopicListStatusResponseJobStatus = "publishing"
+	TopicListStatusResponseJobStatusQueued       TopicListStatusResponseJobStatus = "queued"
+	TopicListStatusResponseJobStatusRunning      TopicListStatusResponseJobStatus = "running"
 )
 
 // Defines values for TopicListStatusResponseStatus.
@@ -2580,6 +2617,16 @@ type Brand struct {
 	SecondaryColorHex        *string `json:"secondary_color_hex,omitempty"`
 	SourceIdentifier         string  `json:"source_identifier"`
 }
+
+// BriefTarget defines model for BriefTarget.
+type BriefTarget struct {
+	Concept *string          `json:"concept"`
+	Text    string           `json:"text"`
+	Type    *BriefTargetType `json:"type,omitempty"`
+}
+
+// BriefTargetType defines model for BriefTarget.Type.
+type BriefTargetType string
 
 // BroadcastNotificationRequest defines model for BroadcastNotificationRequest.
 type BroadcastNotificationRequest struct {
@@ -10011,6 +10058,56 @@ type LegalHoldResult struct {
 	MediaId   string `json:"media_id"`
 }
 
+// LessonDraftRequest defines model for LessonDraftRequest.
+type LessonDraftRequest struct {
+	CanDo           *[]string                          `json:"can_do,omitempty"`
+	Category        *string                            `json:"category,omitempty"`
+	CefrLevel       *string                            `json:"cefr_level,omitempty"`
+	ChapterContext  *string                            `json:"chapter_context"`
+	ChapterTitle    *string                            `json:"chapter_title"`
+	Description     *string                            `json:"description"`
+	DifficultyLevel *LessonDraftRequestDifficultyLevel `json:"difficulty_level"`
+	ForceRegenerate *bool                              `json:"force_regenerate,omitempty"`
+	Grammar         *[]string                          `json:"grammar,omitempty"`
+	Minutes         *int                               `json:"minutes"`
+	Purpose         string                             `json:"purpose"`
+	Shape           *string                            `json:"shape"`
+	Situations      *[]string                          `json:"situations,omitempty"`
+	StepCount       *int                               `json:"step_count"`
+	StepTypes       *[]LessonDraftRequestStepTypes     `json:"step_types,omitempty"`
+	Targets         *[]BriefTarget                     `json:"targets,omitempty"`
+	Title           *string                            `json:"title"`
+	TrackContext    *string                            `json:"track_context"`
+	TtsLanguage     *string                            `json:"tts_language"`
+	Vocabulary      *[]string                          `json:"vocabulary,omitempty"`
+}
+
+// LessonDraftRequestDifficultyLevel defines model for LessonDraftRequest.DifficultyLevel.
+type LessonDraftRequestDifficultyLevel string
+
+// LessonDraftRequestStepTypes defines model for LessonDraftRequest.StepTypes.
+type LessonDraftRequestStepTypes string
+
+// LessonDraftResponse defines model for LessonDraftResponse.
+type LessonDraftResponse struct {
+	Category                 string                    `json:"category"`
+	CefrLevel                string                    `json:"cefr_level"`
+	Description              *string                   `json:"description"`
+	DifficultyLevel          string                    `json:"difficulty_level"`
+	EstimatedDurationMinutes int                       `json:"estimated_duration_minutes"`
+	GrammarConcepts          []string                  `json:"grammar_concepts"`
+	LearningLanguageCode     string                    `json:"learning_language_code"`
+	LessonContent            map[string]interface{}    `json:"lesson_content"`
+	PracticeTargets          []BriefTarget             `json:"practice_targets"`
+	PracticeWords            []string                  `json:"practice_words"`
+	Review                   LessonDraftResponseReview `json:"review"`
+	Shape                    string                    `json:"shape"`
+	Title                    string                    `json:"title"`
+}
+
+// LessonDraftResponseReview defines model for LessonDraftResponse.Review.
+type LessonDraftResponseReview string
+
 // LevelCheckResponse defines model for LevelCheckResponse.
 type LevelCheckResponse struct {
 	CurrentLevel    *string                      `json:"current_level"`
@@ -13107,6 +13204,13 @@ type RoadmapAdminLessonResponseKielolearnEngine struct {
 	UpdatedAt                time.Time              `json:"updated_at"`
 }
 
+// RoadmapBriefTarget defines model for RoadmapBriefTarget.
+type RoadmapBriefTarget struct {
+	Concept *string `json:"concept,omitempty"`
+	Text    string  `json:"text"`
+	Type    string  `json:"type"`
+}
+
 // RoadmapCompleteLessonResponse defines model for RoadmapCompleteLessonResponse.
 type RoadmapCompleteLessonResponse struct {
 	LessonId               uuid.UUID                                          `json:"lesson_id"`
@@ -13156,6 +13260,46 @@ type RoadmapLessonDetailResponsePracticeTargetSource string
 
 // RoadmapLessonDetailResponseState defines model for RoadmapLessonDetailResponse.State.
 type RoadmapLessonDetailResponseState string
+
+// RoadmapLessonDraftRequest defines model for RoadmapLessonDraftRequest.
+type RoadmapLessonDraftRequest struct {
+	CanDo           *[]string             `json:"can_do,omitempty"`
+	Category        *string               `json:"category,omitempty"`
+	CefrLevel       *string               `json:"cefr_level,omitempty"`
+	ChapterContext  *string               `json:"chapter_context,omitempty"`
+	ChapterTitle    *string               `json:"chapter_title,omitempty"`
+	Description     *string               `json:"description,omitempty"`
+	DifficultyLevel *string               `json:"difficulty_level,omitempty"`
+	Grammar         *[]string             `json:"grammar,omitempty"`
+	Minutes         *int                  `json:"minutes,omitempty"`
+	Purpose         string                `json:"purpose"`
+	Shape           *string               `json:"shape,omitempty"`
+	Situations      *[]string             `json:"situations,omitempty"`
+	StepCount       *int                  `json:"step_count,omitempty"`
+	StepTypes       *[]string             `json:"step_types,omitempty"`
+	Targets         *[]RoadmapBriefTarget `json:"targets,omitempty"`
+	Title           *string               `json:"title,omitempty"`
+	TrackContext    *string               `json:"track_context,omitempty"`
+	TtsLanguage     *string               `json:"tts_language,omitempty"`
+	Vocabulary      *[]string             `json:"vocabulary,omitempty"`
+}
+
+// RoadmapLessonDraftResponse defines model for RoadmapLessonDraftResponse.
+type RoadmapLessonDraftResponse struct {
+	Category                 string                 `json:"category"`
+	CefrLevel                string                 `json:"cefr_level"`
+	Description              *string                `json:"description,omitempty"`
+	DifficultyLevel          string                 `json:"difficulty_level"`
+	EstimatedDurationMinutes int                    `json:"estimated_duration_minutes"`
+	GrammarConcepts          []string               `json:"grammar_concepts"`
+	LearningLanguageCode     string                 `json:"learning_language_code"`
+	LessonContent            map[string]interface{} `json:"lesson_content"`
+	PracticeTargets          []RoadmapBriefTarget   `json:"practice_targets"`
+	PracticeWords            []string               `json:"practice_words"`
+	Review                   string                 `json:"review"`
+	Shape                    string                 `json:"shape"`
+	Title                    string                 `json:"title"`
+}
 
 // RoadmapLessonGenerationSettings defines model for RoadmapLessonGenerationSettings.
 type RoadmapLessonGenerationSettings struct {
@@ -15825,6 +15969,11 @@ type SingletonRevokeSubscriptionResponse struct {
 // SingletonRoadmapAdminLessonResponse defines model for SingletonRoadmapAdminLessonResponse.
 type SingletonRoadmapAdminLessonResponse struct {
 	Data RoadmapAdminLessonResponse `json:"data"`
+}
+
+// SingletonRoadmapLessonDraftResponse defines model for SingletonRoadmapLessonDraftResponse.
+type SingletonRoadmapLessonDraftResponse struct {
+	Data RoadmapLessonDraftResponse `json:"data"`
 }
 
 // SingletonRoadmapLessonsV3 defines model for SingletonRoadmapLessonsV3.
@@ -23545,6 +23694,12 @@ type AdminListRoadmapLessonsKlearnApiV3RoadmapAdminLessonsGetParams struct {
 	LearningLanguageCode *string `form:"learning_language_code,omitempty" json:"learning_language_code,omitempty"`
 }
 
+// AdminDraftRoadmapLessonKlearnApiV3RoadmapAdminLessonsDraftPostParams defines parameters for AdminDraftRoadmapLessonKlearnApiV3RoadmapAdminLessonsDraftPost.
+type AdminDraftRoadmapLessonKlearnApiV3RoadmapAdminLessonsDraftPostParams struct {
+	// LearningLanguageCode Target learning language for the draft (e.g. 'fi', 'sv').
+	LearningLanguageCode string `form:"learning_language_code" json:"learning_language_code"`
+}
+
 // AdminGenerateRoadmapLessonKlearnApiV3RoadmapAdminLessonsGeneratePostParams defines parameters for AdminGenerateRoadmapLessonKlearnApiV3RoadmapAdminLessonsGeneratePost.
 type AdminGenerateRoadmapLessonKlearnApiV3RoadmapAdminLessonsGeneratePostParams struct {
 	// LearningLanguageCode Target learning language for the generated lesson (e.g. 'fi', 'sv'). REQUIRED — the admin-ui interceptor (http.ts) stamps this from the workspace dropdown. Empty/missing surfaces as 422 rather than silently letting the LLM invent a language.
@@ -24459,6 +24614,9 @@ type PostApiV3RecommendationCampaignsJSONRequestBody = RecommendationCampaign
 // PostApiV3RoadmapLessonsJSONRequestBody defines body for PostApiV3RoadmapLessons for application/json ContentType.
 type PostApiV3RoadmapLessonsJSONRequestBody = RoadmapLessonUpsertRequest
 
+// PostApiV3RoadmapLessonsDraftJSONRequestBody defines body for PostApiV3RoadmapLessonsDraft for application/json ContentType.
+type PostApiV3RoadmapLessonsDraftJSONRequestBody = RoadmapLessonDraftRequest
+
 // PostApiV3RoadmapLessonsGenerateJSONRequestBody defines body for PostApiV3RoadmapLessonsGenerate for application/json ContentType.
 type PostApiV3RoadmapLessonsGenerateJSONRequestBody = RoadmapAdminGenerateLessonRequest
 
@@ -25076,6 +25234,9 @@ type IngestBehavioralEventKlearnApiV3EventsBehavioralPostJSONRequestBody = Behav
 
 // AdminCreateRoadmapLessonKlearnApiV3RoadmapAdminLessonsPostJSONRequestBody defines body for AdminCreateRoadmapLessonKlearnApiV3RoadmapAdminLessonsPost for application/json ContentType.
 type AdminCreateRoadmapLessonKlearnApiV3RoadmapAdminLessonsPostJSONRequestBody = RoadmapLessonUpsertRequestKielolearnEngine
+
+// AdminDraftRoadmapLessonKlearnApiV3RoadmapAdminLessonsDraftPostJSONRequestBody defines body for AdminDraftRoadmapLessonKlearnApiV3RoadmapAdminLessonsDraftPost for application/json ContentType.
+type AdminDraftRoadmapLessonKlearnApiV3RoadmapAdminLessonsDraftPostJSONRequestBody = LessonDraftRequest
 
 // AdminGenerateRoadmapLessonKlearnApiV3RoadmapAdminLessonsGeneratePostJSONRequestBody defines body for AdminGenerateRoadmapLessonKlearnApiV3RoadmapAdminLessonsGeneratePost for application/json ContentType.
 type AdminGenerateRoadmapLessonKlearnApiV3RoadmapAdminLessonsGeneratePostJSONRequestBody = RoadmapAdminGenerateLessonRequestKielolearnEngine

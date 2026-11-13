@@ -1122,6 +1122,17 @@ class Brand(ArticleBrand):
     pass
 
 
+class Type(StrEnum):
+    BaseWord = "BaseWord"
+    GrammarConcept = "GrammarConcept"
+
+
+class BriefTarget(BaseModel):
+    concept: constr(max_length=200) | None = Field(None, title="Concept")
+    text: constr(min_length=1, max_length=200) = Field(..., title="Text")
+    type: Type | None = Field("BaseWord", title="Type")
+
+
 class BroadcastNotificationRequest(BaseModel):
     body: str
     data: dict[str, Any]
@@ -2291,11 +2302,6 @@ class ContentVersionStatusResponse(AppFeedbackUpdateStatusRequest):
     pass
 
 
-class ItemTypeFk(StrEnum):
-    BaseWord = "BaseWord"
-    GrammarConcept = "GrammarConcept"
-
-
 class OptionKind(StrEnum):
     scenario = "scenario"
     sentence = "sentence"
@@ -2319,7 +2325,7 @@ class ContextualLearningOpportunity(BaseModel):
     )
     target_item_display_text: str = Field(..., title="Target Item Display Text")
     target_item_id: UUID_aliased = Field(..., title="Target Item Id")
-    target_item_type: ItemTypeFk = Field(..., title="Target Item Type")
+    target_item_type: Type = Field(..., title="Target Item Type")
     user_id: UUID_aliased = Field(..., title="User Id")
 
 
@@ -4033,7 +4039,7 @@ class FillInTheBlankExercise(BaseModel):
     generation_provenance: ExerciseGenerationProvenance | None = None
     is_placeholder: bool | None = Field(False, title="Is Placeholder")
     item_id_fk: UUID_aliased | None = Field(..., title="Item Id Fk")
-    item_type_fk: ItemTypeFk | None = Field(..., title="Item Type Fk")
+    item_type_fk: Type | None = Field(..., title="Item Type Fk")
     objective_id: UUID_aliased | None = Field(None, title="Objective Id")
     option_feedback: dict[str, str] | None = Field(None, title="Option Feedback")
     options: list[str] | None = Field(None, title="Options")
@@ -4124,7 +4130,7 @@ class FlashcardExercise(BaseModel):
     )
     is_placeholder: bool | None = Field(False, title="Is Placeholder")
     item_id_fk: UUID_aliased | None = Field(..., title="Item Id Fk")
-    item_type_fk: ItemTypeFk | None = Field(..., title="Item Type Fk")
+    item_type_fk: Type | None = Field(..., title="Item Type Fk")
     objective_id: UUID_aliased | None = Field(None, title="Objective Id")
     option_feedback: dict[str, str] | None = Field(None, title="Option Feedback")
     prompt: str = Field(..., title="Prompt")
@@ -4148,7 +4154,7 @@ class ForgotPasswordResponse(BaseModel):
 
 class GeneralScheduleUpdateItem(BaseModel):
     item_id: UUID_aliased = Field(..., title="Item Id")
-    item_type: ItemTypeFk = Field(..., title="Item Type")
+    item_type: Type = Field(..., title="Item Type")
     next_review_at: AwareDatetime = Field(..., title="Next Review At")
 
 
@@ -4501,7 +4507,7 @@ class IdentifyConceptExercise(BaseModel):
     generation_provenance: ExerciseGenerationProvenance | None = None
     is_placeholder: bool | None = Field(False, title="Is Placeholder")
     item_id_fk: UUID_aliased | None = Field(..., title="Item Id Fk")
-    item_type_fk: ItemTypeFk | None = Field(..., title="Item Type Fk")
+    item_type_fk: Type | None = Field(..., title="Item Type Fk")
     objective_id: UUID_aliased | None = Field(None, title="Objective Id")
     option_feedback: dict[str, str] | None = Field(None, title="Option Feedback")
     options: list[dict[str, str]] = Field(
@@ -4682,7 +4688,7 @@ class IssueRow(BaseModel):
 class ItemDelta(BaseModel):
     created: bool | None = Field(None, title="Created")
     item_id: UUID_aliased = Field(..., title="Item Id")
-    item_type: ItemTypeFk = Field(..., title="Item Type")
+    item_type: Type = Field(..., title="Item Type")
     proficiency_after: float = Field(..., title="Proficiency After")
     proficiency_before: float = Field(..., title="Proficiency Before")
     status_after: str = Field(..., title="Status After")
@@ -4702,7 +4708,7 @@ class ItemDeltaV3(BaseModel):
 class ItemStanding(BaseModel):
     confidence_score: confloat(ge=0.0, le=1.0) = Field(..., title="Confidence Score")
     item_id: UUID_aliased = Field(..., title="Item Id")
-    item_type: ItemTypeFk = Field(..., title="Item Type")
+    item_type: Type = Field(..., title="Item Type")
     mastery_score: confloat(ge=0.0, le=1.0) = Field(..., title="Mastery Score")
     next_review_at: AwareDatetime | None = Field(None, title="Next Review At")
     proficiency: confloat(ge=0.0, le=1.0) = Field(..., title="Proficiency")
@@ -4725,7 +4731,7 @@ class ItemSummary(BaseModel):
     display_text: str = Field(..., title="Display Text")
     grammar_concept_id: UUID_aliased | None = Field(None, title="Grammar Concept Id")
     item_id: UUID_aliased = Field(..., title="Item Id")
-    item_type: ItemTypeFk = Field(..., title="Item Type")
+    item_type: Type = Field(..., title="Item Type")
     learning_language_code: str | None = Field("", title="Learning Language Code")
     support_language_code: str | None = Field("", title="Support Language Code")
     support_text: str | None = Field(None, title="Support Text")
@@ -5971,7 +5977,7 @@ class LearningObjective(BaseModel):
     support_language_code: str | None = Field("", title="Support Language Code")
     support_text: str | None = Field("", title="Support Text")
     target_item_id: UUID_aliased = Field(..., title="Target Item Id")
-    target_item_type: ItemTypeFk = Field(..., title="Target Item Type")
+    target_item_type: Type = Field(..., title="Target Item Type")
 
 
 class SessionBackend(StrEnum):
@@ -6096,6 +6102,75 @@ class LegalHoldResult(BaseModel):
     media_id: str
 
 
+class DifficultyLevel(StrEnum):
+    beginner = "beginner"
+    intermediate = "intermediate"
+    advanced = "advanced"
+
+
+class StepType(StrEnum):
+    explanation = "explanation"
+    listen_repeat = "listen_repeat"
+    info_card = "info_card"
+    quiz = "quiz"
+    sentence_builder = "sentence_builder"
+    fill_blank = "fill_blank"
+    match_pairs = "match_pairs"
+    branching_dialogue = "branching_dialogue"
+    spot_error = "spot_error"
+    scenario_prompt = "scenario_prompt"
+    listening_comprehension = "listening_comprehension"
+    categorization = "categorization"
+    true_false = "true_false"
+    sentence_transformation = "sentence_transformation"
+
+
+class LessonDraftRequest(BaseModel):
+    can_do: list[str] | None = Field(None, title="Can Do")
+    category: str | None = Field("Getting Started", title="Category")
+    cefr_level: constr(pattern=r"^(A1|A2|B1|B2|C1|C2)$") | None = Field(
+        "A1", title="Cefr Level"
+    )
+    chapter_context: str | None = Field(None, title="Chapter Context")
+    chapter_title: str | None = Field(None, title="Chapter Title")
+    description: str | None = Field(None, title="Description")
+    difficulty_level: DifficultyLevel | None = Field(None, title="Difficulty Level")
+    force_regenerate: bool | None = Field(False, title="Force Regenerate")
+    grammar: list[str] | None = Field(None, title="Grammar")
+    minutes: conint(ge=3, le=120) | None = Field(None, title="Minutes")
+    purpose: constr(min_length=3, max_length=500) = Field(..., title="Purpose")
+    shape: str | None = Field(None, title="Shape")
+    situations: list[str] | None = Field(None, title="Situations")
+    step_count: conint(ge=4, le=20) | None = Field(None, title="Step Count")
+    step_types: list[StepType] | None = Field(None, title="Step Types")
+    targets: list[BriefTarget] | None = Field(None, title="Targets")
+    title: constr(min_length=3, max_length=255) | None = Field(None, title="Title")
+    track_context: str | None = Field(None, title="Track Context")
+    tts_language: str | None = Field(None, title="Tts Language")
+    vocabulary: list[str] | None = Field(None, title="Vocabulary")
+
+
+class Review(StrEnum):
+    done = "done"
+    skipped = "skipped"
+
+
+class LessonDraftResponse(BaseModel):
+    category: str = Field(..., title="Category")
+    cefr_level: str = Field(..., title="Cefr Level")
+    description: str | None = Field(None, title="Description")
+    difficulty_level: str = Field(..., title="Difficulty Level")
+    estimated_duration_minutes: int = Field(..., title="Estimated Duration Minutes")
+    grammar_concepts: list[str] = Field(..., title="Grammar Concepts")
+    learning_language_code: str = Field(..., title="Learning Language Code")
+    lesson_content: dict[str, Any] = Field(..., title="Lesson Content")
+    practice_targets: list[BriefTarget] = Field(..., title="Practice Targets")
+    practice_words: list[str] = Field(..., title="Practice Words")
+    review: Review = Field(..., title="Review")
+    shape: str = Field(..., title="Shape")
+    title: str = Field(..., title="Title")
+
+
 class Direction(StrEnum):
     up = "up"
     down = "down"
@@ -6209,7 +6284,7 @@ class ListeningComprehensionExercise(BaseModel):
     generation_provenance: ExerciseGenerationProvenance | None = None
     is_placeholder: bool | None = Field(False, title="Is Placeholder")
     item_id_fk: UUID_aliased | None = Field(..., title="Item Id Fk")
-    item_type_fk: ItemTypeFk | None = Field(..., title="Item Type Fk")
+    item_type_fk: Type | None = Field(..., title="Item Type Fk")
     objective_id: UUID_aliased | None = Field(None, title="Objective Id")
     option_feedback: dict[str, str] | None = Field(None, title="Option Feedback")
     option_kind: OptionKind1 | None = Field("meaning", title="Option Kind")
@@ -6646,7 +6721,7 @@ class MultipleChoiceTranslationExercise(BaseModel):
     generation_provenance: ExerciseGenerationProvenance | None = None
     is_placeholder: bool | None = Field(False, title="Is Placeholder")
     item_id_fk: UUID_aliased | None = Field(..., title="Item Id Fk")
-    item_type_fk: ItemTypeFk | None = Field(..., title="Item Type Fk")
+    item_type_fk: Type | None = Field(..., title="Item Type Fk")
     objective_id: UUID_aliased | None = Field(None, title="Objective Id")
     option_feedback: dict[str, str] | None = Field(None, title="Option Feedback")
     options: list[dict[str, str]] = Field(
@@ -6727,7 +6802,7 @@ class Intent1(StrEnum):
     explore = "explore"
 
 
-class Type(StrEnum):
+class Type1(StrEnum):
     micro_drill = "micro_drill"
     custom_deck = "custom_deck"
     article = "article"
@@ -7317,7 +7392,7 @@ class PlaceholderExercise(BaseModel):
     generation_provenance: ExerciseGenerationProvenance | None = None
     is_placeholder: bool | None = Field(True, title="Is Placeholder")
     item_id_fk: UUID_aliased | None = Field(..., title="Item Id Fk")
-    item_type_fk: ItemTypeFk | None = Field(..., title="Item Type Fk")
+    item_type_fk: Type | None = Field(..., title="Item Type Fk")
     objective_id: UUID_aliased | None = Field(None, title="Objective Id")
     option_feedback: dict[str, str] | None = Field(None, title="Option Feedback")
     planned_exercise_type: str | None = Field(
@@ -7846,7 +7921,7 @@ class RecommendationLaunchParams(BaseModel):
     exercise_types: list[str] | None = Field(None, title="Exercise Types")
     item_id: UUID_aliased | None = Field(None, title="Item Id")
     item_ids: list[UUID_aliased] | None = Field(None, title="Item Ids")
-    item_type: ItemTypeFk | None = Field(None, title="Item Type")
+    item_type: Type | None = Field(None, title="Item Type")
     lesson_id: UUID_aliased | None = Field(None, title="Lesson Id")
     scenario_id: str | None = Field(None, title="Scenario Id")
     source_session_id: UUID_aliased | None = Field(None, title="Source Session Id")
@@ -8357,6 +8432,12 @@ class RoadmapAdminLessonResponseKielolearnEngine(BaseModel):
     updated_at: AwareDatetime = Field(..., title="Updated At")
 
 
+class RoadmapBriefTarget(BaseModel):
+    concept: str | None = None
+    text: str
+    type: str
+
+
 class PracticeStatus(StrEnum):
     unavailable = "unavailable"
     available = "available"
@@ -8375,6 +8456,44 @@ class State(StrEnum):
     completed = "completed"
 
 
+class RoadmapLessonDraftRequest(BaseModel):
+    can_do: list[str] | None = None
+    category: str | None = None
+    cefr_level: str | None = None
+    chapter_context: str | None = None
+    chapter_title: str | None = None
+    description: str | None = None
+    difficulty_level: str | None = None
+    grammar: list[str] | None = None
+    minutes: int | None = None
+    purpose: str
+    shape: str | None = None
+    situations: list[str] | None = None
+    step_count: int | None = None
+    step_types: list[str] | None = None
+    targets: list[RoadmapBriefTarget] | None = None
+    title: str | None = None
+    track_context: str | None = None
+    tts_language: str | None = None
+    vocabulary: list[str] | None = None
+
+
+class RoadmapLessonDraftResponse(BaseModel):
+    category: str
+    cefr_level: str
+    description: str | None = None
+    difficulty_level: str
+    estimated_duration_minutes: int
+    grammar_concepts: list[str]
+    learning_language_code: str
+    lesson_content: dict[str, Any]
+    practice_targets: list[RoadmapBriefTarget]
+    practice_words: list[str]
+    review: str
+    shape: str
+    title: str
+
+
 class RoadmapLessonGenerationSettings(BaseModel):
     category: str
     cefr_level: str | None = None
@@ -8384,12 +8503,6 @@ class RoadmapLessonGenerationSettings(BaseModel):
     shape: str | None = None
     step_count: int | None = None
     tts_language: str
-
-
-class DifficultyLevel(StrEnum):
-    beginner = "beginner"
-    intermediate = "intermediate"
-    advanced = "advanced"
 
 
 class RoadmapLessonGenerationSettingsKielolearnEngine(BaseModel):
@@ -8745,7 +8858,7 @@ class ScenarioChoiceExercise(BaseModel):
     generation_provenance: ExerciseGenerationProvenance | None = None
     is_placeholder: bool | None = Field(False, title="Is Placeholder")
     item_id_fk: UUID_aliased | None = Field(..., title="Item Id Fk")
-    item_type_fk: ItemTypeFk | None = Field(..., title="Item Type Fk")
+    item_type_fk: Type | None = Field(..., title="Item Type Fk")
     objective_id: UUID_aliased | None = Field(None, title="Objective Id")
     option_feedback: dict[str, str] | None = Field(None, title="Option Feedback")
     phrase_options: list[str] = Field(..., title="Phrase Options")
@@ -10103,6 +10216,10 @@ class SingletonRoadmapAdminLessonResponse(BaseModel):
     data: RoadmapAdminLessonResponse
 
 
+class SingletonRoadmapLessonDraftResponse(BaseModel):
+    data: RoadmapLessonDraftResponse
+
+
 class SingletonRoadmapLessonsV3(BaseModel):
     data: RoadmapLessonsV3
 
@@ -10416,7 +10533,7 @@ class SpellingChallengeExercise(BaseModel):
     hint: str | None = Field("", title="Hint")
     is_placeholder: bool | None = Field(False, title="Is Placeholder")
     item_id_fk: UUID_aliased | None = Field(..., title="Item Id Fk")
-    item_type_fk: ItemTypeFk | None = Field(..., title="Item Type Fk")
+    item_type_fk: Type | None = Field(..., title="Item Type Fk")
     objective_id: UUID_aliased | None = Field(None, title="Objective Id")
     option_feedback: dict[str, str] | None = Field(None, title="Option Feedback")
     prompt: str = Field(..., title="Prompt")
@@ -12611,7 +12728,7 @@ class WordDeckCreate(BaseModel):
 
 class WordDeckItemCreate(BaseModel):
     item_id: UUID_aliased = Field(..., title="Item Id")
-    item_type: ItemTypeFk = Field(..., title="Item Type")
+    item_type: Type = Field(..., title="Item Type")
 
 
 class WordDeckItemResponse(BaseModel):
@@ -13282,7 +13399,7 @@ class ContextMatchingExercise(BaseModel):
     generation_provenance: ExerciseGenerationProvenance | None = None
     is_placeholder: bool | None = Field(False, title="Is Placeholder")
     item_id_fk: UUID_aliased | None = Field(..., title="Item Id Fk")
-    item_type_fk: ItemTypeFk | None = Field(..., title="Item Type Fk")
+    item_type_fk: Type | None = Field(..., title="Item Type Fk")
     objective_id: UUID_aliased | None = Field(None, title="Objective Id")
     option_feedback: dict[str, str] | None = Field(None, title="Option Feedback")
     option_kind: OptionKind | None = Field("scenario", title="Option Kind")
@@ -14247,14 +14364,14 @@ class NextStepRecommendation(BaseModel):
     intent: Intent1 | None = Field(None, title="Intent")
     item_id: UUID_aliased | None = Field(None, title="Item Id")
     item_ids: list[UUID_aliased] | None = Field(None, title="Item Ids")
-    item_type: ItemTypeFk | None = Field(None, title="Item Type")
+    item_type: Type | None = Field(None, title="Item Type")
     launch_params: RecommendationLaunchParams | None = None
     path_step: PathStep | None = None
     rationale: str | None = Field(None, title="Rationale")
     session_mode: str | None = Field(None, title="Session Mode")
     subtitle: str | None = Field(None, title="Subtitle")
     title: str = Field(..., title="Title")
-    type: Type = Field(..., title="Type")
+    type: Type1 = Field(..., title="Type")
 
 
 class NextStepRecommendationV3(BaseModel):
@@ -14683,7 +14800,7 @@ class SentenceConstructionExercise(BaseModel):
     generation_provenance: ExerciseGenerationProvenance | None = None
     is_placeholder: bool | None = Field(False, title="Is Placeholder")
     item_id_fk: UUID_aliased | None = Field(..., title="Item Id Fk")
-    item_type_fk: ItemTypeFk | None = Field(..., title="Item Type Fk")
+    item_type_fk: Type | None = Field(..., title="Item Type Fk")
     objective_id: UUID_aliased | None = Field(None, title="Objective Id")
     option_feedback: dict[str, str] | None = Field(None, title="Option Feedback")
     prompt: str = Field(..., title="Prompt")

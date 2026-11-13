@@ -176,7 +176,7 @@ func (t *tagWriter) tagQuery(body []byte) []byte {
 		return nil
 	}
 	sql := string(body[:len(body)-1])
-	tagged := TagSQL(sql, t.tag)
+	tagged := tagQueries(sql, t.tag)
 	if tagged == sql {
 		return nil
 	}
