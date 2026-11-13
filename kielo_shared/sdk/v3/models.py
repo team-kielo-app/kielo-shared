@@ -5338,6 +5338,23 @@ class KieloTVPipelineStep(BaseModel):
     state: str
 
 
+class KieloTVPracticeAnswer(BaseModel):
+    answered_at: str
+    base_word_id: str | None = None
+    chosen: str
+    correct: bool
+    line_index: int
+    word: str
+
+
+class KieloTVPracticeAnswersAccepted(BaseModel):
+    accepted: int
+
+
+class KieloTVPracticeAnswersRequest(BaseModel):
+    answers: list[KieloTVPracticeAnswer]
+
+
 class KieloTVToolboxJobState(BaseModel):
     completed_at: str | None = None
     error: str | None = None
@@ -7476,6 +7493,33 @@ class PostSummary(BaseModel):
     title: str
     translated_locales: list[str]
     updated_at: AwareDatetime
+
+
+class PracticeAnswer(BaseModel):
+    answered_at: AwareDatetime = Field(..., title="Answered At")
+    base_word_id: UUID_aliased = Field(..., title="Base Word Id")
+    chosen: constr(max_length=100) | None = Field("", title="Chosen")
+    context_sentence: constr(max_length=600) | None = Field(
+        "", title="Context Sentence"
+    )
+    correct: bool = Field(..., title="Correct")
+    line_index: conint(ge=0) = Field(..., title="Line Index")
+    word: constr(min_length=1, max_length=100) = Field(..., title="Word")
+
+
+class PracticeAnswersRequest(BaseModel):
+    answers: list[PracticeAnswer] = Field(
+        ..., max_length=50, min_length=1, title="Answers"
+    )
+    video_id: UUID_aliased = Field(..., title="Video Id")
+
+
+class PracticeAnswersResult(BaseModel):
+    duplicates: int | None = Field(0, title="Duplicates")
+    failed: int | None = Field(0, title="Failed")
+    queued: int | None = Field(0, title="Queued")
+    signalled: int | None = Field(0, title="Signalled")
+    skipped: int | None = Field(0, title="Skipped")
 
 
 class PracticeContext(BaseModel):

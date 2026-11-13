@@ -9015,6 +9015,26 @@ type KieloTVPipelineStep struct {
 	State  string  `json:"state"`
 }
 
+// KieloTVPracticeAnswer defines model for KieloTVPracticeAnswer.
+type KieloTVPracticeAnswer struct {
+	AnsweredAt string  `json:"answered_at"`
+	BaseWordId *string `json:"base_word_id,omitempty"`
+	Chosen     string  `json:"chosen"`
+	Correct    bool    `json:"correct"`
+	LineIndex  int     `json:"line_index"`
+	Word       string  `json:"word"`
+}
+
+// KieloTVPracticeAnswersAccepted defines model for KieloTVPracticeAnswersAccepted.
+type KieloTVPracticeAnswersAccepted struct {
+	Accepted int `json:"accepted"`
+}
+
+// KieloTVPracticeAnswersRequest defines model for KieloTVPracticeAnswersRequest.
+type KieloTVPracticeAnswersRequest struct {
+	Answers []KieloTVPracticeAnswer `json:"answers"`
+}
+
 // KieloTVToolboxJobState defines model for KieloTVToolboxJobState.
 type KieloTVToolboxJobState struct {
 	CompletedAt *string          `json:"completed_at,omitempty"`
@@ -11885,6 +11905,32 @@ type PostSummary struct {
 	Title             string     `json:"title"`
 	TranslatedLocales []string   `json:"translated_locales"`
 	UpdatedAt         time.Time  `json:"updated_at"`
+}
+
+// PracticeAnswer defines model for PracticeAnswer.
+type PracticeAnswer struct {
+	AnsweredAt      time.Time `json:"answered_at"`
+	BaseWordId      uuid.UUID `json:"base_word_id"`
+	Chosen          *string   `json:"chosen,omitempty"`
+	ContextSentence *string   `json:"context_sentence,omitempty"`
+	Correct         bool      `json:"correct"`
+	LineIndex       int       `json:"line_index"`
+	Word            string    `json:"word"`
+}
+
+// PracticeAnswersRequest defines model for PracticeAnswersRequest.
+type PracticeAnswersRequest struct {
+	Answers []PracticeAnswer `json:"answers"`
+	VideoId uuid.UUID        `json:"video_id"`
+}
+
+// PracticeAnswersResult defines model for PracticeAnswersResult.
+type PracticeAnswersResult struct {
+	Duplicates *int `json:"duplicates,omitempty"`
+	Failed     *int `json:"failed,omitempty"`
+	Queued     *int `json:"queued,omitempty"`
+	Signalled  *int `json:"signalled,omitempty"`
+	Skipped    *int `json:"skipped,omitempty"`
 }
 
 // PracticeContext defines model for PracticeContext.
@@ -24308,6 +24354,9 @@ type PatchApiV3JourneysIdJSONRequestBody = JourneyRequest
 // PostApiV3KielotvJSONRequestBody defines body for PostApiV3Kielotv for application/json ContentType.
 type PostApiV3KielotvJSONRequestBody = KieloTVVideoUpsertRequest
 
+// PostApiV3KielotvVideosVideoIdPracticeAnswersJSONRequestBody defines body for PostApiV3KielotvVideosVideoIdPracticeAnswers for application/json ContentType.
+type PostApiV3KielotvVideosVideoIdPracticeAnswersJSONRequestBody = KieloTVPracticeAnswersRequest
+
 // PatchApiV3KielotvVideoIdJSONRequestBody defines body for PatchApiV3KielotvVideoId for application/json ContentType.
 type PatchApiV3KielotvVideoIdJSONRequestBody = KieloTVVideoUpsertRequest
 
@@ -25048,6 +25097,9 @@ type UpdateGrammarConceptScheduleInternalKlearnUsersUserIdGrammarConceptGrammarC
 
 // UpdateItemLearningStatusInternalKlearnUsersUserIdItemsItemTypeItemIdLearningStatusPostJSONRequestBody defines body for UpdateItemLearningStatusInternalKlearnUsersUserIdItemsItemTypeItemIdLearningStatusPost for application/json ContentType.
 type UpdateItemLearningStatusInternalKlearnUsersUserIdItemsItemTypeItemIdLearningStatusPostJSONRequestBody = LearningStatusUpdateRequest
+
+// PostPracticeAnswersInternalKlearnUsersUserIdKielotvPracticeAnswersPostJSONRequestBody defines body for PostPracticeAnswersInternalKlearnUsersUserIdKielotvPracticeAnswersPost for application/json ContentType.
+type PostPracticeAnswersInternalKlearnUsersUserIdKielotvPracticeAnswersPostJSONRequestBody = PracticeAnswersRequest
 
 // UpdateUserProgressInternalKlearnUsersUserIdProgressPostJSONRequestBody defines body for UpdateUserProgressInternalKlearnUsersUserIdProgressPost for application/json ContentType.
 type UpdateUserProgressInternalKlearnUsersUserIdProgressPostJSONRequestBody UpdateUserProgressInternalKlearnUsersUserIdProgressPostJSONBody
