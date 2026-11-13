@@ -60,6 +60,14 @@ import (
 // concern; the reaper's job is "flag stale, not delete unknown").
 type CurrentSourceVersionFunc func(ctx context.Context, resourceType, resourceID string) (sourceVersion string, known bool)
 
+// PagePrefetchFunc is called once per scanned page, before any row of the
+// page is decided, with the page's distinct (resource_type, resource_id)
+// pairs in scan order. A caller whose CurrentSourceVersionFunc answers from a
+// store can load every pair's answer in one statement here instead of one
+// statement per resource inside the callback. It has no return value: a
+// failed prefetch leaves the per-resource callback to answer (or decline).
+type PagePrefetchFunc func(ctx context.Context, resources [][2]string)
+
 // Reaper handles stale localization.dynamic_translations rows: a stale
 // machine translation is deleted (nothing of value is lost, and the seam
 // translates the current source on the next read), while a stale approved
@@ -69,6 +77,10 @@ type CurrentSourceVersionFunc func(ctx context.Context, resourceType, resourceID
 type Reaper struct {
 	pool    *pgxpool.Pool
 	current CurrentSourceVersionFunc
+
+	// prefetch, when set, sees each page's distinct resources before the
+	// page's rows are decided (see WithPagePrefetch).
+	prefetch PagePrefetchFunc
 
 	// scanBatchSize bounds memory + lock duration. Reads run in
 	// batches of this size; the reaper applies updates per-batch so
@@ -120,6 +132,32 @@ func WithScanBatchSize(n int) ReaperOption {
 			r.scanBatchSize = n
 		}
 	}
+}
+
+// WithPagePrefetch registers a hook called once per scanned page with the
+// page's distinct (resource_type, resource_id) pairs, before current is asked
+// about any row of it. Optional; the single-resource current callback stays the
+// source of every answer.
+func WithPagePrefetch(fn PagePrefetchFunc) ReaperOption {
+	return func(r *Reaper) {
+		r.prefetch = fn
+	}
+}
+
+// distinctResources returns the page's distinct (resource_type, resource_id)
+// pairs in first-seen order.
+func distinctResources(batch []scanRow) [][2]string {
+	seen := make(map[[2]string]struct{}, len(batch))
+	out := make([][2]string, 0, len(batch))
+	for _, row := range batch {
+		key := [2]string{row.ResourceType, row.ResourceID}
+		if _, dup := seen[key]; dup {
+			continue
+		}
+		seen[key] = struct{}{}
+		out = append(out, key)
+	}
+	return out
 }
 
 // WithResourceTypeFilter restricts the scan to one resource_type.
@@ -211,6 +249,10 @@ func (r *Reaper) Reap(ctx context.Context) (ReapStats, error) {
 		}
 		if len(batch) == 0 {
 			break
+		}
+
+		if r.prefetch != nil {
+			r.prefetch(ctx, distinctResources(batch))
 		}
 
 		var staleIDs []scanRow
