@@ -3,6 +3,9 @@ package pgxsearchpath
 import (
 	"context"
 	"fmt"
+	"reflect"
+	"sync"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	sharedDB "github.com/team-kielo-app/kielo-shared/db"
@@ -32,7 +35,65 @@ import (
 // on first call from every service that runs a periodic fan-out
 // worker (cms cleanup, cms KTV polling, etc.), false-flagging an
 // intentional design as a bug.
+//
+// The list changes only when a language is added, so it is cached per pool for
+// ActiveLanguagesCacheTTL: every fan-out tick of every Go service ran this
+// read-only transaction (about 4 statements), 413 times an hour on the prod
+// primary (2026-11-15). An error or an empty list is never cached.
 func ListActiveLearningLanguageCodes(ctx context.Context, db TxBeginner) ([]string, error) {
+	if codes, ok := activeLanguagesCache.get(db, time.Now()); ok {
+		return codes, nil
+	}
+	codes, err := listActiveLearningLanguageCodes(ctx, db)
+	if err == nil && len(codes) > 0 {
+		activeLanguagesCache.put(db, codes, time.Now())
+	}
+	return codes, err
+}
+
+// ActiveLanguagesCacheTTL bounds how long a newly activated language waits
+// before fan-out workers include it.
+const ActiveLanguagesCacheTTL = 5 * time.Minute
+
+type cachedLanguages struct {
+	codes []string
+	at    time.Time
+}
+
+type languagesCache struct {
+	mu      sync.Mutex
+	entries map[TxBeginner]cachedLanguages
+}
+
+var activeLanguagesCache = &languagesCache{entries: map[TxBeginner]cachedLanguages{}}
+
+func cacheable(db TxBeginner) bool {
+	return db != nil && reflect.TypeOf(db).Comparable()
+}
+
+func (c *languagesCache) get(db TxBeginner, now time.Time) ([]string, bool) {
+	if !cacheable(db) {
+		return nil, false
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	entry, ok := c.entries[db]
+	if !ok || now.Sub(entry.at) >= ActiveLanguagesCacheTTL {
+		return nil, false
+	}
+	return append([]string(nil), entry.codes...), true
+}
+
+func (c *languagesCache) put(db TxBeginner, codes []string, now time.Time) {
+	if !cacheable(db) {
+		return
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.entries[db] = cachedLanguages{codes: append([]string(nil), codes...), at: now}
+}
+
+func listActiveLearningLanguageCodes(ctx context.Context, db TxBeginner) ([]string, error) {
 	ctx = sharedDB.WithExpectedFallback(ctx, "pgxsearchpath.list_active_languages")
 	const sql = `
 		SELECT code
