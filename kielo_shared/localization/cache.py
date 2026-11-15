@@ -30,6 +30,7 @@ import asyncio
 import hashlib
 import json
 import logging
+from collections.abc import Callable
 from typing import Any, Protocol
 
 from kielo_shared.localization.provider import LocalizationProvider
@@ -43,6 +44,10 @@ from kielo_shared.localization.types import (
 
 
 logger = logging.getLogger(__name__)
+
+# (item, answer text, source_locale, target_locale) -> whether the answer may be
+# served from and written to the cache.
+AnswerCheck = Callable[[TranslationItem, str, str, str], bool]
 
 
 # Minimal redis-async surface we depend on. `redis.asyncio.Redis` ships
@@ -103,6 +108,12 @@ class RedisCacheDecorator:
         `ttl_sec`; identical short strings (brand names, taught Finnish words)
         are legitimate answers and keep the full TTL.
       key_prefix: optional namespace override (per-deployment isolation).
+      answer_ok: optional check of an answer for its item and locales. A
+        cached answer that fails it is treated as a miss, so the inner chain
+        (and any retry in it) is asked again and its answer replaces the entry;
+        a fresh answer that fails it is returned but not cached. Without it
+        every non-empty answer is cached, as before. A check that raises
+        counts as a pass.
     """
 
     def __init__(
@@ -113,8 +124,10 @@ class RedisCacheDecorator:
         ttl_sec: int = 7 * 24 * 3600,
         echo_ttl_sec: int = 3600,
         key_prefix: str | None = None,
+        answer_ok: AnswerCheck | None = None,
     ) -> None:
         self._inner = inner
+        self._answer_ok = answer_ok
         self._redis = redis
         self._ttl = ttl_sec
         self._echo_ttl = min(echo_ttl_sec, ttl_sec)
@@ -160,7 +173,11 @@ class RedisCacheDecorator:
         miss_items: list[TranslationItem] = []
 
         for i, cached in enumerate(cached_texts):
-            if isinstance(cached, str) and cached:
+            if (
+                isinstance(cached, str)
+                and cached
+                and self._acceptable(items[i], cached, source_locale, target_locale)
+            ):
                 results[i] = TranslationResult(
                     text=cached,
                     provider=self._inner.provider_id,
@@ -202,6 +219,10 @@ class RedisCacheDecorator:
                         continue
                     if not (r.text or "").strip():
                         continue
+                    if not self._acceptable(
+                        items[slot], r.text, source_locale, target_locale
+                    ):
+                        continue
                     to_set.append(
                         (
                             keys[slot],
@@ -220,6 +241,24 @@ class RedisCacheDecorator:
         ]
 
     # ─────────────────────────── helpers ─────────────────────────────────
+
+    def _acceptable(
+        self,
+        item: TranslationItem,
+        text: str,
+        source_locale: str,
+        target_locale: str,
+    ) -> bool:
+        if self._answer_ok is None:
+            return True
+        try:
+            return bool(self._answer_ok(item, text, source_locale, target_locale))
+        except Exception:
+            logger.debug(
+                "RedisCacheDecorator: answer check raised; treating as a pass",
+                exc_info=True,
+            )
+            return True
 
     def _maybe_prefix(self, key: str) -> str:
         return f"{self._prefix}:{key}" if self._prefix else key
