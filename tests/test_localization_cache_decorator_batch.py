@@ -168,3 +168,52 @@ async def test_client_without_mget_or_pipeline_falls_back_to_per_key() -> None:
     assert [r.text for r in await _run(dec, ["a", "b"])] == ["T(a)", "T(b)"]
     out = await _run(dec, ["a", "b"])
     assert [r.cached for r in out] == [True, True]
+
+
+def _not_finnish(item: TranslationItem, text: str, source: str, target: str) -> bool:
+    return not text.startswith("FI:")
+
+
+@pytest.mark.asyncio
+async def test_cached_answer_failing_the_check_is_asked_again_and_replaced() -> None:
+    redis = _CountingRedis({_key("a"): "FI:bad", _key("b"): "good-b"})
+    inner = _Inner()
+    dec = RedisCacheDecorator(inner, redis, ttl_sec=TTL, answer_ok=_not_finnish)
+    out = await _run(dec, ["a", "b"])
+    assert [r.text for r in out] == ["T(a)", "good-b"]
+    assert [r.cached for r in out] == [False, True]
+    assert inner.calls == [["a"]]
+    assert redis.data[_key("a")] == "T(a)"
+
+
+@pytest.mark.asyncio
+async def test_fresh_answer_failing_the_check_is_returned_but_not_cached() -> None:
+    class _FinnishInner(_Inner):
+        async def translate_batch(
+            self, items, *, source_locale, target_locale, idempotency_key=None
+        ):
+            self.calls.append([i.text for i in items])
+            return [
+                TranslationResult(text=f"FI:{i.text}", provider="stub:v1")
+                for i in items
+            ]
+
+    redis = _CountingRedis()
+    dec = RedisCacheDecorator(
+        _FinnishInner(), redis, ttl_sec=TTL, answer_ok=_not_finnish
+    )
+    out = await _run(dec, ["a"])
+    assert [r.text for r in out] == ["FI:a"]
+    assert not redis.data and redis.pipeline_executes == 0
+
+
+@pytest.mark.asyncio
+async def test_a_raising_check_counts_as_a_pass() -> None:
+    def _boom(item: TranslationItem, text: str, source: str, target: str) -> bool:
+        raise ValueError("boom")
+
+    redis = _CountingRedis({_key("a"): "x"})
+    inner = _Inner()
+    out = await _run(RedisCacheDecorator(inner, redis, answer_ok=_boom), ["a", "b"])
+    assert [r.text for r in out] == ["x", "T(b)"]
+    assert inner.calls == [["b"]] and redis.data[_key("b")] == "T(b)"
