@@ -2537,6 +2537,24 @@ type BatchTranslationItem struct {
 	Value            string  `json:"value"`
 }
 
+// Beat defines model for Beat.
+type Beat struct {
+	Available bool       `json:"available"`
+	Done      bool       `json:"done"`
+	Kind      string     `json:"kind"`
+	Locked    bool       `json:"locked"`
+	Minutes   int        `json:"minutes"`
+	Target    BeatTarget `json:"target"`
+}
+
+// BeatTarget defines model for BeatTarget.
+type BeatTarget struct {
+	LessonId   *string  `json:"lesson_id,omitempty"`
+	ScenarioId *string  `json:"scenario_id,omitempty"`
+	VideoId    *string  `json:"video_id,omitempty"`
+	WordIds    []string `json:"word_ids"`
+}
+
 // BehavioralEventCreate Request body for POST /events/behavioral. Distinct type so that
 // the endpoint signature is self-documenting: `user_id` is sourced
 // from the `X-User-ID` header (a different request layer), and is
@@ -4587,28 +4605,30 @@ type ConversationDrillCorrection struct {
 
 // ConversationFocusResponse defines model for ConversationFocusResponse.
 type ConversationFocusResponse struct {
-	Covered      *int      `json:"covered,omitempty"`
-	CoveredTerms *[]string `json:"covered_terms,omitempty"`
-	ExampleForms *[]string `json:"example_forms,omitempty"`
-	ExampleLine  *string   `json:"example_line"`
-	FocusItemIds *[]string `json:"focus_item_ids,omitempty"`
-	FocusTerms   *[]string `json:"focus_terms,omitempty"`
-	OriginId     string    `json:"origin_id"`
-	OriginKind   string    `json:"origin_kind"`
-	ScenarioId   *string   `json:"scenario_id"`
+	Covered       *int      `json:"covered,omitempty"`
+	CoveredTerms  *[]string `json:"covered_terms,omitempty"`
+	ExampleForms  *[]string `json:"example_forms,omitempty"`
+	ExampleLine   *string   `json:"example_line"`
+	FocusItemIds  *[]string `json:"focus_item_ids,omitempty"`
+	FocusTerms    *[]string `json:"focus_terms,omitempty"`
+	OriginId      string    `json:"origin_id"`
+	OriginKind    string    `json:"origin_kind"`
+	ScenarioId    *string   `json:"scenario_id"`
+	ScenarioTitle *string   `json:"scenario_title"`
 }
 
 // ConversationForOrigin defines model for ConversationForOrigin.
 type ConversationForOrigin struct {
-	Covered      int      `json:"covered"`
-	CoveredTerms []string `json:"covered_terms"`
-	ExampleForms []string `json:"example_forms"`
-	ExampleLine  *string  `json:"example_line,omitempty"`
-	FocusItemIds []string `json:"focus_item_ids"`
-	FocusTerms   []string `json:"focus_terms"`
-	OriginId     string   `json:"origin_id"`
-	OriginKind   string   `json:"origin_kind"`
-	ScenarioId   *string  `json:"scenario_id,omitempty"`
+	Covered       int      `json:"covered"`
+	CoveredTerms  []string `json:"covered_terms"`
+	ExampleForms  []string `json:"example_forms"`
+	ExampleLine   *string  `json:"example_line,omitempty"`
+	FocusItemIds  []string `json:"focus_item_ids"`
+	FocusTerms    []string `json:"focus_terms"`
+	OriginId      string   `json:"origin_id"`
+	OriginKind    string   `json:"origin_kind"`
+	ScenarioId    *string  `json:"scenario_id,omitempty"`
+	ScenarioTitle *string  `json:"scenario_title,omitempty"`
 }
 
 // ConversationHistory defines model for ConversationHistory.
@@ -7166,6 +7186,15 @@ type FirstSceneLine struct {
 	Sentence    string             `json:"sentence"`
 }
 
+// FirstSceneVideo defines model for FirstSceneVideo.
+type FirstSceneVideo struct {
+	DurationS int    `json:"duration_s"`
+	LineCount int    `json:"line_count"`
+	Reason    string `json:"reason"`
+	Title     string `json:"title"`
+	VideoId   string `json:"video_id"`
+}
+
 // FirstSentenceSpeechResponse defines model for FirstSentenceSpeechResponse.
 type FirstSentenceSpeechResponse struct {
 	Similarity float32 `json:"similarity"`
@@ -9013,6 +9042,26 @@ type KieloTVPipelineStep struct {
 	Detail *string `json:"detail,omitempty"`
 	Key    string  `json:"key"`
 	State  string  `json:"state"`
+}
+
+// KieloTVPracticeAnswer defines model for KieloTVPracticeAnswer.
+type KieloTVPracticeAnswer struct {
+	AnsweredAt string  `json:"answered_at"`
+	BaseWordId *string `json:"base_word_id,omitempty"`
+	Chosen     string  `json:"chosen"`
+	Correct    bool    `json:"correct"`
+	LineIndex  int     `json:"line_index"`
+	Word       string  `json:"word"`
+}
+
+// KieloTVPracticeAnswersAccepted defines model for KieloTVPracticeAnswersAccepted.
+type KieloTVPracticeAnswersAccepted struct {
+	Accepted int `json:"accepted"`
+}
+
+// KieloTVPracticeAnswersRequest defines model for KieloTVPracticeAnswersRequest.
+type KieloTVPracticeAnswersRequest struct {
+	Answers []KieloTVPracticeAnswer `json:"answers"`
 }
 
 // KieloTVToolboxJobState defines model for KieloTVToolboxJobState.
@@ -11402,6 +11451,15 @@ type OmorfiResponse struct {
 	Paradigm *OmorfiParadigm `json:"paradigm"`
 }
 
+// OnboardingFirstScene defines model for OnboardingFirstScene.
+type OnboardingFirstScene struct {
+	DurationS int    `json:"duration_s"`
+	LineCount int    `json:"line_count"`
+	Reason    string `json:"reason"`
+	Title     string `json:"title"`
+	VideoId   string `json:"video_id"`
+}
+
 // OpSpec defines model for OpSpec.
 type OpSpec struct {
 	Label string `json:"label"`
@@ -11885,6 +11943,32 @@ type PostSummary struct {
 	Title             string     `json:"title"`
 	TranslatedLocales []string   `json:"translated_locales"`
 	UpdatedAt         time.Time  `json:"updated_at"`
+}
+
+// PracticeAnswer defines model for PracticeAnswer.
+type PracticeAnswer struct {
+	AnsweredAt      time.Time `json:"answered_at"`
+	BaseWordId      uuid.UUID `json:"base_word_id"`
+	Chosen          *string   `json:"chosen,omitempty"`
+	ContextSentence *string   `json:"context_sentence,omitempty"`
+	Correct         bool      `json:"correct"`
+	LineIndex       int       `json:"line_index"`
+	Word            string    `json:"word"`
+}
+
+// PracticeAnswersRequest defines model for PracticeAnswersRequest.
+type PracticeAnswersRequest struct {
+	Answers []PracticeAnswer `json:"answers"`
+	VideoId uuid.UUID        `json:"video_id"`
+}
+
+// PracticeAnswersResult defines model for PracticeAnswersResult.
+type PracticeAnswersResult struct {
+	Duplicates *int `json:"duplicates,omitempty"`
+	Failed     *int `json:"failed,omitempty"`
+	Queued     *int `json:"queued,omitempty"`
+	Signalled  *int `json:"signalled,omitempty"`
+	Skipped    *int `json:"skipped,omitempty"`
 }
 
 // PracticeContext defines model for PracticeContext.
@@ -15066,6 +15150,11 @@ type SingletonFeedbackMessageList struct {
 	Data FeedbackMessageList `json:"data"`
 }
 
+// SingletonFirstSceneVideo defines model for SingletonFirstSceneVideo.
+type SingletonFirstSceneVideo struct {
+	Data FirstSceneVideo `json:"data"`
+}
+
 // SingletonForgotPasswordResponse defines model for SingletonForgotPasswordResponse.
 type SingletonForgotPasswordResponse struct {
 	Data ForgotPasswordResponse `json:"data"`
@@ -15661,6 +15750,11 @@ type SingletonOfferCohortResults struct {
 	Data OfferCohortResults `json:"data"`
 }
 
+// SingletonOnboardingFirstScene defines model for SingletonOnboardingFirstScene.
+type SingletonOnboardingFirstScene struct {
+	Data OnboardingFirstScene `json:"data"`
+}
+
 // SingletonParagraphTranslationResponse defines model for SingletonParagraphTranslationResponse.
 type SingletonParagraphTranslationResponse struct {
 	Data ParagraphTranslationResponse `json:"data"`
@@ -16089,6 +16183,16 @@ type SingletonSitePost struct {
 // SingletonSitePostList defines model for SingletonSitePostList.
 type SingletonSitePostList struct {
 	Data SitePostList `json:"data"`
+}
+
+// SingletonSituation defines model for SingletonSituation.
+type SingletonSituation struct {
+	Data Situation `json:"data"`
+}
+
+// SingletonSituationMap defines model for SingletonSituationMap.
+type SingletonSituationMap struct {
+	Data SituationMap `json:"data"`
 }
 
 // SingletonSocialHoldResponse defines model for SingletonSocialHoldResponse.
@@ -16822,6 +16926,120 @@ type SitePostSummary struct {
 // SiteTranslationSweepRequest defines model for SiteTranslationSweepRequest.
 type SiteTranslationSweepRequest struct {
 	Limit *int `json:"limit"`
+}
+
+// Situation defines model for Situation.
+type Situation struct {
+	Beats         []Beat  `json:"beats"`
+	ChapterId     string  `json:"chapter_id"`
+	Done          bool    `json:"done"`
+	Free          bool    `json:"free"`
+	Level         *string `json:"level,omitempty"`
+	LifeArea      string  `json:"life_area"`
+	LifeAreaTitle string  `json:"life_area_title"`
+	NextBeat      *string `json:"next_beat,omitempty"`
+	Title         string  `json:"title"`
+}
+
+// SituationBeatResponse defines model for SituationBeatResponse.
+type SituationBeatResponse struct {
+	Available *bool                        `json:"available,omitempty"`
+	Done      *bool                        `json:"done,omitempty"`
+	Kind      string                       `json:"kind"`
+	Locked    *bool                        `json:"locked,omitempty"`
+	Minutes   *int                         `json:"minutes,omitempty"`
+	Target    *SituationBeatTargetResponse `json:"target,omitempty"`
+}
+
+// SituationBeatTargetResponse defines model for SituationBeatTargetResponse.
+type SituationBeatTargetResponse struct {
+	LessonId   *string   `json:"lesson_id"`
+	ScenarioId *string   `json:"scenario_id"`
+	VideoId    *string   `json:"video_id"`
+	WordIds    *[]string `json:"word_ids,omitempty"`
+}
+
+// SituationMap defines model for SituationMap.
+type SituationMap struct {
+	Done   int                 `json:"done"`
+	Groups []SituationMapGroup `json:"groups"`
+	Total  int                 `json:"total"`
+}
+
+// SituationMapGroup defines model for SituationMapGroup.
+type SituationMapGroup struct {
+	Done     int                 `json:"done"`
+	Levels   []SituationMapLevel `json:"levels"`
+	LifeArea string              `json:"life_area"`
+	Title    string              `json:"title"`
+	Total    int                 `json:"total"`
+}
+
+// SituationMapGroupResponse defines model for SituationMapGroupResponse.
+type SituationMapGroupResponse struct {
+	Done     *int                         `json:"done,omitempty"`
+	Levels   *[]SituationMapLevelResponse `json:"levels,omitempty"`
+	LifeArea string                       `json:"life_area"`
+	Title    string                       `json:"title"`
+	Total    *int                         `json:"total,omitempty"`
+}
+
+// SituationMapLevel defines model for SituationMapLevel.
+type SituationMapLevel struct {
+	Done       int                `json:"done"`
+	Level      *string            `json:"level,omitempty"`
+	Situations []SituationSummary `json:"situations"`
+	Total      int                `json:"total"`
+}
+
+// SituationMapLevelResponse defines model for SituationMapLevelResponse.
+type SituationMapLevelResponse struct {
+	Done       *int                        `json:"done,omitempty"`
+	Level      *string                     `json:"level"`
+	Situations *[]SituationSummaryResponse `json:"situations,omitempty"`
+	Total      *int                        `json:"total,omitempty"`
+}
+
+// SituationMapResponse defines model for SituationMapResponse.
+type SituationMapResponse struct {
+	Done   *int                         `json:"done,omitempty"`
+	Groups *[]SituationMapGroupResponse `json:"groups,omitempty"`
+	Total  *int                         `json:"total,omitempty"`
+}
+
+// SituationResponse defines model for SituationResponse.
+type SituationResponse struct {
+	Beats         *[]SituationBeatResponse `json:"beats,omitempty"`
+	ChapterId     string                   `json:"chapter_id"`
+	Done          *bool                    `json:"done,omitempty"`
+	Free          *bool                    `json:"free,omitempty"`
+	Level         *string                  `json:"level"`
+	LifeArea      string                   `json:"life_area"`
+	LifeAreaTitle string                   `json:"life_area_title"`
+	NextBeat      *string                  `json:"next_beat"`
+	Title         string                   `json:"title"`
+}
+
+// SituationSummary defines model for SituationSummary.
+type SituationSummary struct {
+	BeatsDone map[string]bool `json:"beats_done"`
+	ChapterId string          `json:"chapter_id"`
+	Current   bool            `json:"current"`
+	Done      bool            `json:"done"`
+	Free      bool            `json:"free"`
+	Level     *string         `json:"level,omitempty"`
+	Title     string          `json:"title"`
+}
+
+// SituationSummaryResponse defines model for SituationSummaryResponse.
+type SituationSummaryResponse struct {
+	BeatsDone *map[string]bool `json:"beats_done,omitempty"`
+	ChapterId string           `json:"chapter_id"`
+	Current   *bool            `json:"current,omitempty"`
+	Done      *bool            `json:"done,omitempty"`
+	Free      *bool            `json:"free,omitempty"`
+	Level     *string          `json:"level"`
+	Title     string           `json:"title"`
 }
 
 // SocialChannel defines model for SocialChannel.
@@ -19648,10 +19866,13 @@ type UserProfile struct {
 
 	// OnboardingCompletedAt When setup finished. Sent as null when the account still owes setup, and always present on servers that know the field, so an absent key means an older server. (Plain string, not a [string, null] type array: the Go SDK generator cannot resolve type arrays.)
 	OnboardingCompletedAt *time.Time `json:"onboarding_completed_at,omitempty"`
-	OnboardingVariant     *string    `json:"onboarding_variant,omitempty"`
-	ReminderHour          *int       `json:"reminder_hour,omitempty"`
-	StreakGraceUsedOn     *string    `json:"streak_grace_used_on,omitempty"`
-	SupportLanguageCode   *string    `json:"support_language_code,omitempty"`
+
+	// OnboardingFirstExperience Arm of the first-experience test: scene or control. Server-assigned, sticky per learner; control for everyone while the test is off.
+	OnboardingFirstExperience *string `json:"onboarding_first_experience,omitempty"`
+	OnboardingVariant         *string `json:"onboarding_variant,omitempty"`
+	ReminderHour              *int    `json:"reminder_hour,omitempty"`
+	StreakGraceUsedOn         *string `json:"streak_grace_used_on,omitempty"`
+	SupportLanguageCode       *string `json:"support_language_code,omitempty"`
 
 	// SupportLanguageSource Sweep VVV: write-source classifier for users.users.support_language_code. 8 canonical values.
 	SupportLanguageSource *UserProfileSupportLanguageSource `json:"support_language_source,omitempty"`
@@ -19700,11 +19921,14 @@ type UserProfileUserService struct {
 	Name                  *string    `json:"name,omitempty"`
 	NewsletterConsent     *bool      `json:"newsletter_consent,omitempty"`
 	OnboardingCompletedAt *time.Time `json:"onboarding_completed_at,omitempty"`
-	OnboardingVariant     *string    `json:"onboarding_variant,omitempty"`
-	ReminderHour          *int       `json:"reminder_hour,omitempty"`
-	StreakGraceUsedOn     *time.Time `json:"streak_grace_used_on,omitempty"`
-	SupportLanguageCode   *string    `json:"support_language_code,omitempty"`
-	SupportLanguageSource *string    `json:"support_language_source,omitempty"`
+
+	// OnboardingFirstExperience Arm of the first-experience test: scene or control. Server-assigned, sticky per learner; control for everyone while the test is off.
+	OnboardingFirstExperience *string    `json:"onboarding_first_experience,omitempty"`
+	OnboardingVariant         *string    `json:"onboarding_variant,omitempty"`
+	ReminderHour              *int       `json:"reminder_hour,omitempty"`
+	StreakGraceUsedOn         *time.Time `json:"streak_grace_used_on,omitempty"`
+	SupportLanguageCode       *string    `json:"support_language_code,omitempty"`
+	SupportLanguageSource     *string    `json:"support_language_source,omitempty"`
 }
 
 // UserProgress defines model for UserProgress.
@@ -21362,6 +21586,12 @@ type GetApiV3KielotvParams struct {
 	Status *string `form:"status,omitempty" json:"status,omitempty"`
 }
 
+// GetApiV3KielotvFirstSceneParams defines parameters for GetApiV3KielotvFirstScene.
+type GetApiV3KielotvFirstSceneParams struct {
+	// SupportLanguageCode Localization target
+	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
+}
+
 // GetApiV3KielotvRecommendationsParams defines parameters for GetApiV3KielotvRecommendations.
 type GetApiV3KielotvRecommendationsParams struct {
 	// FormatType Filter recommendations by KieloTV format type.
@@ -21801,6 +22031,9 @@ type GetApiV3MeDailyChallengeParams struct {
 
 	// LearningLanguageCode Two-letter ISO 639-1 code for the language being learned (per ADR-006 §3.83).
 	LearningLanguageCode *string `form:"learning_language_code,omitempty" json:"learning_language_code,omitempty"`
+
+	// SceneVideoId Session one built from this KieloTV scene (onboarding first-scene arm)
+	SceneVideoId *string `form:"scene_video_id,omitempty" json:"scene_video_id,omitempty"`
 }
 
 // GetApiV3MeInAppNudgesParams defines parameters for GetApiV3MeInAppNudges.
@@ -22064,6 +22297,18 @@ type GetApiV3MeSavedItemsDashboardParams struct {
 	Include *string `form:"include,omitempty" json:"include,omitempty"`
 }
 
+// GetApiV3MeSituationsParams defines parameters for GetApiV3MeSituations.
+type GetApiV3MeSituationsParams struct {
+	// SupportLanguageCode Two-letter ISO 639-1 code for translated UI strings (per ADR-006 §3.83).
+	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
+}
+
+// GetApiV3MeSituationsCurrentParams defines parameters for GetApiV3MeSituationsCurrent.
+type GetApiV3MeSituationsCurrentParams struct {
+	// SupportLanguageCode Two-letter ISO 639-1 code for translated UI strings (per ADR-006 §3.83).
+	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
+}
+
 // GetApiV3MeStudyListsParams defines parameters for GetApiV3MeStudyLists.
 type GetApiV3MeStudyListsParams struct {
 	// ContainsWordId Optional UUID of a base word; lists carry a contains_word flag
@@ -22137,6 +22382,15 @@ type PostApiV3NotificationsParams struct {
 type PostApiV3NotificationsBroadcastParams struct {
 	// IdempotencyKey Stable semantic key reused when retrying the same operator action.
 	IdempotencyKey string `json:"Idempotency-Key"`
+}
+
+// GetApiV3OnboardingFirstSceneParams defines parameters for GetApiV3OnboardingFirstScene.
+type GetApiV3OnboardingFirstSceneParams struct {
+	// SupportLanguageCode Two-letter ISO 639-1 code for translated UI strings (per ADR-006 §3.83).
+	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
+
+	// LearningLanguageCode Two-letter ISO 639-1 code for the language being learned (per ADR-006 §3.83).
+	LearningLanguageCode *string `form:"learning_language_code,omitempty" json:"learning_language_code,omitempty"`
 }
 
 // GetApiV3PlacementItemsParams defines parameters for GetApiV3PlacementItems.
@@ -23805,6 +24059,16 @@ type StartWordClusterSessionKlearnApiV3SessionsWordClusterPostParams struct {
 // CreateReviewMissesSessionKlearnApiV3SessionsSessionIdReviewMissesPostJSONBody defines parameters for CreateReviewMissesSessionKlearnApiV3SessionsSessionIdReviewMissesPost.
 type CreateReviewMissesSessionKlearnApiV3SessionsSessionIdReviewMissesPostJSONBody = ReviewMissesRequest
 
+// GetSituationMapKlearnApiV3SituationsGetParams defines parameters for GetSituationMapKlearnApiV3SituationsGet.
+type GetSituationMapKlearnApiV3SituationsGetParams struct {
+	UserId uuid.UUID `form:"user_id" json:"user_id"`
+}
+
+// GetCurrentSituationKlearnApiV3SituationsCurrentGetParams defines parameters for GetCurrentSituationKlearnApiV3SituationsCurrentGet.
+type GetCurrentSituationKlearnApiV3SituationsCurrentGetParams struct {
+	UserId uuid.UUID `form:"user_id" json:"user_id"`
+}
+
 // GetContextualMicroDrillKlearnApiV3SuggestionsContextualMicroDrillGetParams defines parameters for GetContextualMicroDrillKlearnApiV3SuggestionsContextualMicroDrillGet.
 type GetContextualMicroDrillKlearnApiV3SuggestionsContextualMicroDrillGetParams struct {
 	// UserId The ID of the user
@@ -24307,6 +24571,9 @@ type PatchApiV3JourneysIdJSONRequestBody = JourneyRequest
 
 // PostApiV3KielotvJSONRequestBody defines body for PostApiV3Kielotv for application/json ContentType.
 type PostApiV3KielotvJSONRequestBody = KieloTVVideoUpsertRequest
+
+// PostApiV3KielotvVideosVideoIdPracticeAnswersJSONRequestBody defines body for PostApiV3KielotvVideosVideoIdPracticeAnswers for application/json ContentType.
+type PostApiV3KielotvVideosVideoIdPracticeAnswersJSONRequestBody = KieloTVPracticeAnswersRequest
 
 // PatchApiV3KielotvVideoIdJSONRequestBody defines body for PatchApiV3KielotvVideoId for application/json ContentType.
 type PatchApiV3KielotvVideoIdJSONRequestBody = KieloTVVideoUpsertRequest
@@ -25048,6 +25315,9 @@ type UpdateGrammarConceptScheduleInternalKlearnUsersUserIdGrammarConceptGrammarC
 
 // UpdateItemLearningStatusInternalKlearnUsersUserIdItemsItemTypeItemIdLearningStatusPostJSONRequestBody defines body for UpdateItemLearningStatusInternalKlearnUsersUserIdItemsItemTypeItemIdLearningStatusPost for application/json ContentType.
 type UpdateItemLearningStatusInternalKlearnUsersUserIdItemsItemTypeItemIdLearningStatusPostJSONRequestBody = LearningStatusUpdateRequest
+
+// PostPracticeAnswersInternalKlearnUsersUserIdKielotvPracticeAnswersPostJSONRequestBody defines body for PostPracticeAnswersInternalKlearnUsersUserIdKielotvPracticeAnswersPost for application/json ContentType.
+type PostPracticeAnswersInternalKlearnUsersUserIdKielotvPracticeAnswersPostJSONRequestBody = PracticeAnswersRequest
 
 // UpdateUserProgressInternalKlearnUsersUserIdProgressPostJSONRequestBody defines body for UpdateUserProgressInternalKlearnUsersUserIdProgressPost for application/json ContentType.
 type UpdateUserProgressInternalKlearnUsersUserIdProgressPostJSONRequestBody UpdateUserProgressInternalKlearnUsersUserIdProgressPostJSONBody

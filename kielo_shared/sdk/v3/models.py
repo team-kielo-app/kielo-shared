@@ -1060,6 +1060,13 @@ class BatchTranslationItem(BaseModel):
     value: str
 
 
+class BeatTarget(BaseModel):
+    lesson_id: str | None = None
+    scenario_id: str | None = None
+    video_id: str | None = None
+    word_ids: list[str]
+
+
 class BehavioralEventCreate(BaseModel):
     event_type: str = Field(..., title="Event Type")
     item_id: str | None = Field(None, title="Item Id")
@@ -2411,6 +2418,7 @@ class ConversationFocusResponse(BaseModel):
     origin_id: str = Field(..., title="Origin Id")
     origin_kind: str = Field(..., title="Origin Kind")
     scenario_id: str | None = Field(None, title="Scenario Id")
+    scenario_title: str | None = Field(None, title="Scenario Title")
 
 
 class ConversationForOrigin(BaseModel):
@@ -2423,6 +2431,7 @@ class ConversationForOrigin(BaseModel):
     origin_id: str
     origin_kind: str
     scenario_id: str | None = None
+    scenario_title: str | None = None
 
 
 class ConversationHistory(BaseModel):
@@ -4062,6 +4071,14 @@ class FirstSceneLine(BaseModel):
     sentence: str
 
 
+class FirstSceneVideo(BaseModel):
+    duration_s: int
+    line_count: int
+    reason: str
+    title: str
+    video_id: str
+
+
 class FirstSentenceSpeechResponse(BaseModel):
     similarity: float = Field(..., title="Similarity")
     transcript: str = Field(..., title="Transcript")
@@ -5336,6 +5353,23 @@ class KieloTVPipelineStep(BaseModel):
     detail: str | None = None
     key: str
     state: str
+
+
+class KieloTVPracticeAnswer(BaseModel):
+    answered_at: str
+    base_word_id: str | None = None
+    chosen: str
+    correct: bool
+    line_index: int
+    word: str
+
+
+class KieloTVPracticeAnswersAccepted(BaseModel):
+    accepted: int
+
+
+class KieloTVPracticeAnswersRequest(BaseModel):
+    answers: list[KieloTVPracticeAnswer]
 
 
 class KieloTVToolboxJobState(BaseModel):
@@ -7093,6 +7127,10 @@ class OmorfiParadigmRow(BaseModel):
     label: str = Field(..., title="Label")
 
 
+class OnboardingFirstScene(FirstSceneVideo):
+    pass
+
+
 class OpSpec(BaseModel):
     label: str
     op: str
@@ -7476,6 +7514,33 @@ class PostSummary(BaseModel):
     title: str
     translated_locales: list[str]
     updated_at: AwareDatetime
+
+
+class PracticeAnswer(BaseModel):
+    answered_at: AwareDatetime = Field(..., title="Answered At")
+    base_word_id: UUID_aliased = Field(..., title="Base Word Id")
+    chosen: constr(max_length=100) | None = Field("", title="Chosen")
+    context_sentence: constr(max_length=600) | None = Field(
+        "", title="Context Sentence"
+    )
+    correct: bool = Field(..., title="Correct")
+    line_index: conint(ge=0) = Field(..., title="Line Index")
+    word: constr(min_length=1, max_length=100) = Field(..., title="Word")
+
+
+class PracticeAnswersRequest(BaseModel):
+    answers: list[PracticeAnswer] = Field(
+        ..., max_length=50, min_length=1, title="Answers"
+    )
+    video_id: UUID_aliased = Field(..., title="Video Id")
+
+
+class PracticeAnswersResult(BaseModel):
+    duplicates: int | None = Field(0, title="Duplicates")
+    failed: int | None = Field(0, title="Failed")
+    queued: int | None = Field(0, title="Queued")
+    signalled: int | None = Field(0, title="Signalled")
+    skipped: int | None = Field(0, title="Skipped")
 
 
 class PracticeContext(BaseModel):
@@ -9660,6 +9725,10 @@ class SingletonFeedbackListResponse(BaseModel):
     data: FeedbackListResponse
 
 
+class SingletonFirstSceneVideo(BaseModel):
+    data: FirstSceneVideo
+
+
 class SingletonForgotPasswordResponse(BaseModel):
     data: ForgotPasswordResponse
 
@@ -9994,6 +10063,10 @@ class SingletonOfferCohortChangeList(BaseModel):
 
 class SingletonOfferCohortList(BaseModel):
     data: OfferCohortList
+
+
+class SingletonOnboardingFirstScene(BaseModel):
+    data: OnboardingFirstScene
 
 
 class SingletonPartner(BaseModel):
@@ -10376,6 +10449,33 @@ class SitePostSummary(BaseModel):
 
 class SiteTranslationSweepRequest(BaseModel):
     limit: conint(ge=0, le=500) | None = Field(None, title="Limit")
+
+
+class SituationBeatTargetResponse(BaseModel):
+    lesson_id: str | None = Field(None, title="Lesson Id")
+    scenario_id: str | None = Field(None, title="Scenario Id")
+    video_id: str | None = Field(None, title="Video Id")
+    word_ids: list[str] | None = Field(None, title="Word Ids")
+
+
+class SituationSummary(BaseModel):
+    beats_done: dict[str, bool]
+    chapter_id: str
+    current: bool
+    done: bool
+    free: bool
+    level: str | None = None
+    title: str
+
+
+class SituationSummaryResponse(BaseModel):
+    beats_done: dict[str, bool] | None = Field(None, title="Beats Done")
+    chapter_id: str = Field(..., title="Chapter Id")
+    current: bool | None = Field(False, title="Current")
+    done: bool | None = Field(False, title="Done")
+    free: bool | None = Field(True, title="Free")
+    level: str | None = Field(None, title="Level")
+    title: str = Field(..., title="Title")
 
 
 class SocialChannel(BaseModel):
@@ -12460,6 +12560,10 @@ class UserProfileUserService(BaseModel):
     name: str | None = None
     newsletter_consent: bool | None = None
     onboarding_completed_at: AwareDatetime | None = None
+    onboarding_first_experience: str | None = Field(
+        None,
+        description="Arm of the first-experience test: scene or control. Server-assigned, sticky per learner; control for everyone while the test is off.",
+    )
     onboarding_variant: str | None = None
     reminder_hour: int | None = None
     streak_grace_used_on: AwareDatetime | None = None
@@ -13098,6 +13202,15 @@ class BatchSaveTranslationsRequest(BaseModel):
 
 class BatchScheduleUpdateRequest(BaseModel):
     updates: list[ScheduleUpdateItem] = Field(..., title="Updates")
+
+
+class Beat(BaseModel):
+    available: bool
+    done: bool
+    kind: str
+    locked: bool
+    minutes: int
+    target: BeatTarget
 
 
 class BrowseScenariosResponse(BaseModel):
@@ -15525,6 +15638,53 @@ class SitePostList(BaseModel):
     total: int
 
 
+class Situation(BaseModel):
+    beats: list[Beat]
+    chapter_id: str
+    done: bool
+    free: bool
+    level: str | None = None
+    life_area: str
+    life_area_title: str
+    next_beat: str | None = None
+    title: str
+
+
+class SituationBeatResponse(BaseModel):
+    available: bool | None = Field(True, title="Available")
+    done: bool | None = Field(False, title="Done")
+    kind: str = Field(..., title="Kind")
+    locked: bool | None = Field(False, title="Locked")
+    minutes: int | None = Field(1, title="Minutes")
+    target: SituationBeatTargetResponse | None = None
+
+
+class SituationMapLevel(BaseModel):
+    done: int
+    level: str | None = None
+    situations: list[SituationSummary]
+    total: int
+
+
+class SituationMapLevelResponse(BaseModel):
+    done: int | None = Field(0, title="Done")
+    level: str | None = Field(None, title="Level")
+    situations: list[SituationSummaryResponse] | None = Field(None, title="Situations")
+    total: int | None = Field(0, title="Total")
+
+
+class SituationResponse(BaseModel):
+    beats: list[SituationBeatResponse] | None = Field(None, title="Beats")
+    chapter_id: str = Field(..., title="Chapter Id")
+    done: bool | None = Field(False, title="Done")
+    free: bool | None = Field(True, title="Free")
+    level: str | None = Field(None, title="Level")
+    life_area: str = Field(..., title="Life Area")
+    life_area_title: str = Field(..., title="Life Area Title")
+    next_beat: str | None = Field(None, title="Next Beat")
+    title: str = Field(..., title="Title")
+
+
 class SocialPost(BaseModel):
     audio_media_id: UUID_aliased | None = None
     audio_url: str
@@ -16001,6 +16161,10 @@ class UserProfile(BaseModel):
     onboarding_completed_at: AwareDatetime | None = Field(
         None,
         description="When setup finished. Sent as null when the account still owes setup, and always present on servers that know the field, so an absent key means an older server. (Plain string, not a [string, null] type array: the Go SDK generator cannot resolve type arrays.)",
+    )
+    onboarding_first_experience: str | None = Field(
+        None,
+        description="Arm of the first-experience test: scene or control. Server-assigned, sticky per learner; control for everyone while the test is off.",
     )
     onboarding_variant: str | None = None
     reminder_hour: int | None = None
@@ -16748,6 +16912,10 @@ class SingletonSitePostList(BaseModel):
     data: SitePostList
 
 
+class SingletonSituation(BaseModel):
+    data: Situation
+
+
 class SingletonSocialPost(BaseModel):
     data: SocialPost
 
@@ -16850,6 +17018,28 @@ class SingletonWebIngestRun(BaseModel):
 
 class SingletonWebIngestRunList(BaseModel):
     data: list[WebIngestRun]
+
+
+class SituationMapGroup(BaseModel):
+    done: int
+    levels: list[SituationMapLevel]
+    life_area: str
+    title: str
+    total: int
+
+
+class SituationMapGroupResponse(BaseModel):
+    done: int | None = Field(0, title="Done")
+    levels: list[SituationMapLevelResponse] | None = Field(None, title="Levels")
+    life_area: str = Field(..., title="Life Area")
+    title: str = Field(..., title="Title")
+    total: int | None = Field(0, title="Total")
+
+
+class SituationMapResponse(BaseModel):
+    done: int | None = Field(0, title="Done")
+    groups: list[SituationMapGroupResponse] | None = Field(None, title="Groups")
+    total: int | None = Field(0, title="Total")
 
 
 class Template(BaseModel):
@@ -17021,6 +17211,16 @@ class SingletonJourneyTemplatesResponse(BaseModel):
 
 class SingletonKTVStudioLibrary(BaseModel):
     data: KTVStudioLibrary
+
+
+class SituationMap(BaseModel):
+    done: int
+    groups: list[SituationMapGroup]
+    total: int
+
+
+class SingletonSituationMap(BaseModel):
+    data: SituationMap
 
 
 EmailCopy.model_rebuild()
