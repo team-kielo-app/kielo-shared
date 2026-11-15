@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -197,4 +198,63 @@ func TestListActiveLearningLanguageCodes_PropagatesScanError(t *testing.T) {
 	codes, err := ListActiveLearningLanguageCodes(context.Background(), beginner)
 	assert.Nil(t, codes)
 	assert.ErrorIs(t, err, scanErr)
+}
+
+func TestListActiveLearningLanguageCodes_SecondCallIsServedFromCache(t *testing.T) {
+	rows := &stubRows{codes: []string{"fi", "sv"}}
+	beginner := &listLanguagesBeginner{tx: &queryingTx{rows: rows}}
+
+	first, err := ListActiveLearningLanguageCodes(context.Background(), beginner)
+	require.NoError(t, err)
+	first[0] = "mutated"
+	second, err := ListActiveLearningLanguageCodes(context.Background(), beginner)
+	require.NoError(t, err)
+
+	assert.Equal(t, []string{"fi", "sv"}, second, "callers cannot change the cached slice")
+	assert.Equal(t, 1, beginner.calls, "the second call opens no transaction")
+}
+
+func TestListActiveLearningLanguageCodes_ErrorIsNotCached(t *testing.T) {
+	beginner := &listLanguagesBeginner{beginErr: errors.New("pool exhausted")}
+	_, err := ListActiveLearningLanguageCodes(context.Background(), beginner)
+	require.Error(t, err)
+
+	beginner.beginErr = nil
+	beginner.tx = &queryingTx{rows: &stubRows{codes: []string{"fi"}}}
+	codes, err := ListActiveLearningLanguageCodes(context.Background(), beginner)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"fi"}, codes)
+	assert.Equal(t, 2, beginner.calls)
+}
+
+func TestLanguagesCache_ExpiresAfterTTL(t *testing.T) {
+	cache := &languagesCache{entries: map[TxBeginner]cachedLanguages{}}
+	db := &listLanguagesBeginner{}
+	start := time.Now()
+	cache.put(db, []string{"fi"}, start)
+
+	_, fresh := cache.get(db, start.Add(ActiveLanguagesCacheTTL-time.Second))
+	_, stale := cache.get(db, start.Add(ActiveLanguagesCacheTTL))
+	assert.True(t, fresh)
+	assert.False(t, stale)
+}
+
+func TestLanguagesCache_KeyedPerPool(t *testing.T) {
+	cache := &languagesCache{entries: map[TxBeginner]cachedLanguages{}}
+	now := time.Now()
+	cache.put(&listLanguagesBeginner{}, []string{"fi"}, now)
+
+	_, hit := cache.get(&listLanguagesBeginner{}, now)
+	assert.False(t, hit, "another pool does not see this pool's list")
+}
+
+func TestListActiveLearningLanguageCodes_EmptyListIsNotCached(t *testing.T) {
+	beginner := &listLanguagesBeginner{tx: &queryingTx{rows: &stubRows{}}}
+	_, err := ListActiveLearningLanguageCodes(context.Background(), beginner)
+	require.NoError(t, err)
+
+	beginner.tx = &queryingTx{rows: &stubRows{codes: []string{"sv"}}}
+	codes, err := ListActiveLearningLanguageCodes(context.Background(), beginner)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"sv"}, codes)
 }
