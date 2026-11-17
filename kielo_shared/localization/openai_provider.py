@@ -201,6 +201,7 @@ _TITLE_RULE = (
 # course, so the model took the course language for the output language. The
 # output language is now stated outright, and the course language is named as
 # the one language the answer must never be in unless it is the target.
+# uu-bias-exempt: names both course languages so neither is taken as the output; no Finnish default.
 _TARGET_RULE = (
     "OUTPUT LANGUAGE: write every translation in {lang} and nothing else. "
     "The text comes from a course that teaches Finnish or Swedish; that "

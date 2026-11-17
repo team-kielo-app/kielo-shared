@@ -2453,6 +2453,7 @@ type BaseWordReviewResult struct {
 	MeaningLockedAt   *time.Time `json:"meaning_locked_at,omitempty"`
 	MeaningSource     *string    `json:"meaning_source,omitempty"`
 	Notes             *string    `json:"notes,omitempty"`
+	PartOfSpeech      *string    `json:"part_of_speech,omitempty"`
 	RetireReason      *string    `json:"retire_reason,omitempty"`
 	RetiredAt         *time.Time `json:"retired_at,omitempty"`
 	Status            string     `json:"status"`
@@ -7169,6 +7170,12 @@ type FillInTheBlankExerciseSourceType string
 // FindBySourceResponse defines model for FindBySourceResponse.
 type FindBySourceResponse struct {
 	Scenarios []Scenario `json:"scenarios"`
+}
+
+// FinishReaderRequest defines model for FinishReaderRequest.
+type FinishReaderRequest struct {
+	Score int `json:"score"`
+	Total int `json:"total"`
 }
 
 // FirstScene defines model for FirstScene.
@@ -12386,6 +12393,121 @@ type ReadArticleIDs struct {
 	Reads []ArticleReadTime `json:"reads"`
 }
 
+// ReaderCollection defines model for ReaderCollection.
+type ReaderCollection struct {
+	Cover         *ReaderCover `json:"cover,omitempty"`
+	DescriptionEn string       `json:"description_en"`
+	Id            uuid.UUID    `json:"id"`
+	Items         []ReaderItem `json:"items"`
+	Level         string       `json:"level"`
+	Position      int          `json:"position"`
+	Slug          string       `json:"slug"`
+	Title         string       `json:"title"`
+	TitleEn       string       `json:"title_en"`
+}
+
+// ReaderCollectionsResponse defines model for ReaderCollectionsResponse.
+type ReaderCollectionsResponse struct {
+	Collections []ReaderCollection `json:"collections"`
+}
+
+// ReaderCover defines model for ReaderCover.
+type ReaderCover struct {
+	CreatedAt        time.Time          `json:"created_at"`
+	MediaId          uuid.UUID          `json:"media_id"`
+	MediaType        string             `json:"media_type"`
+	Metadata         *interface{}       `json:"metadata,omitempty"`
+	ProcessingStatus string             `json:"processing_status"`
+	ServeBaseUrl     *string            `json:"serve_base_url,omitempty"`
+	TemporaryUrl     *string            `json:"temporary_url,omitempty"`
+	UpdatedAt        time.Time          `json:"updated_at"`
+	VariantUrls      *map[string]string `json:"variant_urls,omitempty"`
+	Variants         *interface{}       `json:"variants,omitempty"`
+}
+
+// ReaderGlossaryEntry defines model for ReaderGlossaryEntry.
+type ReaderGlossaryEntry struct {
+	Base      string  `json:"base"`
+	Form      string  `json:"form"`
+	MeaningEn string  `json:"meaning_en"`
+	Note      *string `json:"note,omitempty"`
+	Pos       *string `json:"pos,omitempty"`
+}
+
+// ReaderItem defines model for ReaderItem.
+type ReaderItem struct {
+	ArticleVersionId uuid.UUID    `json:"article_version_id"`
+	ContentEntryId   uuid.UUID    `json:"content_entry_id"`
+	Cover            *ReaderCover `json:"cover,omitempty"`
+	Level            string       `json:"level"`
+	Minutes          int          `json:"minutes"`
+	Position         int          `json:"position"`
+	Title            string       `json:"title"`
+	TitleEn          string       `json:"title_en"`
+}
+
+// ReaderProgress defines model for ReaderProgress.
+type ReaderProgress struct {
+	ContentEntryId       uuid.UUID `json:"content_entry_id"`
+	FinishedAt           time.Time `json:"finished_at"`
+	LearningLanguageCode string    `json:"learning_language_code"`
+	Score                int       `json:"score"`
+	Total                int       `json:"total"`
+}
+
+// ReaderProgressResponse defines model for ReaderProgressResponse.
+type ReaderProgressResponse struct {
+	Items []ReaderProgress `json:"items"`
+}
+
+// ReaderQuestion defines model for ReaderQuestion.
+type ReaderQuestion struct {
+	Answer  interface{} `json:"answer"`
+	Options []string    `json:"options"`
+	Q       string      `json:"q"`
+	QEn     *string     `json:"q_en,omitempty"`
+	WhyEn   *string     `json:"why_en,omitempty"`
+}
+
+// ReaderText defines model for ReaderText.
+type ReaderText struct {
+	ArticleVersionId uuid.UUID             `json:"article_version_id"`
+	Collection       *ReaderTextCollection `json:"collection,omitempty"`
+	ContentEntryId   uuid.UUID             `json:"content_entry_id"`
+	Cover            *ReaderCover          `json:"cover,omitempty"`
+	Glossary         []ReaderGlossaryEntry `json:"glossary"`
+	Level            string                `json:"level"`
+	Minutes          int                   `json:"minutes"`
+	Next             *ReaderTextNext       `json:"next,omitempty"`
+	Paragraphs       []ReaderTextParagraph `json:"paragraphs"`
+	Questions        []ReaderQuestion      `json:"questions"`
+	SummaryEn        string                `json:"summary_en"`
+	Title            string                `json:"title"`
+	TitleEn          string                `json:"title_en"`
+}
+
+// ReaderTextCollection defines model for ReaderTextCollection.
+type ReaderTextCollection struct {
+	Position int    `json:"position"`
+	Slug     string `json:"slug"`
+	Title    string `json:"title"`
+	Total    int    `json:"total"`
+}
+
+// ReaderTextNext defines model for ReaderTextNext.
+type ReaderTextNext struct {
+	ContentEntryId uuid.UUID    `json:"content_entry_id"`
+	Cover          *ReaderCover `json:"cover,omitempty"`
+	Title          string       `json:"title"`
+	TitleEn        string       `json:"title_en"`
+}
+
+// ReaderTextParagraph defines model for ReaderTextParagraph.
+type ReaderTextParagraph struct {
+	Index int    `json:"index"`
+	Text  string `json:"text"`
+}
+
 // ReadinessResponse defines model for ReadinessResponse.
 type ReadinessResponse struct {
 	Models string `json:"models"`
@@ -13130,6 +13252,7 @@ type ReviewBaseWordRequest struct {
 	Locked        *bool   `json:"locked,omitempty"`
 	Meaning       *string `json:"meaning,omitempty"`
 	Notes         *string `json:"notes,omitempty"`
+	PartOfSpeech  *string `json:"part_of_speech,omitempty"`
 	Reason        *string `json:"reason,omitempty"`
 }
 
@@ -15888,6 +16011,31 @@ type SingletonQueueStatus struct {
 // SingletonReadArticleIDs defines model for SingletonReadArticleIDs.
 type SingletonReadArticleIDs struct {
 	Data ReadArticleIDs `json:"data"`
+}
+
+// SingletonReaderCollection defines model for SingletonReaderCollection.
+type SingletonReaderCollection struct {
+	Data ReaderCollection `json:"data"`
+}
+
+// SingletonReaderCollectionsResponse defines model for SingletonReaderCollectionsResponse.
+type SingletonReaderCollectionsResponse struct {
+	Data ReaderCollectionsResponse `json:"data"`
+}
+
+// SingletonReaderProgress defines model for SingletonReaderProgress.
+type SingletonReaderProgress struct {
+	Data ReaderProgress `json:"data"`
+}
+
+// SingletonReaderProgressResponse defines model for SingletonReaderProgressResponse.
+type SingletonReaderProgressResponse struct {
+	Data ReaderProgressResponse `json:"data"`
+}
+
+// SingletonReaderText defines model for SingletonReaderText.
+type SingletonReaderText struct {
+	Data ReaderText `json:"data"`
 }
 
 // SingletonRecapV3 defines model for SingletonRecapV3.
@@ -22444,6 +22592,24 @@ type GetApiV3PushFilterRecentlyBlockedParams struct {
 	Days *int `form:"days,omitempty" json:"days,omitempty"`
 }
 
+// GetApiV3ReadersCollectionsParams defines parameters for GetApiV3ReadersCollections.
+type GetApiV3ReadersCollectionsParams struct {
+	// LearningLanguageCode Two-letter ISO 639-1 code for the language being learned (per ADR-006 §3.83).
+	LearningLanguageCode *string `form:"learning_language_code,omitempty" json:"learning_language_code,omitempty"`
+}
+
+// GetApiV3ReadersCollectionsSlugParams defines parameters for GetApiV3ReadersCollectionsSlug.
+type GetApiV3ReadersCollectionsSlugParams struct {
+	// LearningLanguageCode Two-letter ISO 639-1 code for the language being learned (per ADR-006 §3.83).
+	LearningLanguageCode *string `form:"learning_language_code,omitempty" json:"learning_language_code,omitempty"`
+}
+
+// GetApiV3ReadersTextsContentEntryIdParams defines parameters for GetApiV3ReadersTextsContentEntryId.
+type GetApiV3ReadersTextsContentEntryIdParams struct {
+	// LearningLanguageCode Two-letter ISO 639-1 code for the language being learned (per ADR-006 §3.83).
+	LearningLanguageCode *string `form:"learning_language_code,omitempty" json:"learning_language_code,omitempty"`
+}
+
 // GetApiV3RecommendationCampaignsParams defines parameters for GetApiV3RecommendationCampaigns.
 type GetApiV3RecommendationCampaignsParams struct {
 	// Enabled Filter by enabled/disabled state
@@ -24802,6 +24968,9 @@ type PatchApiV3MeProfileJSONRequestBody = UpdateProfileRequest
 
 // PostApiV3MePushTokenJSONRequestBody defines body for PostApiV3MePushToken for application/json ContentType.
 type PostApiV3MePushTokenJSONRequestBody = RegisterPushTokenRequest
+
+// PostApiV3MeReadersContentEntryIdFinishJSONRequestBody defines body for PostApiV3MeReadersContentEntryIdFinish for application/json ContentType.
+type PostApiV3MeReadersContentEntryIdFinishJSONRequestBody = FinishReaderRequest
 
 // PostApiV3MeReferralClaimJSONRequestBody defines body for PostApiV3MeReferralClaim for application/json ContentType.
 type PostApiV3MeReferralClaimJSONRequestBody = ClaimReferralRequest

@@ -1008,6 +1008,7 @@ class BaseWordReviewResult(BaseModel):
     meaning_locked_at: AwareDatetime | None = None
     meaning_source: str | None = None
     notes: str | None = None
+    part_of_speech: str | None = None
     retire_reason: str | None = None
     retired_at: AwareDatetime | None = None
     status: str
@@ -4061,6 +4062,11 @@ class FillInTheBlankExercise(BaseModel):
     source_type: SourceType | None = Field(None, title="Source Type")
     state: ExerciseState | None = None
     validation_signature: str | None = Field(None, title="Validation Signature")
+
+
+class FinishReaderRequest(BaseModel):
+    score: int
+    total: int
 
 
 class FirstSceneLine(BaseModel):
@@ -7822,6 +7828,68 @@ class ReadArticleIDs(BaseModel):
     reads: list[ArticleReadTime]
 
 
+class ReaderCover(MediaAssetResponseContentService):
+    pass
+
+
+class ReaderGlossaryEntry(BaseModel):
+    base: str
+    form: str
+    meaning_en: str
+    note: str | None = None
+    pos: str | None = None
+
+
+class ReaderItem(BaseModel):
+    article_version_id: UUID_aliased
+    content_entry_id: UUID_aliased
+    cover: ReaderCover | None = None
+    level: str
+    minutes: int
+    position: int
+    title: str
+    title_en: str
+
+
+class ReaderProgress(BaseModel):
+    content_entry_id: UUID_aliased
+    finished_at: AwareDatetime
+    learning_language_code: str
+    score: int
+    total: int
+
+
+class ReaderProgressResponse(BaseModel):
+    items: list[ReaderProgress]
+
+
+class ReaderQuestion(BaseModel):
+    answer: Any
+    options: list[str]
+    q: str
+    q_en: str | None = None
+    why_en: str | None = None
+
+
+class ReaderTextCollection(BaseModel):
+    position: int
+    slug: str
+    title: str
+    total: int
+
+
+class ReaderTextNext(BaseModel):
+    content_entry_id: UUID_aliased
+    cover: ReaderCover | None = None
+    title: str
+    title_en: str
+
+
+class ReaderTextParagraph(BaseModel):
+    index: int
+    text: str
+
+
 class ReadinessResponse(BaseModel):
     models: str = Field(..., title="Models")
     status: str = Field(..., title="Status")
@@ -8393,6 +8461,7 @@ class ReviewBaseWordRequest(BaseModel):
     locked: bool | None = None
     meaning: str | None = None
     notes: str | None = None
+    part_of_speech: str | None = None
     reason: str | None = None
 
 
@@ -10155,6 +10224,14 @@ class SingletonQueueStatus(BaseModel):
 
 class SingletonReadArticleIDs(BaseModel):
     data: ReadArticleIDs
+
+
+class SingletonReaderProgress(BaseModel):
+    data: ReaderProgress
+
+
+class SingletonReaderProgressResponse(BaseModel):
+    data: ReaderProgressResponse
 
 
 class SingletonRecentArticleReadIDsResponse(BaseModel):
@@ -14714,6 +14791,38 @@ class PushFilterTermListResponse(BaseModel):
     terms: list[PushFilterTermResponse]
 
 
+class ReaderCollection(BaseModel):
+    cover: ReaderCover | None = None
+    description_en: str
+    id: UUID_aliased
+    items: list[ReaderItem]
+    level: str
+    position: int
+    slug: str
+    title: str
+    title_en: str
+
+
+class ReaderCollectionsResponse(BaseModel):
+    collections: list[ReaderCollection]
+
+
+class ReaderText(BaseModel):
+    article_version_id: UUID_aliased
+    collection: ReaderTextCollection | None = None
+    content_entry_id: UUID_aliased
+    cover: ReaderCover | None = None
+    glossary: list[ReaderGlossaryEntry]
+    level: str
+    minutes: int
+    next: ReaderTextNext | None = None
+    paragraphs: list[ReaderTextParagraph]
+    questions: list[ReaderQuestion]
+    summary_en: str
+    title: str
+    title_en: str
+
+
 class RecapWeek(BaseModel):
     active_dates: list[str] | None = Field(None, title="Active Dates")
     articles_read: int | None = Field(0, title="Articles Read")
@@ -15218,6 +15327,18 @@ class SingletonProgressSummaryV3(BaseModel):
 
 class SingletonPromoCampaignDetail(BaseModel):
     data: PromoCampaignDetail
+
+
+class SingletonReaderCollection(BaseModel):
+    data: ReaderCollection
+
+
+class SingletonReaderCollectionsResponse(BaseModel):
+    data: ReaderCollectionsResponse
+
+
+class SingletonReaderText(BaseModel):
+    data: ReaderText
 
 
 class SingletonRelatedVersionsResponse(BaseModel):
