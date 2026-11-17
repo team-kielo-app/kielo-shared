@@ -2453,6 +2453,7 @@ type BaseWordReviewResult struct {
 	MeaningLockedAt   *time.Time `json:"meaning_locked_at,omitempty"`
 	MeaningSource     *string    `json:"meaning_source,omitempty"`
 	Notes             *string    `json:"notes,omitempty"`
+	PartOfSpeech      *string    `json:"part_of_speech,omitempty"`
 	RetireReason      *string    `json:"retire_reason,omitempty"`
 	RetiredAt         *time.Time `json:"retired_at,omitempty"`
 	Status            string     `json:"status"`
@@ -13130,6 +13131,7 @@ type ReviewBaseWordRequest struct {
 	Locked        *bool   `json:"locked,omitempty"`
 	Meaning       *string `json:"meaning,omitempty"`
 	Notes         *string `json:"notes,omitempty"`
+	PartOfSpeech  *string `json:"part_of_speech,omitempty"`
 	Reason        *string `json:"reason,omitempty"`
 }
 
