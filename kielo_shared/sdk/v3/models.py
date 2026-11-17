@@ -1008,6 +1008,7 @@ class BaseWordReviewResult(BaseModel):
     meaning_locked_at: AwareDatetime | None = None
     meaning_source: str | None = None
     notes: str | None = None
+    part_of_speech: str | None = None
     retire_reason: str | None = None
     retired_at: AwareDatetime | None = None
     status: str
@@ -8393,6 +8394,7 @@ class ReviewBaseWordRequest(BaseModel):
     locked: bool | None = None
     meaning: str | None = None
     notes: str | None = None
+    part_of_speech: str | None = None
     reason: str | None = None
 
 
