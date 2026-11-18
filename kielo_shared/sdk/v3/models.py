@@ -3426,6 +3426,12 @@ class DictionarySense(BaseModel):
     usage_notes_html: str | None = None
 
 
+class DictionarySpokenForm(BaseModel):
+    form: str
+    kind: str
+    standard: str
+
+
 class DictionaryWordForm(BaseModel):
     features: dict[str, str] | None = None
     form: str
@@ -10723,6 +10729,10 @@ class SpellingChallengeExercise(BaseModel):
     validation_signature: str | None = Field(None, title="Validation Signature")
 
 
+class SpokenForm(DictionarySpokenForm):
+    pass
+
+
 class StaleRow(BaseModel):
     created_at: AwareDatetime
     has_owner: bool
@@ -16640,6 +16650,7 @@ class DictionaryEntry(BaseModel):
     related_lemmas: RelatedLemmas | None = None
     senses: list[Sense] | None = None
     similar_words: list[Confusable] | None = None
+    spoken_form: SpokenForm | None = None
     support_language_code: str | None = None
     surface_form: str | None = None
     term: str | None = None
@@ -16671,6 +16682,7 @@ class DictionaryEntryContentService(BaseModel):
     related_lemmas: DictionaryRelatedLemmas | None = None
     senses: list[DictionarySense] | None = None
     similar_words: list[DictionaryConfusable] | None = None
+    spoken_form: DictionarySpokenForm | None = None
     support_language_code: str | None = None
     surface_form: str | None = None
     term: str | None = None
