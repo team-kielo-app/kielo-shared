@@ -6075,6 +6075,7 @@ type DictionaryEntry struct {
 	RelatedLemmas        *RelatedLemmas    `json:"related_lemmas,omitempty"`
 	Senses               *[]Sense          `json:"senses,omitempty"`
 	SimilarWords         *[]Confusable     `json:"similar_words,omitempty"`
+	SpokenForm           *SpokenForm       `json:"spoken_form,omitempty"`
 	SupportLanguageCode  *string           `json:"support_language_code,omitempty"`
 	SurfaceForm          *string           `json:"surface_form,omitempty"`
 	Term                 *string           `json:"term,omitempty"`
@@ -6122,6 +6123,7 @@ type DictionaryEntryContentService struct {
 	RelatedLemmas        *DictionaryRelatedLemmas           `json:"related_lemmas,omitempty"`
 	Senses               *[]DictionarySense                 `json:"senses,omitempty"`
 	SimilarWords         *[]DictionaryConfusable            `json:"similar_words,omitempty"`
+	SpokenForm           *DictionarySpokenForm              `json:"spoken_form,omitempty"`
 	SupportLanguageCode  *string                            `json:"support_language_code,omitempty"`
 	SurfaceForm          *string                            `json:"surface_form,omitempty"`
 	Term                 *string                            `json:"term,omitempty"`
@@ -6229,6 +6231,13 @@ type DictionarySense struct {
 	Translation    *string                            `json:"translation,omitempty"`
 	UsageNotes     *string                            `json:"usage_notes,omitempty"`
 	UsageNotesHtml *string                            `json:"usage_notes_html,omitempty"`
+}
+
+// DictionarySpokenForm defines model for DictionarySpokenForm.
+type DictionarySpokenForm struct {
+	Form     string `json:"form"`
+	Kind     string `json:"kind"`
+	Standard string `json:"standard"`
 }
 
 // DictionaryWordForm defines model for DictionaryWordForm.
@@ -17430,6 +17439,13 @@ type SpellingChallengeExerciseItemTypeFk string
 
 // SpellingChallengeExerciseSourceType defines model for SpellingChallengeExercise.SourceType.
 type SpellingChallengeExerciseSourceType string
+
+// SpokenForm defines model for SpokenForm.
+type SpokenForm struct {
+	Form     string `json:"form"`
+	Kind     string `json:"kind"`
+	Standard string `json:"standard"`
+}
 
 // StaleRow defines model for StaleRow.
 type StaleRow struct {
