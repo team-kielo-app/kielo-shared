@@ -570,6 +570,12 @@ class AgentRefusedItem(BaseModel):
     reason: str
 
 
+class AgentRevertRef(BaseModel):
+    created_at: AwareDatetime
+    id: UUID_aliased
+    status: str
+
+
 class AgentReviewItem(BaseModel):
     area: str
     item_id: str
@@ -3424,6 +3430,12 @@ class DictionarySense(BaseModel):
     translation: str | None = None
     usage_notes: str | None = None
     usage_notes_html: str | None = None
+
+
+class DictionarySpokenForm(BaseModel):
+    form: str
+    kind: str
+    standard: str
 
 
 class DictionaryWordForm(BaseModel):
@@ -8410,6 +8422,12 @@ class RestoreAccessResponseUserService(BaseModel):
     tier: str | None = None
 
 
+class RestoreRequest(BaseModel):
+    force: bool
+    reason: str | None = None
+    to: str
+
+
 class RestoreSubscriptionRequest(LinkRevenueCatUserRequest):
     pass
 
@@ -10723,6 +10741,10 @@ class SpellingChallengeExercise(BaseModel):
     validation_signature: str | None = Field(None, title="Validation Signature")
 
 
+class SpokenForm(DictionarySpokenForm):
+    pass
+
+
 class StaleRow(BaseModel):
     created_at: AwareDatetime
     has_owner: bool
@@ -12985,6 +13007,188 @@ class UnpauseResponse(UnpauseSessionResponse):
     pass
 
 
+class ProfileChannel(BaseModel):
+    enabled: bool
+    handle: str
+    id: str
+    language: str
+    name: str
+    platform: str
+    profile_url: str
+    remote_id: str
+
+
+class ProfileChannelSpec(BaseModel):
+    channel_id: str
+    handle: str | None = None
+    language: str
+    platform: str
+    remote_id: str | None = None
+
+
+class ProfileClaimRequest(BaseModel):
+    lease_seconds: int | None = None
+    platforms: list[str]
+    runner_id: str
+    session: dict[str, str] | None = None
+    version: str
+
+
+class ProfileFieldCap(BaseModel):
+    field: str
+    note: str | None = None
+    verified: bool
+    via: str
+
+
+class ProfileFieldLimit(BaseModel):
+    field: str
+    limit: int
+    note: str | None = None
+    required: bool
+    verified: bool
+    via: str
+
+
+class ProfileFinishRequest(BaseModel):
+    error: str | None = None
+    runner_id: str
+    session_state: str | None = None
+    status: str
+
+
+class ProfileImage(BaseModel):
+    height: int | None = None
+    media_id: UUID_aliased | None = None
+    sha256: str | None = None
+    url: str | None = None
+    width: int | None = None
+
+
+class ProfileIssue(BaseModel):
+    blocking: bool
+    field: str | None = None
+    message: str
+
+
+class ProfileLink(BaseModel):
+    title: str
+    url: str
+
+
+class ProfileLinkLimit(BaseModel):
+    max: int
+    note: str | None = None
+    title_max: int
+    verified: bool
+
+
+class ProfilePlanItem(BaseModel):
+    action: str
+    change_id: str
+    field: str
+    from_: str = Field(..., alias="from")
+    from_unknown: bool | None = None
+    note: str | None = None
+    to: str
+    via: str
+
+
+class ProfileRemote(BaseModel):
+    avatar: ProfileImage | None = None
+    banner: ProfileImage | None = None
+    bio: str
+    category: str
+    country: str
+    default_language: str
+    description: str
+    display_name: str
+    keywords: list[str]
+    links: list[ProfileLink]
+    note: str | None = None
+    read_at: AwareDatetime | None = None
+    unread: list[str] | None = None
+    upload_defaults: dict[str, str]
+
+
+class ProfileRunJob(BaseModel):
+    changes: list[ProfilePlanItem]
+    channel: ProfileChannelSpec
+    kind: str
+    lease_expires_at: AwareDatetime
+    run_id: UUID_aliased
+
+
+class ProfileRunResult(BaseModel):
+    error: str | None = None
+    session_state: str | None = None
+
+
+class ProfileRunner(BaseModel):
+    detail: str | None = None
+    language: str
+    last_seen: AwareDatetime
+    platform: str
+    runner_id: str
+    session_state: str
+    version: str
+
+
+class SocialProfileClaimResponse(BaseModel):
+    job: ProfileRunJob | None = None
+
+
+class SocialProfileHeartbeatRequest(BaseModel):
+    lease_seconds: int | None = None
+    runner_id: str
+
+
+class SocialProfilePatchRequest(BaseModel):
+    avatar: ProfileImage | None = None
+    banner: ProfileImage | None = None
+    bio: str | None = None
+    category: str | None = None
+    country: str | None = None
+    default_language: str | None = None
+    description: str | None = None
+    display_name: str | None = None
+    keywords: list[str] | None = None
+    links: list[ProfileLink] | None = None
+    upload_defaults: dict[str, str] | None = None
+
+
+class SocialProfileRemoteRequest(BaseModel):
+    profile: ProfileRemote
+    runner_id: str
+
+
+class SocialProfileRunCreateRequest(BaseModel):
+    kind: str | None = None
+
+
+class SocialProfileRunSummary(BaseModel):
+    created_at: AwareDatetime
+    error: str | None = None
+    finished_at: AwareDatetime | None = None
+    kind: str
+    run_id: UUID_aliased
+    status: str
+
+
+class SocialProfileSummary(BaseModel):
+    by_hand: int
+    channel: ProfileChannel
+    differs: int
+    last_run: SocialProfileRunSummary | None = None
+    live_name: str
+    live_read_at: AwareDatetime | None = None
+    reads_here: bool
+    revision: int
+    runner: ProfileRunner | None = None
+    status: str
+    updated_at: AwareDatetime | None = None
+
+
 class AICapabilitiesRequest(BaseModel):
     providers: list[AICapabilityProvider]
     reason: str
@@ -13071,12 +13275,15 @@ class AgentChangeSetRequest(BaseModel):
     dry_run: bool | None = None
     ops: list[AgentChangeOp]
     reason: str
+    reverts_change_set_id: UUID_aliased | None = None
 
 
 class AgentChangeSetResult(BaseModel):
     change_set: AgentChangeSet
     dry_run: bool | None = None
     items: list[AgentChangeItem]
+    reverts: list[AgentRevertRef] | None = None
+    reverts_change_set_id: UUID_aliased | None = None
     skipped: list[AgentSkippedItem] | None = None
 
 
@@ -16334,6 +16541,84 @@ class BundledHintResponse(HintResponse):
     pass
 
 
+class ProfileFields(BaseModel):
+    avatar: ProfileImage | None = None
+    banner: ProfileImage | None = None
+    bio: str
+    category: str
+    country: str
+    default_language: str
+    description: str
+    display_name: str
+    keywords: list[str]
+    links: list[ProfileLink]
+    upload_defaults: dict[str, str]
+
+
+class ProfilePlan(BaseModel):
+    fingerprint: str
+    issues: list[ProfileIssue]
+    items: list[ProfilePlanItem]
+    unchanged: int
+    writable: int
+
+
+class ProfileRun(BaseModel):
+    attempts: int
+    channel_id: str
+    claimed_at: AwareDatetime | None = None
+    created_at: AwareDatetime
+    created_by: UUID_aliased | None = None
+    fingerprint: str | None = None
+    finished_at: AwareDatetime | None = None
+    kind: str
+    lease_expires_at: AwareDatetime | None = None
+    lease_owner: str | None = None
+    needs_runner: bool
+    plan: ProfilePlan | None = None
+    profile_revision: int
+    remote: ProfileRemote | None = None
+    result: ProfileRunResult
+    run_id: UUID_aliased
+    status: str
+
+
+class SingletonSocialProfileClaimResponse(BaseModel):
+    data: SocialProfileClaimResponse
+
+
+class SingletonProfileRun(BaseModel):
+    data: ProfileRun
+
+
+class SocialProfile(BaseModel):
+    approved_at: AwareDatetime | None = None
+    approved_revision: int | None = None
+    capabilities: list[ProfileFieldCap]
+    channel: ProfileChannel
+    desired: ProfileFields
+    limits: list[ProfileFieldLimit]
+    links_limit: ProfileLinkLimit
+    live: ProfileRemote | None = None
+    live_read_at: AwareDatetime | None = None
+    live_run: ProfileRun | None = None
+    plan: ProfilePlan | None = None
+    reads_here: bool
+    revision: int
+    runner: ProfileRunner | None = None
+    status: str
+    updated_at: AwareDatetime | None = None
+
+
+class SocialProfileListResponse(BaseModel):
+    items: list[SocialProfileSummary]
+    runners: list[ProfileRunner]
+
+
+class SocialProfileRunListResponse(BaseModel):
+    items: list[ProfileRun]
+
+
 class AgentRoadmapOutline(BaseModel):
     levels: list[AgentRoadmapOutlineLevel]
     track: AgentRoadmapTrack
@@ -16640,6 +16925,7 @@ class DictionaryEntry(BaseModel):
     related_lemmas: RelatedLemmas | None = None
     senses: list[Sense] | None = None
     similar_words: list[Confusable] | None = None
+    spoken_form: SpokenForm | None = None
     support_language_code: str | None = None
     surface_form: str | None = None
     term: str | None = None
@@ -16671,6 +16957,7 @@ class DictionaryEntryContentService(BaseModel):
     related_lemmas: DictionaryRelatedLemmas | None = None
     senses: list[DictionarySense] | None = None
     similar_words: list[DictionaryConfusable] | None = None
+    spoken_form: DictionarySpokenForm | None = None
     support_language_code: str | None = None
     surface_form: str | None = None
     term: str | None = None
@@ -17170,6 +17457,18 @@ class Template(BaseModel):
     key: str
     name: str
     needs_audience: bool | None = None
+
+
+class SingletonSocialProfileListResponse(BaseModel):
+    data: SocialProfileListResponse
+
+
+class SingletonSocialProfileRunListResponse(BaseModel):
+    data: SocialProfileRunListResponse
+
+
+class SingletonSocialProfile(BaseModel):
+    data: SocialProfile
 
 
 class ArticleParagraph(BaseModel):
