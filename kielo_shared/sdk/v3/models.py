@@ -1351,6 +1351,16 @@ class CanonicalError(BaseModel):
     message: str | None = None
 
 
+class CaptionPickWord(BaseModel):
+    base_word_id: UUID_aliased
+    caption_index: int
+    end_index: int | None = None
+    reason: str | None = None
+    source: str | None = None
+    start_index: int | None = None
+    surface: str
+
+
 class CardCheckoutPlan(BaseModel):
     amount_micros: int
     currency: str
@@ -9536,6 +9546,20 @@ class Scenario(BaseModel):
     voice_id: str | None = None
 
 
+class ScenarioArtRequest(BaseModel):
+    dry_run: bool | None = None
+    force: bool | None = None
+
+
+class ScenarioArtResult(BaseModel):
+    error: str | None = None
+    media_id: str | None = None
+    reason: str | None = None
+    slug: str | None = None
+    status: str
+    url: str | None = None
+
+
 class ScenarioChoiceExercise(BaseModel):
     cache_entry_id: str | None = Field(None, title="Cache Entry Id")
     content_ref: ContentRef | None = None
@@ -9599,6 +9623,23 @@ class ScenarioListItem(BaseModel):
     tags: list[str] | None = None
     thumbnail_url: str | None = None
     title: str
+
+
+class SceneArtRequest(BaseModel):
+    dry_run: bool | None = Field(
+        False,
+        description="Draw and check, but store and attach nothing.",
+        title="Dry Run",
+    )
+    force: bool | None = Field(
+        False, description="Draw again for a scene that already has art.", title="Force"
+    )
+
+
+class SceneArtSweepRequest(BaseModel):
+    dry_run: bool | None = Field(False, title="Dry Run")
+    languages: list[str] | None = Field(None, title="Languages")
+    max_scenes: conint(ge=1, le=200) | None = Field(None, title="Max Scenes")
 
 
 class ScheduleUpdateItem(BaseModel):
@@ -10969,6 +11010,10 @@ class SingletonSavedItemsDashboardResponse(BaseModel):
 
 class SingletonSavedItemsDashboardResponseV3(BaseModel):
     data: SavedItemsDashboardResponseV3
+
+
+class SingletonScenarioArtResult(BaseModel):
+    data: ScenarioArtResult
 
 
 class SingletonScheduledCommunication(BaseModel):
@@ -14209,6 +14254,11 @@ class CampaignReach(BaseModel):
     ios_store_discount_held: bool
 
 
+class CaptionPicks(BaseModel):
+    items: list[TextPickItem]
+    words: list[CaptionPickWord]
+
+
 class Captions(BaseModel):
     content_version_id: UUID_aliased | None = None
     created_at: AwareDatetime
@@ -14217,6 +14267,7 @@ class Captions(BaseModel):
     is_fallback: bool
     learning_language_code: str | None = None
     locale: str
+    picks: CaptionPicks | None = None
     prepared: PreparedInfo | None = None
     source_locale: str
     translation_source: str | None = None

@@ -3113,6 +3113,23 @@ type CanonicalError struct {
 	Message *string `json:"message,omitempty"`
 }
 
+// CaptionPickWord defines model for CaptionPickWord.
+type CaptionPickWord struct {
+	BaseWordId   uuid.UUID `json:"base_word_id"`
+	CaptionIndex int       `json:"caption_index"`
+	EndIndex     *int      `json:"end_index,omitempty"`
+	Reason       *string   `json:"reason,omitempty"`
+	Source       *string   `json:"source,omitempty"`
+	StartIndex   *int      `json:"start_index,omitempty"`
+	Surface      string    `json:"surface"`
+}
+
+// CaptionPicks defines model for CaptionPicks.
+type CaptionPicks struct {
+	Items []TextPickItem    `json:"items"`
+	Words []CaptionPickWord `json:"words"`
+}
+
 // Captions defines model for Captions.
 type Captions struct {
 	ContentVersionId     *uuid.UUID    `json:"content_version_id,omitempty"`
@@ -3122,6 +3139,7 @@ type Captions struct {
 	IsFallback           bool          `json:"is_fallback"`
 	LearningLanguageCode *string       `json:"learning_language_code,omitempty"`
 	Locale               string        `json:"locale"`
+	Picks                *CaptionPicks `json:"picks,omitempty"`
 	Prepared             *PreparedInfo `json:"prepared,omitempty"`
 	SourceLocale         string        `json:"source_locale"`
 	TranslationSource    *string       `json:"translation_source,omitempty"`
@@ -14986,6 +15004,22 @@ type Scenario struct {
 	VoiceId                  *string                 `json:"voice_id,omitempty"`
 }
 
+// ScenarioArtRequest defines model for ScenarioArtRequest.
+type ScenarioArtRequest struct {
+	DryRun *bool `json:"dry_run,omitempty"`
+	Force  *bool `json:"force,omitempty"`
+}
+
+// ScenarioArtResult defines model for ScenarioArtResult.
+type ScenarioArtResult struct {
+	Error   *string `json:"error,omitempty"`
+	MediaId *string `json:"media_id,omitempty"`
+	Reason  *string `json:"reason,omitempty"`
+	Slug    *string `json:"slug,omitempty"`
+	Status  string  `json:"status"`
+	Url     *string `json:"url,omitempty"`
+}
+
 // ScenarioChoiceExercise defines model for ScenarioChoiceExercise.
 type ScenarioChoiceExercise struct {
 	CacheEntryId *string     `json:"cache_entry_id"`
@@ -15051,6 +15085,22 @@ type ScenarioListItem struct {
 	Tags                     *[]string               `json:"tags,omitempty"`
 	ThumbnailUrl             *string                 `json:"thumbnail_url,omitempty"`
 	Title                    string                  `json:"title"`
+}
+
+// SceneArtRequest defines model for SceneArtRequest.
+type SceneArtRequest struct {
+	// DryRun Draw and check, but store and attach nothing.
+	DryRun *bool `json:"dry_run,omitempty"`
+
+	// Force Draw again for a scene that already has art.
+	Force *bool `json:"force,omitempty"`
+}
+
+// SceneArtSweepRequest defines model for SceneArtSweepRequest.
+type SceneArtSweepRequest struct {
+	DryRun    *bool     `json:"dry_run,omitempty"`
+	Languages *[]string `json:"languages"`
+	MaxScenes *int      `json:"max_scenes"`
 }
 
 // ScheduleUpdateItem defines model for ScheduleUpdateItem.
@@ -17337,6 +17387,11 @@ type SingletonSavedItemsDashboardResponse struct {
 // SingletonSavedItemsDashboardResponseV3 defines model for SingletonSavedItemsDashboardResponseV3.
 type SingletonSavedItemsDashboardResponseV3 struct {
 	Data SavedItemsDashboardResponseV3 `json:"data"`
+}
+
+// SingletonScenarioArtResult defines model for SingletonScenarioArtResult.
+type SingletonScenarioArtResult struct {
+	Data ScenarioArtResult `json:"data"`
 }
 
 // SingletonScheduledCommunication defines model for SingletonScheduledCommunication.
@@ -23460,6 +23515,9 @@ type GetApiV3KielotvVideosVideoIdCaptionsParams struct {
 	// Locale Legacy alias for support_language_code on KieloTV localized assets.
 	Locale *string `form:"locale,omitempty" json:"locale,omitempty"`
 
+	// Include Pass picks to add the learner's words to learn in this video as picks, placed in cues. Without it the response is unchanged.
+	Include *string `form:"include,omitempty" json:"include,omitempty"`
+
 	// SupportLanguageCode Two-letter ISO 639-1 code for translated UI strings (per ADR-006 §3.83).
 	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
 
@@ -25656,6 +25714,12 @@ type PostInternalPubsubNotificationControlPlaneTickParams struct {
 	Stage *string `form:"stage,omitempty" json:"stage,omitempty"`
 }
 
+// SweepScenarioArtInternalScenarioArtDailyPostJSONBody defines parameters for SweepScenarioArtInternalScenarioArtDailyPost.
+type SweepScenarioArtInternalScenarioArtDailyPostJSONBody = SceneArtSweepRequest
+
+// GenerateScenarioArtInternalScenarioArtScenarioIdPostJSONBody defines parameters for GenerateScenarioArtInternalScenarioArtScenarioIdPost.
+type GenerateScenarioArtInternalScenarioArtScenarioIdPostJSONBody = SceneArtRequest
+
 // GetInternalSearchSemanticParams defines parameters for GetInternalSearchSemantic.
 type GetInternalSearchSemanticParams struct {
 	// Q Search query
@@ -26508,6 +26572,9 @@ type PostApiV3ConversationScenariosGenerateJSONRequestBody = ConvoGenerateScenar
 
 // PatchApiV3ConversationScenariosScenarioIdJSONRequestBody defines body for PatchApiV3ConversationScenariosScenarioId for application/json ContentType.
 type PatchApiV3ConversationScenariosScenarioIdJSONRequestBody = ConvoUpdateScenarioRequest
+
+// PostApiV3ConversationScenariosScenarioIdArtJSONRequestBody defines body for PostApiV3ConversationScenariosScenarioIdArt for application/json ContentType.
+type PostApiV3ConversationScenariosScenarioIdArtJSONRequestBody = ScenarioArtRequest
 
 // PatchApiV3ConversationsInterestsJSONRequestBody defines body for PatchApiV3ConversationsInterests for application/json ContentType.
 type PatchApiV3ConversationsInterestsJSONRequestBody = UpdateConversationInterestsRequest
@@ -27426,6 +27493,12 @@ type ApplyMediaFieldRowsInternalMediaFieldsFieldRowsPostJSONRequestBody = MediaF
 
 // PostInternalMediaUploadUrlJSONRequestBody defines body for PostInternalMediaUploadUrl for application/json ContentType.
 type PostInternalMediaUploadUrlJSONRequestBody = MediaUploadRequest
+
+// SweepScenarioArtInternalScenarioArtDailyPostJSONRequestBody defines body for SweepScenarioArtInternalScenarioArtDailyPost for application/json ContentType.
+type SweepScenarioArtInternalScenarioArtDailyPostJSONRequestBody = SweepScenarioArtInternalScenarioArtDailyPostJSONBody
+
+// GenerateScenarioArtInternalScenarioArtScenarioIdPostJSONRequestBody defines body for GenerateScenarioArtInternalScenarioArtScenarioIdPost for application/json ContentType.
+type GenerateScenarioArtInternalScenarioArtScenarioIdPostJSONRequestBody = GenerateScenarioArtInternalScenarioArtScenarioIdPostJSONBody
 
 // SweepSiteTranslationsInternalSiteTranslationsSweepPostJSONRequestBody defines body for SweepSiteTranslationsInternalSiteTranslationsSweepPost for application/json ContentType.
 type SweepSiteTranslationsInternalSiteTranslationsSweepPostJSONRequestBody = SweepSiteTranslationsInternalSiteTranslationsSweepPostJSONBody
