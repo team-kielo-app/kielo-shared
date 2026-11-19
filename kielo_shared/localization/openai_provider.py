@@ -107,6 +107,11 @@ _FINNISH_CASE_NAMES = {
     "abessive": "abessiivi",
     "comitative": "komitatiivi",
     "instructive": "instruktiivi",
+    "partitive": "partitiivi",
+    "genitive": "genetiivi",
+    "nominative": "nominatiivi",
+    "accusative": "akkusatiivi",
+    "infinitive": "infinitiivi",
 }
 _FINNISH_CASE_RE = re.compile(
     r"(?<!\w)(" + "|".join(_FINNISH_CASE_NAMES) + r")(?!\w)", re.IGNORECASE
