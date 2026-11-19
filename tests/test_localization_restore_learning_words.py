@@ -57,6 +57,17 @@ def test_english_names_of_finnish_cases_become_the_finnish_names() -> None:
     assert name_finnish_cases("đuôi cách essivi -na/-nä") == "đuôi cách essiivi -na/-nä"
 
 
+def test_the_remaining_english_case_and_infinitive_names_become_finnish() -> None:
+    from kielo_shared.localization.openai_provider import name_finnish_cases
+
+    assert (
+        name_finnish_cases("Cách Partitive, genitive, nominative và accusative")
+        == "Cách Partitiivi, genetiivi, nominatiivi và akkusatiivi"
+    )
+    assert name_finnish_cases("Dạng Infinitive (infinitiivi)") == "Dạng Infinitiivi"
+    assert name_finnish_cases("the infinitives") == "the infinitives"
+
+
 def test_case_renaming_leaves_other_words_and_spellings_alone() -> None:
     from kielo_shared.localization.openai_provider import name_finnish_cases
 
