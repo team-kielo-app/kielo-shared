@@ -352,6 +352,34 @@ class AdminDigestSection(BaseModel):
     label: str
 
 
+class AdoptSkip(BaseModel):
+    field: str
+    reason: str
+
+
+class AgentBriefChangeSet(BaseModel):
+    agent_name: str
+    created_at: AwareDatetime
+    id: UUID_aliased
+    item_count: int
+    reason: str
+    status: str
+
+
+class AgentBriefClaimRequest(BaseModel):
+    minutes: int
+
+
+class AgentBriefDoneRequest(BaseModel):
+    note: str
+
+
+class AgentBriefItem(BaseModel):
+    id: str
+    kind: str
+    title: str | None = None
+
+
 class AgentCaptionEdit(BaseModel):
     after_index: int | None = None
     before_index: int | None = None
@@ -375,6 +403,7 @@ class AgentChangeItem(BaseModel):
     applied_at: AwareDatetime | None = None
     before: Any | None = None
     change_set_id: UUID_aliased
+    diff: Any | None = None
     entity_id: str
     entity_type: str
     id: int
@@ -387,6 +416,7 @@ class AgentChangeSet(BaseModel):
     agent_name: str
     applied_at: AwareDatetime | None = None
     approval_reason: str | None = None
+    brief_id: UUID_aliased | None = None
     confidence: str
     created_at: AwareDatetime
     decided_at: AwareDatetime | None = None
@@ -422,8 +452,8 @@ class AgentClaimsRequest(BaseModel):
     minutes: int
 
 
-class AgentDecisionRequest(BaseModel):
-    note: str
+class AgentDecisionRequest(AgentBriefDoneRequest):
+    pass
 
 
 class AgentExercise(BaseModel):
@@ -558,6 +588,16 @@ class AgentPatchItem(BaseModel):
     set: dict[str, str]
 
 
+class AgentReaderEdit(BaseModel):
+    entry_id: UUID_aliased | None = None
+    id: UUID_aliased
+    level: str | None = None
+    position: int | None = None
+    target: str | None = None
+    title: str | None = None
+    title_en: str | None = None
+
+
 class AgentRecordedMark(BaseModel):
     area: str
     item_id: str
@@ -568,6 +608,12 @@ class AgentRefusedItem(BaseModel):
     area: str
     item_id: str
     reason: str
+
+
+class AgentRevertRef(BaseModel):
+    created_at: AwareDatetime
+    id: UUID_aliased
+    status: str
 
 
 class AgentReviewItem(BaseModel):
@@ -607,6 +653,8 @@ class AgentRoadmapEdit(BaseModel):
     difficulty_level: str | None = None
     estimated_duration_minutes: int | None = None
     id: UUID_aliased | None = None
+    item_kind: str | None = None
+    item_ref: str | None = None
     learning_objectives: list[str] | None = None
     lesson_content: Any | None = None
     level_id: UUID_aliased | None = None
@@ -629,6 +677,8 @@ class AgentRoadmapLesson(BaseModel):
     difficulty_level: str
     estimated_duration_minutes: int
     id: UUID_aliased
+    item_kind: str | None = None
+    item_ref: str | None = None
     kind: str
     position: int
     status: str
@@ -649,6 +699,8 @@ class AgentRoadmapLevel(BaseModel):
 
 class AgentRoadmapOutlineLesson(BaseModel):
     id: UUID_aliased
+    item_kind: str | None = None
+    item_ref: str | None = None
     position: int
     status: str
     title: str
@@ -891,6 +943,30 @@ class Asset(BaseModel):
     width: int | None = None
 
 
+class AttemptOut(BaseModel):
+    created_at: AwareDatetime = Field(..., title="Created At")
+    criteria: dict[str, int] = Field(..., title="Criteria")
+    exam_key: str = Field(..., title="Exam Key")
+    grade: int = Field(..., title="Grade")
+    handled: list[dict[str, Any]] = Field(..., title="Handled")
+    handled_count: int = Field(..., title="Handled Count")
+    id: str = Field(..., title="Id")
+    meets_target: bool = Field(..., title="Meets Target")
+    score: float = Field(..., title="Score")
+    seconds: float | None = Field(None, title="Seconds")
+    set_id: str = Field(..., title="Set Id")
+    task_kind: str = Field(..., title="Task Kind")
+    topic: str = Field(..., title="Topic")
+    total: int = Field(..., title="Total")
+    transcript_chars: int = Field(..., title="Transcript Chars")
+    transcript_words: int = Field(..., title="Transcript Words")
+
+
+class AttemptsResponse(BaseModel):
+    attempts: list[AttemptOut] = Field(..., title="Attempts")
+    set_id: str = Field(..., title="Set Id")
+
+
 class Attribution(BaseModel):
     claimed_at: AwareDatetime
     code: str
@@ -1040,6 +1116,7 @@ class BatchLookupRequest(BaseModel):
     item_ids: list[UUID_aliased]
     learning_language_code: str
     per_item_limit: int | None = None
+    support_language_code: str | None = None
     surface_types: list[str] | None = None
 
 
@@ -1084,6 +1161,11 @@ class BehavioralEventRequest(BaseModel):
     timestamp: str
 
 
+class Bilingual(BaseModel):
+    text: str = Field(..., title="Text")
+    text_en: str | None = Field("", title="Text En")
+
+
 class BillingPlan(BaseModel):
     active: bool
     auto_renew: bool
@@ -1121,6 +1203,12 @@ class BodyEvaluateRoadmapStepSpeechKlearnApiV3RoadmapLessonsLessonIdStepsStepInd
 
 
 class BodyPostTtsReviewUploadInternalTtsAdminReviewUploadPost(
+    BodyEvaluateFirstSentenceSpeechKlearnApiV3RoadmapFirstSentenceSpeechEvaluatePost
+):
+    pass
+
+
+class BodyTranscribeLongTakeKlearnApiV3ExamPrepLongTasksSpeechPost(
     BodyEvaluateFirstSentenceSpeechKlearnApiV3RoadmapFirstSentenceSpeechEvaluatePost
 ):
     pass
@@ -1291,6 +1379,16 @@ class Error(BaseModel):
 class CanonicalError(BaseModel):
     error: Error | None = None
     message: str | None = None
+
+
+class CaptionPickWord(BaseModel):
+    base_word_id: UUID_aliased
+    caption_index: int
+    end_index: int | None = None
+    reason: str | None = None
+    source: str | None = None
+    start_index: int | None = None
+    surface: str
 
 
 class CardCheckoutPlan(BaseModel):
@@ -1696,7 +1794,7 @@ class CommsLaneRuleField(BaseModel):
     unit: str | None = None
 
 
-class CommsLaneRuleResetRequest(AgentDecisionRequest):
+class CommsLaneRuleResetRequest(AgentBriefDoneRequest):
     pass
 
 
@@ -2297,6 +2395,7 @@ class Kind(StrEnum):
     conversation = "conversation"
     concept_hub = "concept_hub"
     word_cluster = "word_cluster"
+    saved_sentence = "saved_sentence"
 
 
 class ContentRef(BaseModel):
@@ -3321,6 +3420,43 @@ class DailyChallengeV3(BaseModel):
     title: str | None = None
 
 
+class Handled(StrEnum):
+    yes = "yes"
+    partly = "partly"
+    no = "no"
+
+
+class ModelAnswerSource(StrEnum):
+    learner = "learner"
+    authored = "authored"
+
+
+class DebriefItem(BaseModel):
+    answered: bool = Field(..., title="Answered")
+    handled: Handled = Field(..., title="Handled")
+    model_answer: str = Field(..., title="Model Answer")
+    model_answer_source: ModelAnswerSource = Field(..., title="Model Answer Source")
+    note: str = Field(..., title="Note")
+    situation_id: str = Field(..., title="Situation Id")
+    text: str = Field(..., title="Text")
+    transcript: str = Field(..., title="Transcript")
+
+
+class DebriefResponse(BaseModel):
+    criteria: dict[str, int] = Field(..., title="Criteria")
+    estimated: bool | None = Field(True, title="Estimated")
+    exam_key: str = Field(..., title="Exam Key")
+    grade: int = Field(..., title="Grade")
+    handled_count: int = Field(..., title="Handled Count")
+    items: list[DebriefItem] = Field(..., title="Items")
+    meets_target: bool = Field(..., title="Meets Target")
+    score: float = Field(..., title="Score")
+    set_id: str = Field(..., title="Set Id")
+    summary: str = Field(..., title="Summary")
+    target_grade: int | None = Field(3, title="Target Grade")
+    total: int = Field(..., title="Total")
+
+
 class DecisionReason(BaseModel):
     objective_id: UUID_aliased = Field(..., title="Objective Id")
     reason: str = Field(..., title="Reason")
@@ -3554,6 +3690,19 @@ class DynamicTranslationLocalization(BaseModel):
     updated_at: AwareDatetime
 
 
+class Level(StrEnum):
+    B1 = "B1"
+    B2 = "B2"
+
+
+class EditRequest(BaseModel):
+    content: dict[str, Any] | None = Field(None, title="Content")
+    level: Level | None = Field(None, title="Level")
+    question_edits: list[dict[str, Any]] | None = Field(None, title="Question Edits")
+    questions: list[dict[str, Any]] | None = Field(None, title="Questions")
+    title: constr(max_length=200) | None = Field(None, title="Title")
+
+
 class EmailChangeConfirmRequest(BaseModel):
     code: str
     current_code: str | None = None
@@ -3654,6 +3803,70 @@ class EmailTestSendResponse(CommsEmailTestSendResult):
 
 class EndSessionResponse(AppFeedbackUpdateStatusRequest):
     pass
+
+
+class Event(BaseModel):
+    action: str
+    actor: str
+    created_at: AwareDatetime
+    detail: str
+    id: int
+    profile_id: str | None = None
+
+
+class ExamItem(BaseModel):
+    audio: Any
+    content: Any
+    created_at: AwareDatetime
+    duration_seconds: float | None = None
+    enabled: bool
+    exam_key: str
+    format: str
+    id: str
+    judge: Any
+    kind: str
+    level: str
+    play_count: int | None = None
+    position: int
+    questions: Any
+    review_note: str
+    review_status: str
+    reviewed_at: AwareDatetime | None = None
+    reviewed_by: str | None = None
+    source: Any
+    title: str
+    title_en: str
+    topic: str
+    updated_at: AwareDatetime
+    word_count: int
+
+
+class ExamItemGenerateRequest(BaseModel):
+    language: str
+    note: str | None = None
+    patch: Any | None = None
+    slot_id: str
+    step: str
+
+
+class ExamItemListResponse(BaseModel):
+    items: list[ExamItem]
+
+
+class ExamItemReviewRequest(BaseModel):
+    language: str
+    note: str
+    status: str
+
+
+class ExamTask(BaseModel):
+    answer_seconds: int | None = Field(None, title="Answer Seconds")
+    kind: str = Field(..., title="Kind")
+    prep_seconds: int | None = Field(None, title="Prep Seconds")
+    ref: str = Field(..., title="Ref")
+    title: str | None = Field(None, title="Title")
+    topic: str | None = Field(None, title="Topic")
+    why: str | None = Field(None, title="Why")
 
 
 class Example(BaseModel):
@@ -4088,7 +4301,7 @@ class FirstSceneVideo(BaseModel):
     line_count: int
     reason: str
     title: str
-    video_id: str
+    video_id: UUID_aliased
 
 
 class FirstSentenceSpeechResponse(BaseModel):
@@ -4200,6 +4413,24 @@ class GeneratePromoCodesRequest(CommsUserCountResult):
     pass
 
 
+class GenerateRequest(BaseModel):
+    note: constr(max_length=1500) | None = Field("", title="Note")
+    slot_id: constr(max_length=64) = Field(..., title="Slot Id")
+
+
+class GenerateResponse(BaseModel):
+    audio_whisper: dict[str, Any] | None = Field(None, title="Audio Whisper")
+    flags: list[str] | None = Field([], title="Flags")
+    id: str = Field(..., title="Id")
+    llm_calls: int = Field(..., title="Llm Calls")
+    models: dict[str, str] | None = Field({}, title="Models")
+    notes: list[str] | None = Field([], title="Notes")
+    scores: dict[str, int] | None = Field({}, title="Scores")
+    stored: bool = Field(..., title="Stored")
+    tts_takes: int = Field(..., title="Tts Takes")
+    verdict: str = Field(..., title="Verdict")
+
+
 class GenerateTopicListRequest(BaseModel):
     must_include: list[str] | None = None
     prompt: str
@@ -4286,6 +4517,14 @@ class GlossBatchRequest(BaseModel):
     items: list[GlossBatchItem]
     learning_language_code: str
     support_language_code: str
+
+
+class GlossaryEntry(BaseModel):
+    base: str
+    form: str
+    meaning_en: str
+    note: str | None = None
+    pos: str | None = None
 
 
 class GlossaryTerm(BaseModel):
@@ -4734,6 +4973,12 @@ class ItemDeltaV3(BaseModel):
     status_before: str
 
 
+class ItemDone(BaseModel):
+    at: str = Field(..., title="At")
+    correct: int = Field(..., title="Correct")
+    total: int = Field(..., title="Total")
+
+
 class ItemStanding(BaseModel):
     confidence_score: confloat(ge=0.0, le=1.0) = Field(..., title="Confidence Score")
     item_id: UUID_aliased = Field(..., title="Item Id")
@@ -4752,18 +4997,6 @@ class ItemStandingV3(BaseModel):
     next_review_at: str | None = None
     proficiency: float
     transfer_ready: bool
-
-
-class ItemSummary(BaseModel):
-    base_word_id: UUID_aliased | None = Field(None, title="Base Word Id")
-    cefr_level: str = Field(..., title="Cefr Level")
-    display_text: str = Field(..., title="Display Text")
-    grammar_concept_id: UUID_aliased | None = Field(None, title="Grammar Concept Id")
-    item_id: UUID_aliased = Field(..., title="Item Id")
-    item_type: Type = Field(..., title="Item Type")
-    learning_language_code: str | None = Field("", title="Learning Language Code")
-    support_language_code: str | None = Field("", title="Support Language Code")
-    support_text: str | None = Field(None, title="Support Text")
 
 
 class JoinResp(BaseModel):
@@ -4795,7 +5028,13 @@ class JourneyResultsArm(BaseModel):
     arm: str
     conversion: float
     converted: int
+    eligible_48h: int
+    eligible_7d: int
     entered: int
+    return_rate_48h: float | None = None
+    return_rate_7d: float | None = None
+    returned_48h: int
+    returned_7d: int
 
 
 class JourneySkipReason(BaseModel):
@@ -5418,6 +5657,12 @@ class KieloTVVideoUpsertRequest(BaseModel):
     video_url: str | None = None
 
 
+class KindCount(BaseModel):
+    done: int = Field(..., title="Done")
+    kind: str = Field(..., title="Kind")
+    total: int = Field(..., title="Total")
+
+
 class LLMCandidateActionRequest(BaseModel):
     actor: str
     actor_kind: str
@@ -5642,7 +5887,7 @@ class LaneRuleChangeResponse(AppFeedbackUpdateStatusRequest):
     pass
 
 
-class LaneRuleResetRequest(AgentDecisionRequest):
+class LaneRuleResetRequest(AgentBriefDoneRequest):
     pass
 
 
@@ -6013,6 +6258,8 @@ class LearningObjective(BaseModel):
     exercise_sequence: list[str] | None = Field(None, title="Exercise Sequence")
     focus_label: str | None = Field("", title="Focus Label")
     learning_language_code: str | None = Field("", title="Learning Language Code")
+    localized_support_locale: str | None = Field("", title="Localized Support Locale")
+    localized_support_text: str | None = Field("", title="Localized Support Text")
     objective_id: UUID_aliased | None = Field(None, title="Objective Id")
     objective_type: SectionType = Field(..., title="Objective Type")
     proficiency: float | None = Field(None, title="Proficiency")
@@ -6070,11 +6317,18 @@ class LearningSessionV3(BaseModel):
     version: int | None = None
 
 
+class Source1(StrEnum):
+    reader = "reader"
+    reader_pick_due = "reader_pick_due"
+
+
 class LearningStatusUpdateRequest(BaseModel):
+    explicit: bool | None = Field(False, title="Explicit")
     item_type: str = Field(..., title="Item Type")
     klearn_proficiency: confloat(ge=0.0, le=1.0) | None = Field(
         None, title="Klearn Proficiency"
     )
+    source: Source1 | None = Field(None, title="Source")
     suggested_kielo_status: str | None = Field(None, title="Suggested Kielo Status")
 
 
@@ -6181,8 +6435,12 @@ class LessonDraftRequest(BaseModel):
     chapter_title: str | None = Field(None, title="Chapter Title")
     description: str | None = Field(None, title="Description")
     difficulty_level: DifficultyLevel | None = Field(None, title="Difficulty Level")
+    earlier_lessons: list[str] | None = Field(
+        None, max_length=30, title="Earlier Lessons"
+    )
     force_regenerate: bool | None = Field(False, title="Force Regenerate")
     grammar: list[str] | None = Field(None, title="Grammar")
+    later_lessons: list[str] | None = Field(None, max_length=30, title="Later Lessons")
     minutes: conint(ge=3, le=120) | None = Field(None, title="Minutes")
     purpose: constr(min_length=3, max_length=500) = Field(..., title="Purpose")
     shape: str | None = Field(None, title="Shape")
@@ -6215,6 +6473,44 @@ class LessonDraftResponse(BaseModel):
     review: Review = Field(..., title="Review")
     shape: str = Field(..., title="Shape")
     title: str = Field(..., title="Title")
+
+
+class LessonOverviewRow(BaseModel):
+    attention: float = Field(..., title="Attention")
+    cefr_level: str | None = Field(None, title="Cefr Level")
+    chapter_id: UUID_aliased | None = Field(None, title="Chapter Id")
+    chapter_title: str | None = Field(None, title="Chapter Title")
+    completed: int = Field(..., title="Completed")
+    completion_rate: float | None = Field(None, title="Completion Rate")
+    is_published: bool = Field(..., title="Is Published")
+    is_video: bool | None = Field(False, title="Is Video")
+    lesson_id: UUID_aliased = Field(..., title="Lesson Id")
+    level_id: UUID_aliased | None = Field(None, title="Level Id")
+    level_title: str | None = Field(None, title="Level Title")
+    lost: int = Field(..., title="Lost")
+    open_reports: int = Field(..., title="Open Reports")
+    order_index: int = Field(..., title="Order Index")
+    reports: int = Field(..., title="Reports")
+    shape: str | None = Field(None, title="Shape")
+    starts: int = Field(..., title="Starts")
+    step_count: int = Field(..., title="Step Count")
+    stop_count: int | None = Field(0, title="Stop Count")
+    stop_step: int | None = Field(None, title="Stop Step")
+    stop_step_title: str | None = Field(None, title="Stop Step Title")
+    stop_step_type: str | None = Field(None, title="Stop Step Type")
+    title: str = Field(..., title="Title")
+    track_id: UUID_aliased | None = Field(None, title="Track Id")
+    track_title: str | None = Field(None, title="Track Title")
+    updated_at: AwareDatetime | None = Field(None, title="Updated At")
+
+
+class LessonReport(BaseModel):
+    category: str | None = Field(None, title="Category")
+    created_at: AwareDatetime = Field(..., title="Created At")
+    feedback_id: UUID_aliased = Field(..., title="Feedback Id")
+    message: str = Field(..., title="Message")
+    status: str = Field(..., title="Status")
+    step_index: int | None = Field(None, title="Step Index")
 
 
 class Direction(StrEnum):
@@ -6351,6 +6647,47 @@ class ListeningComprehensionExercise(BaseModel):
     validation_signature: str | None = Field(None, title="Validation Signature")
 
 
+class LiveKitExhaustRequest(BaseModel):
+    reason: str
+    until: AwareDatetime | None = None
+
+
+class LiveKitPoolTotals(BaseModel):
+    calls: int
+    limit_minutes: int
+    participant_minutes: float
+    pct: float
+
+
+class LiveKitProfileCreateRequest(BaseModel):
+    api_key: str | None = None
+    api_secret: str | None = None
+    enabled: bool
+    monthly_participant_minute_limit: int
+    name: str
+    notes: str | None = None
+    priority: int
+    secret_ref: str | None = None
+    url: str
+
+
+class LiveKitProfileUpdateRequest(BaseModel):
+    api_key: str | None = None
+    api_secret: str | None = None
+    enabled: bool | None = None
+    monthly_participant_minute_limit: int | None = None
+    name: str | None = None
+    notes: str | None = None
+    priority: int | None = None
+    secret_ref: str | None = None
+    url: str | None = None
+
+
+class LiveKitServingRequest(BaseModel):
+    name: str
+    profile_id: str
+
+
 class LocalizationInvalidateCacheRequest(BaseModel):
     language: str | None = None
 
@@ -6409,6 +6746,18 @@ class LogoutRequestAuthService(BaseModel):
 
 class LogoutResponse(CancelSubscriptionResponse):
     pass
+
+
+class LongDebriefRequest(BaseModel):
+    mock_id: UUID_aliased | None = Field(None, title="Mock Id")
+    option_id: constr(max_length=8) | None = Field(None, title="Option Id")
+    seconds: confloat(ge=0.0, le=300.0) | None = Field(None, title="Seconds")
+    transcript: constr(max_length=6000) | None = Field("", title="Transcript")
+
+
+class LongSpeechResponse(BaseModel):
+    transcript: str = Field(..., title="Transcript")
+    words: int = Field(..., title="Words")
 
 
 class ManageURLResponse(BaseModel):
@@ -6720,6 +7069,31 @@ class Mindmap(BaseModel):
     video_id: UUID_aliased
 
 
+class Status6(StrEnum):
+    todo = "todo"
+    running = "running"
+    paused = "paused"
+    done = "done"
+    time_up = "time_up"
+
+
+class TimeBasis(StrEnum):
+    official = "official"
+    kielo = "kielo"
+
+
+class MockTask(BaseModel):
+    kind: str = Field(..., title="Kind")
+    ref: str = Field(..., title="Ref")
+    title: str | None = Field(None, title="Title")
+
+
+class Status7(StrEnum):
+    in_progress = "in_progress"
+    finished = "finished"
+    abandoned = "abandoned"
+
+
 class Morphology(DictionaryMorphology):
     pass
 
@@ -6866,6 +7240,20 @@ class SourceKind(StrEnum):
     article = "article"
     ktv_video = "ktv_video"
     conversation = "conversation"
+    lesson = "lesson"
+
+
+class Reason(StrEnum):
+    not_done = "not_done"
+    weakest_topic = "weakest_topic"
+
+
+class NextTask(BaseModel):
+    kind: str = Field(..., title="Kind")
+    reason: Reason = Field(..., title="Reason")
+    ref: str = Field(..., title="Ref")
+    title: str | None = Field(None, title="Title")
+    topic: str | None = Field(None, title="Topic")
 
 
 class NotificationAudience(BaseModel):
@@ -7139,8 +7527,12 @@ class OmorfiParadigmRow(BaseModel):
     label: str = Field(..., title="Label")
 
 
-class OnboardingFirstScene(FirstSceneVideo):
-    pass
+class OnboardingFirstScene(BaseModel):
+    duration_s: int
+    line_count: int
+    reason: str
+    title: str
+    video_id: str
 
 
 class OpSpec(BaseModel):
@@ -7262,6 +7654,34 @@ class ParagraphTranslationRequest(BaseModel):
 
 class PartCoverage(CommsEmailPartCoverage):
     pass
+
+
+class Trend(StrEnum):
+    up = "up"
+    flat = "flat"
+    down = "down"
+    none = "none"
+
+
+class NotEnough(StrEnum):
+    not_done = "not_done"
+    too_few = "too_few"
+    not_graded = "not_graded"
+
+
+class PartResult(BaseModel):
+    budget_seconds: int = Field(..., title="Budget Seconds")
+    correct: int | None = Field(None, title="Correct")
+    level: int | None = Field(None, title="Level")
+    meets_target: bool | None = Field(None, title="Meets Target")
+    not_enough: NotEnough | None = Field(None, title="Not Enough")
+    part: str = Field(..., title="Part")
+    status: Status6 = Field(..., title="Status")
+    tasks_done: int = Field(..., title="Tasks Done")
+    tasks_total: int = Field(..., title="Tasks Total")
+    total: int | None = Field(None, title="Total")
+    used_seconds: int = Field(..., title="Used Seconds")
+    weakest_criterion: str | None = Field(None, title="Weakest Criterion")
 
 
 class Partner(BaseModel):
@@ -7420,6 +7840,11 @@ class PhraseFrame(BaseModel):
     translation: str | None = None
 
 
+class PickIn(BaseModel):
+    kind: constr(max_length=16) = Field(..., title="Kind")
+    ref: constr(max_length=64) = Field(..., title="Ref")
+
+
 class PlaceholderExercise(BaseModel):
     cache_entry_id: str | None = Field(None, title="Cache Entry Id")
     content_ref: ContentRef | None = None
@@ -7489,9 +7914,26 @@ class PlacementTestItemsResponse(BaseModel):
     items: list[PlacementTestItem]
 
 
-class PlacementTestItemsResponseKielolearnEngine(BaseModel):
-    grammar_items: list[ItemSummary] = Field(..., title="Grammar Items")
-    vocabulary_items: list[ItemSummary] = Field(..., title="Vocabulary Items")
+class PlanRow(BaseModel):
+    format: str = Field(..., title="Format")
+    id: str = Field(..., title="Id")
+    kind: str = Field(..., title="Kind")
+    language: str = Field(..., title="Language")
+    level: str = Field(..., title="Level")
+    state: str | None = Field(None, title="State")
+    topic: str = Field(..., title="Topic")
+    verdict: str | None = Field(None, title="Verdict")
+
+
+class PointOut(Bilingual):
+    pass
+
+
+class PointResult(BaseModel):
+    met: Handled = Field(..., title="Met")
+    note: str = Field(..., title="Note")
+    text: str = Field(..., title="Text")
+    text_en: str = Field(..., title="Text En")
 
 
 class Post(BaseModel):
@@ -7569,6 +8011,19 @@ class PracticeContext(BaseModel):
     version_id: UUID_aliased
 
 
+class Reason1(StrEnum):
+    weakest_task = "weakest_task"
+    not_in_mock = "not_in_mock"
+    redo = "redo"
+
+
+class PracticeNext(BaseModel):
+    kind: str = Field(..., title="Kind")
+    part: str = Field(..., title="Part")
+    reason: Reason1 = Field(..., title="Reason")
+    ref: str = Field(..., title="Ref")
+
+
 class UserSetCefrLevel(StrEnum):
     A1 = "A1"
     A2 = "A2"
@@ -7614,7 +8069,158 @@ class PreparedInfo(BaseModel):
     retry_after_ms: int
 
 
+class ProbeState(BaseModel):
+    at: AwareDatetime
+    detail: str
+    result: str
+    status: int
+
+
 class Profile(BaseModel):
+    api_key: str | None = None
+    created_at: AwareDatetime
+    enabled: bool
+    exhausted_until: AwareDatetime | None = None
+    id: UUID_aliased
+    monthly_participant_minute_limit: int
+    name: str
+    notes: str | None = None
+    priority: int
+    secret_ref: str | None = None
+    serving: bool
+    status: str
+    updated_at: AwareDatetime
+    url: str
+
+
+class ProfileChannel(BaseModel):
+    enabled: bool
+    handle: str
+    id: str
+    language: str
+    name: str
+    platform: str
+    profile_url: str
+    remote_id: str
+
+
+class ProfileChannelSpec(BaseModel):
+    channel_id: str
+    handle: str | None = None
+    language: str
+    platform: str
+    remote_id: str | None = None
+
+
+class ProfileClaimRequest(BaseModel):
+    lease_seconds: int | None = None
+    platforms: list[str]
+    runner_id: str
+    session: dict[str, str] | None = None
+    version: str
+
+
+class ProfileFieldCap(BaseModel):
+    field: str
+    note: str | None = None
+    verified: bool
+    via: str
+
+
+class ProfileFieldLimit(BaseModel):
+    field: str
+    limit: int
+    note: str | None = None
+    required: bool
+    verified: bool
+    via: str
+
+
+class ProfileFinishRequest(BaseModel):
+    error: str | None = None
+    runner_id: str
+    session_state: str | None = None
+    status: str
+
+
+class ProfileImage(BaseModel):
+    height: int | None = None
+    media_id: UUID_aliased | None = None
+    sha256: str | None = None
+    url: str | None = None
+    width: int | None = None
+
+
+class ProfileIssue(BaseModel):
+    blocking: bool
+    field: str | None = None
+    message: str
+
+
+class ProfileLink(BaseModel):
+    title: str
+    url: str
+
+
+class ProfileLinkLimit(BaseModel):
+    max: int
+    note: str | None = None
+    title_max: int
+    verified: bool
+
+
+class ProfilePlanItem(BaseModel):
+    action: str
+    change_id: str
+    field: str
+    from_: str = Field(..., alias="from")
+    from_unknown: bool | None = None
+    note: str | None = None
+    to: str
+    via: str
+
+
+class ProfileRemote(BaseModel):
+    avatar: ProfileImage | None = None
+    banner: ProfileImage | None = None
+    bio: str
+    category: str
+    country: str
+    default_language: str
+    description: str
+    display_name: str
+    keywords: list[str]
+    links: list[ProfileLink]
+    note: str | None = None
+    read_at: AwareDatetime | None = None
+    unread: list[str] | None = None
+    upload_defaults: dict[str, str]
+
+
+class ProfileRunJob(BaseModel):
+    changes: list[ProfilePlanItem]
+    channel: ProfileChannelSpec
+    kind: str
+    lease_expires_at: AwareDatetime
+    run_id: UUID_aliased
+
+
+class ProfileRunResult(BaseModel):
+    error: str | None = None
+    session_state: str | None = None
+
+
+class ProfileRunner(BaseModel):
+    detail: str | None = None
+    language: str
+    last_seen: AwareDatetime
+    platform: str
+    runner_id: str
+    session_state: str
+    version: str
+
+
+class ProfileUserService(BaseModel):
     active_days: int
     computed_at: AwareDatetime
     goal: str
@@ -7625,6 +8231,21 @@ class Profile(BaseModel):
     type_minutes: dict[str, float]
     type_share: dict[str, float]
     window_days: int
+
+
+class Action(StrEnum):
+    start = "start"
+    pause = "pause"
+    task_done = "task_done"
+    finish_part = "finish_part"
+
+
+class ProgressRequest(BaseModel):
+    action: Action = Field(..., title="Action")
+    correct: conint(ge=0, le=200) | None = Field(None, title="Correct")
+    part: constr(max_length=16) = Field(..., title="Part")
+    ref: constr(max_length=64) | None = Field(None, title="Ref")
+    total: conint(ge=0, le=200) | None = Field(None, title="Total")
 
 
 class PromoCampaign(BaseModel):
@@ -7739,6 +8360,44 @@ class PromoStats(BaseModel):
     redeemed_30d: int
 
 
+class PronunciationAggregateBody(BaseModel):
+    score: float | None = None
+    scorer_version: str
+    scores: Any
+    status: str
+
+
+class PronunciationJudgementInput(BaseModel):
+    confidence: float
+    dimension: str
+    evidence: Any
+    judge_key: str
+    judge_kind: str
+    judge_label: str
+    value: float
+
+
+class PronunciationJudgementsBody(BaseModel):
+    judgements: list[PronunciationJudgementInput]
+
+
+class PronunciationSourceInput(BaseModel):
+    attribution_required: bool
+    attribution_text: str
+    dialect: str
+    fetched_at: AwareDatetime | None = None
+    file_url: str
+    license_spdx: str
+    license_url: str
+    original_mime: str
+    original_sha256: str
+    page_url: str
+    provider: str
+    region: str
+    speaker: str
+    uploader: str
+
+
 class PubSubMessage(BaseModel):
     deliveryAttempt: int | None = Field(None, title="Deliveryattempt")
     message: dict[str, Any] = Field(..., title="Message")
@@ -7811,6 +8470,23 @@ class QuarantineReviewRequest(BaseModel):
     write: bool | None = Field(True, title="Write")
 
 
+class Question(BaseModel):
+    answer: Any
+    options: list[str]
+    q: str
+    q_en: str | None = None
+    why_en: str | None = None
+
+
+class QuestionResult(BaseModel):
+    answer: str = Field(..., title="Answer")
+    correct: bool = Field(..., title="Correct")
+    correct_answer: str = Field(..., title="Correct Answer")
+    question_id: str = Field(..., title="Question Id")
+    rationale: str | None = Field("", title="Rationale")
+    self_check: bool | None = Field(False, title="Self Check")
+
+
 class QueueStatus(BaseModel):
     position: int
     reason: str | None = None
@@ -7838,12 +8514,8 @@ class ReaderCover(MediaAssetResponseContentService):
     pass
 
 
-class ReaderGlossaryEntry(BaseModel):
-    base: str
-    form: str
-    meaning_en: str
-    note: str | None = None
-    pos: str | None = None
+class ReaderGlossaryEntry(GlossaryEntry):
+    pass
 
 
 class ReaderItem(BaseModel):
@@ -7869,12 +8541,8 @@ class ReaderProgressResponse(BaseModel):
     items: list[ReaderProgress]
 
 
-class ReaderQuestion(BaseModel):
-    answer: Any
-    options: list[str]
-    q: str
-    q_en: str | None = None
-    why_en: str | None = None
+class ReaderQuestion(Question):
+    pass
 
 
 class ReaderTextCollection(BaseModel):
@@ -7894,11 +8562,6 @@ class ReaderTextNext(BaseModel):
 class ReaderTextParagraph(BaseModel):
     index: int
     text: str
-
-
-class ReadinessResponse(BaseModel):
-    models: str = Field(..., title="Models")
-    status: str = Field(..., title="Status")
 
 
 class RecapDeltas(BaseModel):
@@ -7997,6 +8660,14 @@ class RecapWordsV3(BaseModel):
 class RecentArticleReadIDsResponse(BaseModel):
     ids: list[str]
     reads: list[ArticleReadTimeUserService]
+
+
+class RecentAttempt(BaseModel):
+    created_at: AwareDatetime = Field(..., title="Created At")
+    grade: int = Field(..., title="Grade")
+    score: float = Field(..., title="Score")
+    set_id: str = Field(..., title="Set Id")
+    task_kind: str = Field(..., title="Task Kind")
 
 
 class RecommendationCampaign(BaseModel):
@@ -8101,6 +8772,7 @@ class RedeemPromoCodeRequest(BaseModel):
     code: str
     in_app: bool | None = None
     platform: str | None = None
+    source: str | None = None
     via: str | None = None
 
 
@@ -8416,6 +9088,12 @@ class RestoreAccessResponseUserService(BaseModel):
     tier: str | None = None
 
 
+class RestoreRequest(BaseModel):
+    force: bool
+    reason: str | None = None
+    to: str
+
+
 class RestoreSubscriptionRequest(LinkRevenueCatUserRequest):
     pass
 
@@ -8493,7 +9171,7 @@ class ReviewMissesRequestV3(BaseModel):
     missed_item_ids: list[str] | None = None
 
 
-class Status6(StrEnum):
+class Status9(StrEnum):
     composed = "composed"
     nothing_missed = "nothing_missed"
     round_limit = "round_limit"
@@ -8662,7 +9340,7 @@ class RoadmapLessonProgressSnapshot(BaseModel):
     completed_steps: int | None = Field(0, title="Completed Steps")
     current_step_index: int | None = Field(0, title="Current Step Index")
     is_completed: bool | None = Field(False, title="Is Completed")
-    progress_percent: float | None = Field(0.0, title="Progress Percent")
+    progress_percent: float | None = Field(0, title="Progress Percent")
     step_states: dict[str, Any] | None = Field(None, title="Step States")
     total_steps: int | None = Field(0, title="Total Steps")
 
@@ -8820,7 +9498,7 @@ class RoadmapStepTTSStreamSessionResponse(BaseModel):
 class RoadmapUserProgressResponse(BaseModel):
     active_lesson_id: UUID_aliased | None = Field(None, title="Active Lesson Id")
     completed_lessons: int = Field(..., title="Completed Lessons")
-    progress_percent: float | None = Field(0.0, title="Progress Percent")
+    progress_percent: float | None = Field(0, title="Progress Percent")
     total_lessons: int = Field(..., title="Total Lessons")
     user_id: UUID_aliased = Field(..., title="User Id")
 
@@ -8973,6 +9651,20 @@ class Scenario(BaseModel):
     voice_id: str | None = None
 
 
+class ScenarioArtRequest(BaseModel):
+    dry_run: bool | None = None
+    force: bool | None = None
+
+
+class ScenarioArtResult(BaseModel):
+    error: str | None = None
+    media_id: str | None = None
+    reason: str | None = None
+    slug: str | None = None
+    status: str
+    url: str | None = None
+
+
 class ScenarioChoiceExercise(BaseModel):
     cache_entry_id: str | None = Field(None, title="Cache Entry Id")
     content_ref: ContentRef | None = None
@@ -9036,6 +9728,23 @@ class ScenarioListItem(BaseModel):
     tags: list[str] | None = None
     thumbnail_url: str | None = None
     title: str
+
+
+class SceneArtRequest(BaseModel):
+    dry_run: bool | None = Field(
+        False,
+        description="Draw and check, but store and attach nothing.",
+        title="Dry Run",
+    )
+    force: bool | None = Field(
+        False, description="Draw again for a scene that already has art.", title="Force"
+    )
+
+
+class SceneArtSweepRequest(BaseModel):
+    dry_run: bool | None = Field(False, title="Dry Run")
+    languages: list[str] | None = Field(None, title="Languages")
+    max_scenes: conint(ge=1, le=200) | None = Field(None, title="Max Scenes")
 
 
 class ScheduleUpdateItem(BaseModel):
@@ -9203,7 +9912,7 @@ class SessionProgressSummary(BaseModel):
     total_stages: int | None = Field(0, title="Total Stages")
 
 
-class Status7(StrEnum):
+class Status10(StrEnum):
     applied = "applied"
     duplicate = "duplicate"
     skipped = "skipped"
@@ -9215,7 +9924,7 @@ class SessionReconcileRequestKielolearnEngine(BaseModel):
     submissions: list[ExerciseSubmission] | None = Field(None, title="Submissions")
 
 
-class Status8(StrEnum):
+class Status11(StrEnum):
     not_started = "not_started"
     in_progress = "in_progress"
     completed = "completed"
@@ -9226,7 +9935,7 @@ class SessionResumeState(BaseModel):
     current_exercise_index: int | None = Field(0, title="Current Exercise Index")
     current_stage_key: str | None = Field(None, title="Current Stage Key")
     current_stage_title: str | None = Field(None, title="Current Stage Title")
-    status: Status8 | None = Field("not_started", title="Status")
+    status: Status11 | None = Field("not_started", title="Status")
     total_exercises: int | None = Field(0, title="Total Exercises")
 
 
@@ -10408,6 +11117,10 @@ class SingletonSavedItemsDashboardResponseV3(BaseModel):
     data: SavedItemsDashboardResponseV3
 
 
+class SingletonScenarioArtResult(BaseModel):
+    data: ScenarioArtResult
+
+
 class SingletonScheduledCommunication(BaseModel):
     data: ScheduledCommunication
 
@@ -10541,6 +11254,25 @@ class SituationBeatTargetResponse(BaseModel):
     word_ids: list[str] | None = Field(None, title="Word Ids")
 
 
+class SituationOut(BaseModel):
+    id: str = Field(..., title="Id")
+    task: str = Field(..., title="Task")
+    text: str = Field(..., title="Text")
+    text_en: str = Field(..., title="Text En")
+
+
+class SituationSetOut(BaseModel):
+    answer_max_seconds: int | None = Field(30, title="Answer Max Seconds")
+    answer_min_seconds: int | None = Field(20, title="Answer Min Seconds")
+    exam_key: str = Field(..., title="Exam Key")
+    id: str = Field(..., title="Id")
+    read_seconds: int | None = Field(20, title="Read Seconds")
+    situations: list[SituationOut] = Field(..., title="Situations")
+    title: str = Field(..., title="Title")
+    title_en: str = Field(..., title="Title En")
+    topic: str = Field(..., title="Topic")
+
+
 class SituationSummary(BaseModel):
     beats_done: dict[str, bool]
     chapter_id: str
@@ -10642,6 +11374,65 @@ class SocialProblem(BaseModel):
     message: str
 
 
+class SocialProfileAdoptRequest(BaseModel):
+    fields: list[str] | None = None
+
+
+class SocialProfileClaimResponse(BaseModel):
+    job: ProfileRunJob | None = None
+
+
+class SocialProfileHeartbeatRequest(BaseModel):
+    lease_seconds: int | None = None
+    runner_id: str
+
+
+class SocialProfilePatchRequest(BaseModel):
+    avatar: ProfileImage | None = None
+    banner: ProfileImage | None = None
+    bio: str | None = None
+    category: str | None = None
+    country: str | None = None
+    default_language: str | None = None
+    description: str | None = None
+    display_name: str | None = None
+    keywords: list[str] | None = None
+    links: list[ProfileLink] | None = None
+    upload_defaults: dict[str, str] | None = None
+
+
+class SocialProfileRemoteRequest(BaseModel):
+    profile: ProfileRemote
+    runner_id: str
+
+
+class SocialProfileRunCreateRequest(BaseModel):
+    kind: str | None = None
+
+
+class SocialProfileRunSummary(BaseModel):
+    created_at: AwareDatetime
+    error: str | None = None
+    finished_at: AwareDatetime | None = None
+    kind: str
+    run_id: UUID_aliased
+    status: str
+
+
+class SocialProfileSummary(BaseModel):
+    by_hand: int
+    channel: ProfileChannel
+    differs: int
+    last_run: SocialProfileRunSummary | None = None
+    live_name: str
+    live_read_at: AwareDatetime | None = None
+    reads_here: bool
+    revision: int
+    runner: ProfileRunner | None = None
+    status: str
+    updated_at: AwareDatetime | None = None
+
+
 class SocialPublishingRequest(BaseModel):
     buffer_writes: bool
 
@@ -10664,6 +11455,56 @@ class SocialSummary(BaseModel):
     handed_off: int
     published: int
     scheduled: int
+
+
+class SourceOut(BaseModel):
+    label: str | None = Field("", title="Label")
+
+
+class SpeakLineExercise(BaseModel):
+    audio_text: str | None = Field("", title="Audio Text")
+    audio_url: str | None = Field(None, title="Audio Url")
+    cache_entry_id: str | None = Field(None, title="Cache Entry Id")
+    content_ref: ContentRef | None = None
+    context_hint: str | None = Field(
+        None,
+        description="A specific concept or hint for the exercise, e.g., 'inessive case'.",
+        title="Context Hint",
+    )
+    correct_answer: str | None = Field("", title="Correct Answer")
+    difficulty: int | None = Field(None, title="Difficulty")
+    error_pattern_tag: str | None = Field(None, title="Error Pattern Tag")
+    exercise_id: UUID_aliased | None = Field(
+        None,
+        description="Unique ID for this specific exercise instance.",
+        title="Exercise Id",
+    )
+    exercise_type: Literal["speak_line"] = Field("speak_line", title="Exercise Type")
+    explanation: str | None = Field(None, title="Explanation")
+    generation_job_id: UUID_aliased | None = Field(None, title="Generation Job Id")
+    generation_model: str | None = Field(None, title="Generation Model")
+    generation_provenance: ExerciseGenerationProvenance | None = None
+    is_placeholder: bool | None = Field(False, title="Is Placeholder")
+    item_id_fk: UUID_aliased | None = Field(..., title="Item Id Fk")
+    item_type_fk: Type | None = Field(..., title="Item Type Fk")
+    line_text: str = Field(..., title="Line Text")
+    objective_id: UUID_aliased | None = Field(None, title="Objective Id")
+    option_feedback: dict[str, str] | None = Field(None, title="Option Feedback")
+    prompt: str = Field(..., title="Prompt")
+    prompt_version: str | None = Field(None, title="Prompt Version")
+    quality_score: float | None = Field(None, title="Quality Score")
+    section_index: int | None = Field(None, title="Section Index")
+    section_key: str | None = Field(None, title="Section Key")
+    source_type: SourceType | None = Field(None, title="Source Type")
+    state: ExerciseState | None = None
+    translation_prompt: str | None = Field("", title="Translation Prompt")
+    validation_signature: str | None = Field(None, title="Validation Signature")
+
+
+class SpeakerOut(BaseModel):
+    gender: str | None = Field("", title="Gender")
+    id: str = Field(..., title="Id")
+    name: str = Field(..., title="Name")
 
 
 class SpeechReferenceAudioRequest(BaseModel):
@@ -10741,6 +11582,11 @@ class StaleRow(BaseModel):
     profile: str | None = None
 
 
+class StartRequest(BaseModel):
+    exam_key: constr(max_length=64) = Field(..., title="Exam Key")
+    picks: dict[str, list[PickIn]] | None = Field(None, max_length=4, title="Picks")
+
+
 class Stats(BaseModel):
     active: int
     converted_30d: int
@@ -10773,6 +11619,11 @@ class StatusResponse(AppFeedbackUpdateStatusRequest):
 
 class StatusResult(AppFeedbackUpdateStatusRequest):
     pass
+
+
+class StepStop(BaseModel):
+    count: int = Field(..., title="Count")
+    step_index: int = Field(..., title="Step Index")
 
 
 class StopExperimentRequest(BaseModel):
@@ -10981,23 +11832,23 @@ class StorePageReviewStatus(BaseModel):
 
 
 class StorePageRunBrief(BaseModel):
+    blocked: bool
+    changes: int
     created_at: AwareDatetime
     dry_run: bool
     finished_at: AwareDatetime | None = None
     run_id: UUID_aliased
     snapshot: int
     status: str
-    changes: int
-    blocked: bool
 
 
 class StorePageSummary(BaseModel):
     StorePage_1: StorePage = Field(..., alias="StorePage")
     approved_count: int
+    last_publish: StorePageRunBrief | None = None
     last_run: StorePageRunBrief | None = None
     locales_with_text: int
     set_name: str | None = None
-    last_publish: StorePageRunBrief | None = None
 
 
 class StorePageText(BaseModel):
@@ -11684,7 +12535,7 @@ class TTSGenerateRequest(BaseModel):
     language_code: str | None = Field("", title="Language Code")
 
 
-class Status9(StrEnum):
+class Status12(StrEnum):
     ready = "ready"
     generating = "generating"
     failed = "failed"
@@ -11698,7 +12549,7 @@ class TTSGenerateResponse(BaseModel):
     job_status: Status1 | None = Field(None, title="Job Status")
     media_id: UUID_aliased | None = Field(None, title="Media Id")
     stage: str | None = Field(None, title="Stage")
-    status: Status9 = Field(..., title="Status")
+    status: Status12 = Field(..., title="Status")
 
 
 class TTSJobStatusResponse(BaseModel):
@@ -11726,7 +12577,7 @@ class TTSParagraphGenerateResponse(BaseModel):
     media_id: UUID_aliased | None = Field(None, title="Media Id")
     paragraph_id: UUID_aliased = Field(..., title="Paragraph Id")
     stage: str | None = Field(None, title="Stage")
-    status: Status9 = Field(..., title="Status")
+    status: Status12 = Field(..., title="Status")
 
 
 class TTSPreviewRequest(BaseModel):
@@ -11923,6 +12774,63 @@ class TargetedSuggestionsResponse(BaseModel):
     user_id: str
 
 
+class TextCollection(ReaderTextCollection):
+    pass
+
+
+class TextNext(BaseModel):
+    content_entry_id: UUID_aliased
+    cover: MediaAssetResponseContentService | None = None
+    title: str
+    title_en: str
+
+
+class TextParagraph(ReaderTextParagraph):
+    pass
+
+
+class TextPickCandidate(BaseModel):
+    curated: bool | None = Field(False, title="Curated")
+    item_id: UUID_aliased = Field(..., title="Item Id")
+    item_type: Kind2 = Field(..., title="Item Type")
+
+
+class TextPickItem(BaseModel):
+    item_id: UUID_aliased
+    item_type: str
+    reason: str
+
+
+class Reason2(StrEnum):
+    due_review = "due_review"
+    path = "path"
+    mistake = "mistake"
+    new_at_level = "new_at_level"
+
+
+class TextPickItemKielolearnEngine(BaseModel):
+    item_id: UUID_aliased = Field(..., title="Item Id")
+    item_type: Kind2 = Field(..., title="Item Type")
+    rank: int = Field(..., title="Rank")
+    reason: Reason2 = Field(..., title="Reason")
+
+
+class TextPicks(BaseModel):
+    items: list[TextPickItem]
+
+
+class TextPicksRequest(BaseModel):
+    candidates: list[TextPickCandidate] | None = Field(
+        None, max_length=2000, title="Candidates"
+    )
+    content_version_id: UUID_aliased = Field(..., title="Content Version Id")
+    language: str = Field(..., title="Language")
+
+
+class TextPicksResponse(BaseModel):
+    picks: list[TextPickItemKielolearnEngine] = Field(..., title="Picks")
+
+
 class TimeSeriesPoint(CommsTimeSeriesPoint):
     pass
 
@@ -12016,7 +12924,7 @@ class TopicListResponseKielolearnEngine(BaseModel):
     word_count: int | None = Field(0, title="Word Count")
 
 
-class Status14(StrEnum):
+class Status17(StrEnum):
     found = "found"
     generating = "generating"
     draft_pending = "draft_pending"
@@ -12092,10 +13000,37 @@ class TrackListResponse(BaseModel):
     tracks: list[TrackListItem] = Field(..., title="Tracks")
 
 
-class Status15(StrEnum):
+class Status18(StrEnum):
     completed = "completed"
     active = "active"
     locked = "locked"
+
+
+class Kind3(StrEnum):
+    reading = "reading"
+    text = "text"
+    scene = "scene"
+
+
+class Status19(StrEnum):
+    done = "done"
+    in_progress = "in_progress"
+    available = "available"
+
+
+class TrackRoadmapItem(BaseModel):
+    description: str | None = Field(None, title="Description")
+    done_count: int | None = Field(None, title="Done Count")
+    kind: Kind3 = Field(..., title="Kind")
+    lesson_id: UUID_aliased = Field(..., title="Lesson Id")
+    optional: Literal[True] = Field(True, title="Optional")
+    order_index: int = Field(..., title="Order Index")
+    ref: str = Field(..., title="Ref")
+    status: Status19 = Field(..., title="Status")
+    thumbnail_media_id: UUID_aliased | None = Field(None, title="Thumbnail Media Id")
+    thumbnail_url: str | None = Field(None, title="Thumbnail Url")
+    title: str = Field(..., title="Title")
+    total_count: int | None = Field(None, title="Total Count")
 
 
 class TrackRoadmapLesson(BaseModel):
@@ -12103,10 +13038,72 @@ class TrackRoadmapLesson(BaseModel):
     kind: str | None = Field(None, title="Kind")
     lesson_id: UUID_aliased = Field(..., title="Lesson Id")
     order_index: int = Field(..., title="Order Index")
-    state: Status15 = Field(..., title="State")
+    state: Status18 = Field(..., title="State")
     thumbnail_media_id: UUID_aliased | None = Field(None, title="Thumbnail Media Id")
     thumbnail_url: str | None = Field(None, title="Thumbnail Url")
     title: str = Field(..., title="Title")
+    title_meaning: str | None = Field(None, title="Title Meaning")
+    title_original: str | None = Field(None, title="Title Original")
+
+
+class TrackedLink(BaseModel):
+    archived_at: AwareDatetime | None = None
+    campaign_id: UUID_aliased | None = None
+    code: str
+    created_at: AwareDatetime
+    created_by: UUID_aliased | None = None
+    destination: str
+    id: UUID_aliased
+    language: str
+    name: str
+    platform: str
+    updated_at: AwareDatetime
+
+
+class TrackedLinkArchiveRequest(BaseModel):
+    archived: bool
+
+
+class TrackedLinkClickRequest(BaseModel):
+    user_agent: str
+
+
+class TrackedLinkClickResponse(BaseModel):
+    url: str
+
+
+class TrackedLinkDay(BaseModel):
+    bot_clicks: int
+    claims: int
+    clicks: int
+    day: str
+    purchases: int
+    store_taps: int
+
+
+class TrackedLinkInput(BaseModel):
+    campaign_id: UUID_aliased | None = None
+    code: str
+    destination: str
+    language: str
+    name: str
+    platform: str
+
+
+class TrackedLinkList(BaseModel):
+    links: list[TrackedLink]
+    next_page_key: str | None = None
+    total_count: int
+
+
+class TrackedLinkStats(BaseModel):
+    days: list[TrackedLinkDay]
+    link: TrackedLink
+    total_bot_clicks: int
+    total_claims: int
+    total_clicks: int
+    total_purchases: int
+    total_store_taps: int
 
 
 class Transaction(BaseModel):
@@ -12147,6 +13144,11 @@ class TranscriptResponse(BaseModel):
     has_transcript: bool
     srt: str | None = None
     status: str
+
+
+class TranscriptTurn(BaseModel):
+    speaker: str = Field(..., title="Speaker")
+    text: str = Field(..., title="Text")
 
 
 class TransferCodeResponse(BaseModel):
@@ -12349,7 +13351,9 @@ class UpdateLearningProgressResponse(BaseModel):
 
 
 class UpdateLearningStatusRequest(BaseModel):
+    explicit: bool | None = None
     item_type: str | None = None
+    source: str | None = None
     suggested_kielo_status: str
 
 
@@ -12498,6 +13502,12 @@ class UpsertTierLimitResponse(BaseModel):
     tier: str
 
 
+class Usage(BaseModel):
+    calls: int
+    participant_minutes: float
+    pct: float
+
+
 class UserAchievementProgress(BaseModel):
     achievement_code: str
     current_value: int
@@ -12554,7 +13564,7 @@ class UserActionEnvelope(BaseModel):
 
 
 class UserActiveTrackResponse(BaseModel):
-    progress_percent: float | None = Field(0.0, title="Progress Percent")
+    progress_percent: float | None = Field(0, title="Progress Percent")
     track_color_hex: str | None = Field(None, title="Track Color Hex")
     track_icon_emoji: str | None = Field(None, title="Track Icon Emoji")
     track_id: UUID_aliased | None = Field(None, title="Track Id")
@@ -12635,7 +13645,7 @@ class UserProfileUserService(BaseModel):
     estimated_skill_level: str | None = None
     how_did_you_find_out: str | None = None
     id: UUID_aliased
-    intent: Profile | None = None
+    intent: ProfileUserService | None = None
     is_guest: bool
     last_active_date: AwareDatetime | None = None
     learner_stage: str | None = None
@@ -12647,10 +13657,7 @@ class UserProfileUserService(BaseModel):
     name: str | None = None
     newsletter_consent: bool | None = None
     onboarding_completed_at: AwareDatetime | None = None
-    onboarding_first_experience: str | None = Field(
-        None,
-        description="Arm of the first-experience test: scene or control. Server-assigned, sticky per learner; control for everyone while the test is off.",
-    )
+    onboarding_first_experience: str | None = None
     onboarding_variant: str | None = None
     reminder_hour: int | None = None
     streak_grace_used_on: AwareDatetime | None = None
@@ -12967,9 +13974,43 @@ class WordImagesRequest(QuarantineReviewRequest):
     pass
 
 
+class WordReadingArticle(BaseModel):
+    article_type: str
+    content_entry_id: UUID_aliased
+    content_version_id: UUID_aliased
+    matched_item_ids: list[UUID_aliased]
+    published_at: AwareDatetime
+    title: str
+
+
+class WordReadingRequest(BaseModel):
+    item_ids: list[UUID_aliased]
+    learning_language_code: str
+    level: str | None = None
+    limit: int | None = None
+    within_days: int | None = None
+
+
+class WordReadingResponse(BaseModel):
+    articles: list[WordReadingArticle]
+    language_code: str
+
+
 class WordScrambleItem(BaseModel):
     is_correct_target_word: bool | None = Field(False, title="Is Correct Target Word")
     text: str = Field(..., title="Text")
+
+
+class WritingOut(BaseModel):
+    minutes: int = Field(..., title="Minutes")
+    model_answer: str = Field(..., title="Model Answer")
+    phrases: list[Bilingual] = Field(..., title="Phrases")
+    points: list[Bilingual] = Field(..., title="Points")
+    register_: str = Field(..., alias="register", title="Register")
+    situation: str = Field(..., title="Situation")
+    situation_en: str | None = Field("", title="Situation En")
+    task_type: str = Field(..., title="Task Type")
+    words: list[int] = Field(..., title="Words")
 
 
 class FieldTranslateBatchRequest(BaseModel):
@@ -12989,6 +14030,62 @@ class FieldTranslateBatchResponse(BaseModel):
 
 class PauseResponse(PauseSessionResponse):
     pass
+
+
+class SrcKielolearnengineCoreSchemasEventsItemSummary(BaseModel):
+    base_word_id: UUID_aliased | None = Field(None, title="Base Word Id")
+    cefr_level: str = Field(..., title="Cefr Level")
+    display_text: str = Field(..., title="Display Text")
+    grammar_concept_id: UUID_aliased | None = Field(None, title="Grammar Concept Id")
+    item_id: UUID_aliased = Field(..., title="Item Id")
+    item_type: Type = Field(..., title="Item Type")
+    learning_language_code: str | None = Field("", title="Learning Language Code")
+    support_language_code: str | None = Field("", title="Support Language Code")
+    support_text: str | None = Field(None, title="Support Text")
+
+
+class SrcKielolearnengineMainReadinessResponse(BaseModel):
+    models: str = Field(..., title="Models")
+    status: str = Field(..., title="Status")
+
+
+class SrcKielolearnengineServicesExamItemsAnswerIn(BaseModel):
+    answer: constr(max_length=400) | None = Field("", title="Answer")
+    question_id: constr(max_length=32) = Field(..., title="Question Id")
+
+
+class SrcKielolearnengineServicesExamItemsItemSummary(BaseModel):
+    done: ItemDone | None = None
+    duration_seconds: float | None = Field(None, title="Duration Seconds")
+    exam_key: str = Field(..., title="Exam Key")
+    format: str = Field(..., title="Format")
+    id: str = Field(..., title="Id")
+    kind: str = Field(..., title="Kind")
+    level: str = Field(..., title="Level")
+    minutes: int | None = Field(None, title="Minutes")
+    play_count: int | None = Field(None, title="Play Count")
+    question_count: int = Field(..., title="Question Count")
+    title: str = Field(..., title="Title")
+    topic: str = Field(..., title="Topic")
+    word_count: int = Field(..., title="Word Count")
+    words: list[int] | None = Field(None, title="Words")
+
+
+class SrcKielolearnengineServicesExamItemsOptionOut(BaseModel):
+    id: str = Field(..., title="Id")
+    text: str = Field(..., title="Text")
+
+
+class SrcKielolearnengineServicesExamPrepAnswerIn(BaseModel):
+    seconds: confloat(ge=0.0, le=120.0) | None = Field(None, title="Seconds")
+    situation_id: constr(max_length=64) = Field(..., title="Situation Id")
+    transcript: constr(max_length=1200) | None = Field("", title="Transcript")
+
+
+class SrcKielolearnengineServicesExamPrepLongOptionOut(BaseModel):
+    id: str = Field(..., title="Id")
+    text: str = Field(..., title="Text")
+    text_en: str | None = Field("", title="Text En")
 
 
 class UnpauseResponse(UnpauseSessionResponse):
@@ -13035,6 +14132,7 @@ class AIModelFamily(BaseModel):
     recent_changes: list[AIRouteChange]
     retry_rate: float
     service: str
+    spend_24h_usd: float
     spend_7d: list[AIUsageDay]
     spend_today_usd: float
     thinking_budget: int
@@ -13066,27 +14164,55 @@ class AdminDigestEmail(BaseModel):
     summary: str
 
 
+class AgentBrief(BaseModel):
+    brief: str
+    change_sets: list[AgentBriefChangeSet]
+    claim_expires_at: AwareDatetime | None = None
+    claimed_at: AwareDatetime | None = None
+    claimed_by_name: str | None = None
+    closed_at: AwareDatetime | None = None
+    closed_by: str | None = None
+    closing_note: str | None = None
+    created_at: AwareDatetime
+    created_by: str
+    id: UUID_aliased
+    items: list[AgentBriefItem]
+    learning_language_code: str
+    status: str
+
+
+class AgentBriefCreateRequest(BaseModel):
+    brief: str
+    items: list[AgentBriefItem]
+    learning_language_code: str
+
+
 class AgentChangeOp(BaseModel):
     captions: list[AgentCaptionPatch] | None = None
     ids: list[UUID_aliased] | None = None
     items: list[AgentPatchItem] | None = None
     merges: list[AgentMergeItem] | None = None
     op: str
+    reader: list[AgentReaderEdit] | None = None
     retired_reason: str | None = None
     roadmap: list[AgentRoadmapEdit] | None = None
 
 
 class AgentChangeSetRequest(BaseModel):
+    brief_id: UUID_aliased | None = None
     confidence: str
     dry_run: bool | None = None
     ops: list[AgentChangeOp]
     reason: str
+    reverts_change_set_id: UUID_aliased | None = None
 
 
 class AgentChangeSetResult(BaseModel):
     change_set: AgentChangeSet
     dry_run: bool | None = None
     items: list[AgentChangeItem]
+    reverts: list[AgentRevertRef] | None = None
+    reverts_change_set_id: UUID_aliased | None = None
     skipped: list[AgentSkippedItem] | None = None
 
 
@@ -13350,6 +14476,11 @@ class CampaignReach(BaseModel):
     ios_store_discount_held: bool
 
 
+class CaptionPicks(BaseModel):
+    items: list[TextPickItem]
+    words: list[CaptionPickWord]
+
+
 class Captions(BaseModel):
     content_version_id: UUID_aliased | None = None
     created_at: AwareDatetime
@@ -13358,6 +14489,7 @@ class Captions(BaseModel):
     is_fallback: bool
     learning_language_code: str | None = None
     locale: str
+    picks: CaptionPicks | None = None
     prepared: PreparedInfo | None = None
     source_locale: str
     translation_source: str | None = None
@@ -13947,6 +15079,13 @@ class DataQualitySummary(BaseModel):
     open: int
 
 
+class DebriefRequest(BaseModel):
+    answers: list[SrcKielolearnengineServicesExamPrepAnswerIn] = Field(
+        ..., max_length=10, min_length=1, title="Answers"
+    )
+    mock_id: UUID_aliased | None = Field(None, title="Mock Id")
+
+
 class DecisionLog(BaseModel):
     breadth_mode: str | None = Field("", title="Breadth Mode")
     breadth_reason: str | None = Field("", title="Breadth Reason")
@@ -14042,7 +15181,9 @@ class DiscountCampaignList(BaseModel):
 
 
 class DiscoveryItemsResponse(BaseModel):
-    items: list[ItemSummary] = Field(..., title="Items")
+    items: list[SrcKielolearnengineCoreSchemasEventsItemSummary] = Field(
+        ..., title="Items"
+    )
 
 
 class EffectiveUserLimitsResponse(BaseModel):
@@ -14055,6 +15196,22 @@ class Email(BaseModel):
     campaign_id: UUID_aliased | None = None
     copy_: dict[str, EmailCopy] = Field(..., alias="copy")
     link: str
+
+
+class ExamPrepConfig(BaseModel):
+    exam_key: str = Field(..., title="Exam Key")
+    grade_label: str = Field(..., title="Grade Label")
+    pairs: list[list[str]] = Field(..., title="Pairs")
+    parts: list[str] = Field(..., title="Parts")
+    target_grade: int = Field(..., title="Target Grade")
+    tasks: dict[str, list[ExamTask]] = Field(..., title="Tasks")
+    title: str = Field(..., title="Title")
+    track_id: str = Field(..., title="Track Id")
+    track_slug: str = Field(..., title="Track Slug")
+
+
+class ExamPrepResponse(BaseModel):
+    configs: list[ExamPrepConfig] = Field(..., title="Configs")
 
 
 class ExperimentArmConfig(BaseModel):
@@ -14241,12 +15398,34 @@ class Inbox(BaseModel):
     link: str
 
 
+class Item(BaseModel):
+    article_version_id: UUID_aliased
+    content_entry_id: UUID_aliased
+    cover: MediaAssetResponseContentService | None = None
+    level: str
+    minutes: int
+    position: int
+    title: str
+    title_en: str
+
+
+class ItemsResponse(BaseModel):
+    items: list[SrcKielolearnengineServicesExamItemsItemSummary] = Field(
+        ..., title="Items"
+    )
+
+
 class JourneyResultsSend(BaseModel):
     channel: str
     sent: int
     skipped: int
     skipped_reasons: list[JourneySkipReason]
     waiting: int
+
+
+class JourneyReturnLift(BaseModel):
+    within_48h: Lift | None = None
+    within_7d: Lift | None = None
 
 
 class JourneyTriggerEventsResponse(BaseModel):
@@ -14501,8 +15680,63 @@ class LearningSession(BaseModel):
     user_id: UUID_aliased | None = None
 
 
+class LessonOverviewResponse(BaseModel):
+    days: int = Field(..., title="Days")
+    lessons: list[LessonOverviewRow] = Field(..., title="Lessons")
+
+
+class LessonSignals(BaseModel):
+    completed: int = Field(..., title="Completed")
+    days: int = Field(..., title="Days")
+    lesson_id: UUID_aliased = Field(..., title="Lesson Id")
+    reports: list[LessonReport] = Field(..., title="Reports")
+    starts: int = Field(..., title="Starts")
+    stops: list[StepStop] = Field(..., title="Stops")
+
+
 class ListScenariosResponse(BaseModel):
     items: list[ScenarioListItem]
+
+
+class LiveKitPoolDesiredResponse(BaseModel):
+    desired: Profile | None = None
+    serving: Profile | None = None
+
+
+class LongDebriefResponse(BaseModel):
+    better_answer: str = Field(..., title="Better Answer")
+    criteria: dict[str, int] = Field(..., title="Criteria")
+    estimated: bool | None = Field(True, title="Estimated")
+    exam_key: str = Field(..., title="Exam Key")
+    grade: int = Field(..., title="Grade")
+    kind: str = Field(..., title="Kind")
+    meets_target: bool = Field(..., title="Meets Target")
+    min_words: int = Field(..., title="Min Words")
+    option_id: str | None = Field(None, title="Option Id")
+    points: list[PointResult] = Field(..., title="Points")
+    prompt_id: str = Field(..., title="Prompt Id")
+    score: float = Field(..., title="Score")
+    summary: str = Field(..., title="Summary")
+    target_grade: int | None = Field(3, title="Target Grade")
+    too_short: bool = Field(..., title="Too Short")
+    words: int = Field(..., title="Words")
+
+
+class LongPromptOut(BaseModel):
+    answer_seconds: int = Field(..., title="Answer Seconds")
+    exam_key: str = Field(..., title="Exam Key")
+    id: str = Field(..., title="Id")
+    kind: str = Field(..., title="Kind")
+    options: list[SrcKielolearnengineServicesExamPrepLongOptionOut] | None = Field(
+        [], title="Options", validate_default=True
+    )
+    points: list[PointOut] | None = Field([], title="Points", validate_default=True)
+    prep_seconds: int = Field(..., title="Prep Seconds")
+    text: str | None = Field("", title="Text")
+    text_en: str | None = Field("", title="Text En")
+    title: str = Field(..., title="Title")
+    title_en: str = Field(..., title="Title En")
+    topic: str = Field(..., title="Topic")
 
 
 class MarketingCampaignRequest(BaseModel):
@@ -14551,6 +15785,51 @@ class MediaMetadata(BaseModel):
     variants: dict[str, MediaVariantInfo] | None = None
 
 
+class MockPartOut(BaseModel):
+    budget_seconds: int = Field(..., title="Budget Seconds")
+    done: list[str] = Field(..., title="Done")
+    part: str = Field(..., title="Part")
+    remaining_seconds: int = Field(..., title="Remaining Seconds")
+    status: Status6 = Field(..., title="Status")
+    tasks: list[MockTask] = Field(..., title="Tasks")
+    time_basis: str = Field(..., title="Time Basis")
+    used_seconds: int = Field(..., title="Used Seconds")
+
+
+class MockPartPlan(BaseModel):
+    budget_seconds: int = Field(..., title="Budget Seconds")
+    part: str = Field(..., title="Part")
+    tasks: list[MockTask] = Field(..., title="Tasks")
+    time_basis: TimeBasis = Field(..., title="Time Basis")
+
+
+class MockPlan(BaseModel):
+    left_out: list[dict[str, str]] | None = Field([], title="Left Out")
+    parts: list[MockPartPlan] = Field(..., title="Parts")
+
+
+class MockResult(BaseModel):
+    estimated: bool | None = Field(True, title="Estimated")
+    exam_key: str = Field(..., title="Exam Key")
+    id: str = Field(..., title="Id")
+    left_out: list[dict[str, str]] = Field(..., title="Left Out")
+    parts: list[PartResult] = Field(..., title="Parts")
+    practice_next: list[PracticeNext] = Field(..., title="Practice Next")
+    status: str = Field(..., title="Status")
+    target_grade: int = Field(..., title="Target Grade")
+
+
+class MockTestOut(BaseModel):
+    current_part: str | None = Field(None, title="Current Part")
+    exam_key: str = Field(..., title="Exam Key")
+    id: str = Field(..., title="Id")
+    left_out: list[dict[str, str]] = Field(..., title="Left Out")
+    parts: list[MockPartOut] = Field(..., title="Parts")
+    started_at: AwareDatetime = Field(..., title="Started At")
+    status: Status7 = Field(..., title="Status")
+    warn_seconds: int | None = Field(60, title="Warn Seconds")
+
+
 class MyTopicListsResponse(BaseModel):
     topic_lists: list[TopicListTeaser]
 
@@ -14572,6 +15851,7 @@ class NextStepRecommendation(BaseModel):
     subtitle: str | None = Field(None, title="Subtitle")
     title: str = Field(..., title="Title")
     type: Type1 = Field(..., title="Type")
+    words: list[str] | None = Field(None, title="Words")
 
 
 class NextStepRecommendationV3(BaseModel):
@@ -14591,6 +15871,7 @@ class NextStepRecommendationV3(BaseModel):
     subtitle: str | None = None
     title: str
     type: str
+    words: list[str] | None = None
 
 
 class NextStepsResponse(BaseModel):
@@ -14718,6 +15999,30 @@ class ParagraphTranslationResponse(BaseModel):
     translations: list[ParagraphTranslationItem]
 
 
+class PartReadiness(BaseModel):
+    by_kind: list[KindCount] | None = Field([], title="By Kind", validate_default=True)
+    estimated: bool | None = Field(True, title="Estimated")
+    grade_estimate: int | None = Field(None, title="Grade Estimate")
+    graded: bool = Field(..., title="Graded")
+    levels: list[RecentAttempt] | None = Field(
+        [], title="Levels", validate_default=True
+    )
+    max_level: int | None = Field(4, title="Max Level")
+    mean_score: float | None = Field(None, title="Mean Score")
+    meets_target: bool | None = Field(False, title="Meets Target")
+    more_needed: int | None = Field(0, title="More Needed")
+    next_task: NextTask | None = None
+    part: str = Field(..., title="Part")
+    recent: list[RecentAttempt] | None = Field(
+        [], title="Recent", validate_default=True
+    )
+    target_grade: int | None = Field(3, title="Target Grade")
+    tasks_done: int | None = Field(0, title="Tasks Done")
+    tasks_total: int | None = Field(0, title="Tasks Total")
+    trend: Trend | None = Field("none", title="Trend")
+    window: int | None = Field(5, title="Window")
+
+
 class PaywallConfig(BaseModel):
     default_plan: str
     experiment_id: str | None = None
@@ -14726,10 +16031,67 @@ class PaywallConfig(BaseModel):
     variant: str
 
 
+class PlacementTestItemsResponseKielolearnEngine(BaseModel):
+    grammar_items: list[SrcKielolearnengineCoreSchemasEventsItemSummary] = Field(
+        ..., title="Grammar Items"
+    )
+    vocabulary_items: list[SrcKielolearnengineCoreSchemasEventsItemSummary] = Field(
+        ..., title="Vocabulary Items"
+    )
+
+
 class PostList(BaseModel):
     locale: str | None = None
     posts: list[PostSummary]
     total: int
+
+
+class ProfileFields(BaseModel):
+    avatar: ProfileImage | None = None
+    banner: ProfileImage | None = None
+    bio: str
+    category: str
+    country: str
+    default_language: str
+    description: str
+    display_name: str
+    keywords: list[str]
+    links: list[ProfileLink]
+    upload_defaults: dict[str, str]
+
+
+class ProfilePlan(BaseModel):
+    fingerprint: str
+    issues: list[ProfileIssue]
+    items: list[ProfilePlanItem]
+    unchanged: int
+    writable: int
+
+
+class ProfileRun(BaseModel):
+    attempts: int
+    channel_id: str
+    claimed_at: AwareDatetime | None = None
+    created_at: AwareDatetime
+    created_by: UUID_aliased | None = None
+    fingerprint: str | None = None
+    finished_at: AwareDatetime | None = None
+    kind: str
+    lease_expires_at: AwareDatetime | None = None
+    lease_owner: str | None = None
+    needs_runner: bool
+    plan: ProfilePlan | None = None
+    profile_revision: int
+    remote: ProfileRemote | None = None
+    result: ProfileRunResult
+    run_id: UUID_aliased
+    status: str
+
+
+class ProfileUsage(BaseModel):
+    Profile_1: Profile = Field(..., alias="Profile")
+    last_probe: ProbeState | None = None
+    usage: Usage
 
 
 class ProgressSummary(BaseModel):
@@ -14776,6 +16138,27 @@ class PromoCampaignDetail(BaseModel):
     paid_after_gift: int
 
 
+class PronunciationCandidateBody(BaseModel):
+    attribution: str
+    audio_sha256: str
+    base_word_id: UUID_aliased
+    duration_ms: int | None = None
+    license: str
+    license_url: str
+    loudness_lufs: float | None = None
+    media_url: str
+    provenance: PronunciationSourceInput | None = None
+    provider: str
+    region: str
+    snr_db: float | None = None
+    source: str
+    source_key: str
+    source_url: str
+    speaker: str
+    term: str
+    voice: str
+
+
 class Push(Inbox):
     pass
 
@@ -14799,6 +16182,16 @@ class PushFilterPreviewResult(BaseModel):
 
 class PushFilterTermListResponse(BaseModel):
     terms: list[PushFilterTermResponse]
+
+
+class QuestionOut(BaseModel):
+    id: str = Field(..., title="Id")
+    options: list[SrcKielolearnengineServicesExamItemsOptionOut] | None = Field(
+        None, title="Options"
+    )
+    prompt: str = Field(..., title="Prompt")
+    prompt_en: str | None = Field("", title="Prompt En")
+    type: str = Field(..., title="Type")
 
 
 class ReaderCollection(BaseModel):
@@ -14982,7 +16375,7 @@ class RoadmapLessonsResponse(BaseModel):
 
 class RoadmapSpeechEvaluationResponse(BaseModel):
     expected_text: str = Field(..., title="Expected Text")
-    language_probability: float | None = Field(0.0, title="Language Probability")
+    language_probability: float | None = Field(0, title="Language Probability")
     lesson_id: UUID_aliased = Field(..., title="Lesson Id")
     passed: bool = Field(..., title="Passed")
     recognized_text: str = Field(..., title="Recognized Text")
@@ -15327,6 +16720,10 @@ class SingletonPaywallConfig(BaseModel):
     data: PaywallConfig
 
 
+class SingletonProfileRun(BaseModel):
+    data: ProfileRun
+
+
 class SingletonProgressSummary(BaseModel):
     data: ProgressSummary
 
@@ -15381,6 +16778,10 @@ class SingletonSocialImportResponse(BaseModel):
 
 class SingletonSocialPostEventsResponse(BaseModel):
     data: SocialPostEventsResponse
+
+
+class SingletonSocialProfileClaimResponse(BaseModel):
+    data: SocialProfileClaimResponse
 
 
 class SingletonSocialPublishingRequest(BaseModel):
@@ -15587,6 +16988,22 @@ class SingletonTopicListsForWordResponse(BaseModel):
     data: TopicListsForWordResponse
 
 
+class SingletonTrackedLink(BaseModel):
+    data: TrackedLink
+
+
+class SingletonTrackedLinkClickResponse(BaseModel):
+    data: TrackedLinkClickResponse
+
+
+class SingletonTrackedLinkList(BaseModel):
+    data: TrackedLinkList
+
+
+class SingletonTrackedLinkStats(BaseModel):
+    data: TrackedLinkStats
+
+
 class SingletonTransactionHistoryResponse(BaseModel):
     data: TransactionHistoryResponse
 
@@ -15763,6 +17180,10 @@ class SingletonWebIngestTargetList(BaseModel):
     data: list[WebIngestTarget]
 
 
+class SingletonWordReadingResponse(BaseModel):
+    data: WordReadingResponse
+
+
 class SitePostList(BaseModel):
     counts: SitePostCounts
     posts: list[SitePostSummary]
@@ -15866,6 +17287,40 @@ class SocialPostListResponse(BaseModel):
     slots: dict[str, list[str]]
     summary: SocialSummary
     window_hours: int
+
+
+class SocialProfile(BaseModel):
+    approved_at: AwareDatetime | None = None
+    approved_revision: int | None = None
+    capabilities: list[ProfileFieldCap]
+    channel: ProfileChannel
+    desired: ProfileFields
+    limits: list[ProfileFieldLimit]
+    links_limit: ProfileLinkLimit
+    live: ProfileRemote | None = None
+    live_read_at: AwareDatetime | None = None
+    live_run: ProfileRun | None = None
+    plan: ProfilePlan | None = None
+    reads_here: bool
+    revision: int
+    runner: ProfileRunner | None = None
+    status: str
+    updated_at: AwareDatetime | None = None
+
+
+class SocialProfileAdoptResponse(BaseModel):
+    adopted: list[str]
+    profile: SocialProfile
+    skipped: list[AdoptSkip]
+
+
+class SocialProfileListResponse(BaseModel):
+    items: list[SocialProfileSummary]
+    runners: list[ProfileRunner]
+
+
+class SocialProfileRunListResponse(BaseModel):
+    items: list[ProfileRun]
 
 
 class StatsChartResponse(BaseModel):
@@ -15974,6 +17429,21 @@ class SubmitAnswerResponseV3(BaseModel):
     score: int | None = None
     session_completed: bool
     xp_awarded: int | None = None
+
+
+class SubmitRequest(BaseModel):
+    answers: list[SrcKielolearnengineServicesExamItemsAnswerIn] = Field(
+        ..., max_length=12, title="Answers"
+    )
+
+
+class SubmitResponse(BaseModel):
+    correct: int = Field(..., title="Correct")
+    item_id: str = Field(..., title="Item Id")
+    results: list[QuestionResult] = Field(..., title="Results")
+    text: str | None = Field(None, title="Text")
+    total: int = Field(..., title="Total")
+    transcript: list[TranscriptTurn] | None = Field(None, title="Transcript")
 
 
 class SubscriptionInfo(BaseModel):
@@ -16104,6 +17574,22 @@ class TTSStreamSession(BaseModel):
     word_timings: list[TTSWordTiming] | None = None
 
 
+class Text(BaseModel):
+    article_version_id: UUID_aliased
+    collection: TextCollection | None = None
+    content_entry_id: UUID_aliased
+    cover: MediaAssetResponseContentService | None = None
+    glossary: list[GlossaryEntry]
+    level: str
+    minutes: int
+    next: TextNext | None = None
+    paragraphs: list[TextParagraph]
+    questions: list[Question]
+    summary_en: str
+    title: str
+    title_en: str
+
+
 class TopicListGenerationJobResponse(BaseModel):
     error: str | None = Field(None, title="Error")
     error_message: str | None = Field(None, title="Error Message")
@@ -16122,7 +17608,7 @@ class TopicListStatusResponse(BaseModel):
     preview: TopicListPreview | None = None
     seed_word_id: UUID_aliased = Field(..., title="Seed Word Id")
     stage: str | None = Field(None, title="Stage")
-    status: Status14 = Field(..., title="Status")
+    status: Status17 = Field(..., title="Status")
     topic_lists: list[TopicListTeaserKielolearnEngine] | None = Field(
         None, title="Topic Lists"
     )
@@ -16134,13 +17620,17 @@ class TrackRoadmapChapter(BaseModel):
     icon_emoji: str | None = Field(None, title="Icon Emoji")
     id: UUID_aliased = Field(..., title="Id")
     lesson_count: int | None = Field(0, title="Lesson Count")
-    lessons: list[TrackRoadmapLesson] | None = Field(None, title="Lessons")
-    status: Status15 = Field(..., title="Status")
+    lessons: list[TrackRoadmapLesson | TrackRoadmapItem] | None = Field(
+        None, title="Lessons"
+    )
+    status: Status18 = Field(..., title="Status")
     test_out: ChapterTestOutOffer | None = None
     tested_out_lesson_count: int | None = Field(0, title="Tested Out Lesson Count")
     thumbnail_media_id: UUID_aliased | None = Field(None, title="Thumbnail Media Id")
     thumbnail_url: str | None = Field(None, title="Thumbnail Url")
     title: str = Field(..., title="Title")
+    title_meaning: str | None = Field(None, title="Title Meaning")
+    title_original: str | None = Field(None, title="Title Original")
 
 
 class TrackRoadmapLevel(BaseModel):
@@ -16151,8 +17641,8 @@ class TrackRoadmapLevel(BaseModel):
     icon_emoji: str | None = Field(None, title="Icon Emoji")
     id: UUID_aliased = Field(..., title="Id")
     placed_past: bool | None = Field(False, title="Placed Past")
-    progress_percent: float | None = Field(0.0, title="Progress Percent")
-    status: Status15 = Field(..., title="Status")
+    progress_percent: float | None = Field(0, title="Progress Percent")
+    status: Status18 = Field(..., title="Status")
     thumbnail_media_id: UUID_aliased | None = Field(None, title="Thumbnail Media Id")
     thumbnail_url: str | None = Field(None, title="Thumbnail Url")
     title: str = Field(..., title="Title")
@@ -16164,7 +17654,7 @@ class TrackRoadmapResponse(BaseModel):
     next_chapter_title: str | None = Field(None, title="Next Chapter Title")
     next_lesson_id: UUID_aliased | None = Field(None, title="Next Lesson Id")
     next_lesson_title: str | None = Field(None, title="Next Lesson Title")
-    progress_percent: float | None = Field(0.0, title="Progress Percent")
+    progress_percent: float | None = Field(0, title="Progress Percent")
     total_lessons: int | None = Field(0, title="Total Lessons")
     track_color_hex: str | None = Field(None, title="Track Color Hex")
     track_description: str | None = Field(None, title="Track Description")
@@ -16175,6 +17665,8 @@ class TrackRoadmapResponse(BaseModel):
     )
     track_thumbnail_url: str | None = Field(None, title="Track Thumbnail Url")
     track_title: str = Field(..., title="Track Title")
+    track_title_meaning: str | None = Field(None, title="Track Title Meaning")
+    track_title_original: str | None = Field(None, title="Track Title Original")
 
 
 class TranslationKey(BaseModel):
@@ -16263,7 +17755,7 @@ class UserAchievementsResult(BaseModel):
 
 
 class UserActiveTrackWithRoadmapResponse(BaseModel):
-    progress_percent: float | None = Field(0.0, title="Progress Percent")
+    progress_percent: float | None = Field(0, title="Progress Percent")
     roadmap: TrackRoadmapResponse | None = None
     track_color_hex: str | None = Field(None, title="Track Color Hex")
     track_icon_emoji: str | None = Field(None, title="Track Icon Emoji")
@@ -16293,10 +17785,7 @@ class UserProfile(BaseModel):
         None,
         description="When setup finished. Sent as null when the account still owes setup, and always present on servers that know the field, so an absent key means an older server. (Plain string, not a [string, null] type array: the Go SDK generator cannot resolve type arrays.)",
     )
-    onboarding_first_experience: str | None = Field(
-        None,
-        description="Arm of the first-experience test: scene or control. Server-assigned, sticky per learner; control for everyone while the test is off.",
-    )
+    onboarding_first_experience: str | None = None
     onboarding_variant: str | None = None
     reminder_hour: int | None = None
     streak_grace_used_on: str | None = None
@@ -16396,6 +17885,7 @@ class ArticleVersionOccurrence(BaseModel):
     base_word_id: UUID_aliased | None = None
     end_char_offset: int
     end_word_index: int | None = None
+    for_you: bool | None = None
     grammar_concept_id: UUID_aliased | None = None
     grammar_detail: GrammarConcept | None = None
     inflected_form_details: Any | None = None
@@ -16406,8 +17896,10 @@ class ArticleVersionOccurrence(BaseModel):
     occurrence_type: str
     original_token_phrase: str | None = None
     paragraph_id: UUID_aliased
+    pick_reason: str | None = None
     sentence_text: str | None = None
     sentence_translation: str | None = None
+    source: str | None = None
     specific_explanation: str | None = None
     specific_explanation_html: str | None = None
     start_char_offset: int
@@ -16419,6 +17911,7 @@ class ArticleVersionOccurrenceContentService(BaseModel):
     base_word_id: UUID_aliased | None = None
     end_char_offset: int
     end_word_index: int | None = None
+    for_you: bool | None = None
     grammar_concept_id: UUID_aliased | None = None
     grammar_detail: GrammarConceptContentService | None = None
     inflected_form_details: Any | None = None
@@ -16429,8 +17922,10 @@ class ArticleVersionOccurrenceContentService(BaseModel):
     occurrence_type: str
     original_token_phrase: str | None = None
     paragraph_id: UUID_aliased
+    pick_reason: str | None = None
     sentence_text: str | None = None
     sentence_translation: str | None = None
+    source: str | None = None
     specific_explanation: str | None = None
     specific_explanation_html: str | None = None
     start_char_offset: int
@@ -16463,6 +17958,7 @@ class ChallengeSection(BaseModel):
             | ContextMatchingExercise
             | SpellingChallengeExercise
             | ScenarioChoiceExercise
+            | SpeakLineExercise
             | PlaceholderExercise,
             Field(discriminator="exercise_type"),
         ]
@@ -16480,6 +17976,22 @@ class ChallengeSection(BaseModel):
     subtitle: str | None = Field(None, title="Subtitle")
     title: str = Field(..., title="Title")
     xp_multiplier: conint(ge=1, le=3) | None = Field(1, title="Xp Multiplier")
+
+
+class Collection(BaseModel):
+    cover: MediaAssetResponseContentService | None = None
+    description_en: str
+    id: UUID_aliased
+    items: list[Item]
+    level: str
+    position: int
+    slug: str
+    title: str
+    title_en: str
+
+
+class CollectionsResponse(BaseModel):
+    collections: list[Collection]
 
 
 class CommsEmailCoverage(BaseModel):
@@ -16716,6 +18228,13 @@ class EmailTemplateCoverage(BaseModel):
     languages: list[LanguageCoverageCommunicationsService]
 
 
+class ExamReadiness(BaseModel):
+    exam_key: str = Field(..., title="Exam Key")
+    parts: list[PartReadiness] = Field(..., title="Parts")
+    target_grade: int = Field(..., title="Target Grade")
+    title: str = Field(..., title="Title")
+
+
 class ExperimentArm(BaseModel):
     config: ExperimentArmConfig
     is_control: bool
@@ -16748,6 +18267,27 @@ class HubStatusResponse(BaseModel):
     preview: ConceptHubPreview | None = None
     stage: str | None = Field(None, title="Stage")
     status: Status3 = Field(..., title="Status")
+
+
+class ItemOut(BaseModel):
+    audio_url: str | None = Field(None, title="Audio Url")
+    duration_seconds: float | None = Field(None, title="Duration Seconds")
+    exam_key: str = Field(..., title="Exam Key")
+    format: str = Field(..., title="Format")
+    id: str = Field(..., title="Id")
+    instruction: str | None = Field("", title="Instruction")
+    kind: str = Field(..., title="Kind")
+    level: str = Field(..., title="Level")
+    play_count: int | None = Field(None, title="Play Count")
+    questions: list[QuestionOut] = Field(..., title="Questions")
+    source: SourceOut | None = None
+    speakers: list[SpeakerOut] | None = Field(None, title="Speakers")
+    text: str | None = Field(None, title="Text")
+    title: str = Field(..., title="Title")
+    title_en: str | None = Field("", title="Title En")
+    topic: str = Field(..., title="Topic")
+    word_count: int = Field(..., title="Word Count")
+    writing: WritingOut | None = None
 
 
 class Journey(BaseModel):
@@ -16784,6 +18324,7 @@ class JourneyResultsResponse(BaseModel):
     definitions: dict[str, str]
     lift: Lift | None = None
     lift_needs_entered: int
+    return_lift: JourneyReturnLift
     sends: list[JourneyResultsSend]
 
 
@@ -16837,6 +18378,7 @@ class LearningSessionKielolearnEngine(BaseModel):
             | ContextMatchingExercise
             | SpellingChallengeExercise
             | ScenarioChoiceExercise
+            | SpeakLineExercise
             | PlaceholderExercise,
             Field(discriminator="exercise_type"),
         ]
@@ -16883,8 +18425,24 @@ class LearningSessionKielolearnEngine(BaseModel):
     xp_target: int | None = Field(None, title="Xp Target")
 
 
+class LiveKitPoolResponse(BaseModel):
+    active_profile_id: UUID_aliased | None = None
+    month_start: AwareDatetime
+    profiles: list[ProfileUsage]
+    recent_events: list[Event]
+    serving_profile_id: UUID_aliased | None = None
+    totals: LiveKitPoolTotals
+
+
 class MarketingCampaignListResponse(BaseModel):
     items: list[MarketingCampaignResponse]
+
+
+class MockCurrentResponse(BaseModel):
+    mock: MockTestOut | None = None
+    mock_limit_exempt: bool | None = Field(False, title="Mock Limit Exempt")
+    mocks_started: int | None = Field(0, title="Mocks Started")
+    plan: MockPlan | None = None
 
 
 class Paragraph(BaseModel):
@@ -16934,13 +18492,13 @@ class ReviewMissesResponse(BaseModel):
     review_item_ids: list[UUID_aliased] | None = Field(None, title="Review Item Ids")
     round: int | None = Field(0, title="Round")
     session: LearningSessionKielolearnEngine | None = None
-    status: Status6 = Field(..., title="Status")
+    status: Status9 = Field(..., title="Status")
 
 
 class SessionReconcileItemResult(BaseModel):
     exercise_id: UUID_aliased = Field(..., title="Exercise Id")
     result: SubmissionResult | None = None
-    status: Status7 | None = Field("applied", title="Status")
+    status: Status10 | None = Field("applied", title="Status")
     submission_id: str | None = Field(None, title="Submission Id")
 
 
@@ -16963,6 +18521,14 @@ class SessionReconcileResponseV3(BaseModel):
 
 class SingletonAudienceFields(BaseModel):
     data: AudienceFields
+
+
+class SingletonCollection(BaseModel):
+    data: Collection
+
+
+class SingletonCollectionsResponse(BaseModel):
+    data: CollectionsResponse
 
 
 class SingletonCommsEmailCoverage(BaseModel):
@@ -17061,6 +18627,22 @@ class SingletonSocialPostListResponse(BaseModel):
     data: SocialPostListResponse
 
 
+class SingletonSocialProfile(BaseModel):
+    data: SocialProfile
+
+
+class SingletonSocialProfileAdoptResponse(BaseModel):
+    data: SocialProfileAdoptResponse
+
+
+class SingletonSocialProfileListResponse(BaseModel):
+    data: SocialProfileListResponse
+
+
+class SingletonSocialProfileRunListResponse(BaseModel):
+    data: SocialProfileRunListResponse
+
+
 class SingletonStorageClassMoveResult(BaseModel):
     data: StorageClassMoveResult
 
@@ -17111,6 +18693,10 @@ class SingletonTTSParagraphJobStatus(BaseModel):
 
 class SingletonTTSStreamSession(BaseModel):
     data: TTSStreamSession
+
+
+class SingletonText(BaseModel):
+    data: Text
 
 
 class SingletonTranslationKey(BaseModel):
@@ -17184,6 +18770,10 @@ class Template(BaseModel):
     needs_audience: bool | None = None
 
 
+class SrcKielolearnengineServicesExamPrepAttemptsReadinessResponse(BaseModel):
+    exams: list[ExamReadiness] = Field(..., title="Exams")
+
+
 class ArticleParagraph(BaseModel):
     audio_url: str | None = None
     content_locale: str | None = None
@@ -17216,6 +18806,7 @@ class ArticleVersion(BaseModel):
     original_title: str | None = None
     paragraphs: list[ArticleParagraph] | None = None
     personalized_content: KLearnPersonalizedArticleResponse | None = None
+    picks: TextPicks | None = None
     publication_date: AwareDatetime | None = None
     simplified_article_version_id: UUID_aliased | None = None
     source_url: str | None = None
@@ -17247,6 +18838,7 @@ class ArticleVersionContentService(BaseModel):
     original_title: str | None = None
     paragraphs: list[Paragraph] | None = None
     personalized_content: KLearnPersonalizedArticleResponseContentService | None = None
+    picks: TextPicks | None = None
     prepared: PreparedInfo | None = None
     publication_date: AwareDatetime | None = None
     simplified_article_version_id: UUID_aliased | None = None
