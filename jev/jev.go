@@ -12,6 +12,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -22,6 +23,7 @@ import (
 	"time"
 
 	"github.com/team-kielo-app/kielo-shared/llmroute"
+	sharedmetrics "github.com/team-kielo-app/kielo-shared/observe/metrics"
 )
 
 const (
@@ -217,6 +219,7 @@ func (c *Client) Decide(ctx context.Context, site string, state any, questions [
 	res, latency, err := c.post(ctx, state, questions)
 	if err != nil {
 		slog.Warn("jev: call failed", "site", site, "latency_ms", latency.Milliseconds(), "error", err)
+		reportFailure(ctx, site, err)
 		llmroute.Record(llmroute.Sample{
 			Family: family, Model: c.modelName(), Provider: usageProvider, Latency: latency, Outcome: llmroute.OutcomeError,
 		})
@@ -279,7 +282,7 @@ func (c *Client) post(ctx context.Context, state any, questions []Question) (*re
 		return nil, latency, fmt.Errorf("read: %w", err)
 	}
 	if resp.StatusCode/100 != 2 {
-		return nil, latency, fmt.Errorf("status %d", resp.StatusCode)
+		return nil, latency, &statusError{code: resp.StatusCode, body: string(raw)}
 	}
 	var out response
 	if err := json.Unmarshal(raw, &out); err != nil {
@@ -317,4 +320,39 @@ func (f *Fake) Decide(_ context.Context, _ string, _ any, questions []Question) 
 		}
 	}
 	return out
+}
+
+// statusError is a non-2xx answer. Its body goes into the failure detail so a
+// 402/429 that names quota or billing is classified as kind=quota.
+type statusError struct {
+	code int
+	body string
+}
+
+func (e *statusError) Error() string {
+	body := strings.TrimSpace(e.body)
+	if len(body) > 200 {
+		body = body[:200]
+	}
+	if body == "" {
+		return fmt.Sprintf("status %d", e.code)
+	}
+	return fmt.Sprintf("status %d: %s", e.code, body)
+}
+
+// reportFailure writes the shared external_api_failure line, so the
+// quota/auth and sustained-failure alerts cover TypeSafe like the other paid
+// providers.
+func reportFailure(ctx context.Context, site string, err error) {
+	status := 0
+	var se *statusError
+	if errors.As(err, &se) {
+		status = se.code
+	}
+	sharedmetrics.ExternalAPIFailureEmit(ctx, sharedmetrics.ExternalAPIFailure{
+		Provider:  usageProvider,
+		Operation: "decide:" + site,
+		Status:    status,
+		Err:       err,
+	})
 }
