@@ -1122,6 +1122,7 @@ type AIModelFamily struct {
 	RecentChanges      []AIRouteChange `json:"recent_changes"`
 	RetryRate          float32         `json:"retry_rate"`
 	Service            string          `json:"service"`
+	Spend24hUsd        float32         `json:"spend_24h_usd"`
 	Spend7d            []AIUsageDay    `json:"spend_7d"`
 	SpendTodayUsd      float32         `json:"spend_today_usd"`
 	ThinkingBudget     int             `json:"thinking_budget"`
@@ -1448,6 +1449,64 @@ type AdminDigestSection struct {
 	Label string            `json:"label"`
 }
 
+// AdoptSkip defines model for AdoptSkip.
+type AdoptSkip struct {
+	Field  string `json:"field"`
+	Reason string `json:"reason"`
+}
+
+// AgentBrief defines model for AgentBrief.
+type AgentBrief struct {
+	Brief                string                `json:"brief"`
+	ChangeSets           []AgentBriefChangeSet `json:"change_sets"`
+	ClaimExpiresAt       *time.Time            `json:"claim_expires_at,omitempty"`
+	ClaimedAt            *time.Time            `json:"claimed_at,omitempty"`
+	ClaimedByName        *string               `json:"claimed_by_name,omitempty"`
+	ClosedAt             *time.Time            `json:"closed_at,omitempty"`
+	ClosedBy             *string               `json:"closed_by,omitempty"`
+	ClosingNote          *string               `json:"closing_note,omitempty"`
+	CreatedAt            time.Time             `json:"created_at"`
+	CreatedBy            string                `json:"created_by"`
+	Id                   uuid.UUID             `json:"id"`
+	Items                []AgentBriefItem      `json:"items"`
+	LearningLanguageCode string                `json:"learning_language_code"`
+	Status               string                `json:"status"`
+}
+
+// AgentBriefChangeSet defines model for AgentBriefChangeSet.
+type AgentBriefChangeSet struct {
+	AgentName string    `json:"agent_name"`
+	CreatedAt time.Time `json:"created_at"`
+	Id        uuid.UUID `json:"id"`
+	ItemCount int       `json:"item_count"`
+	Reason    string    `json:"reason"`
+	Status    string    `json:"status"`
+}
+
+// AgentBriefClaimRequest defines model for AgentBriefClaimRequest.
+type AgentBriefClaimRequest struct {
+	Minutes int `json:"minutes"`
+}
+
+// AgentBriefCreateRequest defines model for AgentBriefCreateRequest.
+type AgentBriefCreateRequest struct {
+	Brief                string           `json:"brief"`
+	Items                []AgentBriefItem `json:"items"`
+	LearningLanguageCode string           `json:"learning_language_code"`
+}
+
+// AgentBriefDoneRequest defines model for AgentBriefDoneRequest.
+type AgentBriefDoneRequest struct {
+	Note string `json:"note"`
+}
+
+// AgentBriefItem defines model for AgentBriefItem.
+type AgentBriefItem struct {
+	Id    string  `json:"id"`
+	Kind  string  `json:"kind"`
+	Title *string `json:"title,omitempty"`
+}
+
 // AgentCaptionEdit defines model for AgentCaptionEdit.
 type AgentCaptionEdit struct {
 	AfterIndex  *int     `json:"after_index,omitempty"`
@@ -1474,6 +1533,7 @@ type AgentChangeItem struct {
 	AppliedAt   *time.Time   `json:"applied_at,omitempty"`
 	Before      *interface{} `json:"before,omitempty"`
 	ChangeSetId uuid.UUID    `json:"change_set_id"`
+	Diff        *interface{} `json:"diff,omitempty"`
 	EntityId    string       `json:"entity_id"`
 	EntityType  string       `json:"entity_type"`
 	Id          int          `json:"id"`
@@ -1499,6 +1559,7 @@ type AgentChangeSet struct {
 	AgentName            string      `json:"agent_name"`
 	AppliedAt            *time.Time  `json:"applied_at,omitempty"`
 	ApprovalReason       *string     `json:"approval_reason,omitempty"`
+	BriefId              *uuid.UUID  `json:"brief_id,omitempty"`
 	Confidence           string      `json:"confidence"`
 	CreatedAt            time.Time   `json:"created_at"`
 	DecidedAt            *time.Time  `json:"decided_at,omitempty"`
@@ -1519,6 +1580,7 @@ type AgentChangeSet struct {
 
 // AgentChangeSetRequest defines model for AgentChangeSetRequest.
 type AgentChangeSetRequest struct {
+	BriefId            *uuid.UUID      `json:"brief_id,omitempty"`
 	Confidence         string          `json:"confidence"`
 	DryRun             *bool           `json:"dry_run,omitempty"`
 	Ops                []AgentChangeOp `json:"ops"`
@@ -11621,6 +11683,7 @@ type NextStepRecommendation struct {
 	Subtitle        *string                         `json:"subtitle"`
 	Title           string                          `json:"title"`
 	Type            NextStepRecommendationType      `json:"type"`
+	Words           *[]string                       `json:"words"`
 }
 
 // NextStepRecommendationCtaId defines model for NextStepRecommendation.CtaId.
@@ -11653,6 +11716,7 @@ type NextStepRecommendationV3 struct {
 	Subtitle        *string                       `json:"subtitle,omitempty"`
 	Title           string                        `json:"title"`
 	Type            string                        `json:"type"`
+	Words           *[]string                     `json:"words,omitempty"`
 }
 
 // NextStepsResponse What next, after a surface: the plan for a learner who has just
@@ -17514,6 +17578,11 @@ type SingletonSocialProfile struct {
 	Data SocialProfile `json:"data"`
 }
 
+// SingletonSocialProfileAdoptResponse defines model for SingletonSocialProfileAdoptResponse.
+type SingletonSocialProfileAdoptResponse struct {
+	Data SocialProfileAdoptResponse `json:"data"`
+}
+
 // SingletonSocialProfileClaimResponse defines model for SingletonSocialProfileClaimResponse.
 type SingletonSocialProfileClaimResponse struct {
 	Data SocialProfileClaimResponse `json:"data"`
@@ -18134,6 +18203,11 @@ type SingletonWebIngestTargetList struct {
 	Data []WebIngestTarget `json:"data"`
 }
 
+// SingletonWordReadingResponse defines model for SingletonWordReadingResponse.
+type SingletonWordReadingResponse struct {
+	Data WordReadingResponse `json:"data"`
+}
+
 // SingletonMapStringMapStringString defines model for Singleton_map_string_map_string_string_.
 type SingletonMapStringMapStringString struct {
 	Data map[string]map[string]string `json:"data"`
@@ -18536,6 +18610,18 @@ type SocialProfile struct {
 	Runner           *ProfileRunner      `json:"runner,omitempty"`
 	Status           string              `json:"status"`
 	UpdatedAt        *time.Time          `json:"updated_at,omitempty"`
+}
+
+// SocialProfileAdoptRequest defines model for SocialProfileAdoptRequest.
+type SocialProfileAdoptRequest struct {
+	Fields *[]string `json:"fields,omitempty"`
+}
+
+// SocialProfileAdoptResponse defines model for SocialProfileAdoptResponse.
+type SocialProfileAdoptResponse struct {
+	Adopted []string      `json:"adopted"`
+	Profile SocialProfile `json:"profile"`
+	Skipped []AdoptSkip   `json:"skipped"`
 }
 
 // SocialProfileClaimResponse defines model for SocialProfileClaimResponse.
@@ -22014,6 +22100,31 @@ type WordImagesRequest struct {
 	Write     *bool     `json:"write,omitempty"`
 }
 
+// WordReadingArticle defines model for WordReadingArticle.
+type WordReadingArticle struct {
+	ArticleType      string      `json:"article_type"`
+	ContentEntryId   uuid.UUID   `json:"content_entry_id"`
+	ContentVersionId uuid.UUID   `json:"content_version_id"`
+	MatchedItemIds   []uuid.UUID `json:"matched_item_ids"`
+	PublishedAt      time.Time   `json:"published_at"`
+	Title            string      `json:"title"`
+}
+
+// WordReadingRequest defines model for WordReadingRequest.
+type WordReadingRequest struct {
+	ItemIds              []uuid.UUID `json:"item_ids"`
+	LearningLanguageCode string      `json:"learning_language_code"`
+	Level                *string     `json:"level,omitempty"`
+	Limit                *int        `json:"limit,omitempty"`
+	WithinDays           *int        `json:"within_days,omitempty"`
+}
+
+// WordReadingResponse defines model for WordReadingResponse.
+type WordReadingResponse struct {
+	Articles     []WordReadingArticle `json:"articles"`
+	LanguageCode string               `json:"language_code"`
+}
+
 // WordScrambleItem defines model for WordScrambleItem.
 type WordScrambleItem struct {
 	IsCorrectTargetWord *bool  `json:"is_correct_target_word,omitempty"`
@@ -23962,7 +24073,7 @@ type GetApiV3MeNextStepsParams struct {
 	// SourceId Content entry id (article, video), scenario id or roadmap lesson id
 	SourceId string `form:"source_id" json:"source_id"`
 
-	// Supports Comma list of card kinds this client can launch, e.g. article_pack. Omitted: only the original kinds.
+	// Supports Comma list of card kinds this client can launch, e.g. article_pack, roadmap_lesson, lesson_reading (a lesson end may then carry an article card naming the lesson's words in `words`). Omitted: only the original kinds.
 	Supports *string `form:"supports,omitempty" json:"supports,omitempty"`
 
 	// SupportLanguageCode Two-letter ISO 639-1 code for translated UI strings (per ADR-006 §3.83).
@@ -24653,6 +24764,18 @@ type GetInternalAdminAgentAtWorkParams struct {
 	LearningLanguageCode *string `form:"learning_language_code,omitempty" json:"learning_language_code,omitempty"`
 }
 
+// GetInternalAdminAgentBriefsParams defines parameters for GetInternalAdminAgentBriefs.
+type GetInternalAdminAgentBriefsParams struct {
+	// Status open, claimed, done or cancelled
+	Status *string `form:"status,omitempty" json:"status,omitempty"`
+
+	// LearningLanguageCode Two-letter ISO 639-1 code for the language being learned (per ADR-006 §3.83).
+	LearningLanguageCode *string `form:"learning_language_code,omitempty" json:"learning_language_code,omitempty"`
+
+	// PageSize Maximum number of items per page. Handler default applies if omitted.
+	PageSize *int `form:"page_size,omitempty" json:"page_size,omitempty"`
+}
+
 // GetInternalAdminAgentChangeSetsParams defines parameters for GetInternalAdminAgentChangeSets.
 type GetInternalAdminAgentChangeSetsParams struct {
 	// Status pending, applied, rejected or reverted
@@ -24810,6 +24933,18 @@ type GetInternalAdminMediaStorageUntrackedParams struct {
 
 	// Offset Legacy offset-pagination offset. Prefer next_page_key on new routes.
 	Offset *int `form:"offset,omitempty" json:"offset,omitempty"`
+}
+
+// PostInternalAgentBriefsBriefIdClaimParams defines parameters for PostInternalAgentBriefsBriefIdClaim.
+type PostInternalAgentBriefsBriefIdClaimParams struct {
+	// IdempotencyKey Unique per request; a retry with the same key replays the first answer
+	IdempotencyKey string `json:"Idempotency-Key"`
+}
+
+// PostInternalAgentBriefsBriefIdDoneParams defines parameters for PostInternalAgentBriefsBriefIdDone.
+type PostInternalAgentBriefsBriefIdDoneParams struct {
+	// IdempotencyKey Unique per request; a retry with the same key replays the first answer
+	IdempotencyKey string `json:"Idempotency-Key"`
 }
 
 // GetInternalAgentChangeSetsParams defines parameters for GetInternalAgentChangeSets.
@@ -26363,6 +26498,9 @@ type PatchAdminApiV3SocialPostsPostIdJSONRequestBody = SocialPostUpdateRequest
 // PatchAdminApiV3SocialProfilesChannelIdJSONRequestBody defines body for PatchAdminApiV3SocialProfilesChannelId for application/json ContentType.
 type PatchAdminApiV3SocialProfilesChannelIdJSONRequestBody = SocialProfilePatchRequest
 
+// PostAdminApiV3SocialProfilesChannelIdAdoptLiveJSONRequestBody defines body for PostAdminApiV3SocialProfilesChannelIdAdoptLive for application/json ContentType.
+type PostAdminApiV3SocialProfilesChannelIdAdoptLiveJSONRequestBody = SocialProfileAdoptRequest
+
 // PostAdminApiV3SocialProfilesChannelIdRunsJSONRequestBody defines body for PostAdminApiV3SocialProfilesChannelIdRuns for application/json ContentType.
 type PostAdminApiV3SocialProfilesChannelIdRunsJSONRequestBody = SocialProfileRunCreateRequest
 
@@ -27137,6 +27275,12 @@ type PostApiV3WebIngestTargetsJSONRequestBody = WebIngestTargetRequest
 // PatchApiV3WebIngestTargetsTargetIdJSONRequestBody defines body for PatchApiV3WebIngestTargetsTargetId for application/json ContentType.
 type PatchApiV3WebIngestTargetsTargetIdJSONRequestBody = WebIngestTargetRequest
 
+// PostInternalAdminAgentBriefsJSONRequestBody defines body for PostInternalAdminAgentBriefs for application/json ContentType.
+type PostInternalAdminAgentBriefsJSONRequestBody = AgentBriefCreateRequest
+
+// PostInternalAdminAgentBriefsBriefIdCancelJSONRequestBody defines body for PostInternalAdminAgentBriefsBriefIdCancel for application/json ContentType.
+type PostInternalAdminAgentBriefsBriefIdCancelJSONRequestBody = AgentBriefDoneRequest
+
 // PostInternalAdminAgentChangeSetsChangeSetIdApproveJSONRequestBody defines body for PostInternalAdminAgentChangeSetsChangeSetIdApprove for application/json ContentType.
 type PostInternalAdminAgentChangeSetsChangeSetIdApproveJSONRequestBody = AgentDecisionRequest
 
@@ -27172,6 +27316,12 @@ type PostInternalAdminMediaStorageFieldsOwnerFieldSyncJSONRequestBody = SyncRequ
 
 // PostInternalAdminMediaStorageUntrackedDeleteJSONRequestBody defines body for PostInternalAdminMediaStorageUntrackedDelete for application/json ContentType.
 type PostInternalAdminMediaStorageUntrackedDeleteJSONRequestBody = StorageDeleteObjectsRequest
+
+// PostInternalAgentBriefsBriefIdClaimJSONRequestBody defines body for PostInternalAgentBriefsBriefIdClaim for application/json ContentType.
+type PostInternalAgentBriefsBriefIdClaimJSONRequestBody = AgentBriefClaimRequest
+
+// PostInternalAgentBriefsBriefIdDoneJSONRequestBody defines body for PostInternalAgentBriefsBriefIdDone for application/json ContentType.
+type PostInternalAgentBriefsBriefIdDoneJSONRequestBody = AgentBriefDoneRequest
 
 // PostInternalAgentChangeSetsJSONRequestBody defines body for PostInternalAgentChangeSets for application/json ContentType.
 type PostInternalAgentChangeSetsJSONRequestBody = AgentChangeSetRequest
@@ -27409,6 +27559,9 @@ type CreateDailyBlogDraftsInternalBlogDraftsDailyPostJSONRequestBody = CreateDai
 
 // PostInternalContentBridgeItemsLookupJSONRequestBody defines body for PostInternalContentBridgeItemsLookup for application/json ContentType.
 type PostInternalContentBridgeItemsLookupJSONRequestBody = BatchLookupRequest
+
+// PostInternalContentBridgeWordsArticlesJSONRequestBody defines body for PostInternalContentBridgeWordsArticles for application/json ContentType.
+type PostInternalContentBridgeWordsArticlesJSONRequestBody = WordReadingRequest
 
 // PostInternalContentVersionsVersionIdClaimForProcessingJSONRequestBody defines body for PostInternalContentVersionsVersionIdClaimForProcessing for application/json ContentType.
 type PostInternalContentVersionsVersionIdClaimForProcessingJSONRequestBody = ClaimContentVersionForProcessingRequest
