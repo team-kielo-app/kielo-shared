@@ -251,3 +251,35 @@ func TestEveryJevCallLogsOneUsageLineWithProviderAndOutcome(t *testing.T) {
 		t.Fatalf("outcomes: %q / %q", sink.lines[0], sink.lines[1])
 	}
 }
+
+func TestCreditFailureWritesTheSharedExternalAPILine(t *testing.T) {
+	cases := []struct {
+		status int
+		body   string
+		kind   string
+	}{
+		{http.StatusPaymentRequired, `{"error":"insufficient credits"}`, "kind=quota"},
+		{http.StatusUnauthorized, `{"error":"invalid api key"}`, "kind=auth"},
+	}
+	for _, tc := range cases {
+		var buf strings.Builder
+		prev := slog.Default()
+		slog.SetDefault(slog.New(slog.NewTextHandler(&buf, nil)))
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(tc.status)
+			_, _ = w.Write([]byte(tc.body))
+		}))
+		got := client(srv.URL).Decide(context.Background(), "s", "t", qs)
+		srv.Close()
+		slog.SetDefault(prev)
+		if got != nil {
+			t.Fatalf("status %d: want nil, got %v", tc.status, got)
+		}
+		out := buf.String()
+		for _, want := range []string{"external_api_failure provider=typesafe", "operation=decide:s", tc.kind} {
+			if !strings.Contains(out, want) {
+				t.Fatalf("status %d: log lacks %q:\n%s", tc.status, want, out)
+			}
+		}
+	}
+}
