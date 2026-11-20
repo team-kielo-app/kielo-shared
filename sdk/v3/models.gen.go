@@ -75,6 +75,7 @@ const (
 	ContentRefKindConversation  ContentRefKind = "conversation"
 	ContentRefKindKtvVideo      ContentRefKind = "ktv_video"
 	ContentRefKindRoadmapLesson ContentRefKind = "roadmap_lesson"
+	ContentRefKindSavedSentence ContentRefKind = "saved_sentence"
 	ContentRefKindWordCluster   ContentRefKind = "word_cluster"
 )
 
@@ -153,6 +154,19 @@ const (
 	CurriculumReorderRequestKielolearnEngineEntityTypeTrack   CurriculumReorderRequestKielolearnEngineEntityType = "track"
 )
 
+// Defines values for DebriefItemHandled.
+const (
+	DebriefItemHandledNo     DebriefItemHandled = "no"
+	DebriefItemHandledPartly DebriefItemHandled = "partly"
+	DebriefItemHandledYes    DebriefItemHandled = "yes"
+)
+
+// Defines values for DebriefItemModelAnswerSource.
+const (
+	DebriefItemModelAnswerSourceAuthored DebriefItemModelAnswerSource = "authored"
+	DebriefItemModelAnswerSourceLearner  DebriefItemModelAnswerSource = "learner"
+)
+
 // Defines values for DevicePreferencesSupportLanguageSource.
 const (
 	DevicePreferencesSupportLanguageSourceAdminOverride     DevicePreferencesSupportLanguageSource = "admin_override"
@@ -163,6 +177,12 @@ const (
 	DevicePreferencesSupportLanguageSourceUnknown           DevicePreferencesSupportLanguageSource = "unknown"
 	DevicePreferencesSupportLanguageSourceV062Normalization DevicePreferencesSupportLanguageSource = "v062_normalization"
 	DevicePreferencesSupportLanguageSourceV064Backfill      DevicePreferencesSupportLanguageSource = "v064_backfill"
+)
+
+// Defines values for EditRequestLevel.
+const (
+	EditRequestLevelB1 EditRequestLevel = "B1"
+	EditRequestLevelB2 EditRequestLevel = "B2"
 )
 
 // Defines values for ExerciseGenerationProvenanceRepairScope.
@@ -278,12 +298,6 @@ const (
 	ItemStandingItemTypeGrammarConcept ItemStandingItemType = "GrammarConcept"
 )
 
-// Defines values for ItemSummaryItemType.
-const (
-	ItemSummaryItemTypeBaseWord       ItemSummaryItemType = "BaseWord"
-	ItemSummaryItemTypeGrammarConcept ItemSummaryItemType = "GrammarConcept"
-)
-
 // Defines values for LearningArcStageStatus.
 const (
 	LearningArcStageStatusCompleted LearningArcStageStatus = "completed"
@@ -316,6 +330,12 @@ const (
 	LearningSessionKielolearnEngineSessionTypeDailyChallenge LearningSessionKielolearnEngineSessionType = "daily_challenge"
 	LearningSessionKielolearnEngineSessionTypeExerciseDeck   LearningSessionKielolearnEngineSessionType = "exercise_deck"
 	LearningSessionKielolearnEngineSessionTypeMicroDrill     LearningSessionKielolearnEngineSessionType = "micro_drill"
+)
+
+// Defines values for LearningStatusUpdateRequestSource.
+const (
+	Reader        LearningStatusUpdateRequestSource = "reader"
+	ReaderPickDue LearningStatusUpdateRequestSource = "reader_pick_due"
 )
 
 // Defines values for LessonDraftRequestDifficultyLevel.
@@ -351,8 +371,8 @@ const (
 
 // Defines values for LevelCheckResponseDirection.
 const (
-	Down LevelCheckResponseDirection = "down"
-	Up   LevelCheckResponseDirection = "up"
+	LevelCheckResponseDirectionDown LevelCheckResponseDirection = "down"
+	LevelCheckResponseDirectionUp   LevelCheckResponseDirection = "up"
 )
 
 // Defines values for ListeningComprehensionExerciseItemTypeFk.
@@ -380,6 +400,28 @@ const (
 const (
 	LocalizationStatusKielolearnEngineStatusPending LocalizationStatusKielolearnEngineStatus = "pending"
 	LocalizationStatusKielolearnEngineStatusReady   LocalizationStatusKielolearnEngineStatus = "ready"
+)
+
+// Defines values for MockPartOutStatus.
+const (
+	MockPartOutStatusDone    MockPartOutStatus = "done"
+	MockPartOutStatusPaused  MockPartOutStatus = "paused"
+	MockPartOutStatusRunning MockPartOutStatus = "running"
+	MockPartOutStatusTimeUp  MockPartOutStatus = "time_up"
+	MockPartOutStatusTodo    MockPartOutStatus = "todo"
+)
+
+// Defines values for MockPartPlanTimeBasis.
+const (
+	Kielo    MockPartPlanTimeBasis = "kielo"
+	Official MockPartPlanTimeBasis = "official"
+)
+
+// Defines values for MockTestOutStatus.
+const (
+	MockTestOutStatusAbandoned  MockTestOutStatus = "abandoned"
+	MockTestOutStatusFinished   MockTestOutStatus = "finished"
+	MockTestOutStatusInProgress MockTestOutStatus = "in_progress"
 )
 
 // Defines values for MultipleChoiceTranslationExerciseItemTypeFk.
@@ -449,6 +491,37 @@ const (
 	NextStepsResponseSourceKindArticle      NextStepsResponseSourceKind = "article"
 	NextStepsResponseSourceKindConversation NextStepsResponseSourceKind = "conversation"
 	NextStepsResponseSourceKindKtvVideo     NextStepsResponseSourceKind = "ktv_video"
+	NextStepsResponseSourceKindLesson       NextStepsResponseSourceKind = "lesson"
+)
+
+// Defines values for NextTaskReason.
+const (
+	NextTaskReasonNotDone      NextTaskReason = "not_done"
+	NextTaskReasonWeakestTopic NextTaskReason = "weakest_topic"
+)
+
+// Defines values for PartReadinessTrend.
+const (
+	PartReadinessTrendDown PartReadinessTrend = "down"
+	PartReadinessTrendFlat PartReadinessTrend = "flat"
+	PartReadinessTrendNone PartReadinessTrend = "none"
+	PartReadinessTrendUp   PartReadinessTrend = "up"
+)
+
+// Defines values for PartResultNotEnough.
+const (
+	PartResultNotEnoughNotDone   PartResultNotEnough = "not_done"
+	PartResultNotEnoughNotGraded PartResultNotEnough = "not_graded"
+	PartResultNotEnoughTooFew    PartResultNotEnough = "too_few"
+)
+
+// Defines values for PartResultStatus.
+const (
+	PartResultStatusDone    PartResultStatus = "done"
+	PartResultStatusPaused  PartResultStatus = "paused"
+	PartResultStatusRunning PartResultStatus = "running"
+	PartResultStatusTimeUp  PartResultStatus = "time_up"
+	PartResultStatusTodo    PartResultStatus = "todo"
 )
 
 // Defines values for PlaceholderExerciseItemTypeFk.
@@ -466,14 +539,36 @@ const (
 	PlaceholderExerciseSourceTypeRuleBased  PlaceholderExerciseSourceType = "rule_based"
 )
 
+// Defines values for PointResultMet.
+const (
+	PointResultMetNo     PointResultMet = "no"
+	PointResultMetPartly PointResultMet = "partly"
+	PointResultMetYes    PointResultMet = "yes"
+)
+
+// Defines values for PracticeNextReason.
+const (
+	NotInMock   PracticeNextReason = "not_in_mock"
+	Redo        PracticeNextReason = "redo"
+	WeakestTask PracticeNextReason = "weakest_task"
+)
+
 // Defines values for PreferredDifficultyProfileUserSetCefrLevel.
 const (
-	A1 PreferredDifficultyProfileUserSetCefrLevel = "A1"
-	A2 PreferredDifficultyProfileUserSetCefrLevel = "A2"
-	B1 PreferredDifficultyProfileUserSetCefrLevel = "B1"
-	B2 PreferredDifficultyProfileUserSetCefrLevel = "B2"
-	C1 PreferredDifficultyProfileUserSetCefrLevel = "C1"
-	C2 PreferredDifficultyProfileUserSetCefrLevel = "C2"
+	PreferredDifficultyProfileUserSetCefrLevelA1 PreferredDifficultyProfileUserSetCefrLevel = "A1"
+	PreferredDifficultyProfileUserSetCefrLevelA2 PreferredDifficultyProfileUserSetCefrLevel = "A2"
+	PreferredDifficultyProfileUserSetCefrLevelB1 PreferredDifficultyProfileUserSetCefrLevel = "B1"
+	PreferredDifficultyProfileUserSetCefrLevelB2 PreferredDifficultyProfileUserSetCefrLevel = "B2"
+	PreferredDifficultyProfileUserSetCefrLevelC1 PreferredDifficultyProfileUserSetCefrLevel = "C1"
+	PreferredDifficultyProfileUserSetCefrLevelC2 PreferredDifficultyProfileUserSetCefrLevel = "C2"
+)
+
+// Defines values for ProgressRequestAction.
+const (
+	FinishPart ProgressRequestAction = "finish_part"
+	Pause      ProgressRequestAction = "pause"
+	Start      ProgressRequestAction = "start"
+	TaskDone   ProgressRequestAction = "task_done"
 )
 
 // Defines values for RecapNextUpKind.
@@ -635,6 +730,21 @@ const (
 	SessionResumeStateStatusNotStarted SessionResumeStateStatus = "not_started"
 )
 
+// Defines values for SpeakLineExerciseItemTypeFk.
+const (
+	SpeakLineExerciseItemTypeFkBaseWord       SpeakLineExerciseItemTypeFk = "BaseWord"
+	SpeakLineExerciseItemTypeFkGrammarConcept SpeakLineExerciseItemTypeFk = "GrammarConcept"
+)
+
+// Defines values for SpeakLineExerciseSourceType.
+const (
+	SpeakLineExerciseSourceTypeCache      SpeakLineExerciseSourceType = "cache"
+	SpeakLineExerciseSourceTypeDatabase   SpeakLineExerciseSourceType = "database"
+	SpeakLineExerciseSourceTypeLlm        SpeakLineExerciseSourceType = "llm"
+	SpeakLineExerciseSourceTypeRepository SpeakLineExerciseSourceType = "repository"
+	SpeakLineExerciseSourceTypeRuleBased  SpeakLineExerciseSourceType = "rule_based"
+)
+
 // Defines values for SpellingChallengeExerciseItemTypeFk.
 const (
 	SpellingChallengeExerciseItemTypeFkBaseWord       SpellingChallengeExerciseItemTypeFk = "BaseWord"
@@ -643,11 +753,11 @@ const (
 
 // Defines values for SpellingChallengeExerciseSourceType.
 const (
-	SpellingChallengeExerciseSourceTypeCache      SpellingChallengeExerciseSourceType = "cache"
-	SpellingChallengeExerciseSourceTypeDatabase   SpellingChallengeExerciseSourceType = "database"
-	SpellingChallengeExerciseSourceTypeLlm        SpellingChallengeExerciseSourceType = "llm"
-	SpellingChallengeExerciseSourceTypeRepository SpellingChallengeExerciseSourceType = "repository"
-	SpellingChallengeExerciseSourceTypeRuleBased  SpellingChallengeExerciseSourceType = "rule_based"
+	Cache      SpellingChallengeExerciseSourceType = "cache"
+	Database   SpellingChallengeExerciseSourceType = "database"
+	Llm        SpellingChallengeExerciseSourceType = "llm"
+	Repository SpellingChallengeExerciseSourceType = "repository"
+	RuleBased  SpellingChallengeExerciseSourceType = "rule_based"
 )
 
 // Defines values for SubscriptionInfoGrantSource.
@@ -728,6 +838,26 @@ const (
 	TTSReviewResultOutcomeUnchecked TTSReviewResultOutcome = "unchecked"
 )
 
+// Defines values for TextPickCandidateItemType.
+const (
+	TextPickCandidateItemTypeGrammar TextPickCandidateItemType = "grammar"
+	TextPickCandidateItemTypeWord    TextPickCandidateItemType = "word"
+)
+
+// Defines values for TextPickItemKielolearnEngineItemType.
+const (
+	TextPickItemKielolearnEngineItemTypeGrammar TextPickItemKielolearnEngineItemType = "grammar"
+	TextPickItemKielolearnEngineItemTypeWord    TextPickItemKielolearnEngineItemType = "word"
+)
+
+// Defines values for TextPickItemKielolearnEngineReason.
+const (
+	DueReview  TextPickItemKielolearnEngineReason = "due_review"
+	Mistake    TextPickItemKielolearnEngineReason = "mistake"
+	NewAtLevel TextPickItemKielolearnEngineReason = "new_at_level"
+	Path       TextPickItemKielolearnEngineReason = "path"
+)
+
 // Defines values for TopicListGenerationJobResponseStatus.
 const (
 	TopicListGenerationJobResponseStatusFailed       TopicListGenerationJobResponseStatus = "failed"
@@ -762,6 +892,20 @@ const (
 	TrackRoadmapChapterStatusLocked    TrackRoadmapChapterStatus = "locked"
 )
 
+// Defines values for TrackRoadmapItemKind.
+const (
+	TrackRoadmapItemKindReading TrackRoadmapItemKind = "reading"
+	TrackRoadmapItemKindScene   TrackRoadmapItemKind = "scene"
+	TrackRoadmapItemKindText    TrackRoadmapItemKind = "text"
+)
+
+// Defines values for TrackRoadmapItemStatus.
+const (
+	Available  TrackRoadmapItemStatus = "available"
+	Done       TrackRoadmapItemStatus = "done"
+	InProgress TrackRoadmapItemStatus = "in_progress"
+)
+
 // Defines values for TrackRoadmapLessonState.
 const (
 	TrackRoadmapLessonStateActive    TrackRoadmapLessonState = "active"
@@ -771,9 +915,9 @@ const (
 
 // Defines values for TrackRoadmapLevelStatus.
 const (
-	TrackRoadmapLevelStatusActive    TrackRoadmapLevelStatus = "active"
-	TrackRoadmapLevelStatusCompleted TrackRoadmapLevelStatus = "completed"
-	TrackRoadmapLevelStatusLocked    TrackRoadmapLevelStatus = "locked"
+	Active    TrackRoadmapLevelStatus = "active"
+	Completed TrackRoadmapLevelStatus = "completed"
+	Locked    TrackRoadmapLevelStatus = "locked"
 )
 
 // Defines values for UpdateDevicePreferencesRequestSupportLanguageSource.
@@ -828,6 +972,12 @@ const (
 const (
 	WordDeckItemCreateItemTypeBaseWord       WordDeckItemCreateItemType = "BaseWord"
 	WordDeckItemCreateItemTypeGrammarConcept WordDeckItemCreateItemType = "GrammarConcept"
+)
+
+// Defines values for SrcKielolearnengineCoreSchemasEventsItemSummaryItemType.
+const (
+	SrcKielolearnengineCoreSchemasEventsItemSummaryItemTypeBaseWord       SrcKielolearnengineCoreSchemasEventsItemSummaryItemType = "BaseWord"
+	SrcKielolearnengineCoreSchemasEventsItemSummaryItemTypeGrammarConcept SrcKielolearnengineCoreSchemasEventsItemSummaryItemType = "GrammarConcept"
 )
 
 // Defines values for GetConversationFocusKlearnApiV3ConversationFocusGetParamsOriginKind.
@@ -972,6 +1122,7 @@ type AIModelFamily struct {
 	RecentChanges      []AIRouteChange `json:"recent_changes"`
 	RetryRate          float32         `json:"retry_rate"`
 	Service            string          `json:"service"`
+	Spend24hUsd        float32         `json:"spend_24h_usd"`
 	Spend7d            []AIUsageDay    `json:"spend_7d"`
 	SpendTodayUsd      float32         `json:"spend_today_usd"`
 	ThinkingBudget     int             `json:"thinking_budget"`
@@ -1298,6 +1449,64 @@ type AdminDigestSection struct {
 	Label string            `json:"label"`
 }
 
+// AdoptSkip defines model for AdoptSkip.
+type AdoptSkip struct {
+	Field  string `json:"field"`
+	Reason string `json:"reason"`
+}
+
+// AgentBrief defines model for AgentBrief.
+type AgentBrief struct {
+	Brief                string                `json:"brief"`
+	ChangeSets           []AgentBriefChangeSet `json:"change_sets"`
+	ClaimExpiresAt       *time.Time            `json:"claim_expires_at,omitempty"`
+	ClaimedAt            *time.Time            `json:"claimed_at,omitempty"`
+	ClaimedByName        *string               `json:"claimed_by_name,omitempty"`
+	ClosedAt             *time.Time            `json:"closed_at,omitempty"`
+	ClosedBy             *string               `json:"closed_by,omitempty"`
+	ClosingNote          *string               `json:"closing_note,omitempty"`
+	CreatedAt            time.Time             `json:"created_at"`
+	CreatedBy            string                `json:"created_by"`
+	Id                   uuid.UUID             `json:"id"`
+	Items                []AgentBriefItem      `json:"items"`
+	LearningLanguageCode string                `json:"learning_language_code"`
+	Status               string                `json:"status"`
+}
+
+// AgentBriefChangeSet defines model for AgentBriefChangeSet.
+type AgentBriefChangeSet struct {
+	AgentName string    `json:"agent_name"`
+	CreatedAt time.Time `json:"created_at"`
+	Id        uuid.UUID `json:"id"`
+	ItemCount int       `json:"item_count"`
+	Reason    string    `json:"reason"`
+	Status    string    `json:"status"`
+}
+
+// AgentBriefClaimRequest defines model for AgentBriefClaimRequest.
+type AgentBriefClaimRequest struct {
+	Minutes int `json:"minutes"`
+}
+
+// AgentBriefCreateRequest defines model for AgentBriefCreateRequest.
+type AgentBriefCreateRequest struct {
+	Brief                string           `json:"brief"`
+	Items                []AgentBriefItem `json:"items"`
+	LearningLanguageCode string           `json:"learning_language_code"`
+}
+
+// AgentBriefDoneRequest defines model for AgentBriefDoneRequest.
+type AgentBriefDoneRequest struct {
+	Note string `json:"note"`
+}
+
+// AgentBriefItem defines model for AgentBriefItem.
+type AgentBriefItem struct {
+	Id    string  `json:"id"`
+	Kind  string  `json:"kind"`
+	Title *string `json:"title,omitempty"`
+}
+
 // AgentCaptionEdit defines model for AgentCaptionEdit.
 type AgentCaptionEdit struct {
 	AfterIndex  *int     `json:"after_index,omitempty"`
@@ -1324,6 +1533,7 @@ type AgentChangeItem struct {
 	AppliedAt   *time.Time   `json:"applied_at,omitempty"`
 	Before      *interface{} `json:"before,omitempty"`
 	ChangeSetId uuid.UUID    `json:"change_set_id"`
+	Diff        *interface{} `json:"diff,omitempty"`
 	EntityId    string       `json:"entity_id"`
 	EntityType  string       `json:"entity_type"`
 	Id          int          `json:"id"`
@@ -1338,6 +1548,7 @@ type AgentChangeOp struct {
 	Items         *[]AgentPatchItem    `json:"items,omitempty"`
 	Merges        *[]AgentMergeItem    `json:"merges,omitempty"`
 	Op            string               `json:"op"`
+	Reader        *[]AgentReaderEdit   `json:"reader,omitempty"`
 	RetiredReason *string              `json:"retired_reason,omitempty"`
 	Roadmap       *[]AgentRoadmapEdit  `json:"roadmap,omitempty"`
 }
@@ -1348,6 +1559,7 @@ type AgentChangeSet struct {
 	AgentName            string      `json:"agent_name"`
 	AppliedAt            *time.Time  `json:"applied_at,omitempty"`
 	ApprovalReason       *string     `json:"approval_reason,omitempty"`
+	BriefId              *uuid.UUID  `json:"brief_id,omitempty"`
 	Confidence           string      `json:"confidence"`
 	CreatedAt            time.Time   `json:"created_at"`
 	DecidedAt            *time.Time  `json:"decided_at,omitempty"`
@@ -1368,18 +1580,22 @@ type AgentChangeSet struct {
 
 // AgentChangeSetRequest defines model for AgentChangeSetRequest.
 type AgentChangeSetRequest struct {
-	Confidence string          `json:"confidence"`
-	DryRun     *bool           `json:"dry_run,omitempty"`
-	Ops        []AgentChangeOp `json:"ops"`
-	Reason     string          `json:"reason"`
+	BriefId            *uuid.UUID      `json:"brief_id,omitempty"`
+	Confidence         string          `json:"confidence"`
+	DryRun             *bool           `json:"dry_run,omitempty"`
+	Ops                []AgentChangeOp `json:"ops"`
+	Reason             string          `json:"reason"`
+	RevertsChangeSetId *uuid.UUID      `json:"reverts_change_set_id,omitempty"`
 }
 
 // AgentChangeSetResult defines model for AgentChangeSetResult.
 type AgentChangeSetResult struct {
-	ChangeSet AgentChangeSet      `json:"change_set"`
-	DryRun    *bool               `json:"dry_run,omitempty"`
-	Items     []AgentChangeItem   `json:"items"`
-	Skipped   *[]AgentSkippedItem `json:"skipped,omitempty"`
+	ChangeSet          AgentChangeSet      `json:"change_set"`
+	DryRun             *bool               `json:"dry_run,omitempty"`
+	Items              []AgentChangeItem   `json:"items"`
+	Reverts            *[]AgentRevertRef   `json:"reverts,omitempty"`
+	RevertsChangeSetId *uuid.UUID          `json:"reverts_change_set_id,omitempty"`
+	Skipped            *[]AgentSkippedItem `json:"skipped,omitempty"`
 }
 
 // AgentClaim defines model for AgentClaim.
@@ -1558,6 +1774,17 @@ type AgentPatchItem struct {
 	Set map[string]string `json:"set"`
 }
 
+// AgentReaderEdit defines model for AgentReaderEdit.
+type AgentReaderEdit struct {
+	EntryId  *uuid.UUID `json:"entry_id,omitempty"`
+	Id       uuid.UUID  `json:"id"`
+	Level    *string    `json:"level,omitempty"`
+	Position *int       `json:"position,omitempty"`
+	Target   *string    `json:"target,omitempty"`
+	Title    *string    `json:"title,omitempty"`
+	TitleEn  *string    `json:"title_en,omitempty"`
+}
+
 // AgentRecordedMark defines model for AgentRecordedMark.
 type AgentRecordedMark struct {
 	Area   string `json:"area"`
@@ -1570,6 +1797,13 @@ type AgentRefusedItem struct {
 	Area   string `json:"area"`
 	ItemId string `json:"item_id"`
 	Reason string `json:"reason"`
+}
+
+// AgentRevertRef defines model for AgentRevertRef.
+type AgentRevertRef struct {
+	CreatedAt time.Time `json:"created_at"`
+	Id        uuid.UUID `json:"id"`
+	Status    string    `json:"status"`
 }
 
 // AgentReviewItem defines model for AgentReviewItem.
@@ -1614,6 +1848,8 @@ type AgentRoadmapEdit struct {
 	DifficultyLevel          *string      `json:"difficulty_level,omitempty"`
 	EstimatedDurationMinutes *int         `json:"estimated_duration_minutes,omitempty"`
 	Id                       *uuid.UUID   `json:"id,omitempty"`
+	ItemKind                 *string      `json:"item_kind,omitempty"`
+	ItemRef                  *string      `json:"item_ref,omitempty"`
 	LearningObjectives       *[]string    `json:"learning_objectives,omitempty"`
 	LessonContent            *interface{} `json:"lesson_content,omitempty"`
 	LevelId                  *uuid.UUID   `json:"level_id,omitempty"`
@@ -1637,6 +1873,8 @@ type AgentRoadmapLesson struct {
 	DifficultyLevel          string     `json:"difficulty_level"`
 	EstimatedDurationMinutes int        `json:"estimated_duration_minutes"`
 	Id                       uuid.UUID  `json:"id"`
+	ItemKind                 *string    `json:"item_kind,omitempty"`
+	ItemRef                  *string    `json:"item_ref,omitempty"`
 	Kind                     string     `json:"kind"`
 	Position                 int        `json:"position"`
 	Status                   string     `json:"status"`
@@ -1688,6 +1926,8 @@ type AgentRoadmapOutlineChapter struct {
 // AgentRoadmapOutlineLesson defines model for AgentRoadmapOutlineLesson.
 type AgentRoadmapOutlineLesson struct {
 	Id       uuid.UUID `json:"id"`
+	ItemKind *string   `json:"item_kind,omitempty"`
+	ItemRef  *string   `json:"item_ref,omitempty"`
 	Position int       `json:"position"`
 	Status   string    `json:"status"`
 	Title    string    `json:"title"`
@@ -2060,6 +2300,7 @@ type ArticleVersion struct {
 	OriginalTitle                   *string                                `json:"original_title,omitempty"`
 	Paragraphs                      *[]ArticleParagraph                    `json:"paragraphs,omitempty"`
 	PersonalizedContent             *KLearnPersonalizedArticleResponse     `json:"personalized_content,omitempty"`
+	Picks                           *TextPicks                             `json:"picks,omitempty"`
 	PublicationDate                 *time.Time                             `json:"publication_date,omitempty"`
 	SimplifiedArticleVersionId      *uuid.UUID                             `json:"simplified_article_version_id,omitempty"`
 	SourceUrl                       *string                                `json:"source_url,omitempty"`
@@ -2090,6 +2331,7 @@ type ArticleVersionContentService struct {
 	OriginalTitle                   *string                                          `json:"original_title,omitempty"`
 	Paragraphs                      *[]Paragraph                                     `json:"paragraphs,omitempty"`
 	PersonalizedContent             *KLearnPersonalizedArticleResponseContentService `json:"personalized_content,omitempty"`
+	Picks                           *TextPicks                                       `json:"picks,omitempty"`
 	Prepared                        *PreparedInfo                                    `json:"prepared,omitempty"`
 	PublicationDate                 *time.Time                                       `json:"publication_date,omitempty"`
 	SimplifiedArticleVersionId      *uuid.UUID                                       `json:"simplified_article_version_id,omitempty"`
@@ -2137,6 +2379,7 @@ type ArticleVersionOccurrence struct {
 	BaseWordId              *uuid.UUID      `json:"base_word_id,omitempty"`
 	EndCharOffset           int             `json:"end_char_offset"`
 	EndWordIndex            *int            `json:"end_word_index,omitempty"`
+	ForYou                  *bool           `json:"for_you,omitempty"`
 	GrammarConceptId        *uuid.UUID      `json:"grammar_concept_id,omitempty"`
 	GrammarDetail           *GrammarConcept `json:"grammar_detail,omitempty"`
 	InflectedFormDetails    *interface{}    `json:"inflected_form_details,omitempty"`
@@ -2147,8 +2390,10 @@ type ArticleVersionOccurrence struct {
 	OccurrenceType          string          `json:"occurrence_type"`
 	OriginalTokenPhrase     *string         `json:"original_token_phrase,omitempty"`
 	ParagraphId             uuid.UUID       `json:"paragraph_id"`
+	PickReason              *string         `json:"pick_reason,omitempty"`
 	SentenceText            *string         `json:"sentence_text,omitempty"`
 	SentenceTranslation     *string         `json:"sentence_translation,omitempty"`
+	Source                  *string         `json:"source,omitempty"`
 	SpecificExplanation     *string         `json:"specific_explanation,omitempty"`
 	SpecificExplanationHtml *string         `json:"specific_explanation_html,omitempty"`
 	StartCharOffset         int             `json:"start_char_offset"`
@@ -2161,6 +2406,7 @@ type ArticleVersionOccurrenceContentService struct {
 	BaseWordId              *uuid.UUID                    `json:"base_word_id,omitempty"`
 	EndCharOffset           int                           `json:"end_char_offset"`
 	EndWordIndex            *int                          `json:"end_word_index,omitempty"`
+	ForYou                  *bool                         `json:"for_you,omitempty"`
 	GrammarConceptId        *uuid.UUID                    `json:"grammar_concept_id,omitempty"`
 	GrammarDetail           *GrammarConceptContentService `json:"grammar_detail,omitempty"`
 	InflectedFormDetails    *interface{}                  `json:"inflected_form_details,omitempty"`
@@ -2171,8 +2417,10 @@ type ArticleVersionOccurrenceContentService struct {
 	OccurrenceType          string                        `json:"occurrence_type"`
 	OriginalTokenPhrase     *string                       `json:"original_token_phrase,omitempty"`
 	ParagraphId             uuid.UUID                     `json:"paragraph_id"`
+	PickReason              *string                       `json:"pick_reason,omitempty"`
 	SentenceText            *string                       `json:"sentence_text,omitempty"`
 	SentenceTranslation     *string                       `json:"sentence_translation,omitempty"`
+	Source                  *string                       `json:"source,omitempty"`
 	SpecificExplanation     *string                       `json:"specific_explanation,omitempty"`
 	SpecificExplanationHtml *string                       `json:"specific_explanation_html,omitempty"`
 	StartCharOffset         int                           `json:"start_char_offset"`
@@ -2228,6 +2476,32 @@ type Asset struct {
 	ThumbnailUrl *string  `json:"thumbnail_url,omitempty"`
 	VideoUrl     string   `json:"video_url"`
 	Width        *int     `json:"width,omitempty"`
+}
+
+// AttemptOut defines model for AttemptOut.
+type AttemptOut struct {
+	CreatedAt       time.Time                `json:"created_at"`
+	Criteria        map[string]int           `json:"criteria"`
+	ExamKey         string                   `json:"exam_key"`
+	Grade           int                      `json:"grade"`
+	Handled         []map[string]interface{} `json:"handled"`
+	HandledCount    int                      `json:"handled_count"`
+	Id              string                   `json:"id"`
+	MeetsTarget     bool                     `json:"meets_target"`
+	Score           float32                  `json:"score"`
+	Seconds         *float32                 `json:"seconds"`
+	SetId           string                   `json:"set_id"`
+	TaskKind        string                   `json:"task_kind"`
+	Topic           string                   `json:"topic"`
+	Total           int                      `json:"total"`
+	TranscriptChars int                      `json:"transcript_chars"`
+	TranscriptWords int                      `json:"transcript_words"`
+}
+
+// AttemptsResponse defines model for AttemptsResponse.
+type AttemptsResponse struct {
+	Attempts []AttemptOut `json:"attempts"`
+	SetId    string       `json:"set_id"`
 }
 
 // Attribution defines model for Attribution.
@@ -2497,6 +2771,7 @@ type BatchLookupRequest struct {
 	ItemIds                  []uuid.UUID  `json:"item_ids"`
 	LearningLanguageCode     string       `json:"learning_language_code"`
 	PerItemLimit             *int         `json:"per_item_limit,omitempty"`
+	SupportLanguageCode      *string      `json:"support_language_code,omitempty"`
 	SurfaceTypes             *[]string    `json:"surface_types,omitempty"`
 }
 
@@ -2583,6 +2858,12 @@ type BehavioralEventRequest struct {
 	Timestamp  string                  `json:"timestamp"`
 }
 
+// Bilingual defines model for Bilingual.
+type Bilingual struct {
+	Text   string  `json:"text"`
+	TextEn *string `json:"text_en,omitempty"`
+}
+
 // BillingPlan defines model for BillingPlan.
 type BillingPlan struct {
 	Active         bool       `json:"active"`
@@ -2622,6 +2903,11 @@ type BodyEvaluateRoadmapStepSpeechKlearnApiV3RoadmapLessonsLessonIdStepsStepInde
 
 // BodyPostTtsReviewUploadInternalTtsAdminReviewUploadPost defines model for Body_post_tts_review_upload_internal_tts_admin_review_upload_post.
 type BodyPostTtsReviewUploadInternalTtsAdminReviewUploadPost struct {
+	File File `json:"file"`
+}
+
+// BodyTranscribeLongTakeKlearnApiV3ExamPrepLongTasksSpeechPost defines model for Body_transcribe_long_take_klearn_api_v3_exam_prep_long_tasks_speech_post.
+type BodyTranscribeLongTakeKlearnApiV3ExamPrepLongTasksSpeechPost struct {
 	File File `json:"file"`
 }
 
@@ -2889,6 +3175,23 @@ type CanonicalError struct {
 	Message *string `json:"message,omitempty"`
 }
 
+// CaptionPickWord defines model for CaptionPickWord.
+type CaptionPickWord struct {
+	BaseWordId   uuid.UUID `json:"base_word_id"`
+	CaptionIndex int       `json:"caption_index"`
+	EndIndex     *int      `json:"end_index,omitempty"`
+	Reason       *string   `json:"reason,omitempty"`
+	Source       *string   `json:"source,omitempty"`
+	StartIndex   *int      `json:"start_index,omitempty"`
+	Surface      string    `json:"surface"`
+}
+
+// CaptionPicks defines model for CaptionPicks.
+type CaptionPicks struct {
+	Items []TextPickItem    `json:"items"`
+	Words []CaptionPickWord `json:"words"`
+}
+
 // Captions defines model for Captions.
 type Captions struct {
 	ContentVersionId     *uuid.UUID    `json:"content_version_id,omitempty"`
@@ -2898,6 +3201,7 @@ type Captions struct {
 	IsFallback           bool          `json:"is_fallback"`
 	LearningLanguageCode *string       `json:"learning_language_code,omitempty"`
 	Locale               string        `json:"locale"`
+	Picks                *CaptionPicks `json:"picks,omitempty"`
 	Prepared             *PreparedInfo `json:"prepared,omitempty"`
 	SourceLocale         string        `json:"source_locale"`
 	TranslationSource    *string       `json:"translation_source,omitempty"`
@@ -3143,6 +3447,24 @@ type ClusterWord struct {
 	Pos         *string `json:"pos,omitempty"`
 	Term        *string `json:"term,omitempty"`
 	Translation *string `json:"translation,omitempty"`
+}
+
+// Collection defines model for Collection.
+type Collection struct {
+	Cover         *MediaAssetResponseContentService `json:"cover,omitempty"`
+	DescriptionEn string                            `json:"description_en"`
+	Id            uuid.UUID                         `json:"id"`
+	Items         []Item                            `json:"items"`
+	Level         string                            `json:"level"`
+	Position      int                               `json:"position"`
+	Slug          string                            `json:"slug"`
+	Title         string                            `json:"title"`
+	TitleEn       string                            `json:"title_en"`
+}
+
+// CollectionsResponse defines model for CollectionsResponse.
+type CollectionsResponse struct {
+	Collections []Collection `json:"collections"`
 }
 
 // CommonMistake defines model for CommonMistake.
@@ -5937,6 +6259,46 @@ type DataQualitySummary struct {
 	Open       int            `json:"open"`
 }
 
+// DebriefItem defines model for DebriefItem.
+type DebriefItem struct {
+	Answered          bool                         `json:"answered"`
+	Handled           DebriefItemHandled           `json:"handled"`
+	ModelAnswer       string                       `json:"model_answer"`
+	ModelAnswerSource DebriefItemModelAnswerSource `json:"model_answer_source"`
+	Note              string                       `json:"note"`
+	SituationId       string                       `json:"situation_id"`
+	Text              string                       `json:"text"`
+	Transcript        string                       `json:"transcript"`
+}
+
+// DebriefItemHandled defines model for DebriefItem.Handled.
+type DebriefItemHandled string
+
+// DebriefItemModelAnswerSource defines model for DebriefItem.ModelAnswerSource.
+type DebriefItemModelAnswerSource string
+
+// DebriefRequest defines model for DebriefRequest.
+type DebriefRequest struct {
+	Answers []SrcKielolearnengineServicesExamPrepAnswerIn `json:"answers"`
+	MockId  *uuid.UUID                                    `json:"mock_id"`
+}
+
+// DebriefResponse defines model for DebriefResponse.
+type DebriefResponse struct {
+	Criteria     map[string]int `json:"criteria"`
+	Estimated    *bool          `json:"estimated,omitempty"`
+	ExamKey      string         `json:"exam_key"`
+	Grade        int            `json:"grade"`
+	HandledCount int            `json:"handled_count"`
+	Items        []DebriefItem  `json:"items"`
+	MeetsTarget  bool           `json:"meets_target"`
+	Score        float32        `json:"score"`
+	SetId        string         `json:"set_id"`
+	Summary      string         `json:"summary"`
+	TargetGrade  *int           `json:"target_grade,omitempty"`
+	Total        int            `json:"total"`
+}
+
 // DecisionLog defines model for DecisionLog.
 type DecisionLog struct {
 	BreadthMode                      *string                 `json:"breadth_mode,omitempty"`
@@ -6334,7 +6696,7 @@ type DiscountCampaignWrite struct {
 
 // DiscoveryItemsResponse defines model for DiscoveryItemsResponse.
 type DiscoveryItemsResponse struct {
-	Items []ItemSummary `json:"items"`
+	Items []SrcKielolearnengineCoreSchemasEventsItemSummary `json:"items"`
 }
 
 // DomainCount defines model for DomainCount.
@@ -6409,6 +6771,21 @@ type DynamicTranslationLocalization struct {
 	TranslatorSource *string    `json:"translator_source,omitempty"`
 	UpdatedAt        time.Time  `json:"updated_at"`
 }
+
+// EditRequest A reviewer's corrections, applied in place. `content` keys replace the
+// same keys of the stored content (text, instruction, turns, speakers);
+// `questions` replaces the whole list; `question_edits` replaces single
+// questions by id. The item stays pending and unjudged.
+type EditRequest struct {
+	Content       *map[string]interface{}   `json:"content"`
+	Level         *EditRequestLevel         `json:"level"`
+	QuestionEdits *[]map[string]interface{} `json:"question_edits"`
+	Questions     *[]map[string]interface{} `json:"questions"`
+	Title         *string                   `json:"title"`
+}
+
+// EditRequestLevel defines model for EditRequest.Level.
+type EditRequestLevel string
 
 // EffectiveUserLimitsResponse defines model for EffectiveUserLimitsResponse.
 type EffectiveUserLimitsResponse struct {
@@ -6570,6 +6947,102 @@ type EmailTestSendResponse struct {
 // EndSessionResponse defines model for EndSessionResponse.
 type EndSessionResponse struct {
 	Status string `json:"status"`
+}
+
+// Event defines model for Event.
+type Event struct {
+	Action    string    `json:"action"`
+	Actor     string    `json:"actor"`
+	CreatedAt time.Time `json:"created_at"`
+	Detail    string    `json:"detail"`
+	Id        int       `json:"id"`
+	ProfileId *string   `json:"profile_id,omitempty"`
+}
+
+// ExamItem defines model for ExamItem.
+type ExamItem struct {
+	Audio           interface{} `json:"audio"`
+	Content         interface{} `json:"content"`
+	CreatedAt       time.Time   `json:"created_at"`
+	DurationSeconds *float32    `json:"duration_seconds,omitempty"`
+	Enabled         bool        `json:"enabled"`
+	ExamKey         string      `json:"exam_key"`
+	Format          string      `json:"format"`
+	Id              string      `json:"id"`
+	Judge           interface{} `json:"judge"`
+	Kind            string      `json:"kind"`
+	Level           string      `json:"level"`
+	PlayCount       *int        `json:"play_count,omitempty"`
+	Position        int         `json:"position"`
+	Questions       interface{} `json:"questions"`
+	ReviewNote      string      `json:"review_note"`
+	ReviewStatus    string      `json:"review_status"`
+	ReviewedAt      *time.Time  `json:"reviewed_at,omitempty"`
+	ReviewedBy      *string     `json:"reviewed_by,omitempty"`
+	Source          interface{} `json:"source"`
+	Title           string      `json:"title"`
+	TitleEn         string      `json:"title_en"`
+	Topic           string      `json:"topic"`
+	UpdatedAt       time.Time   `json:"updated_at"`
+	WordCount       int         `json:"word_count"`
+}
+
+// ExamItemGenerateRequest defines model for ExamItemGenerateRequest.
+type ExamItemGenerateRequest struct {
+	Language string       `json:"language"`
+	Note     *string      `json:"note,omitempty"`
+	Patch    *interface{} `json:"patch,omitempty"`
+	SlotId   string       `json:"slot_id"`
+	Step     string       `json:"step"`
+}
+
+// ExamItemListResponse defines model for ExamItemListResponse.
+type ExamItemListResponse struct {
+	Items []ExamItem `json:"items"`
+}
+
+// ExamItemReviewRequest defines model for ExamItemReviewRequest.
+type ExamItemReviewRequest struct {
+	Language string `json:"language"`
+	Note     string `json:"note"`
+	Status   string `json:"status"`
+}
+
+// ExamPrepConfig defines model for ExamPrepConfig.
+type ExamPrepConfig struct {
+	ExamKey     string                `json:"exam_key"`
+	GradeLabel  string                `json:"grade_label"`
+	Pairs       [][]string            `json:"pairs"`
+	Parts       []string              `json:"parts"`
+	TargetGrade int                   `json:"target_grade"`
+	Tasks       map[string][]ExamTask `json:"tasks"`
+	Title       string                `json:"title"`
+	TrackId     string                `json:"track_id"`
+	TrackSlug   string                `json:"track_slug"`
+}
+
+// ExamPrepResponse defines model for ExamPrepResponse.
+type ExamPrepResponse struct {
+	Configs []ExamPrepConfig `json:"configs"`
+}
+
+// ExamReadiness defines model for ExamReadiness.
+type ExamReadiness struct {
+	ExamKey     string          `json:"exam_key"`
+	Parts       []PartReadiness `json:"parts"`
+	TargetGrade int             `json:"target_grade"`
+	Title       string          `json:"title"`
+}
+
+// ExamTask defines model for ExamTask.
+type ExamTask struct {
+	AnswerSeconds *int    `json:"answer_seconds"`
+	Kind          string  `json:"kind"`
+	PrepSeconds   *int    `json:"prep_seconds"`
+	Ref           string  `json:"ref"`
+	Title         *string `json:"title"`
+	Topic         *string `json:"topic"`
+	Why           *string `json:"why"`
 }
 
 // Example defines model for Example.
@@ -7204,11 +7677,11 @@ type FirstSceneLine struct {
 
 // FirstSceneVideo defines model for FirstSceneVideo.
 type FirstSceneVideo struct {
-	DurationS int    `json:"duration_s"`
-	LineCount int    `json:"line_count"`
-	Reason    string `json:"reason"`
-	Title     string `json:"title"`
-	VideoId   string `json:"video_id"`
+	DurationS int       `json:"duration_s"`
+	LineCount int       `json:"line_count"`
+	Reason    string    `json:"reason"`
+	Title     string    `json:"title"`
+	VideoId   uuid.UUID `json:"video_id"`
 }
 
 // FirstSentenceSpeechResponse defines model for FirstSentenceSpeechResponse.
@@ -7358,6 +7831,26 @@ type GeneratePromoCodesRequest struct {
 	Count int `json:"count"`
 }
 
+// GenerateRequest defines model for GenerateRequest.
+type GenerateRequest struct {
+	Note   *string `json:"note,omitempty"`
+	SlotId string  `json:"slot_id"`
+}
+
+// GenerateResponse defines model for GenerateResponse.
+type GenerateResponse struct {
+	AudioWhisper *map[string]interface{} `json:"audio_whisper"`
+	Flags        *[]string               `json:"flags,omitempty"`
+	Id           string                  `json:"id"`
+	LlmCalls     int                     `json:"llm_calls"`
+	Models       *map[string]string      `json:"models,omitempty"`
+	Notes        *[]string               `json:"notes,omitempty"`
+	Scores       *map[string]int         `json:"scores,omitempty"`
+	Stored       bool                    `json:"stored"`
+	TtsTakes     int                     `json:"tts_takes"`
+	Verdict      string                  `json:"verdict"`
+}
+
 // GenerateScenarioResponse defines model for GenerateScenarioResponse.
 type GenerateScenarioResponse struct {
 	Message  string    `json:"message"`
@@ -7480,6 +7973,15 @@ type GlossBatchRequest struct {
 	Items                []GlossBatchItem `json:"items"`
 	LearningLanguageCode string           `json:"learning_language_code"`
 	SupportLanguageCode  string           `json:"support_language_code"`
+}
+
+// GlossaryEntry defines model for GlossaryEntry.
+type GlossaryEntry struct {
+	Base      string  `json:"base"`
+	Form      string  `json:"form"`
+	MeaningEn string  `json:"meaning_en"`
+	Note      *string `json:"note,omitempty"`
+	Pos       *string `json:"pos,omitempty"`
 }
 
 // GlossaryListResponse defines model for GlossaryListResponse.
@@ -8040,6 +8542,18 @@ type IssueRow struct {
 	SuggestedAction string      `json:"suggested_action"`
 }
 
+// Item defines model for Item.
+type Item struct {
+	ArticleVersionId uuid.UUID                         `json:"article_version_id"`
+	ContentEntryId   uuid.UUID                         `json:"content_entry_id"`
+	Cover            *MediaAssetResponseContentService `json:"cover,omitempty"`
+	Level            string                            `json:"level"`
+	Minutes          int                               `json:"minutes"`
+	Position         int                               `json:"position"`
+	Title            string                            `json:"title"`
+	TitleEn          string                            `json:"title_en"`
+}
+
 // ItemDelta One learning item an answer moved. `status_*` are the stored vocabulary
 // (unknown / learning / known) derived from the proficiency the write moved;
 // `created` is True when the answer made the item's status row (it newly
@@ -8067,6 +8581,35 @@ type ItemDeltaV3 struct {
 	ProficiencyBefore float32 `json:"proficiency_before"`
 	StatusAfter       string  `json:"status_after"`
 	StatusBefore      string  `json:"status_before"`
+}
+
+// ItemDone defines model for ItemDone.
+type ItemDone struct {
+	At      string `json:"at"`
+	Correct int    `json:"correct"`
+	Total   int    `json:"total"`
+}
+
+// ItemOut defines model for ItemOut.
+type ItemOut struct {
+	AudioUrl        *string       `json:"audio_url"`
+	DurationSeconds *float32      `json:"duration_seconds"`
+	ExamKey         string        `json:"exam_key"`
+	Format          string        `json:"format"`
+	Id              string        `json:"id"`
+	Instruction     *string       `json:"instruction,omitempty"`
+	Kind            string        `json:"kind"`
+	Level           string        `json:"level"`
+	PlayCount       *int          `json:"play_count"`
+	Questions       []QuestionOut `json:"questions"`
+	Source          *SourceOut    `json:"source,omitempty"`
+	Speakers        *[]SpeakerOut `json:"speakers"`
+	Text            *string       `json:"text"`
+	Title           string        `json:"title"`
+	TitleEn         *string       `json:"title_en,omitempty"`
+	Topic           string        `json:"topic"`
+	WordCount       int           `json:"word_count"`
+	Writing         *WritingOut   `json:"writing"`
 }
 
 // ItemStanding Where an item stands AFTER the round's answers were recorded. The
@@ -8098,21 +8641,10 @@ type ItemStandingV3 struct {
 	TransferReady   bool    `json:"transfer_ready"`
 }
 
-// ItemSummary defines model for ItemSummary.
-type ItemSummary struct {
-	BaseWordId           *uuid.UUID          `json:"base_word_id"`
-	CefrLevel            string              `json:"cefr_level"`
-	DisplayText          string              `json:"display_text"`
-	GrammarConceptId     *uuid.UUID          `json:"grammar_concept_id"`
-	ItemId               uuid.UUID           `json:"item_id"`
-	ItemType             ItemSummaryItemType `json:"item_type"`
-	LearningLanguageCode *string             `json:"learning_language_code,omitempty"`
-	SupportLanguageCode  *string             `json:"support_language_code,omitempty"`
-	SupportText          *string             `json:"support_text"`
+// ItemsResponse defines model for ItemsResponse.
+type ItemsResponse struct {
+	Items []SrcKielolearnengineServicesExamItemsItemSummary `json:"items"`
 }
-
-// ItemSummaryItemType defines model for ItemSummary.ItemType.
-type ItemSummaryItemType string
 
 // JoinResp defines model for JoinResp.
 type JoinResp struct {
@@ -8182,11 +8714,17 @@ type JourneyRequest struct {
 
 // JourneyResultsArm defines model for JourneyResultsArm.
 type JourneyResultsArm struct {
-	Active     int     `json:"active"`
-	Arm        string  `json:"arm"`
-	Conversion float32 `json:"conversion"`
-	Converted  int     `json:"converted"`
-	Entered    int     `json:"entered"`
+	Active        int      `json:"active"`
+	Arm           string   `json:"arm"`
+	Conversion    float32  `json:"conversion"`
+	Converted     int      `json:"converted"`
+	Eligible48h   int      `json:"eligible_48h"`
+	Eligible7d    int      `json:"eligible_7d"`
+	Entered       int      `json:"entered"`
+	ReturnRate48h *float32 `json:"return_rate_48h,omitempty"`
+	ReturnRate7d  *float32 `json:"return_rate_7d,omitempty"`
+	Returned48h   int      `json:"returned_48h"`
+	Returned7d    int      `json:"returned_7d"`
 }
 
 // JourneyResultsResponse defines model for JourneyResultsResponse.
@@ -8195,6 +8733,7 @@ type JourneyResultsResponse struct {
 	Definitions      map[string]string    `json:"definitions"`
 	Lift             *Lift                `json:"lift,omitempty"`
 	LiftNeedsEntered int                  `json:"lift_needs_entered"`
+	ReturnLift       JourneyReturnLift    `json:"return_lift"`
 	Sends            []JourneyResultsSend `json:"sends"`
 }
 
@@ -8205,6 +8744,12 @@ type JourneyResultsSend struct {
 	Skipped        int                 `json:"skipped"`
 	SkippedReasons []JourneySkipReason `json:"skipped_reasons"`
 	Waiting        int                 `json:"waiting"`
+}
+
+// JourneyReturnLift defines model for JourneyReturnLift.
+type JourneyReturnLift struct {
+	Within48h *Lift `json:"within_48h,omitempty"`
+	Within7d  *Lift `json:"within_7d,omitempty"`
 }
 
 // JourneySkipReason defines model for JourneySkipReason.
@@ -9142,6 +9687,13 @@ type KieloTVVideoUpsertRequest struct {
 	VideoUrl             *string   `json:"video_url,omitempty"`
 }
 
+// KindCount defines model for KindCount.
+type KindCount struct {
+	Done  int    `json:"done"`
+	Kind  string `json:"kind"`
+	Total int    `json:"total"`
+}
+
 // LLMCandidateActionRequest defines model for LLMCandidateActionRequest.
 type LLMCandidateActionRequest struct {
 	Actor     string  `json:"actor"`
@@ -9924,23 +10476,25 @@ type LearningItemsCountsResponseV3 struct {
 
 // LearningObjective A planned learning objective for a given item.
 type LearningObjective struct {
-	DaysOverdue          *int                            `json:"days_overdue,omitempty"`
-	DisplayText          *string                         `json:"display_text,omitempty"`
-	ErrorPatternTag      *string                         `json:"error_pattern_tag"`
-	ExerciseSequence     *[]string                       `json:"exercise_sequence,omitempty"`
-	FocusLabel           *string                         `json:"focus_label,omitempty"`
-	LearningLanguageCode *string                         `json:"learning_language_code,omitempty"`
-	ObjectiveId          *uuid.UUID                      `json:"objective_id,omitempty"`
-	ObjectiveType        LearningObjectiveObjectiveType  `json:"objective_type"`
-	Proficiency          *float32                        `json:"proficiency"`
-	Reason               string                          `json:"reason"`
-	RecentErrorCount     *int                            `json:"recent_error_count,omitempty"`
-	SelectionSourceLabel *string                         `json:"selection_source_label"`
-	Source               string                          `json:"source"`
-	SupportLanguageCode  *string                         `json:"support_language_code,omitempty"`
-	SupportText          *string                         `json:"support_text,omitempty"`
-	TargetItemId         uuid.UUID                       `json:"target_item_id"`
-	TargetItemType       LearningObjectiveTargetItemType `json:"target_item_type"`
+	DaysOverdue            *int                            `json:"days_overdue,omitempty"`
+	DisplayText            *string                         `json:"display_text,omitempty"`
+	ErrorPatternTag        *string                         `json:"error_pattern_tag"`
+	ExerciseSequence       *[]string                       `json:"exercise_sequence,omitempty"`
+	FocusLabel             *string                         `json:"focus_label,omitempty"`
+	LearningLanguageCode   *string                         `json:"learning_language_code,omitempty"`
+	LocalizedSupportLocale *string                         `json:"localized_support_locale,omitempty"`
+	LocalizedSupportText   *string                         `json:"localized_support_text,omitempty"`
+	ObjectiveId            *uuid.UUID                      `json:"objective_id,omitempty"`
+	ObjectiveType          LearningObjectiveObjectiveType  `json:"objective_type"`
+	Proficiency            *float32                        `json:"proficiency"`
+	Reason                 string                          `json:"reason"`
+	RecentErrorCount       *int                            `json:"recent_error_count,omitempty"`
+	SelectionSourceLabel   *string                         `json:"selection_source_label"`
+	Source                 string                          `json:"source"`
+	SupportLanguageCode    *string                         `json:"support_language_code,omitempty"`
+	SupportText            *string                         `json:"support_text,omitempty"`
+	TargetItemId           uuid.UUID                       `json:"target_item_id"`
+	TargetItemType         LearningObjectiveTargetItemType `json:"target_item_type"`
 }
 
 // LearningObjectiveObjectiveType defines model for LearningObjective.ObjectiveType.
@@ -10049,10 +10603,15 @@ type LearningSessionV3 struct {
 
 // LearningStatusUpdateRequest defines model for LearningStatusUpdateRequest.
 type LearningStatusUpdateRequest struct {
-	ItemType             string   `json:"item_type"`
-	KlearnProficiency    *float32 `json:"klearn_proficiency"`
-	SuggestedKieloStatus *string  `json:"suggested_kielo_status"`
+	Explicit             *bool                              `json:"explicit,omitempty"`
+	ItemType             string                             `json:"item_type"`
+	KlearnProficiency    *float32                           `json:"klearn_proficiency"`
+	Source               *LearningStatusUpdateRequestSource `json:"source"`
+	SuggestedKieloStatus *string                            `json:"suggested_kielo_status"`
 }
+
+// LearningStatusUpdateRequestSource defines model for LearningStatusUpdateRequest.Source.
+type LearningStatusUpdateRequestSource string
 
 // LearningStyleProfile defines model for LearningStyleProfile.
 type LearningStyleProfile struct {
@@ -10132,8 +10691,10 @@ type LessonDraftRequest struct {
 	ChapterTitle    *string                            `json:"chapter_title"`
 	Description     *string                            `json:"description"`
 	DifficultyLevel *LessonDraftRequestDifficultyLevel `json:"difficulty_level"`
+	EarlierLessons  *[]string                          `json:"earlier_lessons,omitempty"`
 	ForceRegenerate *bool                              `json:"force_regenerate,omitempty"`
 	Grammar         *[]string                          `json:"grammar,omitempty"`
+	LaterLessons    *[]string                          `json:"later_lessons,omitempty"`
 	Minutes         *int                               `json:"minutes"`
 	Purpose         string                             `json:"purpose"`
 	Shape           *string                            `json:"shape"`
@@ -10172,6 +10733,62 @@ type LessonDraftResponse struct {
 
 // LessonDraftResponseReview defines model for LessonDraftResponse.Review.
 type LessonDraftResponseReview string
+
+// LessonOverviewResponse defines model for LessonOverviewResponse.
+type LessonOverviewResponse struct {
+	Days    int                 `json:"days"`
+	Lessons []LessonOverviewRow `json:"lessons"`
+}
+
+// LessonOverviewRow defines model for LessonOverviewRow.
+type LessonOverviewRow struct {
+	Attention      float32    `json:"attention"`
+	CefrLevel      *string    `json:"cefr_level"`
+	ChapterId      *uuid.UUID `json:"chapter_id"`
+	ChapterTitle   *string    `json:"chapter_title"`
+	Completed      int        `json:"completed"`
+	CompletionRate *float32   `json:"completion_rate"`
+	IsPublished    bool       `json:"is_published"`
+	IsVideo        *bool      `json:"is_video,omitempty"`
+	LessonId       uuid.UUID  `json:"lesson_id"`
+	LevelId        *uuid.UUID `json:"level_id"`
+	LevelTitle     *string    `json:"level_title"`
+	Lost           int        `json:"lost"`
+	OpenReports    int        `json:"open_reports"`
+	OrderIndex     int        `json:"order_index"`
+	Reports        int        `json:"reports"`
+	Shape          *string    `json:"shape"`
+	Starts         int        `json:"starts"`
+	StepCount      int        `json:"step_count"`
+	StopCount      *int       `json:"stop_count,omitempty"`
+	StopStep       *int       `json:"stop_step"`
+	StopStepTitle  *string    `json:"stop_step_title"`
+	StopStepType   *string    `json:"stop_step_type"`
+	Title          string     `json:"title"`
+	TrackId        *uuid.UUID `json:"track_id"`
+	TrackTitle     *string    `json:"track_title"`
+	UpdatedAt      *time.Time `json:"updated_at"`
+}
+
+// LessonReport defines model for LessonReport.
+type LessonReport struct {
+	Category   *string   `json:"category"`
+	CreatedAt  time.Time `json:"created_at"`
+	FeedbackId uuid.UUID `json:"feedback_id"`
+	Message    string    `json:"message"`
+	Status     string    `json:"status"`
+	StepIndex  *int      `json:"step_index"`
+}
+
+// LessonSignals defines model for LessonSignals.
+type LessonSignals struct {
+	Completed int            `json:"completed"`
+	Days      int            `json:"days"`
+	LessonId  uuid.UUID      `json:"lesson_id"`
+	Reports   []LessonReport `json:"reports"`
+	Starts    int            `json:"starts"`
+	Stops     []StepStop     `json:"stops"`
+}
 
 // LevelCheckResponse defines model for LevelCheckResponse.
 type LevelCheckResponse struct {
@@ -10312,6 +10929,68 @@ type ListeningComprehensionExerciseOptionKind string
 // ListeningComprehensionExerciseSourceType defines model for ListeningComprehensionExercise.SourceType.
 type ListeningComprehensionExerciseSourceType string
 
+// LiveKitExhaustRequest defines model for LiveKitExhaustRequest.
+type LiveKitExhaustRequest struct {
+	Reason string     `json:"reason"`
+	Until  *time.Time `json:"until,omitempty"`
+}
+
+// LiveKitPoolDesiredResponse defines model for LiveKitPoolDesiredResponse.
+type LiveKitPoolDesiredResponse struct {
+	Desired *Profile `json:"desired,omitempty"`
+	Serving *Profile `json:"serving,omitempty"`
+}
+
+// LiveKitPoolResponse defines model for LiveKitPoolResponse.
+type LiveKitPoolResponse struct {
+	ActiveProfileId  *uuid.UUID        `json:"active_profile_id,omitempty"`
+	MonthStart       time.Time         `json:"month_start"`
+	Profiles         []ProfileUsage    `json:"profiles"`
+	RecentEvents     []Event           `json:"recent_events"`
+	ServingProfileId *uuid.UUID        `json:"serving_profile_id,omitempty"`
+	Totals           LiveKitPoolTotals `json:"totals"`
+}
+
+// LiveKitPoolTotals defines model for LiveKitPoolTotals.
+type LiveKitPoolTotals struct {
+	Calls              int     `json:"calls"`
+	LimitMinutes       int     `json:"limit_minutes"`
+	ParticipantMinutes float32 `json:"participant_minutes"`
+	Pct                float32 `json:"pct"`
+}
+
+// LiveKitProfileCreateRequest defines model for LiveKitProfileCreateRequest.
+type LiveKitProfileCreateRequest struct {
+	ApiKey                        *string `json:"api_key,omitempty"`
+	ApiSecret                     *string `json:"api_secret,omitempty"`
+	Enabled                       bool    `json:"enabled"`
+	MonthlyParticipantMinuteLimit int     `json:"monthly_participant_minute_limit"`
+	Name                          string  `json:"name"`
+	Notes                         *string `json:"notes,omitempty"`
+	Priority                      int     `json:"priority"`
+	SecretRef                     *string `json:"secret_ref,omitempty"`
+	Url                           string  `json:"url"`
+}
+
+// LiveKitProfileUpdateRequest defines model for LiveKitProfileUpdateRequest.
+type LiveKitProfileUpdateRequest struct {
+	ApiKey                        *string `json:"api_key,omitempty"`
+	ApiSecret                     *string `json:"api_secret,omitempty"`
+	Enabled                       *bool   `json:"enabled,omitempty"`
+	MonthlyParticipantMinuteLimit *int    `json:"monthly_participant_minute_limit,omitempty"`
+	Name                          *string `json:"name,omitempty"`
+	Notes                         *string `json:"notes,omitempty"`
+	Priority                      *int    `json:"priority,omitempty"`
+	SecretRef                     *string `json:"secret_ref,omitempty"`
+	Url                           *string `json:"url,omitempty"`
+}
+
+// LiveKitServingRequest defines model for LiveKitServingRequest.
+type LiveKitServingRequest struct {
+	Name      string `json:"name"`
+	ProfileId string `json:"profile_id"`
+}
+
 // LocalizationInvalidateCacheRequest defines model for LocalizationInvalidateCacheRequest.
 type LocalizationInvalidateCacheRequest struct {
 	Language *string `json:"language,omitempty"`
@@ -10380,6 +11059,56 @@ type LogoutRequestAuthService struct {
 type LogoutResponse struct {
 	Message string `json:"message"`
 	Success bool   `json:"success"`
+}
+
+// LongDebriefRequest defines model for LongDebriefRequest.
+type LongDebriefRequest struct {
+	MockId     *uuid.UUID `json:"mock_id"`
+	OptionId   *string    `json:"option_id"`
+	Seconds    *float32   `json:"seconds"`
+	Transcript *string    `json:"transcript,omitempty"`
+}
+
+// LongDebriefResponse defines model for LongDebriefResponse.
+type LongDebriefResponse struct {
+	BetterAnswer string         `json:"better_answer"`
+	Criteria     map[string]int `json:"criteria"`
+	Estimated    *bool          `json:"estimated,omitempty"`
+	ExamKey      string         `json:"exam_key"`
+	Grade        int            `json:"grade"`
+	Kind         string         `json:"kind"`
+	MeetsTarget  bool           `json:"meets_target"`
+	MinWords     int            `json:"min_words"`
+	OptionId     *string        `json:"option_id"`
+	Points       []PointResult  `json:"points"`
+	PromptId     string         `json:"prompt_id"`
+	Score        float32        `json:"score"`
+	Summary      string         `json:"summary"`
+	TargetGrade  *int           `json:"target_grade,omitempty"`
+	TooShort     bool           `json:"too_short"`
+	Words        int            `json:"words"`
+}
+
+// LongPromptOut defines model for LongPromptOut.
+type LongPromptOut struct {
+	AnswerSeconds int                                                 `json:"answer_seconds"`
+	ExamKey       string                                              `json:"exam_key"`
+	Id            string                                              `json:"id"`
+	Kind          string                                              `json:"kind"`
+	Options       *[]SrcKielolearnengineServicesExamPrepLongOptionOut `json:"options,omitempty"`
+	Points        *[]PointOut                                         `json:"points,omitempty"`
+	PrepSeconds   int                                                 `json:"prep_seconds"`
+	Text          *string                                             `json:"text,omitempty"`
+	TextEn        *string                                             `json:"text_en,omitempty"`
+	Title         string                                              `json:"title"`
+	TitleEn       string                                              `json:"title_en"`
+	Topic         string                                              `json:"topic"`
+}
+
+// LongSpeechResponse defines model for LongSpeechResponse.
+type LongSpeechResponse struct {
+	Transcript string `json:"transcript"`
+	Words      int    `json:"words"`
 }
 
 // ManageURLResponse defines model for ManageURLResponse.
@@ -10821,6 +11550,80 @@ type Mindmap struct {
 	VideoId              uuid.UUID   `json:"video_id"`
 }
 
+// MockCurrentResponse defines model for MockCurrentResponse.
+type MockCurrentResponse struct {
+	Mock            *MockTestOut `json:"mock"`
+	MockLimitExempt *bool        `json:"mock_limit_exempt,omitempty"`
+	MocksStarted    *int         `json:"mocks_started,omitempty"`
+	Plan            *MockPlan    `json:"plan"`
+}
+
+// MockPartOut defines model for MockPartOut.
+type MockPartOut struct {
+	BudgetSeconds    int               `json:"budget_seconds"`
+	Done             []string          `json:"done"`
+	Part             string            `json:"part"`
+	RemainingSeconds int               `json:"remaining_seconds"`
+	Status           MockPartOutStatus `json:"status"`
+	Tasks            []MockTask        `json:"tasks"`
+	TimeBasis        string            `json:"time_basis"`
+	UsedSeconds      int               `json:"used_seconds"`
+}
+
+// MockPartOutStatus defines model for MockPartOut.Status.
+type MockPartOutStatus string
+
+// MockPartPlan defines model for MockPartPlan.
+type MockPartPlan struct {
+	BudgetSeconds int                   `json:"budget_seconds"`
+	Part          string                `json:"part"`
+	Tasks         []MockTask            `json:"tasks"`
+	TimeBasis     MockPartPlanTimeBasis `json:"time_basis"`
+}
+
+// MockPartPlanTimeBasis defines model for MockPartPlan.TimeBasis.
+type MockPartPlanTimeBasis string
+
+// MockPlan defines model for MockPlan.
+type MockPlan struct {
+	LeftOut *[]map[string]string `json:"left_out,omitempty"`
+	Parts   []MockPartPlan       `json:"parts"`
+}
+
+// MockResult defines model for MockResult.
+type MockResult struct {
+	Estimated    *bool               `json:"estimated,omitempty"`
+	ExamKey      string              `json:"exam_key"`
+	Id           string              `json:"id"`
+	LeftOut      []map[string]string `json:"left_out"`
+	Parts        []PartResult        `json:"parts"`
+	PracticeNext []PracticeNext      `json:"practice_next"`
+	Status       string              `json:"status"`
+	TargetGrade  int                 `json:"target_grade"`
+}
+
+// MockTask defines model for MockTask.
+type MockTask struct {
+	Kind  string  `json:"kind"`
+	Ref   string  `json:"ref"`
+	Title *string `json:"title"`
+}
+
+// MockTestOut defines model for MockTestOut.
+type MockTestOut struct {
+	CurrentPart *string             `json:"current_part"`
+	ExamKey     string              `json:"exam_key"`
+	Id          string              `json:"id"`
+	LeftOut     []map[string]string `json:"left_out"`
+	Parts       []MockPartOut       `json:"parts"`
+	StartedAt   time.Time           `json:"started_at"`
+	Status      MockTestOutStatus   `json:"status"`
+	WarnSeconds *int                `json:"warn_seconds,omitempty"`
+}
+
+// MockTestOutStatus defines model for MockTestOut.Status.
+type MockTestOutStatus string
+
 // Morphology defines model for Morphology.
 type Morphology struct {
 	BaseForm  string `json:"base_form"`
@@ -10952,6 +11755,7 @@ type NextStepRecommendation struct {
 	Subtitle        *string                         `json:"subtitle"`
 	Title           string                          `json:"title"`
 	Type            NextStepRecommendationType      `json:"type"`
+	Words           *[]string                       `json:"words"`
 }
 
 // NextStepRecommendationCtaId defines model for NextStepRecommendation.CtaId.
@@ -10984,10 +11788,12 @@ type NextStepRecommendationV3 struct {
 	Subtitle        *string                       `json:"subtitle,omitempty"`
 	Title           string                        `json:"title"`
 	Type            string                        `json:"type"`
+	Words           *[]string                     `json:"words,omitempty"`
 }
 
 // NextStepsResponse What next, after a surface: the plan for a learner who has just
-// finished a KieloTV video, an article or a conversation scenario.
+// finished a KieloTV video, an article, a conversation scenario or a roadmap
+// lesson.
 type NextStepsResponse struct {
 	NextSteps  *[]NextStepRecommendation   `json:"next_steps,omitempty"`
 	SourceId   string                      `json:"source_id"`
@@ -11003,6 +11809,18 @@ type NextStepsResponseV3 struct {
 	SourceId   string                     `json:"source_id"`
 	SourceKind string                     `json:"source_kind"`
 }
+
+// NextTask defines model for NextTask.
+type NextTask struct {
+	Kind   string         `json:"kind"`
+	Reason NextTaskReason `json:"reason"`
+	Ref    string         `json:"ref"`
+	Title  *string        `json:"title"`
+	Topic  *string        `json:"topic"`
+}
+
+// NextTaskReason defines model for NextTask.Reason.
+type NextTaskReason string
 
 // NotificationAudience defines model for NotificationAudience.
 type NotificationAudience struct {
@@ -11654,6 +12472,52 @@ type PartCoverage struct {
 	Source  string  `json:"source"`
 }
 
+// PartReadiness defines model for PartReadiness.
+type PartReadiness struct {
+	ByKind        *[]KindCount        `json:"by_kind,omitempty"`
+	Estimated     *bool               `json:"estimated,omitempty"`
+	GradeEstimate *int                `json:"grade_estimate"`
+	Graded        bool                `json:"graded"`
+	Levels        *[]RecentAttempt    `json:"levels,omitempty"`
+	MaxLevel      *int                `json:"max_level,omitempty"`
+	MeanScore     *float32            `json:"mean_score"`
+	MeetsTarget   *bool               `json:"meets_target,omitempty"`
+	MoreNeeded    *int                `json:"more_needed,omitempty"`
+	NextTask      *NextTask           `json:"next_task"`
+	Part          string              `json:"part"`
+	Recent        *[]RecentAttempt    `json:"recent,omitempty"`
+	TargetGrade   *int                `json:"target_grade,omitempty"`
+	TasksDone     *int                `json:"tasks_done,omitempty"`
+	TasksTotal    *int                `json:"tasks_total,omitempty"`
+	Trend         *PartReadinessTrend `json:"trend,omitempty"`
+	Window        *int                `json:"window,omitempty"`
+}
+
+// PartReadinessTrend defines model for PartReadiness.Trend.
+type PartReadinessTrend string
+
+// PartResult defines model for PartResult.
+type PartResult struct {
+	BudgetSeconds    int                  `json:"budget_seconds"`
+	Correct          *int                 `json:"correct"`
+	Level            *int                 `json:"level"`
+	MeetsTarget      *bool                `json:"meets_target"`
+	NotEnough        *PartResultNotEnough `json:"not_enough"`
+	Part             string               `json:"part"`
+	Status           PartResultStatus     `json:"status"`
+	TasksDone        int                  `json:"tasks_done"`
+	TasksTotal       int                  `json:"tasks_total"`
+	Total            *int                 `json:"total"`
+	UsedSeconds      int                  `json:"used_seconds"`
+	WeakestCriterion *string              `json:"weakest_criterion"`
+}
+
+// PartResultNotEnough defines model for PartResult.NotEnough.
+type PartResultNotEnough string
+
+// PartResultStatus defines model for PartResult.Status.
+type PartResultStatus string
+
 // Partner defines model for Partner.
 type Partner struct {
 	CodeCount         int       `json:"code_count"`
@@ -11838,6 +12702,12 @@ type PhraseFrame struct {
 	Translation        *string `json:"translation,omitempty"`
 }
 
+// PickIn defines model for PickIn.
+type PickIn struct {
+	Kind string `json:"kind"`
+	Ref  string `json:"ref"`
+}
+
 // PlaceholderExercise defines model for PlaceholderExercise.
 type PlaceholderExercise struct {
 	CacheEntryId *string     `json:"cache_entry_id"`
@@ -11914,9 +12784,38 @@ type PlacementTestItemsResponse struct {
 
 // PlacementTestItemsResponseKielolearnEngine defines model for PlacementTestItemsResponseKielolearnEngine.
 type PlacementTestItemsResponseKielolearnEngine struct {
-	GrammarItems    []ItemSummary `json:"grammar_items"`
-	VocabularyItems []ItemSummary `json:"vocabulary_items"`
+	GrammarItems    []SrcKielolearnengineCoreSchemasEventsItemSummary `json:"grammar_items"`
+	VocabularyItems []SrcKielolearnengineCoreSchemasEventsItemSummary `json:"vocabulary_items"`
 }
+
+// PlanRow defines model for PlanRow.
+type PlanRow struct {
+	Format   string  `json:"format"`
+	Id       string  `json:"id"`
+	Kind     string  `json:"kind"`
+	Language string  `json:"language"`
+	Level    string  `json:"level"`
+	State    *string `json:"state"`
+	Topic    string  `json:"topic"`
+	Verdict  *string `json:"verdict"`
+}
+
+// PointOut defines model for PointOut.
+type PointOut struct {
+	Text   string  `json:"text"`
+	TextEn *string `json:"text_en,omitempty"`
+}
+
+// PointResult defines model for PointResult.
+type PointResult struct {
+	Met    PointResultMet `json:"met"`
+	Note   string         `json:"note"`
+	Text   string         `json:"text"`
+	TextEn string         `json:"text_en"`
+}
+
+// PointResultMet defines model for PointResult.Met.
+type PointResultMet string
 
 // Post defines model for Post.
 type Post struct {
@@ -12002,6 +12901,17 @@ type PracticeContext struct {
 	VersionId            uuid.UUID  `json:"version_id"`
 }
 
+// PracticeNext defines model for PracticeNext.
+type PracticeNext struct {
+	Kind   string             `json:"kind"`
+	Part   string             `json:"part"`
+	Reason PracticeNextReason `json:"reason"`
+	Ref    string             `json:"ref"`
+}
+
+// PracticeNextReason defines model for PracticeNext.Reason.
+type PracticeNextReason string
+
 // PreferredDifficultyProfile defines model for PreferredDifficultyProfile.
 type PreferredDifficultyProfile struct {
 	// DerivedDifficultyScore System-inferred difficulty preference (0=easy, 1=hard).
@@ -12038,8 +12948,228 @@ type PreparedInfo struct {
 	RetryAfterMs int `json:"retry_after_ms"`
 }
 
+// ProbeState defines model for ProbeState.
+type ProbeState struct {
+	At     time.Time `json:"at"`
+	Detail string    `json:"detail"`
+	Result string    `json:"result"`
+	Status int       `json:"status"`
+}
+
 // Profile defines model for Profile.
 type Profile struct {
+	ApiKey                        *string    `json:"api_key,omitempty"`
+	CreatedAt                     time.Time  `json:"created_at"`
+	Enabled                       bool       `json:"enabled"`
+	ExhaustedUntil                *time.Time `json:"exhausted_until,omitempty"`
+	Id                            uuid.UUID  `json:"id"`
+	MonthlyParticipantMinuteLimit int        `json:"monthly_participant_minute_limit"`
+	Name                          string     `json:"name"`
+	Notes                         *string    `json:"notes,omitempty"`
+	Priority                      int        `json:"priority"`
+	SecretRef                     *string    `json:"secret_ref,omitempty"`
+	Serving                       bool       `json:"serving"`
+	Status                        string     `json:"status"`
+	UpdatedAt                     time.Time  `json:"updated_at"`
+	Url                           string     `json:"url"`
+}
+
+// ProfileChannel defines model for ProfileChannel.
+type ProfileChannel struct {
+	Enabled    bool   `json:"enabled"`
+	Handle     string `json:"handle"`
+	Id         string `json:"id"`
+	Language   string `json:"language"`
+	Name       string `json:"name"`
+	Platform   string `json:"platform"`
+	ProfileUrl string `json:"profile_url"`
+	RemoteId   string `json:"remote_id"`
+}
+
+// ProfileChannelSpec defines model for ProfileChannelSpec.
+type ProfileChannelSpec struct {
+	ChannelId string  `json:"channel_id"`
+	Handle    *string `json:"handle,omitempty"`
+	Language  string  `json:"language"`
+	Platform  string  `json:"platform"`
+	RemoteId  *string `json:"remote_id,omitempty"`
+}
+
+// ProfileClaimRequest defines model for ProfileClaimRequest.
+type ProfileClaimRequest struct {
+	LeaseSeconds *int               `json:"lease_seconds,omitempty"`
+	Platforms    []string           `json:"platforms"`
+	RunnerId     string             `json:"runner_id"`
+	Session      *map[string]string `json:"session,omitempty"`
+	Version      string             `json:"version"`
+}
+
+// ProfileFieldCap defines model for ProfileFieldCap.
+type ProfileFieldCap struct {
+	Field    string  `json:"field"`
+	Note     *string `json:"note,omitempty"`
+	Verified bool    `json:"verified"`
+	Via      string  `json:"via"`
+}
+
+// ProfileFieldLimit defines model for ProfileFieldLimit.
+type ProfileFieldLimit struct {
+	Field    string  `json:"field"`
+	Limit    int     `json:"limit"`
+	Note     *string `json:"note,omitempty"`
+	Required bool    `json:"required"`
+	Verified bool    `json:"verified"`
+	Via      string  `json:"via"`
+}
+
+// ProfileFields defines model for ProfileFields.
+type ProfileFields struct {
+	Avatar          *ProfileImage     `json:"avatar,omitempty"`
+	Banner          *ProfileImage     `json:"banner,omitempty"`
+	Bio             string            `json:"bio"`
+	Category        string            `json:"category"`
+	Country         string            `json:"country"`
+	DefaultLanguage string            `json:"default_language"`
+	Description     string            `json:"description"`
+	DisplayName     string            `json:"display_name"`
+	Keywords        []string          `json:"keywords"`
+	Links           []ProfileLink     `json:"links"`
+	UploadDefaults  map[string]string `json:"upload_defaults"`
+}
+
+// ProfileFinishRequest defines model for ProfileFinishRequest.
+type ProfileFinishRequest struct {
+	Error        *string `json:"error,omitempty"`
+	RunnerId     string  `json:"runner_id"`
+	SessionState *string `json:"session_state,omitempty"`
+	Status       string  `json:"status"`
+}
+
+// ProfileImage defines model for ProfileImage.
+type ProfileImage struct {
+	Height  *int       `json:"height,omitempty"`
+	MediaId *uuid.UUID `json:"media_id,omitempty"`
+	Sha256  *string    `json:"sha256,omitempty"`
+	Url     *string    `json:"url,omitempty"`
+	Width   *int       `json:"width,omitempty"`
+}
+
+// ProfileIssue defines model for ProfileIssue.
+type ProfileIssue struct {
+	Blocking bool    `json:"blocking"`
+	Field    *string `json:"field,omitempty"`
+	Message  string  `json:"message"`
+}
+
+// ProfileLink defines model for ProfileLink.
+type ProfileLink struct {
+	Title string `json:"title"`
+	Url   string `json:"url"`
+}
+
+// ProfileLinkLimit defines model for ProfileLinkLimit.
+type ProfileLinkLimit struct {
+	Max      int     `json:"max"`
+	Note     *string `json:"note,omitempty"`
+	TitleMax int     `json:"title_max"`
+	Verified bool    `json:"verified"`
+}
+
+// ProfilePlan defines model for ProfilePlan.
+type ProfilePlan struct {
+	Fingerprint string            `json:"fingerprint"`
+	Issues      []ProfileIssue    `json:"issues"`
+	Items       []ProfilePlanItem `json:"items"`
+	Unchanged   int               `json:"unchanged"`
+	Writable    int               `json:"writable"`
+}
+
+// ProfilePlanItem defines model for ProfilePlanItem.
+type ProfilePlanItem struct {
+	Action      string  `json:"action"`
+	ChangeId    string  `json:"change_id"`
+	Field       string  `json:"field"`
+	From        string  `json:"from"`
+	FromUnknown *bool   `json:"from_unknown,omitempty"`
+	Note        *string `json:"note,omitempty"`
+	To          string  `json:"to"`
+	Via         string  `json:"via"`
+}
+
+// ProfileRemote defines model for ProfileRemote.
+type ProfileRemote struct {
+	Avatar          *ProfileImage     `json:"avatar,omitempty"`
+	Banner          *ProfileImage     `json:"banner,omitempty"`
+	Bio             string            `json:"bio"`
+	Category        string            `json:"category"`
+	Country         string            `json:"country"`
+	DefaultLanguage string            `json:"default_language"`
+	Description     string            `json:"description"`
+	DisplayName     string            `json:"display_name"`
+	Keywords        []string          `json:"keywords"`
+	Links           []ProfileLink     `json:"links"`
+	Note            *string           `json:"note,omitempty"`
+	ReadAt          *time.Time        `json:"read_at,omitempty"`
+	Unread          *[]string         `json:"unread,omitempty"`
+	UploadDefaults  map[string]string `json:"upload_defaults"`
+}
+
+// ProfileRun defines model for ProfileRun.
+type ProfileRun struct {
+	Attempts        int              `json:"attempts"`
+	ChannelId       string           `json:"channel_id"`
+	ClaimedAt       *time.Time       `json:"claimed_at,omitempty"`
+	CreatedAt       time.Time        `json:"created_at"`
+	CreatedBy       *uuid.UUID       `json:"created_by,omitempty"`
+	Fingerprint     *string          `json:"fingerprint,omitempty"`
+	FinishedAt      *time.Time       `json:"finished_at,omitempty"`
+	Kind            string           `json:"kind"`
+	LeaseExpiresAt  *time.Time       `json:"lease_expires_at,omitempty"`
+	LeaseOwner      *string          `json:"lease_owner,omitempty"`
+	NeedsRunner     bool             `json:"needs_runner"`
+	Plan            *ProfilePlan     `json:"plan,omitempty"`
+	ProfileRevision int              `json:"profile_revision"`
+	Remote          *ProfileRemote   `json:"remote,omitempty"`
+	Result          ProfileRunResult `json:"result"`
+	RunId           uuid.UUID        `json:"run_id"`
+	Status          string           `json:"status"`
+}
+
+// ProfileRunJob defines model for ProfileRunJob.
+type ProfileRunJob struct {
+	Changes        []ProfilePlanItem  `json:"changes"`
+	Channel        ProfileChannelSpec `json:"channel"`
+	Kind           string             `json:"kind"`
+	LeaseExpiresAt time.Time          `json:"lease_expires_at"`
+	RunId          uuid.UUID          `json:"run_id"`
+}
+
+// ProfileRunResult defines model for ProfileRunResult.
+type ProfileRunResult struct {
+	Error        *string `json:"error,omitempty"`
+	SessionState *string `json:"session_state,omitempty"`
+}
+
+// ProfileRunner defines model for ProfileRunner.
+type ProfileRunner struct {
+	Detail       *string   `json:"detail,omitempty"`
+	Language     string    `json:"language"`
+	LastSeen     time.Time `json:"last_seen"`
+	Platform     string    `json:"platform"`
+	RunnerId     string    `json:"runner_id"`
+	SessionState string    `json:"session_state"`
+	Version      string    `json:"version"`
+}
+
+// ProfileUsage defines model for ProfileUsage.
+type ProfileUsage struct {
+	Profile   Profile     `json:"Profile"`
+	LastProbe *ProbeState `json:"last_probe,omitempty"`
+	Usage     Usage       `json:"usage"`
+}
+
+// ProfileUserService defines model for ProfileUserService.
+type ProfileUserService struct {
 	ActiveDays           int                `json:"active_days"`
 	ComputedAt           time.Time          `json:"computed_at"`
 	Goal                 string             `json:"goal"`
@@ -12051,6 +13181,18 @@ type Profile struct {
 	TypeShare            map[string]float32 `json:"type_share"`
 	WindowDays           int                `json:"window_days"`
 }
+
+// ProgressRequest defines model for ProgressRequest.
+type ProgressRequest struct {
+	Action  ProgressRequestAction `json:"action"`
+	Correct *int                  `json:"correct"`
+	Part    string                `json:"part"`
+	Ref     *string               `json:"ref"`
+	Total   *int                  `json:"total"`
+}
+
+// ProgressRequestAction defines model for ProgressRequest.Action.
+type ProgressRequestAction string
 
 // ProgressSummary defines model for ProgressSummary.
 type ProgressSummary struct {
@@ -12221,6 +13363,70 @@ type PromoStats struct {
 	Redeemed30d        int     `json:"redeemed_30d"`
 }
 
+// PronunciationAggregateBody defines model for PronunciationAggregateBody.
+type PronunciationAggregateBody struct {
+	Score         *float32    `json:"score,omitempty"`
+	ScorerVersion string      `json:"scorer_version"`
+	Scores        interface{} `json:"scores"`
+	Status        string      `json:"status"`
+}
+
+// PronunciationCandidateBody defines model for PronunciationCandidateBody.
+type PronunciationCandidateBody struct {
+	Attribution  string                    `json:"attribution"`
+	AudioSha256  string                    `json:"audio_sha256"`
+	BaseWordId   uuid.UUID                 `json:"base_word_id"`
+	DurationMs   *int                      `json:"duration_ms,omitempty"`
+	License      string                    `json:"license"`
+	LicenseUrl   string                    `json:"license_url"`
+	LoudnessLufs *float32                  `json:"loudness_lufs,omitempty"`
+	MediaUrl     string                    `json:"media_url"`
+	Provenance   *PronunciationSourceInput `json:"provenance,omitempty"`
+	Provider     string                    `json:"provider"`
+	Region       string                    `json:"region"`
+	SnrDb        *float32                  `json:"snr_db,omitempty"`
+	Source       string                    `json:"source"`
+	SourceKey    string                    `json:"source_key"`
+	SourceUrl    string                    `json:"source_url"`
+	Speaker      string                    `json:"speaker"`
+	Term         string                    `json:"term"`
+	Voice        string                    `json:"voice"`
+}
+
+// PronunciationJudgementInput defines model for PronunciationJudgementInput.
+type PronunciationJudgementInput struct {
+	Confidence float32     `json:"confidence"`
+	Dimension  string      `json:"dimension"`
+	Evidence   interface{} `json:"evidence"`
+	JudgeKey   string      `json:"judge_key"`
+	JudgeKind  string      `json:"judge_kind"`
+	JudgeLabel string      `json:"judge_label"`
+	Value      float32     `json:"value"`
+}
+
+// PronunciationJudgementsBody defines model for PronunciationJudgementsBody.
+type PronunciationJudgementsBody struct {
+	Judgements []PronunciationJudgementInput `json:"judgements"`
+}
+
+// PronunciationSourceInput defines model for PronunciationSourceInput.
+type PronunciationSourceInput struct {
+	AttributionRequired bool       `json:"attribution_required"`
+	AttributionText     string     `json:"attribution_text"`
+	Dialect             string     `json:"dialect"`
+	FetchedAt           *time.Time `json:"fetched_at,omitempty"`
+	FileUrl             string     `json:"file_url"`
+	LicenseSpdx         string     `json:"license_spdx"`
+	LicenseUrl          string     `json:"license_url"`
+	OriginalMime        string     `json:"original_mime"`
+	OriginalSha256      string     `json:"original_sha256"`
+	PageUrl             string     `json:"page_url"`
+	Provider            string     `json:"provider"`
+	Region              string     `json:"region"`
+	Speaker             string     `json:"speaker"`
+	Uploader            string     `json:"uploader"`
+}
+
 // PubSubMessage defines model for PubSubMessage.
 type PubSubMessage struct {
 	DeliveryAttempt *int                   `json:"deliveryAttempt"`
@@ -12372,6 +13578,34 @@ type QuarantineReviewRequest struct {
 	Write     *bool     `json:"write,omitempty"`
 }
 
+// Question defines model for Question.
+type Question struct {
+	Answer  interface{} `json:"answer"`
+	Options []string    `json:"options"`
+	Q       string      `json:"q"`
+	QEn     *string     `json:"q_en,omitempty"`
+	WhyEn   *string     `json:"why_en,omitempty"`
+}
+
+// QuestionOut defines model for QuestionOut.
+type QuestionOut struct {
+	Id       string                                           `json:"id"`
+	Options  *[]SrcKielolearnengineServicesExamItemsOptionOut `json:"options"`
+	Prompt   string                                           `json:"prompt"`
+	PromptEn *string                                          `json:"prompt_en,omitempty"`
+	Type     string                                           `json:"type"`
+}
+
+// QuestionResult defines model for QuestionResult.
+type QuestionResult struct {
+	Answer        string  `json:"answer"`
+	Correct       bool    `json:"correct"`
+	CorrectAnswer string  `json:"correct_answer"`
+	QuestionId    string  `json:"question_id"`
+	Rationale     *string `json:"rationale,omitempty"`
+	SelfCheck     *bool   `json:"self_check,omitempty"`
+}
+
 // QueueStatus defines model for QueueStatus.
 type QueueStatus struct {
 	Position int     `json:"position"`
@@ -12515,12 +13749,6 @@ type ReaderTextNext struct {
 type ReaderTextParagraph struct {
 	Index int    `json:"index"`
 	Text  string `json:"text"`
-}
-
-// ReadinessResponse defines model for ReadinessResponse.
-type ReadinessResponse struct {
-	Models string `json:"models"`
-	Status string `json:"status"`
 }
 
 // RecapDeltas defines model for RecapDeltas.
@@ -12697,6 +13925,15 @@ type RecentArticleReadIDsResponse struct {
 	Reads []ArticleReadTimeUserService `json:"reads"`
 }
 
+// RecentAttempt defines model for RecentAttempt.
+type RecentAttempt struct {
+	CreatedAt time.Time `json:"created_at"`
+	Grade     int       `json:"grade"`
+	Score     float32   `json:"score"`
+	SetId     string    `json:"set_id"`
+	TaskKind  string    `json:"task_kind"`
+}
+
 // RecommendationCampaign defines model for RecommendationCampaign.
 type RecommendationCampaign struct {
 	BodyKeyId        *uuid.UUID             `json:"body_key_id,omitempty"`
@@ -12814,6 +14051,7 @@ type RedeemPromoCodeRequest struct {
 	Code     string  `json:"code"`
 	InApp    *bool   `json:"in_app,omitempty"`
 	Platform *string `json:"platform,omitempty"`
+	Source   *string `json:"source,omitempty"`
 	Via      *string `json:"via,omitempty"`
 }
 
@@ -13200,6 +14438,13 @@ type RestoreAccessResponseUserService struct {
 	Message string  `json:"message"`
 	Success bool    `json:"success"`
 	Tier    *string `json:"tier,omitempty"`
+}
+
+// RestoreRequest defines model for RestoreRequest.
+type RestoreRequest struct {
+	Force  bool    `json:"force"`
+	Reason *string `json:"reason,omitempty"`
+	To     string  `json:"to"`
 }
 
 // RestoreSubscriptionRequest defines model for RestoreSubscriptionRequest.
@@ -13929,6 +15174,22 @@ type Scenario struct {
 	VoiceId                  *string                 `json:"voice_id,omitempty"`
 }
 
+// ScenarioArtRequest defines model for ScenarioArtRequest.
+type ScenarioArtRequest struct {
+	DryRun *bool `json:"dry_run,omitempty"`
+	Force  *bool `json:"force,omitempty"`
+}
+
+// ScenarioArtResult defines model for ScenarioArtResult.
+type ScenarioArtResult struct {
+	Error   *string `json:"error,omitempty"`
+	MediaId *string `json:"media_id,omitempty"`
+	Reason  *string `json:"reason,omitempty"`
+	Slug    *string `json:"slug,omitempty"`
+	Status  string  `json:"status"`
+	Url     *string `json:"url,omitempty"`
+}
+
 // ScenarioChoiceExercise defines model for ScenarioChoiceExercise.
 type ScenarioChoiceExercise struct {
 	CacheEntryId *string     `json:"cache_entry_id"`
@@ -13994,6 +15255,22 @@ type ScenarioListItem struct {
 	Tags                     *[]string               `json:"tags,omitempty"`
 	ThumbnailUrl             *string                 `json:"thumbnail_url,omitempty"`
 	Title                    string                  `json:"title"`
+}
+
+// SceneArtRequest defines model for SceneArtRequest.
+type SceneArtRequest struct {
+	// DryRun Draw and check, but store and attach nothing.
+	DryRun *bool `json:"dry_run,omitempty"`
+
+	// Force Draw again for a scene that already has art.
+	Force *bool `json:"force,omitempty"`
+}
+
+// SceneArtSweepRequest defines model for SceneArtSweepRequest.
+type SceneArtSweepRequest struct {
+	DryRun    *bool     `json:"dry_run,omitempty"`
+	Languages *[]string `json:"languages"`
+	MaxScenes *int      `json:"max_scenes"`
 }
 
 // ScheduleUpdateItem defines model for ScheduleUpdateItem.
@@ -14695,6 +15972,16 @@ type SingletonClaimReferralResponse struct {
 // SingletonClaimResult defines model for SingletonClaimResult.
 type SingletonClaimResult struct {
 	Data ClaimResult `json:"data"`
+}
+
+// SingletonCollection defines model for SingletonCollection.
+type SingletonCollection struct {
+	Data Collection `json:"data"`
+}
+
+// SingletonCollectionsResponse defines model for SingletonCollectionsResponse.
+type SingletonCollectionsResponse struct {
+	Data CollectionsResponse `json:"data"`
 }
 
 // SingletonCommsBatchEmailResult defines model for SingletonCommsBatchEmailResult.
@@ -15952,6 +17239,11 @@ type SingletonPlacementItemsV3 struct {
 	Data PlacementItemsV3 `json:"data"`
 }
 
+// SingletonProfileRun defines model for SingletonProfileRun.
+type SingletonProfileRun struct {
+	Data ProfileRun `json:"data"`
+}
+
 // SingletonProgressSummary defines model for SingletonProgressSummary.
 type SingletonProgressSummary struct {
 	Data ProgressSummary `json:"data"`
@@ -16267,6 +17559,11 @@ type SingletonSavedItemsDashboardResponseV3 struct {
 	Data SavedItemsDashboardResponseV3 `json:"data"`
 }
 
+// SingletonScenarioArtResult defines model for SingletonScenarioArtResult.
+type SingletonScenarioArtResult struct {
+	Data ScenarioArtResult `json:"data"`
+}
+
 // SingletonScheduledCommunication defines model for SingletonScheduledCommunication.
 type SingletonScheduledCommunication struct {
 	Data ScheduledCommunication `json:"data"`
@@ -16380,6 +17677,31 @@ type SingletonSocialPostEventsResponse struct {
 // SingletonSocialPostListResponse defines model for SingletonSocialPostListResponse.
 type SingletonSocialPostListResponse struct {
 	Data SocialPostListResponse `json:"data"`
+}
+
+// SingletonSocialProfile defines model for SingletonSocialProfile.
+type SingletonSocialProfile struct {
+	Data SocialProfile `json:"data"`
+}
+
+// SingletonSocialProfileAdoptResponse defines model for SingletonSocialProfileAdoptResponse.
+type SingletonSocialProfileAdoptResponse struct {
+	Data SocialProfileAdoptResponse `json:"data"`
+}
+
+// SingletonSocialProfileClaimResponse defines model for SingletonSocialProfileClaimResponse.
+type SingletonSocialProfileClaimResponse struct {
+	Data SocialProfileClaimResponse `json:"data"`
+}
+
+// SingletonSocialProfileListResponse defines model for SingletonSocialProfileListResponse.
+type SingletonSocialProfileListResponse struct {
+	Data SocialProfileListResponse `json:"data"`
+}
+
+// SingletonSocialProfileRunListResponse defines model for SingletonSocialProfileRunListResponse.
+type SingletonSocialProfileRunListResponse struct {
+	Data SocialProfileRunListResponse `json:"data"`
 }
 
 // SingletonSocialPublishingRequest defines model for SingletonSocialPublishingRequest.
@@ -16687,6 +18009,11 @@ type SingletonTargetedSuggestionsResponse struct {
 	Data TargetedSuggestionsResponse `json:"data"`
 }
 
+// SingletonText defines model for SingletonText.
+type SingletonText struct {
+	Data Text `json:"data"`
+}
+
 // SingletonTokenResponse defines model for SingletonTokenResponse.
 type SingletonTokenResponse struct {
 	Data TokenResponse `json:"data"`
@@ -16700,6 +18027,26 @@ type SingletonTopicListWithWordsResponse struct {
 // SingletonTopicListsForWordResponse defines model for SingletonTopicListsForWordResponse.
 type SingletonTopicListsForWordResponse struct {
 	Data TopicListsForWordResponse `json:"data"`
+}
+
+// SingletonTrackedLink defines model for SingletonTrackedLink.
+type SingletonTrackedLink struct {
+	Data TrackedLink `json:"data"`
+}
+
+// SingletonTrackedLinkClickResponse defines model for SingletonTrackedLinkClickResponse.
+type SingletonTrackedLinkClickResponse struct {
+	Data TrackedLinkClickResponse `json:"data"`
+}
+
+// SingletonTrackedLinkList defines model for SingletonTrackedLinkList.
+type SingletonTrackedLinkList struct {
+	Data TrackedLinkList `json:"data"`
+}
+
+// SingletonTrackedLinkStats defines model for SingletonTrackedLinkStats.
+type SingletonTrackedLinkStats struct {
+	Data TrackedLinkStats `json:"data"`
 }
 
 // SingletonTransactionHistoryResponse defines model for SingletonTransactionHistoryResponse.
@@ -16982,6 +18329,11 @@ type SingletonWebIngestTargetList struct {
 	Data []WebIngestTarget `json:"data"`
 }
 
+// SingletonWordReadingResponse defines model for SingletonWordReadingResponse.
+type SingletonWordReadingResponse struct {
+	Data WordReadingResponse `json:"data"`
+}
+
 // SingletonMapStringMapStringString defines model for Singleton_map_string_map_string_string_.
 type SingletonMapStringMapStringString struct {
 	Data map[string]map[string]string `json:"data"`
@@ -17164,6 +18516,14 @@ type SituationMapResponse struct {
 	Total  *int                         `json:"total,omitempty"`
 }
 
+// SituationOut defines model for SituationOut.
+type SituationOut struct {
+	Id     string `json:"id"`
+	Task   string `json:"task"`
+	Text   string `json:"text"`
+	TextEn string `json:"text_en"`
+}
+
 // SituationResponse defines model for SituationResponse.
 type SituationResponse struct {
 	Beats         *[]SituationBeatResponse `json:"beats,omitempty"`
@@ -17175,6 +18535,19 @@ type SituationResponse struct {
 	LifeAreaTitle string                   `json:"life_area_title"`
 	NextBeat      *string                  `json:"next_beat"`
 	Title         string                   `json:"title"`
+}
+
+// SituationSetOut defines model for SituationSetOut.
+type SituationSetOut struct {
+	AnswerMaxSeconds *int           `json:"answer_max_seconds,omitempty"`
+	AnswerMinSeconds *int           `json:"answer_min_seconds,omitempty"`
+	ExamKey          string         `json:"exam_key"`
+	Id               string         `json:"id"`
+	ReadSeconds      *int           `json:"read_seconds,omitempty"`
+	Situations       []SituationOut `json:"situations"`
+	Title            string         `json:"title"`
+	TitleEn          string         `json:"title_en"`
+	Topic            string         `json:"topic"`
 }
 
 // SituationSummary defines model for SituationSummary.
@@ -17345,6 +18718,111 @@ type SocialProblem struct {
 	Message string `json:"message"`
 }
 
+// SocialProfile defines model for SocialProfile.
+type SocialProfile struct {
+	ApprovedAt       *time.Time          `json:"approved_at,omitempty"`
+	ApprovedRevision *int                `json:"approved_revision,omitempty"`
+	Capabilities     []ProfileFieldCap   `json:"capabilities"`
+	Channel          ProfileChannel      `json:"channel"`
+	Desired          ProfileFields       `json:"desired"`
+	Limits           []ProfileFieldLimit `json:"limits"`
+	LinksLimit       ProfileLinkLimit    `json:"links_limit"`
+	Live             *ProfileRemote      `json:"live,omitempty"`
+	LiveReadAt       *time.Time          `json:"live_read_at,omitempty"`
+	LiveRun          *ProfileRun         `json:"live_run,omitempty"`
+	Plan             *ProfilePlan        `json:"plan,omitempty"`
+	ReadsHere        bool                `json:"reads_here"`
+	Revision         int                 `json:"revision"`
+	Runner           *ProfileRunner      `json:"runner,omitempty"`
+	Status           string              `json:"status"`
+	UpdatedAt        *time.Time          `json:"updated_at,omitempty"`
+}
+
+// SocialProfileAdoptRequest defines model for SocialProfileAdoptRequest.
+type SocialProfileAdoptRequest struct {
+	Fields *[]string `json:"fields,omitempty"`
+}
+
+// SocialProfileAdoptResponse defines model for SocialProfileAdoptResponse.
+type SocialProfileAdoptResponse struct {
+	Adopted []string      `json:"adopted"`
+	Profile SocialProfile `json:"profile"`
+	Skipped []AdoptSkip   `json:"skipped"`
+}
+
+// SocialProfileClaimResponse defines model for SocialProfileClaimResponse.
+type SocialProfileClaimResponse struct {
+	Job *ProfileRunJob `json:"job,omitempty"`
+}
+
+// SocialProfileHeartbeatRequest defines model for SocialProfileHeartbeatRequest.
+type SocialProfileHeartbeatRequest struct {
+	LeaseSeconds *int   `json:"lease_seconds,omitempty"`
+	RunnerId     string `json:"runner_id"`
+}
+
+// SocialProfileListResponse defines model for SocialProfileListResponse.
+type SocialProfileListResponse struct {
+	Items   []SocialProfileSummary `json:"items"`
+	Runners []ProfileRunner        `json:"runners"`
+}
+
+// SocialProfilePatchRequest defines model for SocialProfilePatchRequest.
+type SocialProfilePatchRequest struct {
+	Avatar          *ProfileImage      `json:"avatar,omitempty"`
+	Banner          *ProfileImage      `json:"banner,omitempty"`
+	Bio             *string            `json:"bio,omitempty"`
+	Category        *string            `json:"category,omitempty"`
+	Country         *string            `json:"country,omitempty"`
+	DefaultLanguage *string            `json:"default_language,omitempty"`
+	Description     *string            `json:"description,omitempty"`
+	DisplayName     *string            `json:"display_name,omitempty"`
+	Keywords        *[]string          `json:"keywords,omitempty"`
+	Links           *[]ProfileLink     `json:"links,omitempty"`
+	UploadDefaults  *map[string]string `json:"upload_defaults,omitempty"`
+}
+
+// SocialProfileRemoteRequest defines model for SocialProfileRemoteRequest.
+type SocialProfileRemoteRequest struct {
+	Profile  ProfileRemote `json:"profile"`
+	RunnerId string        `json:"runner_id"`
+}
+
+// SocialProfileRunCreateRequest defines model for SocialProfileRunCreateRequest.
+type SocialProfileRunCreateRequest struct {
+	Kind *string `json:"kind,omitempty"`
+}
+
+// SocialProfileRunListResponse defines model for SocialProfileRunListResponse.
+type SocialProfileRunListResponse struct {
+	Items []ProfileRun `json:"items"`
+}
+
+// SocialProfileRunSummary defines model for SocialProfileRunSummary.
+type SocialProfileRunSummary struct {
+	CreatedAt  time.Time  `json:"created_at"`
+	Error      *string    `json:"error,omitempty"`
+	FinishedAt *time.Time `json:"finished_at,omitempty"`
+	Kind       string     `json:"kind"`
+	RunId      uuid.UUID  `json:"run_id"`
+	Status     string     `json:"status"`
+}
+
+// SocialProfileSummary defines model for SocialProfileSummary.
+type SocialProfileSummary struct {
+	ByHand     int                      `json:"by_hand"`
+	Channel    ProfileChannel           `json:"channel"`
+	Differs    int                      `json:"differs"`
+	LastRun    *SocialProfileRunSummary `json:"last_run,omitempty"`
+	LiveName   string                   `json:"live_name"`
+	LiveReadAt *time.Time               `json:"live_read_at,omitempty"`
+	ReadsHere  bool                     `json:"reads_here"`
+	Revision   int                      `json:"revision"`
+	Runner     *ProfileRunner           `json:"runner,omitempty"`
+	Status     string                   `json:"status"`
+	UpdatedAt  *time.Time               `json:"updated_at,omitempty"`
+}
+
 // SocialPublishingRequest defines model for SocialPublishingRequest.
 type SocialPublishingRequest struct {
 	BufferWrites bool `json:"buffer_writes"`
@@ -17371,6 +18849,65 @@ type SocialSummary struct {
 	HandedOff int `json:"handed_off"`
 	Published int `json:"published"`
 	Scheduled int `json:"scheduled"`
+}
+
+// SourceOut defines model for SourceOut.
+type SourceOut struct {
+	Label *string `json:"label,omitempty"`
+}
+
+// SpeakLineExercise Hear a line, say it out loud; the spoken transcript is graded against it.
+//
+// `correct_answer` is the line itself (the grader compares the learner's
+// transcript to it at the speech pass line). The card is served only to
+// clients that announce `speak_line` support.
+type SpeakLineExercise struct {
+	AudioText    *string     `json:"audio_text,omitempty"`
+	AudioUrl     *string     `json:"audio_url"`
+	CacheEntryId *string     `json:"cache_entry_id"`
+	ContentRef   *ContentRef `json:"content_ref"`
+
+	// ContextHint A specific concept or hint for the exercise, e.g., 'inessive case'.
+	ContextHint     *string `json:"context_hint"`
+	CorrectAnswer   *string `json:"correct_answer,omitempty"`
+	Difficulty      *int    `json:"difficulty"`
+	ErrorPatternTag *string `json:"error_pattern_tag"`
+
+	// ExerciseId Unique ID for this specific exercise instance.
+	ExerciseId           *uuid.UUID                    `json:"exercise_id,omitempty"`
+	ExerciseType         string                        `json:"exercise_type"`
+	Explanation          *string                       `json:"explanation"`
+	GenerationJobId      *uuid.UUID                    `json:"generation_job_id"`
+	GenerationModel      *string                       `json:"generation_model"`
+	GenerationProvenance *ExerciseGenerationProvenance `json:"generation_provenance"`
+	IsPlaceholder        *bool                         `json:"is_placeholder,omitempty"`
+	ItemIdFk             *uuid.UUID                    `json:"item_id_fk"`
+	ItemTypeFk           *SpeakLineExerciseItemTypeFk  `json:"item_type_fk"`
+	LineText             string                        `json:"line_text"`
+	ObjectiveId          *uuid.UUID                    `json:"objective_id"`
+	OptionFeedback       *map[string]string            `json:"option_feedback"`
+	Prompt               string                        `json:"prompt"`
+	PromptVersion        *string                       `json:"prompt_version"`
+	QualityScore         *float32                      `json:"quality_score"`
+	SectionIndex         *int                          `json:"section_index"`
+	SectionKey           *string                       `json:"section_key"`
+	SourceType           *SpeakLineExerciseSourceType  `json:"source_type"`
+	State                *ExerciseState                `json:"state,omitempty"`
+	TranslationPrompt    *string                       `json:"translation_prompt,omitempty"`
+	ValidationSignature  *string                       `json:"validation_signature"`
+}
+
+// SpeakLineExerciseItemTypeFk defines model for SpeakLineExercise.ItemTypeFk.
+type SpeakLineExerciseItemTypeFk string
+
+// SpeakLineExerciseSourceType defines model for SpeakLineExercise.SourceType.
+type SpeakLineExerciseSourceType string
+
+// SpeakerOut defines model for SpeakerOut.
+type SpeakerOut struct {
+	Gender *string `json:"gender,omitempty"`
+	Id     string  `json:"id"`
+	Name   string  `json:"name"`
 }
 
 // SpeechReferenceAudioRequest defines model for SpeechReferenceAudioRequest.
@@ -17456,6 +18993,12 @@ type StaleRow struct {
 	Profile          *string   `json:"profile,omitempty"`
 }
 
+// StartRequest defines model for StartRequest.
+type StartRequest struct {
+	ExamKey string               `json:"exam_key"`
+	Picks   *map[string][]PickIn `json:"picks,omitempty"`
+}
+
 // Stats defines model for Stats.
 type Stats struct {
 	Active       int `json:"active"`
@@ -17509,6 +19052,12 @@ type Step struct {
 	Push           *Push           `json:"push,omitempty"`
 	Wait           *Wait           `json:"wait,omitempty"`
 	WaitUntilLocal *WaitUntilLocal `json:"wait_until_local,omitempty"`
+}
+
+// StepStop defines model for StepStop.
+type StepStop struct {
+	Count     int `json:"count"`
+	StepIndex int `json:"step_index"`
 }
 
 // StopExperimentRequest defines model for StopExperimentRequest.
@@ -18296,6 +19845,21 @@ type SubmitFeedbackRequest struct {
 	Rating     *int                    `json:"rating,omitempty"`
 }
 
+// SubmitRequest defines model for SubmitRequest.
+type SubmitRequest struct {
+	Answers []SrcKielolearnengineServicesExamItemsAnswerIn `json:"answers"`
+}
+
+// SubmitResponse defines model for SubmitResponse.
+type SubmitResponse struct {
+	Correct    int               `json:"correct"`
+	ItemId     string            `json:"item_id"`
+	Results    []QuestionResult  `json:"results"`
+	Text       *string           `json:"text"`
+	Total      int               `json:"total"`
+	Transcript *[]TranscriptTurn `json:"transcript"`
+}
+
 // SubscriptionGift defines model for SubscriptionGift.
 type SubscriptionGift struct {
 	CampaignId  string `json:"campaign_id"`
@@ -19042,6 +20606,93 @@ type Template struct {
 	NeedsAudience *bool   `json:"needs_audience,omitempty"`
 }
 
+// Text defines model for Text.
+type Text struct {
+	ArticleVersionId uuid.UUID                         `json:"article_version_id"`
+	Collection       *TextCollection                   `json:"collection,omitempty"`
+	ContentEntryId   uuid.UUID                         `json:"content_entry_id"`
+	Cover            *MediaAssetResponseContentService `json:"cover,omitempty"`
+	Glossary         []GlossaryEntry                   `json:"glossary"`
+	Level            string                            `json:"level"`
+	Minutes          int                               `json:"minutes"`
+	Next             *TextNext                         `json:"next,omitempty"`
+	Paragraphs       []TextParagraph                   `json:"paragraphs"`
+	Questions        []Question                        `json:"questions"`
+	SummaryEn        string                            `json:"summary_en"`
+	Title            string                            `json:"title"`
+	TitleEn          string                            `json:"title_en"`
+}
+
+// TextCollection defines model for TextCollection.
+type TextCollection struct {
+	Position int    `json:"position"`
+	Slug     string `json:"slug"`
+	Title    string `json:"title"`
+	Total    int    `json:"total"`
+}
+
+// TextNext defines model for TextNext.
+type TextNext struct {
+	ContentEntryId uuid.UUID                         `json:"content_entry_id"`
+	Cover          *MediaAssetResponseContentService `json:"cover,omitempty"`
+	Title          string                            `json:"title"`
+	TitleEn        string                            `json:"title_en"`
+}
+
+// TextParagraph defines model for TextParagraph.
+type TextParagraph struct {
+	Index int    `json:"index"`
+	Text  string `json:"text"`
+}
+
+// TextPickCandidate defines model for TextPickCandidate.
+type TextPickCandidate struct {
+	Curated  *bool                     `json:"curated,omitempty"`
+	ItemId   uuid.UUID                 `json:"item_id"`
+	ItemType TextPickCandidateItemType `json:"item_type"`
+}
+
+// TextPickCandidateItemType defines model for TextPickCandidate.ItemType.
+type TextPickCandidateItemType string
+
+// TextPickItem defines model for TextPickItem.
+type TextPickItem struct {
+	ItemId   uuid.UUID `json:"item_id"`
+	ItemType string    `json:"item_type"`
+	Reason   string    `json:"reason"`
+}
+
+// TextPickItemKielolearnEngine defines model for TextPickItemKielolearnEngine.
+type TextPickItemKielolearnEngine struct {
+	ItemId   uuid.UUID                            `json:"item_id"`
+	ItemType TextPickItemKielolearnEngineItemType `json:"item_type"`
+	Rank     int                                  `json:"rank"`
+	Reason   TextPickItemKielolearnEngineReason   `json:"reason"`
+}
+
+// TextPickItemKielolearnEngineItemType defines model for TextPickItemKielolearnEngine.ItemType.
+type TextPickItemKielolearnEngineItemType string
+
+// TextPickItemKielolearnEngineReason defines model for TextPickItemKielolearnEngine.Reason.
+type TextPickItemKielolearnEngineReason string
+
+// TextPicks defines model for TextPicks.
+type TextPicks struct {
+	Items []TextPickItem `json:"items"`
+}
+
+// TextPicksRequest defines model for TextPicksRequest.
+type TextPicksRequest struct {
+	Candidates       *[]TextPickCandidate `json:"candidates,omitempty"`
+	ContentVersionId uuid.UUID            `json:"content_version_id"`
+	Language         string               `json:"language"`
+}
+
+// TextPicksResponse defines model for TextPicksResponse.
+type TextPicksResponse struct {
+	Picks []TextPickItemKielolearnEngine `json:"picks"`
+}
+
 // TimeSeriesPoint defines model for TimeSeriesPoint.
 type TimeSeriesPoint struct {
 	Date   string `json:"date"`
@@ -19255,22 +20906,53 @@ type TrackListResponse struct {
 
 // TrackRoadmapChapter defines model for TrackRoadmapChapter.
 type TrackRoadmapChapter struct {
-	CompletedLessonCount *int                      `json:"completed_lesson_count,omitempty"`
-	Description          *string                   `json:"description"`
-	IconEmoji            *string                   `json:"icon_emoji"`
-	Id                   uuid.UUID                 `json:"id"`
-	LessonCount          *int                      `json:"lesson_count,omitempty"`
-	Lessons              *[]TrackRoadmapLesson     `json:"lessons,omitempty"`
-	Status               TrackRoadmapChapterStatus `json:"status"`
-	TestOut              *ChapterTestOutOffer      `json:"test_out,omitempty"`
-	TestedOutLessonCount *int                      `json:"tested_out_lesson_count,omitempty"`
-	ThumbnailMediaId     *uuid.UUID                `json:"thumbnail_media_id"`
-	ThumbnailUrl         *string                   `json:"thumbnail_url"`
-	Title                string                    `json:"title"`
+	CompletedLessonCount *int                                `json:"completed_lesson_count,omitempty"`
+	Description          *string                             `json:"description"`
+	IconEmoji            *string                             `json:"icon_emoji"`
+	Id                   uuid.UUID                           `json:"id"`
+	LessonCount          *int                                `json:"lesson_count,omitempty"`
+	Lessons              *[]TrackRoadmapChapter_Lessons_Item `json:"lessons,omitempty"`
+	Status               TrackRoadmapChapterStatus           `json:"status"`
+	TestOut              *ChapterTestOutOffer                `json:"test_out,omitempty"`
+	TestedOutLessonCount *int                                `json:"tested_out_lesson_count,omitempty"`
+	ThumbnailMediaId     *uuid.UUID                          `json:"thumbnail_media_id"`
+	ThumbnailUrl         *string                             `json:"thumbnail_url"`
+	Title                string                              `json:"title"`
+	TitleMeaning         *string                             `json:"title_meaning"`
+	TitleOriginal        *string                             `json:"title_original"`
+}
+
+// TrackRoadmapChapter_Lessons_Item defines model for TrackRoadmapChapter.lessons.Item.
+type TrackRoadmapChapter_Lessons_Item struct {
+	union json.RawMessage
 }
 
 // TrackRoadmapChapterStatus defines model for TrackRoadmapChapter.Status.
 type TrackRoadmapChapterStatus string
+
+// TrackRoadmapItem A path item (reading collection, text or Juka scene) beside a chapter's
+// lessons. Optional by design: never locked, never the next lesson, and not
+// counted in any lesson count or progress. Sent only on ?items=path.
+type TrackRoadmapItem struct {
+	Description      *string                `json:"description"`
+	DoneCount        *int                   `json:"done_count"`
+	Kind             TrackRoadmapItemKind   `json:"kind"`
+	LessonId         uuid.UUID              `json:"lesson_id"`
+	Optional         *bool                  `json:"optional,omitempty"`
+	OrderIndex       int                    `json:"order_index"`
+	Ref              string                 `json:"ref"`
+	Status           TrackRoadmapItemStatus `json:"status"`
+	ThumbnailMediaId *uuid.UUID             `json:"thumbnail_media_id"`
+	ThumbnailUrl     *string                `json:"thumbnail_url"`
+	Title            string                 `json:"title"`
+	TotalCount       *int                   `json:"total_count"`
+}
+
+// TrackRoadmapItemKind defines model for TrackRoadmapItem.Kind.
+type TrackRoadmapItemKind string
+
+// TrackRoadmapItemStatus defines model for TrackRoadmapItem.Status.
+type TrackRoadmapItemStatus string
 
 // TrackRoadmapLesson defines model for TrackRoadmapLesson.
 type TrackRoadmapLesson struct {
@@ -19282,6 +20964,8 @@ type TrackRoadmapLesson struct {
 	ThumbnailMediaId *uuid.UUID              `json:"thumbnail_media_id"`
 	ThumbnailUrl     *string                 `json:"thumbnail_url"`
 	Title            string                  `json:"title"`
+	TitleMeaning     *string                 `json:"title_meaning"`
+	TitleOriginal    *string                 `json:"title_original"`
 }
 
 // TrackRoadmapLessonState defines model for TrackRoadmapLesson.State.
@@ -19322,6 +21006,76 @@ type TrackRoadmapResponse struct {
 	TrackThumbnailMediaId *uuid.UUID           `json:"track_thumbnail_media_id"`
 	TrackThumbnailUrl     *string              `json:"track_thumbnail_url"`
 	TrackTitle            string               `json:"track_title"`
+	TrackTitleMeaning     *string              `json:"track_title_meaning"`
+	TrackTitleOriginal    *string              `json:"track_title_original"`
+}
+
+// TrackedLink defines model for TrackedLink.
+type TrackedLink struct {
+	ArchivedAt  *time.Time `json:"archived_at,omitempty"`
+	CampaignId  *uuid.UUID `json:"campaign_id,omitempty"`
+	Code        string     `json:"code"`
+	CreatedAt   time.Time  `json:"created_at"`
+	CreatedBy   *uuid.UUID `json:"created_by,omitempty"`
+	Destination string     `json:"destination"`
+	Id          uuid.UUID  `json:"id"`
+	Language    string     `json:"language"`
+	Name        string     `json:"name"`
+	Platform    string     `json:"platform"`
+	UpdatedAt   time.Time  `json:"updated_at"`
+}
+
+// TrackedLinkArchiveRequest defines model for TrackedLinkArchiveRequest.
+type TrackedLinkArchiveRequest struct {
+	Archived bool `json:"archived"`
+}
+
+// TrackedLinkClickRequest defines model for TrackedLinkClickRequest.
+type TrackedLinkClickRequest struct {
+	UserAgent string `json:"user_agent"`
+}
+
+// TrackedLinkClickResponse defines model for TrackedLinkClickResponse.
+type TrackedLinkClickResponse struct {
+	Url string `json:"url"`
+}
+
+// TrackedLinkDay defines model for TrackedLinkDay.
+type TrackedLinkDay struct {
+	BotClicks int    `json:"bot_clicks"`
+	Claims    int    `json:"claims"`
+	Clicks    int    `json:"clicks"`
+	Day       string `json:"day"`
+	Purchases int    `json:"purchases"`
+	StoreTaps int    `json:"store_taps"`
+}
+
+// TrackedLinkInput defines model for TrackedLinkInput.
+type TrackedLinkInput struct {
+	CampaignId  *uuid.UUID `json:"campaign_id,omitempty"`
+	Code        string     `json:"code"`
+	Destination string     `json:"destination"`
+	Language    string     `json:"language"`
+	Name        string     `json:"name"`
+	Platform    string     `json:"platform"`
+}
+
+// TrackedLinkList defines model for TrackedLinkList.
+type TrackedLinkList struct {
+	Links       []TrackedLink `json:"links"`
+	NextPageKey *string       `json:"next_page_key,omitempty"`
+	TotalCount  int           `json:"total_count"`
+}
+
+// TrackedLinkStats defines model for TrackedLinkStats.
+type TrackedLinkStats struct {
+	Days           []TrackedLinkDay `json:"days"`
+	Link           TrackedLink      `json:"link"`
+	TotalBotClicks int              `json:"total_bot_clicks"`
+	TotalClaims    int              `json:"total_claims"`
+	TotalClicks    int              `json:"total_clicks"`
+	TotalPurchases int              `json:"total_purchases"`
+	TotalStoreTaps int              `json:"total_store_taps"`
 }
 
 // Transaction defines model for Transaction.
@@ -19379,6 +21133,12 @@ type TranscriptResponse struct {
 	HasTranscript      bool                      `json:"has_transcript"`
 	Srt                *string                   `json:"srt,omitempty"`
 	Status             string                    `json:"status"`
+}
+
+// TranscriptTurn defines model for TranscriptTurn.
+type TranscriptTurn struct {
+	Speaker string `json:"speaker"`
+	Text    string `json:"text"`
 }
 
 // TransferCodeResponse defines model for TransferCodeResponse.
@@ -19672,7 +21432,9 @@ type UpdateLearningProgressResponse struct {
 
 // UpdateLearningStatusRequest defines model for UpdateLearningStatusRequest.
 type UpdateLearningStatusRequest struct {
+	Explicit             *bool   `json:"explicit,omitempty"`
 	ItemType             *string `json:"item_type,omitempty"`
+	Source               *string `json:"source,omitempty"`
 	SuggestedKieloStatus string  `json:"suggested_kielo_status"`
 }
 
@@ -19861,6 +21623,13 @@ type UpsertTierLimitResponse struct {
 	Tier       string `json:"tier"`
 }
 
+// Usage defines model for Usage.
+type Usage struct {
+	Calls              int     `json:"calls"`
+	ParticipantMinutes float32 `json:"participant_minutes"`
+	Pct                float32 `json:"pct"`
+}
+
 // UserAchievementProgress defines model for UserAchievementProgress.
 type UserAchievementProgress struct {
 	AchievementCode string    `json:"achievement_code"`
@@ -20029,14 +21798,12 @@ type UserProfile struct {
 	NewsletterConsent    *bool                      `json:"newsletter_consent,omitempty"`
 
 	// OnboardingCompletedAt When setup finished. Sent as null when the account still owes setup, and always present on servers that know the field, so an absent key means an older server. (Plain string, not a [string, null] type array: the Go SDK generator cannot resolve type arrays.)
-	OnboardingCompletedAt *time.Time `json:"onboarding_completed_at,omitempty"`
-
-	// OnboardingFirstExperience Arm of the first-experience test: scene or control. Server-assigned, sticky per learner; control for everyone while the test is off.
-	OnboardingFirstExperience *string `json:"onboarding_first_experience,omitempty"`
-	OnboardingVariant         *string `json:"onboarding_variant,omitempty"`
-	ReminderHour              *int    `json:"reminder_hour,omitempty"`
-	StreakGraceUsedOn         *string `json:"streak_grace_used_on,omitempty"`
-	SupportLanguageCode       *string `json:"support_language_code,omitempty"`
+	OnboardingCompletedAt     *time.Time `json:"onboarding_completed_at,omitempty"`
+	OnboardingFirstExperience *string    `json:"onboarding_first_experience,omitempty"`
+	OnboardingVariant         *string    `json:"onboarding_variant,omitempty"`
+	ReminderHour              *int       `json:"reminder_hour,omitempty"`
+	StreakGraceUsedOn         *string    `json:"streak_grace_used_on,omitempty"`
+	SupportLanguageCode       *string    `json:"support_language_code,omitempty"`
 
 	// SupportLanguageSource Sweep VVV: write-source classifier for users.users.support_language_code. 8 canonical values.
 	SupportLanguageSource *UserProfileSupportLanguageSource `json:"support_language_source,omitempty"`
@@ -20064,35 +21831,33 @@ type UserProfilePersonalizationUpdate struct {
 
 // UserProfileUserService defines model for UserProfileUserService.
 type UserProfileUserService struct {
-	AvatarMediaId         *string    `json:"avatar_media_id,omitempty"`
-	CountryCode           *string    `json:"country_code,omitempty"`
-	CurrentStreakDays     int        `json:"current_streak_days"`
-	EffectiveLevelSource  *string    `json:"effective_level_source,omitempty"`
-	EffectiveSkillLevel   *string    `json:"effective_skill_level,omitempty"`
-	Email                 string     `json:"email"`
-	EstimatedSkillLevel   *string    `json:"estimated_skill_level,omitempty"`
-	HowDidYouFindOut      *string    `json:"how_did_you_find_out,omitempty"`
-	Id                    uuid.UUID  `json:"id"`
-	Intent                *Profile   `json:"intent,omitempty"`
-	IsGuest               bool       `json:"is_guest"`
-	LastActiveDate        *time.Time `json:"last_active_date,omitempty"`
-	LearnerStage          *string    `json:"learner_stage,omitempty"`
-	LearnerStageSince     *time.Time `json:"learner_stage_since,omitempty"`
-	LearningLanguageCode  *string    `json:"learning_language_code,omitempty"`
-	LearningMinutesGoal   *int       `json:"learning_minutes_goal,omitempty"`
-	LearningReason        *string    `json:"learning_reason,omitempty"`
-	LongestStreakDays     int        `json:"longest_streak_days"`
-	Name                  *string    `json:"name,omitempty"`
-	NewsletterConsent     *bool      `json:"newsletter_consent,omitempty"`
-	OnboardingCompletedAt *time.Time `json:"onboarding_completed_at,omitempty"`
-
-	// OnboardingFirstExperience Arm of the first-experience test: scene or control. Server-assigned, sticky per learner; control for everyone while the test is off.
-	OnboardingFirstExperience *string    `json:"onboarding_first_experience,omitempty"`
-	OnboardingVariant         *string    `json:"onboarding_variant,omitempty"`
-	ReminderHour              *int       `json:"reminder_hour,omitempty"`
-	StreakGraceUsedOn         *time.Time `json:"streak_grace_used_on,omitempty"`
-	SupportLanguageCode       *string    `json:"support_language_code,omitempty"`
-	SupportLanguageSource     *string    `json:"support_language_source,omitempty"`
+	AvatarMediaId             *string             `json:"avatar_media_id,omitempty"`
+	CountryCode               *string             `json:"country_code,omitempty"`
+	CurrentStreakDays         int                 `json:"current_streak_days"`
+	EffectiveLevelSource      *string             `json:"effective_level_source,omitempty"`
+	EffectiveSkillLevel       *string             `json:"effective_skill_level,omitempty"`
+	Email                     string              `json:"email"`
+	EstimatedSkillLevel       *string             `json:"estimated_skill_level,omitempty"`
+	HowDidYouFindOut          *string             `json:"how_did_you_find_out,omitempty"`
+	Id                        uuid.UUID           `json:"id"`
+	Intent                    *ProfileUserService `json:"intent,omitempty"`
+	IsGuest                   bool                `json:"is_guest"`
+	LastActiveDate            *time.Time          `json:"last_active_date,omitempty"`
+	LearnerStage              *string             `json:"learner_stage,omitempty"`
+	LearnerStageSince         *time.Time          `json:"learner_stage_since,omitempty"`
+	LearningLanguageCode      *string             `json:"learning_language_code,omitempty"`
+	LearningMinutesGoal       *int                `json:"learning_minutes_goal,omitempty"`
+	LearningReason            *string             `json:"learning_reason,omitempty"`
+	LongestStreakDays         int                 `json:"longest_streak_days"`
+	Name                      *string             `json:"name,omitempty"`
+	NewsletterConsent         *bool               `json:"newsletter_consent,omitempty"`
+	OnboardingCompletedAt     *time.Time          `json:"onboarding_completed_at,omitempty"`
+	OnboardingFirstExperience *string             `json:"onboarding_first_experience,omitempty"`
+	OnboardingVariant         *string             `json:"onboarding_variant,omitempty"`
+	ReminderHour              *int                `json:"reminder_hour,omitempty"`
+	StreakGraceUsedOn         *time.Time          `json:"streak_grace_used_on,omitempty"`
+	SupportLanguageCode       *string             `json:"support_language_code,omitempty"`
+	SupportLanguageSource     *string             `json:"support_language_source,omitempty"`
 }
 
 // UserProgress defines model for UserProgress.
@@ -20536,10 +22301,48 @@ type WordImagesRequest struct {
 	Write     *bool     `json:"write,omitempty"`
 }
 
+// WordReadingArticle defines model for WordReadingArticle.
+type WordReadingArticle struct {
+	ArticleType      string      `json:"article_type"`
+	ContentEntryId   uuid.UUID   `json:"content_entry_id"`
+	ContentVersionId uuid.UUID   `json:"content_version_id"`
+	MatchedItemIds   []uuid.UUID `json:"matched_item_ids"`
+	PublishedAt      time.Time   `json:"published_at"`
+	Title            string      `json:"title"`
+}
+
+// WordReadingRequest defines model for WordReadingRequest.
+type WordReadingRequest struct {
+	ItemIds              []uuid.UUID `json:"item_ids"`
+	LearningLanguageCode string      `json:"learning_language_code"`
+	Level                *string     `json:"level,omitempty"`
+	Limit                *int        `json:"limit,omitempty"`
+	WithinDays           *int        `json:"within_days,omitempty"`
+}
+
+// WordReadingResponse defines model for WordReadingResponse.
+type WordReadingResponse struct {
+	Articles     []WordReadingArticle `json:"articles"`
+	LanguageCode string               `json:"language_code"`
+}
+
 // WordScrambleItem defines model for WordScrambleItem.
 type WordScrambleItem struct {
 	IsCorrectTargetWord *bool  `json:"is_correct_target_word,omitempty"`
 	Text                string `json:"text"`
+}
+
+// WritingOut defines model for WritingOut.
+type WritingOut struct {
+	Minutes     int         `json:"minutes"`
+	ModelAnswer string      `json:"model_answer"`
+	Phrases     []Bilingual `json:"phrases"`
+	Points      []Bilingual `json:"points"`
+	Register    string      `json:"register"`
+	Situation   string      `json:"situation"`
+	SituationEn *string     `json:"situation_en,omitempty"`
+	TaskType    string      `json:"task_type"`
+	Words       []int       `json:"words"`
 }
 
 // TranslateBatchRequest defines model for _TranslateBatchRequest.
@@ -20571,6 +22374,77 @@ type PauseResponse struct {
 	Extended     bool   `json:"extended"`
 	GraceSec     int    `json:"grace_sec"`
 	State        string `json:"state"`
+}
+
+// SrcKielolearnengineCoreSchemasEventsItemSummary defines model for src__kielolearnengine__core__schemas__events__ItemSummary.
+type SrcKielolearnengineCoreSchemasEventsItemSummary struct {
+	BaseWordId           *uuid.UUID                                              `json:"base_word_id"`
+	CefrLevel            string                                                  `json:"cefr_level"`
+	DisplayText          string                                                  `json:"display_text"`
+	GrammarConceptId     *uuid.UUID                                              `json:"grammar_concept_id"`
+	ItemId               uuid.UUID                                               `json:"item_id"`
+	ItemType             SrcKielolearnengineCoreSchemasEventsItemSummaryItemType `json:"item_type"`
+	LearningLanguageCode *string                                                 `json:"learning_language_code,omitempty"`
+	SupportLanguageCode  *string                                                 `json:"support_language_code,omitempty"`
+	SupportText          *string                                                 `json:"support_text"`
+}
+
+// SrcKielolearnengineCoreSchemasEventsItemSummaryItemType defines model for SrcKielolearnengineCoreSchemasEventsItemSummary.ItemType.
+type SrcKielolearnengineCoreSchemasEventsItemSummaryItemType string
+
+// SrcKielolearnengineMainReadinessResponse defines model for src__kielolearnengine__main__ReadinessResponse.
+type SrcKielolearnengineMainReadinessResponse struct {
+	Models string `json:"models"`
+	Status string `json:"status"`
+}
+
+// SrcKielolearnengineServicesExamItemsAnswerIn defines model for src__kielolearnengine__services__exam_items__AnswerIn.
+type SrcKielolearnengineServicesExamItemsAnswerIn struct {
+	Answer     *string `json:"answer,omitempty"`
+	QuestionId string  `json:"question_id"`
+}
+
+// SrcKielolearnengineServicesExamItemsItemSummary defines model for src__kielolearnengine__services__exam_items__ItemSummary.
+type SrcKielolearnengineServicesExamItemsItemSummary struct {
+	Done            *ItemDone `json:"done"`
+	DurationSeconds *float32  `json:"duration_seconds"`
+	ExamKey         string    `json:"exam_key"`
+	Format          string    `json:"format"`
+	Id              string    `json:"id"`
+	Kind            string    `json:"kind"`
+	Level           string    `json:"level"`
+	Minutes         *int      `json:"minutes"`
+	PlayCount       *int      `json:"play_count"`
+	QuestionCount   int       `json:"question_count"`
+	Title           string    `json:"title"`
+	Topic           string    `json:"topic"`
+	WordCount       int       `json:"word_count"`
+	Words           *[]int    `json:"words"`
+}
+
+// SrcKielolearnengineServicesExamItemsOptionOut defines model for src__kielolearnengine__services__exam_items__OptionOut.
+type SrcKielolearnengineServicesExamItemsOptionOut struct {
+	Id   string `json:"id"`
+	Text string `json:"text"`
+}
+
+// SrcKielolearnengineServicesExamPrepAnswerIn defines model for src__kielolearnengine__services__exam_prep__AnswerIn.
+type SrcKielolearnengineServicesExamPrepAnswerIn struct {
+	Seconds     *float32 `json:"seconds"`
+	SituationId string   `json:"situation_id"`
+	Transcript  *string  `json:"transcript,omitempty"`
+}
+
+// SrcKielolearnengineServicesExamPrepAttemptsReadinessResponse defines model for src__kielolearnengine__services__exam_prep_attempts__ReadinessResponse.
+type SrcKielolearnengineServicesExamPrepAttemptsReadinessResponse struct {
+	Exams []ExamReadiness `json:"exams"`
+}
+
+// SrcKielolearnengineServicesExamPrepLongOptionOut defines model for src__kielolearnengine__services__exam_prep_long__OptionOut.
+type SrcKielolearnengineServicesExamPrepLongOptionOut struct {
+	Id     string  `json:"id"`
+	Text   string  `json:"text"`
+	TextEn *string `json:"text_en,omitempty"`
 }
 
 // UnpauseResponse defines model for unpauseResponse.
@@ -20839,6 +22713,18 @@ type GetAdminApiV3SubscriptionTransactionsPendingParams struct {
 
 	// Limit Max rows (default 100, cap 500).
 	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// GetAdminApiV3TrackedLinksParams defines parameters for GetAdminApiV3TrackedLinks.
+type GetAdminApiV3TrackedLinksParams struct {
+	// IncludeArchived true lists archived links too
+	IncludeArchived *bool `form:"include_archived,omitempty" json:"include_archived,omitempty"`
+
+	// PageSize Maximum number of items per page. Handler default applies if omitted.
+	PageSize *int `form:"page_size,omitempty" json:"page_size,omitempty"`
+
+	// NextPageKey Opaque pagination cursor returned by the previous response.
+	NextPageKey *string `form:"next_page_key,omitempty" json:"next_page_key,omitempty"`
 }
 
 // GetAdminApiV3UsersUserIdFeatureLimitsEffectiveParams defines parameters for GetAdminApiV3UsersUserIdFeatureLimitsEffective.
@@ -21224,6 +23110,9 @@ type GetApiV3ConceptHubsExerciseDecksDeckIdParams struct {
 	// ForceRefresh When true, bypass caches and refetch upstream.
 	ForceRefresh *bool `form:"force_refresh,omitempty" json:"force_refresh,omitempty"`
 
+	// Supports Comma list of exercise types this client can render beyond the original set, e.g. speak_line
+	Supports *string `form:"supports,omitempty" json:"supports,omitempty"`
+
 	// SupportLanguageCode Two-letter ISO 639-1 code for translated UI strings (per ADR-006 §3.83).
 	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
 }
@@ -21415,6 +23304,9 @@ type GetApiV3CurriculumTracksParams struct {
 type GetApiV3CurriculumTracksTrackIdRoadmapParams struct {
 	// SupportLanguageCode Two-letter ISO 639-1 code for translated UI strings (per ADR-006 §3.83).
 	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
+
+	// Items Pass path to include optional path items inside chapter lessons; any other value is dropped
+	Items *string `form:"items,omitempty" json:"items,omitempty"`
 }
 
 // GetApiV3CurriculumUserTrackParams defines parameters for GetApiV3CurriculumUserTrack.
@@ -21424,6 +23316,9 @@ type GetApiV3CurriculumUserTrackParams struct {
 
 	// Include Pass roadmap to embed the active track's roadmap (same shape as the track roadmap route) under roadmap
 	Include *string `form:"include,omitempty" json:"include,omitempty"`
+
+	// Items With include=roadmap, pass path to include optional path items inside chapter lessons; any other value is dropped
+	Items *string `form:"items,omitempty" json:"items,omitempty"`
 }
 
 // PutApiV3CurriculumUserTrackParams defines parameters for PutApiV3CurriculumUserTrack.
@@ -21585,6 +23480,138 @@ type PostApiV3EventsEmailBounceParams struct {
 	Provider string `form:"provider" json:"provider"`
 }
 
+// GetApiV3ExamPrepParams defines parameters for GetApiV3ExamPrep.
+type GetApiV3ExamPrepParams struct {
+	// SupportLanguageCode Two-letter ISO 639-1 code for translated UI strings (per ADR-006 §3.83).
+	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
+}
+
+// GetApiV3ExamPrepItemsParams defines parameters for GetApiV3ExamPrepItems.
+type GetApiV3ExamPrepItemsParams struct {
+	// ExamKey Exam key, e.g. yki_fi_b1
+	ExamKey *string `form:"exam_key,omitempty" json:"exam_key,omitempty"`
+
+	// Kind reading or listening
+	Kind *string `form:"kind,omitempty" json:"kind,omitempty"`
+
+	// SupportLanguageCode Two-letter ISO 639-1 code for translated UI strings (per ADR-006 §3.83).
+	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
+}
+
+// GetApiV3ExamPrepItemsItemIdParams defines parameters for GetApiV3ExamPrepItemsItemId.
+type GetApiV3ExamPrepItemsItemIdParams struct {
+	// SupportLanguageCode Two-letter ISO 639-1 code for translated UI strings (per ADR-006 §3.83).
+	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
+}
+
+// PostApiV3ExamPrepItemsItemIdSubmitParams defines parameters for PostApiV3ExamPrepItemsItemIdSubmit.
+type PostApiV3ExamPrepItemsItemIdSubmitParams struct {
+	// SupportLanguageCode Two-letter ISO 639-1 code for translated UI strings (per ADR-006 §3.83).
+	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
+}
+
+// PostApiV3ExamPrepLongTasksSpeechParams defines parameters for PostApiV3ExamPrepLongTasksSpeech.
+type PostApiV3ExamPrepLongTasksSpeechParams struct {
+	// Language fi or sv
+	Language string `form:"language" json:"language"`
+
+	// PeakDbfs Loudest level of the take, dBFS
+	PeakDbfs *float32 `form:"peak_dbfs,omitempty" json:"peak_dbfs,omitempty"`
+}
+
+// GetApiV3ExamPrepLongTasksPromptIdParams defines parameters for GetApiV3ExamPrepLongTasksPromptId.
+type GetApiV3ExamPrepLongTasksPromptIdParams struct {
+	// SupportLanguageCode Two-letter ISO 639-1 code for translated UI strings (per ADR-006 §3.83).
+	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
+}
+
+// GetApiV3ExamPrepLongTasksPromptIdAttemptsParams defines parameters for GetApiV3ExamPrepLongTasksPromptIdAttempts.
+type GetApiV3ExamPrepLongTasksPromptIdAttemptsParams struct {
+	// Limit 1-100 (default 20)
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// SupportLanguageCode Two-letter ISO 639-1 code for translated UI strings (per ADR-006 §3.83).
+	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
+}
+
+// PostApiV3ExamPrepLongTasksPromptIdDebriefParams defines parameters for PostApiV3ExamPrepLongTasksPromptIdDebrief.
+type PostApiV3ExamPrepLongTasksPromptIdDebriefParams struct {
+	// SupportLanguageCode Two-letter ISO 639-1 code for translated UI strings (per ADR-006 §3.83).
+	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
+}
+
+// PostApiV3ExamPrepMockTestsParams defines parameters for PostApiV3ExamPrepMockTests.
+type PostApiV3ExamPrepMockTestsParams struct {
+	// SupportLanguageCode Two-letter ISO 639-1 code for translated UI strings (per ADR-006 §3.83).
+	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
+}
+
+// GetApiV3ExamPrepMockTestsCurrentParams defines parameters for GetApiV3ExamPrepMockTestsCurrent.
+type GetApiV3ExamPrepMockTestsCurrentParams struct {
+	// ExamKey Exam key, e.g. yki_fi_b1
+	ExamKey string `form:"exam_key" json:"exam_key"`
+
+	// SupportLanguageCode Two-letter ISO 639-1 code for translated UI strings (per ADR-006 §3.83).
+	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
+}
+
+// GetApiV3ExamPrepMockTestsMockIdParams defines parameters for GetApiV3ExamPrepMockTestsMockId.
+type GetApiV3ExamPrepMockTestsMockIdParams struct {
+	// SupportLanguageCode Two-letter ISO 639-1 code for translated UI strings (per ADR-006 §3.83).
+	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
+}
+
+// PostApiV3ExamPrepMockTestsMockIdFinishParams defines parameters for PostApiV3ExamPrepMockTestsMockIdFinish.
+type PostApiV3ExamPrepMockTestsMockIdFinishParams struct {
+	// Abandon End without finishing
+	Abandon *bool `form:"abandon,omitempty" json:"abandon,omitempty"`
+
+	// SupportLanguageCode Two-letter ISO 639-1 code for translated UI strings (per ADR-006 §3.83).
+	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
+}
+
+// PostApiV3ExamPrepMockTestsMockIdProgressParams defines parameters for PostApiV3ExamPrepMockTestsMockIdProgress.
+type PostApiV3ExamPrepMockTestsMockIdProgressParams struct {
+	// SupportLanguageCode Two-letter ISO 639-1 code for translated UI strings (per ADR-006 §3.83).
+	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
+}
+
+// GetApiV3ExamPrepMockTestsMockIdResultParams defines parameters for GetApiV3ExamPrepMockTestsMockIdResult.
+type GetApiV3ExamPrepMockTestsMockIdResultParams struct {
+	// SupportLanguageCode Two-letter ISO 639-1 code for translated UI strings (per ADR-006 §3.83).
+	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
+}
+
+// GetApiV3ExamPrepReadinessParams defines parameters for GetApiV3ExamPrepReadiness.
+type GetApiV3ExamPrepReadinessParams struct {
+	// Window Tasks the estimate covers, 1-20 (default 5)
+	Window *int `form:"window,omitempty" json:"window,omitempty"`
+
+	// SupportLanguageCode Two-letter ISO 639-1 code for translated UI strings (per ADR-006 §3.83).
+	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
+}
+
+// GetApiV3ExamPrepSituationSetsSetIdParams defines parameters for GetApiV3ExamPrepSituationSetsSetId.
+type GetApiV3ExamPrepSituationSetsSetIdParams struct {
+	// SupportLanguageCode Two-letter ISO 639-1 code for translated UI strings (per ADR-006 §3.83).
+	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
+}
+
+// GetApiV3ExamPrepSituationSetsSetIdAttemptsParams defines parameters for GetApiV3ExamPrepSituationSetsSetIdAttempts.
+type GetApiV3ExamPrepSituationSetsSetIdAttemptsParams struct {
+	// Limit 1-100 (default 20)
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// SupportLanguageCode Two-letter ISO 639-1 code for translated UI strings (per ADR-006 §3.83).
+	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
+}
+
+// PostApiV3ExamPrepSituationSetsSetIdDebriefParams defines parameters for PostApiV3ExamPrepSituationSetsSetIdDebrief.
+type PostApiV3ExamPrepSituationSetsSetIdDebriefParams struct {
+	// SupportLanguageCode Two-letter ISO 639-1 code for translated UI strings (per ADR-006 §3.83).
+	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
+}
+
 // GetApiV3FeatureLimitsUsersSearchParams defines parameters for GetApiV3FeatureLimitsUsersSearch.
 type GetApiV3FeatureLimitsUsersSearchParams struct {
 	// Email Email substring to match
@@ -21601,6 +23628,9 @@ type GetApiV3FeedParams struct {
 
 	// ReadIds Comma-separated article IDs the learner has read; ranked below unread ones.
 	ReadIds *string `form:"read_ids,omitempty" json:"read_ids,omitempty"`
+
+	// Order Set to latest to order the feed newest first.
+	Order *string `form:"order,omitempty" json:"order,omitempty"`
 
 	// LearningLanguageCode Two-letter ISO 639-1 code for the language being learned (per ADR-006 §3.83).
 	LearningLanguageCode *string `form:"learning_language_code,omitempty" json:"learning_language_code,omitempty"`
@@ -21809,6 +23839,9 @@ type GetApiV3KielotvVideosVideoIdCaptionsParams struct {
 	// Locale Legacy alias for support_language_code on KieloTV localized assets.
 	Locale *string `form:"locale,omitempty" json:"locale,omitempty"`
 
+	// Include Pass picks to add the learner's words to learn in this video as picks, placed in cues. Without it the response is unchanged.
+	Include *string `form:"include,omitempty" json:"include,omitempty"`
+
 	// SupportLanguageCode Two-letter ISO 639-1 code for translated UI strings (per ADR-006 §3.83).
 	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
 
@@ -21887,8 +23920,8 @@ type GetApiV3KlearnConceptHubsByConceptGrammarConceptIdParams struct {
 
 // GetApiV3KlearnConceptHubsExerciseDecksDeckIdParams defines parameters for GetApiV3KlearnConceptHubsExerciseDecksDeckId.
 type GetApiV3KlearnConceptHubsExerciseDecksDeckIdParams struct {
-	// UserId UUID of the user requesting the deck.
-	UserId *string `form:"user_id,omitempty" json:"user_id,omitempty"`
+	// Supports Comma-separated support language codes the deck's glosses are localized into.
+	Supports *string `form:"supports,omitempty" json:"supports,omitempty"`
 
 	// ForceRefresh When true, bypass caches and refetch upstream.
 	ForceRefresh *bool `form:"force_refresh,omitempty" json:"force_refresh,omitempty"`
@@ -22253,7 +24286,7 @@ type GetApiV3MeNextStepsParams struct {
 	// SourceId Content entry id (article, video), scenario id or roadmap lesson id
 	SourceId string `form:"source_id" json:"source_id"`
 
-	// Supports Comma list of card kinds this client can launch, e.g. article_pack. Omitted: only the original kinds.
+	// Supports Comma list of card kinds this client can launch, e.g. article_pack, roadmap_lesson, lesson_reading (a lesson end may then carry an article card naming the lesson's words in `words`). Omitted: only the original kinds.
 	Supports *string `form:"supports,omitempty" json:"supports,omitempty"`
 
 	// SupportLanguageCode Two-letter ISO 639-1 code for translated UI strings (per ADR-006 §3.83).
@@ -22439,11 +24472,11 @@ type GetApiV3MeSavedItemsParams struct {
 	// SupportLanguageCode Two-letter ISO 639-1 code for translated UI strings (per ADR-006 §3.83).
 	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
 
-	// ItemIds Optional comma-separated item ids; returns exactly those saved items (no pagination)
-	ItemIds *string `form:"item_ids,omitempty" json:"item_ids,omitempty"`
-
 	// Include Opt-in item types hidden by default, comma-separated (RoadmapLesson)
 	Include *string `form:"include,omitempty" json:"include,omitempty"`
+
+	// ItemIds Optional comma-separated item ids; returns exactly those saved items (no pagination)
+	ItemIds *string `form:"item_ids,omitempty" json:"item_ids,omitempty"`
 }
 
 // GetApiV3MeSavedItemsCountsParams defines parameters for GetApiV3MeSavedItemsCounts.
@@ -22674,10 +24707,43 @@ type GetApiV3RoadmapLessonsParams struct {
 	CefrLevel *string `form:"cefr_level,omitempty" json:"cefr_level,omitempty"`
 }
 
+// GetApiV3RoadmapLessonsOverviewParams defines parameters for GetApiV3RoadmapLessonsOverview.
+type GetApiV3RoadmapLessonsOverviewParams struct {
+	// Days Window in days for starts, stops and reports (1-180, default 30)
+	Days *int `form:"days,omitempty" json:"days,omitempty"`
+}
+
 // GetApiV3RoadmapLessonsLessonIdParams defines parameters for GetApiV3RoadmapLessonsLessonId.
 type GetApiV3RoadmapLessonsLessonIdParams struct {
 	// SupportLanguageCode Two-letter ISO 639-1 code for translated UI strings (per ADR-006 §3.83).
 	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
+}
+
+// PatchApiV3RoadmapLessonsLessonIdParams defines parameters for PatchApiV3RoadmapLessonsLessonId.
+type PatchApiV3RoadmapLessonsLessonIdParams struct {
+	// XKieloRunId Optional id (letters, digits, - and _, up to 64) a bulk run sends on every save, so the run's saves share one history run that can be reviewed and undone together
+	XKieloRunId *string `json:"X-Kielo-Run-Id,omitempty"`
+}
+
+// GetApiV3RoadmapLessonsLessonIdDiffParams defines parameters for GetApiV3RoadmapLessonsLessonIdDiff.
+type GetApiV3RoadmapLessonsLessonIdDiffParams struct {
+	// From current, <revision id> or <revision id>:before
+	From string `form:"from" json:"from"`
+
+	// To current, <revision id> or <revision id>:before
+	To string `form:"to" json:"to"`
+}
+
+// GetApiV3RoadmapLessonsLessonIdHistoryParams defines parameters for GetApiV3RoadmapLessonsLessonIdHistory.
+type GetApiV3RoadmapLessonsLessonIdHistoryParams struct {
+	// Limit Most rows to return (1-200, default 50)
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// GetApiV3RoadmapLessonsLessonIdSignalsParams defines parameters for GetApiV3RoadmapLessonsLessonIdSignals.
+type GetApiV3RoadmapLessonsLessonIdSignalsParams struct {
+	// Days Window in days (1-180, default 30)
+	Days *int `form:"days,omitempty" json:"days,omitempty"`
 }
 
 // PostApiV3RoadmapLessonsLessonIdStepsStepIndexSpeechEvaluateParams defines parameters for PostApiV3RoadmapLessonsLessonIdStepsStepIndexSpeechEvaluate.
@@ -22911,6 +24977,18 @@ type GetInternalAdminAgentAtWorkParams struct {
 	LearningLanguageCode *string `form:"learning_language_code,omitempty" json:"learning_language_code,omitempty"`
 }
 
+// GetInternalAdminAgentBriefsParams defines parameters for GetInternalAdminAgentBriefs.
+type GetInternalAdminAgentBriefsParams struct {
+	// Status open, claimed, done or cancelled
+	Status *string `form:"status,omitempty" json:"status,omitempty"`
+
+	// LearningLanguageCode Two-letter ISO 639-1 code for the language being learned (per ADR-006 §3.83).
+	LearningLanguageCode *string `form:"learning_language_code,omitempty" json:"learning_language_code,omitempty"`
+
+	// PageSize Maximum number of items per page. Handler default applies if omitted.
+	PageSize *int `form:"page_size,omitempty" json:"page_size,omitempty"`
+}
+
 // GetInternalAdminAgentChangeSetsParams defines parameters for GetInternalAdminAgentChangeSets.
 type GetInternalAdminAgentChangeSetsParams struct {
 	// Status pending, applied, rejected or reverted
@@ -22989,6 +25067,15 @@ type GetInternalAdminContentContentIdParams struct {
 	Type *string `form:"type,omitempty" json:"type,omitempty"`
 }
 
+// GetInternalAdminExamItemsParams defines parameters for GetInternalAdminExamItems.
+type GetInternalAdminExamItemsParams struct {
+	// Language Learning language (fi or sv)
+	Language string `form:"language" json:"language"`
+
+	// ReviewStatus pending, approved, rejected or all (default all)
+	ReviewStatus *string `form:"review_status,omitempty" json:"review_status,omitempty"`
+}
+
 // GetInternalAdminGrammarConceptsParams defines parameters for GetInternalAdminGrammarConcepts.
 type GetInternalAdminGrammarConceptsParams struct {
 	// LearningLanguageCode Two-letter ISO 639-1 code for the language being learned (per ADR-006 §3.83).
@@ -23059,6 +25146,18 @@ type GetInternalAdminMediaStorageUntrackedParams struct {
 
 	// Offset Legacy offset-pagination offset. Prefer next_page_key on new routes.
 	Offset *int `form:"offset,omitempty" json:"offset,omitempty"`
+}
+
+// PostInternalAgentBriefsBriefIdClaimParams defines parameters for PostInternalAgentBriefsBriefIdClaim.
+type PostInternalAgentBriefsBriefIdClaimParams struct {
+	// IdempotencyKey Unique per request; a retry with the same key replays the first answer
+	IdempotencyKey string `json:"Idempotency-Key"`
+}
+
+// PostInternalAgentBriefsBriefIdDoneParams defines parameters for PostInternalAgentBriefsBriefIdDone.
+type PostInternalAgentBriefsBriefIdDoneParams struct {
+	// IdempotencyKey Unique per request; a retry with the same key replays the first answer
+	IdempotencyKey string `json:"Idempotency-Key"`
 }
 
 // GetInternalAgentChangeSetsParams defines parameters for GetInternalAgentChangeSets.
@@ -23157,6 +25256,18 @@ type GetInternalAgentFocusParams struct {
 	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
+// GetInternalAgentReaderCollectionsParams defines parameters for GetInternalAgentReaderCollections.
+type GetInternalAgentReaderCollectionsParams struct {
+	// Days Window in days (1-180, default 30)
+	Days *int `form:"days,omitempty" json:"days,omitempty"`
+}
+
+// GetInternalAgentReaderCollectionsIdParams defines parameters for GetInternalAgentReaderCollectionsId.
+type GetInternalAgentReaderCollectionsIdParams struct {
+	// Days Window in days (1-180, default 30)
+	Days *int `form:"days,omitempty" json:"days,omitempty"`
+}
+
 // PostInternalAgentReviewsParams defines parameters for PostInternalAgentReviews.
 type PostInternalAgentReviewsParams struct {
 	// IdempotencyKey Unique per request; a retry with the same key replays the first answer
@@ -23173,6 +25284,39 @@ type GetInternalAgentRoadmapChaptersChapterIdLessonsParams struct {
 
 	// NextPageKey Opaque pagination cursor returned by the previous response.
 	NextPageKey *string `form:"next_page_key,omitempty" json:"next_page_key,omitempty"`
+}
+
+// GetInternalAgentRoadmapLessonsOverviewParams defines parameters for GetInternalAgentRoadmapLessonsOverview.
+type GetInternalAgentRoadmapLessonsOverviewParams struct {
+	// Days Window in days (1-180, default 30)
+	Days *int `form:"days,omitempty" json:"days,omitempty"`
+}
+
+// GetInternalAgentRoadmapLessonsLessonIdDiffParams defines parameters for GetInternalAgentRoadmapLessonsLessonIdDiff.
+type GetInternalAgentRoadmapLessonsLessonIdDiffParams struct {
+	// From current, <revision id> or <revision id>:before
+	From string `form:"from" json:"from"`
+
+	// To current, <revision id> or <revision id>:before
+	To string `form:"to" json:"to"`
+}
+
+// GetInternalAgentRoadmapLessonsLessonIdHistoryParams defines parameters for GetInternalAgentRoadmapLessonsLessonIdHistory.
+type GetInternalAgentRoadmapLessonsLessonIdHistoryParams struct {
+	// Limit Most rows to return (1-200, default 50)
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// PostInternalAgentRoadmapLessonsLessonIdRevisionsRevisionIdRestoreParams defines parameters for PostInternalAgentRoadmapLessonsLessonIdRevisionsRevisionIdRestore.
+type PostInternalAgentRoadmapLessonsLessonIdRevisionsRevisionIdRestoreParams struct {
+	// IdempotencyKey Unique per change; a retry with the same key replays the first answer
+	IdempotencyKey string `json:"Idempotency-Key"`
+}
+
+// GetInternalAgentRoadmapLessonsLessonIdSignalsParams defines parameters for GetInternalAgentRoadmapLessonsLessonIdSignals.
+type GetInternalAgentRoadmapLessonsLessonIdSignalsParams struct {
+	// Days Window in days (1-180, default 30)
+	Days *int `form:"days,omitempty" json:"days,omitempty"`
 }
 
 // GetInternalAgentRoadmapLevelsLevelIdChaptersParams defines parameters for GetInternalAgentRoadmapLevelsLevelIdChapters.
@@ -23534,6 +25678,9 @@ type GetInternalContentBridgeItemsItemIdSurfacesParams struct {
 
 	// Caller Consumer identifier for metric attribution. Coerced to bounded set; unknown → 'unknown'.
 	Caller *string `form:"caller,omitempty" json:"caller,omitempty"`
+
+	// SupportLanguageCode The learner's support language. An English-speaking learner gets no KieloTV video whose captions carry English (kielotv.ExcludesEnglishCarrier).
+	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
 }
 
 // GetInternalContentBridgeItemsItemIdSurfacesCountParams defines parameters for GetInternalContentBridgeItemsItemIdSurfacesCount.
@@ -23915,6 +26062,12 @@ type PostInternalPubsubNotificationControlPlaneTickParams struct {
 	Stage *string `form:"stage,omitempty" json:"stage,omitempty"`
 }
 
+// SweepScenarioArtInternalScenarioArtDailyPostJSONBody defines parameters for SweepScenarioArtInternalScenarioArtDailyPost.
+type SweepScenarioArtInternalScenarioArtDailyPostJSONBody = SceneArtSweepRequest
+
+// GenerateScenarioArtInternalScenarioArtScenarioIdPostJSONBody defines parameters for GenerateScenarioArtInternalScenarioArtScenarioIdPost.
+type GenerateScenarioArtInternalScenarioArtScenarioIdPostJSONBody = SceneArtRequest
+
 // GetInternalSearchSemanticParams defines parameters for GetInternalSearchSemantic.
 type GetInternalSearchSemanticParams struct {
 	// Q Search query
@@ -23987,6 +26140,9 @@ type GetDailyChallengeKlearnApiV3ChallengesDailyGetParams struct {
 
 	// LearningLanguageCode Learning language code for challenge content
 	LearningLanguageCode *string `form:"learning_language_code,omitempty" json:"learning_language_code,omitempty"`
+
+	// SceneVideoId Build session one from this KieloTV scene (onboarding first-scene arm)
+	SceneVideoId *uuid.UUID `form:"scene_video_id,omitempty" json:"scene_video_id,omitempty"`
 }
 
 // StartAdaptivePracticeKlearnApiV3ChallengesPracticePostParams defines parameters for StartAdaptivePracticeKlearnApiV3ChallengesPracticePost.
@@ -24023,6 +26179,9 @@ type GetExercisesForDeckKlearnApiV3ConceptHubsExerciseDecksDeckIdGetParams struc
 
 	// ForceRefresh Skip session reuse and force a fresh deck session.
 	ForceRefresh *bool `form:"force_refresh,omitempty" json:"force_refresh,omitempty"`
+
+	// Supports Comma list of exercise types the client can play beyond the original set, e.g. speak_line
+	Supports *string `form:"supports,omitempty" json:"supports,omitempty"`
 }
 
 // GetConceptHubSummariesKlearnApiV3ConceptHubsSummariesGetParams defines parameters for GetConceptHubSummariesKlearnApiV3ConceptHubsSummariesGet.
@@ -24062,12 +26221,14 @@ type ListPublishedTracksKlearnApiV3CurriculumTracksGetParams struct {
 // GetTrackRoadmapKlearnApiV3CurriculumTracksTrackIdRoadmapGetParams defines parameters for GetTrackRoadmapKlearnApiV3CurriculumTracksTrackIdRoadmapGet.
 type GetTrackRoadmapKlearnApiV3CurriculumTracksTrackIdRoadmapGetParams struct {
 	UserId uuid.UUID `form:"user_id" json:"user_id"`
+	Items  *string   `form:"items,omitempty" json:"items,omitempty"`
 }
 
 // GetUserActiveTrackKlearnApiV3CurriculumUserTrackGetParams defines parameters for GetUserActiveTrackKlearnApiV3CurriculumUserTrackGet.
 type GetUserActiveTrackKlearnApiV3CurriculumUserTrackGetParams struct {
 	UserId  uuid.UUID `form:"user_id" json:"user_id"`
 	Include *string   `form:"include,omitempty" json:"include,omitempty"`
+	Items   *string   `form:"items,omitempty" json:"items,omitempty"`
 }
 
 // SetUserActiveTrackKlearnApiV3CurriculumUserTrackPutParams defines parameters for SetUserActiveTrackKlearnApiV3CurriculumUserTrackPut.
@@ -24090,6 +26251,105 @@ type IngestBehavioralEventKlearnApiV3EventsBehavioralPostParams struct {
 	XUserID uuid.UUID `json:"X-User-ID"`
 }
 
+// GetExamPrepKlearnApiV3ExamPrepGetParams defines parameters for GetExamPrepKlearnApiV3ExamPrepGet.
+type GetExamPrepKlearnApiV3ExamPrepGetParams struct {
+	UserId uuid.UUID `form:"user_id" json:"user_id"`
+}
+
+// ListItemsKlearnApiV3ExamPrepItemsGetParams defines parameters for ListItemsKlearnApiV3ExamPrepItemsGet.
+type ListItemsKlearnApiV3ExamPrepItemsGetParams struct {
+	UserId  uuid.UUID `form:"user_id" json:"user_id"`
+	ExamKey *string   `form:"exam_key,omitempty" json:"exam_key,omitempty"`
+	Kind    *string   `form:"kind,omitempty" json:"kind,omitempty"`
+}
+
+// GetItemKlearnApiV3ExamPrepItemsItemIdGetParams defines parameters for GetItemKlearnApiV3ExamPrepItemsItemIdGet.
+type GetItemKlearnApiV3ExamPrepItemsItemIdGetParams struct {
+	UserId uuid.UUID `form:"user_id" json:"user_id"`
+}
+
+// SubmitItemKlearnApiV3ExamPrepItemsItemIdSubmitPostParams defines parameters for SubmitItemKlearnApiV3ExamPrepItemsItemIdSubmitPost.
+type SubmitItemKlearnApiV3ExamPrepItemsItemIdSubmitPostParams struct {
+	UserId uuid.UUID `form:"user_id" json:"user_id"`
+}
+
+// TranscribeLongTakeKlearnApiV3ExamPrepLongTasksSpeechPostParams defines parameters for TranscribeLongTakeKlearnApiV3ExamPrepLongTasksSpeechPost.
+type TranscribeLongTakeKlearnApiV3ExamPrepLongTasksSpeechPostParams struct {
+	UserId   uuid.UUID `form:"user_id" json:"user_id"`
+	Language string    `form:"language" json:"language"`
+	PeakDbfs *float32  `form:"peak_dbfs,omitempty" json:"peak_dbfs,omitempty"`
+}
+
+// GetLongPromptKlearnApiV3ExamPrepLongTasksPromptIdGetParams defines parameters for GetLongPromptKlearnApiV3ExamPrepLongTasksPromptIdGet.
+type GetLongPromptKlearnApiV3ExamPrepLongTasksPromptIdGetParams struct {
+	UserId uuid.UUID `form:"user_id" json:"user_id"`
+}
+
+// LongTaskAttemptsKlearnApiV3ExamPrepLongTasksPromptIdAttemptsGetParams defines parameters for LongTaskAttemptsKlearnApiV3ExamPrepLongTasksPromptIdAttemptsGet.
+type LongTaskAttemptsKlearnApiV3ExamPrepLongTasksPromptIdAttemptsGetParams struct {
+	UserId uuid.UUID `form:"user_id" json:"user_id"`
+	Limit  *int      `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// DebriefLongTaskKlearnApiV3ExamPrepLongTasksPromptIdDebriefPostParams defines parameters for DebriefLongTaskKlearnApiV3ExamPrepLongTasksPromptIdDebriefPost.
+type DebriefLongTaskKlearnApiV3ExamPrepLongTasksPromptIdDebriefPostParams struct {
+	UserId uuid.UUID `form:"user_id" json:"user_id"`
+}
+
+// StartMockTestKlearnApiV3ExamPrepMockTestsPostParams defines parameters for StartMockTestKlearnApiV3ExamPrepMockTestsPost.
+type StartMockTestKlearnApiV3ExamPrepMockTestsPostParams struct {
+	UserId uuid.UUID `form:"user_id" json:"user_id"`
+}
+
+// CurrentMockTestKlearnApiV3ExamPrepMockTestsCurrentGetParams defines parameters for CurrentMockTestKlearnApiV3ExamPrepMockTestsCurrentGet.
+type CurrentMockTestKlearnApiV3ExamPrepMockTestsCurrentGetParams struct {
+	ExamKey string    `form:"exam_key" json:"exam_key"`
+	UserId  uuid.UUID `form:"user_id" json:"user_id"`
+}
+
+// GetMockTestKlearnApiV3ExamPrepMockTestsMockIdGetParams defines parameters for GetMockTestKlearnApiV3ExamPrepMockTestsMockIdGet.
+type GetMockTestKlearnApiV3ExamPrepMockTestsMockIdGetParams struct {
+	UserId uuid.UUID `form:"user_id" json:"user_id"`
+}
+
+// FinishMockTestKlearnApiV3ExamPrepMockTestsMockIdFinishPostParams defines parameters for FinishMockTestKlearnApiV3ExamPrepMockTestsMockIdFinishPost.
+type FinishMockTestKlearnApiV3ExamPrepMockTestsMockIdFinishPostParams struct {
+	Abandon *bool     `form:"abandon,omitempty" json:"abandon,omitempty"`
+	UserId  uuid.UUID `form:"user_id" json:"user_id"`
+}
+
+// MockTestProgressKlearnApiV3ExamPrepMockTestsMockIdProgressPostParams defines parameters for MockTestProgressKlearnApiV3ExamPrepMockTestsMockIdProgressPost.
+type MockTestProgressKlearnApiV3ExamPrepMockTestsMockIdProgressPostParams struct {
+	UserId uuid.UUID `form:"user_id" json:"user_id"`
+}
+
+// MockTestResultKlearnApiV3ExamPrepMockTestsMockIdResultGetParams defines parameters for MockTestResultKlearnApiV3ExamPrepMockTestsMockIdResultGet.
+type MockTestResultKlearnApiV3ExamPrepMockTestsMockIdResultGetParams struct {
+	UserId uuid.UUID `form:"user_id" json:"user_id"`
+}
+
+// GetReadinessKlearnApiV3ExamPrepReadinessGetParams defines parameters for GetReadinessKlearnApiV3ExamPrepReadinessGet.
+type GetReadinessKlearnApiV3ExamPrepReadinessGetParams struct {
+	UserId uuid.UUID `form:"user_id" json:"user_id"`
+	Window *int      `form:"window,omitempty" json:"window,omitempty"`
+}
+
+// GetSituationSetKlearnApiV3ExamPrepSituationSetsSetIdGetParams defines parameters for GetSituationSetKlearnApiV3ExamPrepSituationSetsSetIdGet.
+type GetSituationSetKlearnApiV3ExamPrepSituationSetsSetIdGetParams struct {
+	UserId uuid.UUID `form:"user_id" json:"user_id"`
+}
+
+// SituationSetAttemptsKlearnApiV3ExamPrepSituationSetsSetIdAttemptsGetParams defines parameters for SituationSetAttemptsKlearnApiV3ExamPrepSituationSetsSetIdAttemptsGet.
+type SituationSetAttemptsKlearnApiV3ExamPrepSituationSetsSetIdAttemptsGetParams struct {
+	UserId uuid.UUID `form:"user_id" json:"user_id"`
+	Limit  *int      `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// DebriefSituationSetKlearnApiV3ExamPrepSituationSetsSetIdDebriefPostParams defines parameters for DebriefSituationSetKlearnApiV3ExamPrepSituationSetsSetIdDebriefPost.
+type DebriefSituationSetKlearnApiV3ExamPrepSituationSetsSetIdDebriefPostParams struct {
+	UserId uuid.UUID `form:"user_id" json:"user_id"`
+}
+
 // GetSurfaceNextStepsKlearnApiV3NextStepsGetParams defines parameters for GetSurfaceNextStepsKlearnApiV3NextStepsGet.
 type GetSurfaceNextStepsKlearnApiV3NextStepsGetParams struct {
 	UserId uuid.UUID `form:"user_id" json:"user_id"`
@@ -24097,10 +26357,10 @@ type GetSurfaceNextStepsKlearnApiV3NextStepsGetParams struct {
 	// SourceKind The surface the learner just finished
 	SourceKind GetSurfaceNextStepsKlearnApiV3NextStepsGetParamsSourceKind `form:"source_kind" json:"source_kind"`
 
-	// SourceId Content entry id (article, video) or scenario id
+	// SourceId Content entry id (article, video), scenario id or roadmap lesson id
 	SourceId string `form:"source_id" json:"source_id"`
 
-	// Supports Comma list of card kinds the client can launch, e.g. article_pack
+	// Supports Comma list of card kinds the client can launch, e.g. article_pack, roadmap_lesson
 	Supports *string `form:"supports,omitempty" json:"supports,omitempty"`
 }
 
@@ -24140,6 +26400,18 @@ type AdminDraftRoadmapLessonKlearnApiV3RoadmapAdminLessonsDraftPostParams struct
 type AdminGenerateRoadmapLessonKlearnApiV3RoadmapAdminLessonsGeneratePostParams struct {
 	// LearningLanguageCode Target learning language for the generated lesson (e.g. 'fi', 'sv'). REQUIRED — the admin-ui interceptor (http.ts) stamps this from the workspace dropdown. Empty/missing surfaces as 422 rather than silently letting the LLM invent a language.
 	LearningLanguageCode string `form:"learning_language_code" json:"learning_language_code"`
+}
+
+// AdminRoadmapLessonOverviewKlearnApiV3RoadmapAdminLessonsOverviewGetParams defines parameters for AdminRoadmapLessonOverviewKlearnApiV3RoadmapAdminLessonsOverviewGet.
+type AdminRoadmapLessonOverviewKlearnApiV3RoadmapAdminLessonsOverviewGetParams struct {
+	// Days Window for starts, stops and reports
+	Days *int `form:"days,omitempty" json:"days,omitempty"`
+}
+
+// AdminRoadmapLessonSignalsKlearnApiV3RoadmapAdminLessonsLessonIdSignalsGetParams defines parameters for AdminRoadmapLessonSignalsKlearnApiV3RoadmapAdminLessonsLessonIdSignalsGet.
+type AdminRoadmapLessonSignalsKlearnApiV3RoadmapAdminLessonsLessonIdSignalsGetParams struct {
+	// Days Window for starts, stops and reports
+	Days *int `form:"days,omitempty" json:"days,omitempty"`
 }
 
 // StartChapterTestOutKlearnApiV3RoadmapChaptersChapterIdTestOutPostParams defines parameters for StartChapterTestOutKlearnApiV3RoadmapChaptersChapterIdTestOutPost.
@@ -24436,6 +26708,15 @@ type PostAdminApiV3SocialPostsJSONRequestBody = SocialPostCreateRequest
 // PatchAdminApiV3SocialPostsPostIdJSONRequestBody defines body for PatchAdminApiV3SocialPostsPostId for application/json ContentType.
 type PatchAdminApiV3SocialPostsPostIdJSONRequestBody = SocialPostUpdateRequest
 
+// PatchAdminApiV3SocialProfilesChannelIdJSONRequestBody defines body for PatchAdminApiV3SocialProfilesChannelId for application/json ContentType.
+type PatchAdminApiV3SocialProfilesChannelIdJSONRequestBody = SocialProfilePatchRequest
+
+// PostAdminApiV3SocialProfilesChannelIdAdoptLiveJSONRequestBody defines body for PostAdminApiV3SocialProfilesChannelIdAdoptLive for application/json ContentType.
+type PostAdminApiV3SocialProfilesChannelIdAdoptLiveJSONRequestBody = SocialProfileAdoptRequest
+
+// PostAdminApiV3SocialProfilesChannelIdRunsJSONRequestBody defines body for PostAdminApiV3SocialProfilesChannelIdRuns for application/json ContentType.
+type PostAdminApiV3SocialProfilesChannelIdRunsJSONRequestBody = SocialProfileRunCreateRequest
+
 // PutAdminApiV3SocialPublishingJSONRequestBody defines body for PutAdminApiV3SocialPublishing for application/json ContentType.
 type PutAdminApiV3SocialPublishingJSONRequestBody = SocialPublishingRequest
 
@@ -24450,6 +26731,15 @@ type PostAdminApiV3StoreReviewsReviewIdReplyJSONRequestBody = StoreReviewReplyRe
 
 // PostAdminApiV3StoreReviewsReviewIdReplyPreviewJSONRequestBody defines body for PostAdminApiV3StoreReviewsReviewIdReplyPreview for application/json ContentType.
 type PostAdminApiV3StoreReviewsReviewIdReplyPreviewJSONRequestBody = StoreReviewReplyRequest
+
+// PostAdminApiV3TrackedLinksJSONRequestBody defines body for PostAdminApiV3TrackedLinks for application/json ContentType.
+type PostAdminApiV3TrackedLinksJSONRequestBody = TrackedLinkInput
+
+// PatchAdminApiV3TrackedLinksLinkIdJSONRequestBody defines body for PatchAdminApiV3TrackedLinksLinkId for application/json ContentType.
+type PatchAdminApiV3TrackedLinksLinkIdJSONRequestBody = TrackedLinkInput
+
+// PostAdminApiV3TrackedLinksLinkIdArchiveJSONRequestBody defines body for PostAdminApiV3TrackedLinksLinkIdArchive for application/json ContentType.
+type PostAdminApiV3TrackedLinksLinkIdArchiveJSONRequestBody = TrackedLinkArchiveRequest
 
 // PostAdminApiV3UsersUserIdAchievementsCodeJSONRequestBody defines body for PostAdminApiV3UsersUserIdAchievementsCode for application/json ContentType.
 type PostAdminApiV3UsersUserIdAchievementsCodeJSONRequestBody = AwardAchievementByPathRequest
@@ -24642,6 +26932,9 @@ type PostApiV3ConversationScenariosGenerateJSONRequestBody = ConvoGenerateScenar
 
 // PatchApiV3ConversationScenariosScenarioIdJSONRequestBody defines body for PatchApiV3ConversationScenariosScenarioId for application/json ContentType.
 type PatchApiV3ConversationScenariosScenarioIdJSONRequestBody = ConvoUpdateScenarioRequest
+
+// PostApiV3ConversationScenariosScenarioIdArtJSONRequestBody defines body for PostApiV3ConversationScenariosScenarioIdArt for application/json ContentType.
+type PostApiV3ConversationScenariosScenarioIdArtJSONRequestBody = ScenarioArtRequest
 
 // PatchApiV3ConversationsInterestsJSONRequestBody defines body for PatchApiV3ConversationsInterests for application/json ContentType.
 type PatchApiV3ConversationsInterestsJSONRequestBody = UpdateConversationInterestsRequest
@@ -25075,6 +27368,9 @@ type PostApiV3RoadmapLessonsGenerateJSONRequestBody = RoadmapAdminGenerateLesson
 // PatchApiV3RoadmapLessonsLessonIdJSONRequestBody defines body for PatchApiV3RoadmapLessonsLessonId for application/json ContentType.
 type PatchApiV3RoadmapLessonsLessonIdJSONRequestBody = RoadmapLessonUpsertRequest
 
+// PostApiV3RoadmapLessonsLessonIdRevisionsRevisionIdRestoreJSONRequestBody defines body for PostApiV3RoadmapLessonsLessonIdRevisionsRevisionIdRestore for application/json ContentType.
+type PostApiV3RoadmapLessonsLessonIdRevisionsRevisionIdRestoreJSONRequestBody = RestoreRequest
+
 // PostApiV3RoadmapLessonsLessonIdStepsStepIndexCompleteJSONRequestBody defines body for PostApiV3RoadmapLessonsLessonIdStepsStepIndexComplete for application/json ContentType.
 type PostApiV3RoadmapLessonsLessonIdStepsStepIndexCompleteJSONRequestBody = CompleteRoadmapStepRequest
 
@@ -25201,6 +27497,12 @@ type PostApiV3WebIngestTargetsJSONRequestBody = WebIngestTargetRequest
 // PatchApiV3WebIngestTargetsTargetIdJSONRequestBody defines body for PatchApiV3WebIngestTargetsTargetId for application/json ContentType.
 type PatchApiV3WebIngestTargetsTargetIdJSONRequestBody = WebIngestTargetRequest
 
+// PostInternalAdminAgentBriefsJSONRequestBody defines body for PostInternalAdminAgentBriefs for application/json ContentType.
+type PostInternalAdminAgentBriefsJSONRequestBody = AgentBriefCreateRequest
+
+// PostInternalAdminAgentBriefsBriefIdCancelJSONRequestBody defines body for PostInternalAdminAgentBriefsBriefIdCancel for application/json ContentType.
+type PostInternalAdminAgentBriefsBriefIdCancelJSONRequestBody = AgentBriefDoneRequest
+
 // PostInternalAdminAgentChangeSetsChangeSetIdApproveJSONRequestBody defines body for PostInternalAdminAgentChangeSetsChangeSetIdApprove for application/json ContentType.
 type PostInternalAdminAgentChangeSetsChangeSetIdApproveJSONRequestBody = AgentDecisionRequest
 
@@ -25212,6 +27514,12 @@ type PostInternalAdminAgentKeysJSONRequestBody = AgentKeyCreateRequest
 
 // PutInternalAdminAgentKeysAgentKeyIdFocusWeightsJSONRequestBody defines body for PutInternalAdminAgentKeysAgentKeyIdFocusWeights for application/json ContentType.
 type PutInternalAdminAgentKeysAgentKeyIdFocusWeightsJSONRequestBody = AgentFocusWeightsRequest
+
+// PostInternalAdminExamItemsGenerateJSONRequestBody defines body for PostInternalAdminExamItemsGenerate for application/json ContentType.
+type PostInternalAdminExamItemsGenerateJSONRequestBody = ExamItemGenerateRequest
+
+// PostInternalAdminExamItemsIdReviewJSONRequestBody defines body for PostInternalAdminExamItemsIdReview for application/json ContentType.
+type PostInternalAdminExamItemsIdReviewJSONRequestBody = ExamItemReviewRequest
 
 // PutInternalAdminMediaLifecycleMediaIdLegalHoldJSONRequestBody defines body for PutInternalAdminMediaLifecycleMediaIdLegalHold for application/json ContentType.
 type PutInternalAdminMediaLifecycleMediaIdLegalHoldJSONRequestBody = SetLegalHoldRequest
@@ -25231,6 +27539,12 @@ type PostInternalAdminMediaStorageFieldsOwnerFieldSyncJSONRequestBody = SyncRequ
 // PostInternalAdminMediaStorageUntrackedDeleteJSONRequestBody defines body for PostInternalAdminMediaStorageUntrackedDelete for application/json ContentType.
 type PostInternalAdminMediaStorageUntrackedDeleteJSONRequestBody = StorageDeleteObjectsRequest
 
+// PostInternalAgentBriefsBriefIdClaimJSONRequestBody defines body for PostInternalAgentBriefsBriefIdClaim for application/json ContentType.
+type PostInternalAgentBriefsBriefIdClaimJSONRequestBody = AgentBriefClaimRequest
+
+// PostInternalAgentBriefsBriefIdDoneJSONRequestBody defines body for PostInternalAgentBriefsBriefIdDone for application/json ContentType.
+type PostInternalAgentBriefsBriefIdDoneJSONRequestBody = AgentBriefDoneRequest
+
 // PostInternalAgentChangeSetsJSONRequestBody defines body for PostInternalAgentChangeSets for application/json ContentType.
 type PostInternalAgentChangeSetsJSONRequestBody = AgentChangeSetRequest
 
@@ -25239,6 +27553,21 @@ type PostInternalAgentClaimsJSONRequestBody = AgentClaimsRequest
 
 // PostInternalAgentReviewsJSONRequestBody defines body for PostInternalAgentReviews for application/json ContentType.
 type PostInternalAgentReviewsJSONRequestBody = AgentReviewsRequest
+
+// PostInternalAgentRoadmapLessonsLessonIdRevisionsRevisionIdRestoreJSONRequestBody defines body for PostInternalAgentRoadmapLessonsLessonIdRevisionsRevisionIdRestore for application/json ContentType.
+type PostInternalAgentRoadmapLessonsLessonIdRevisionsRevisionIdRestoreJSONRequestBody = RestoreRequest
+
+// PostInternalAgentSocialProfileRunsClaimJSONRequestBody defines body for PostInternalAgentSocialProfileRunsClaim for application/json ContentType.
+type PostInternalAgentSocialProfileRunsClaimJSONRequestBody = ProfileClaimRequest
+
+// PostInternalAgentSocialProfileRunsRunIdFinishJSONRequestBody defines body for PostInternalAgentSocialProfileRunsRunIdFinish for application/json ContentType.
+type PostInternalAgentSocialProfileRunsRunIdFinishJSONRequestBody = ProfileFinishRequest
+
+// PostInternalAgentSocialProfileRunsRunIdHeartbeatJSONRequestBody defines body for PostInternalAgentSocialProfileRunsRunIdHeartbeat for application/json ContentType.
+type PostInternalAgentSocialProfileRunsRunIdHeartbeatJSONRequestBody = SocialProfileHeartbeatRequest
+
+// PostInternalAgentSocialProfileRunsRunIdRemoteJSONRequestBody defines body for PostInternalAgentSocialProfileRunsRunIdRemote for application/json ContentType.
+type PostInternalAgentSocialProfileRunsRunIdRemoteJSONRequestBody = SocialProfileRemoteRequest
 
 // PostInternalAgentVideosJSONRequestBody defines body for PostInternalAgentVideos for application/json ContentType.
 type PostInternalAgentVideosJSONRequestBody = AgentVideoCreateRequest
@@ -25378,6 +27707,9 @@ type PutInternalApiV3LocalizationTtsRoutesLanguageCodeSurfaceJSONRequestBody = T
 // PostInternalApiV3NotificationDedupeClaimsJSONRequestBody defines body for PostInternalApiV3NotificationDedupeClaims for application/json ContentType.
 type PostInternalApiV3NotificationDedupeClaimsJSONRequestBody = NotificationDedupeClaimRequest
 
+// PostInternalApiV3TrackedLinksCodeClickJSONRequestBody defines body for PostInternalApiV3TrackedLinksCodeClick for application/json ContentType.
+type PostInternalApiV3TrackedLinksCodeClickJSONRequestBody = TrackedLinkClickRequest
+
 // PostInternalApiV3UsersJSONRequestBody defines body for PostInternalApiV3Users for application/json ContentType.
 type PostInternalApiV3UsersJSONRequestBody = CreateAuthUserRequest
 
@@ -25453,6 +27785,9 @@ type CreateDailyBlogDraftsInternalBlogDraftsDailyPostJSONRequestBody = CreateDai
 // PostInternalContentBridgeItemsLookupJSONRequestBody defines body for PostInternalContentBridgeItemsLookup for application/json ContentType.
 type PostInternalContentBridgeItemsLookupJSONRequestBody = BatchLookupRequest
 
+// PostInternalContentBridgeWordsArticlesJSONRequestBody defines body for PostInternalContentBridgeWordsArticles for application/json ContentType.
+type PostInternalContentBridgeWordsArticlesJSONRequestBody = WordReadingRequest
+
 // PostInternalContentVersionsVersionIdClaimForProcessingJSONRequestBody defines body for PostInternalContentVersionsVersionIdClaimForProcessing for application/json ContentType.
 type PostInternalContentVersionsVersionIdClaimForProcessingJSONRequestBody = ClaimContentVersionForProcessingRequest
 
@@ -25483,6 +27818,15 @@ type CreateConversationDrillsInternalKlearnConversationDrillsPostJSONRequestBody
 // CreateCustomExerciseDeckInternalKlearnExerciseDecksPostJSONRequestBody defines body for CreateCustomExerciseDeckInternalKlearnExerciseDecksPost for application/json ContentType.
 type CreateCustomExerciseDeckInternalKlearnExerciseDecksPostJSONRequestBody = CreateCustomDeckRequest
 
+// PostInternalKlearnPronunciationCandidatesJSONRequestBody defines body for PostInternalKlearnPronunciationCandidates for application/json ContentType.
+type PostInternalKlearnPronunciationCandidatesJSONRequestBody = PronunciationCandidateBody
+
+// PatchInternalKlearnPronunciationCandidatesCandidateIdAggregateJSONRequestBody defines body for PatchInternalKlearnPronunciationCandidatesCandidateIdAggregate for application/json ContentType.
+type PatchInternalKlearnPronunciationCandidatesCandidateIdAggregateJSONRequestBody = PronunciationAggregateBody
+
+// PostInternalKlearnPronunciationCandidatesCandidateIdJudgementsJSONRequestBody defines body for PostInternalKlearnPronunciationCandidatesCandidateIdJudgements for application/json ContentType.
+type PostInternalKlearnPronunciationCandidatesCandidateIdJudgementsJSONRequestBody = PronunciationJudgementsBody
+
 // ClusterTopicListsInternalKlearnTopicListsClusterPostJSONRequestBody defines body for ClusterTopicListsInternalKlearnTopicListsClusterPost for application/json ContentType.
 type ClusterTopicListsInternalKlearnTopicListsClusterPostJSONRequestBody = TopicListClusteringRequest
 
@@ -25510,11 +27854,17 @@ type UpdateUserProgressInternalKlearnUsersUserIdProgressPostJSONRequestBody Upda
 // BatchUpdateItemSchedulesInternalKlearnUsersUserIdSchedulesPostJSONRequestBody defines body for BatchUpdateItemSchedulesInternalKlearnUsersUserIdSchedulesPost for application/json ContentType.
 type BatchUpdateItemSchedulesInternalKlearnUsersUserIdSchedulesPostJSONRequestBody = GeneralBatchScheduleUpdateRequest
 
+// GetTextPicksInternalKlearnUsersUserIdTextPicksPostJSONRequestBody defines body for GetTextPicksInternalKlearnUsersUserIdTextPicksPost for application/json ContentType.
+type GetTextPicksInternalKlearnUsersUserIdTextPicksPostJSONRequestBody = TextPicksRequest
+
 // ReviewQuarantinedWordsInternalLexiconQuarantineReviewDailyPostJSONRequestBody defines body for ReviewQuarantinedWordsInternalLexiconQuarantineReviewDailyPost for application/json ContentType.
 type ReviewQuarantinedWordsInternalLexiconQuarantineReviewDailyPostJSONRequestBody = ReviewQuarantinedWordsInternalLexiconQuarantineReviewDailyPostJSONBody
 
 // FillWordImagesInternalLexiconWordImagesDailyPostJSONRequestBody defines body for FillWordImagesInternalLexiconWordImagesDailyPost for application/json ContentType.
 type FillWordImagesInternalLexiconWordImagesDailyPostJSONRequestBody = FillWordImagesInternalLexiconWordImagesDailyPostJSONBody
+
+// PostInternalLivekitPoolServingJSONRequestBody defines body for PostInternalLivekitPoolServing for application/json ContentType.
+type PostInternalLivekitPoolServingJSONRequestBody = LiveKitServingRequest
 
 // PostInAppNudgeStateInternalMeInAppNudgesNudgeIdStatePostJSONRequestBody defines body for PostInAppNudgeStateInternalMeInAppNudgesNudgeIdStatePost for application/json ContentType.
 type PostInAppNudgeStateInternalMeInAppNudgesNudgeIdStatePostJSONRequestBody = InAppNudgeStateTransitionKielolearnEngine
@@ -25524,6 +27874,12 @@ type ApplyMediaFieldRowsInternalMediaFieldsFieldRowsPostJSONRequestBody = MediaF
 
 // PostInternalMediaUploadUrlJSONRequestBody defines body for PostInternalMediaUploadUrl for application/json ContentType.
 type PostInternalMediaUploadUrlJSONRequestBody = MediaUploadRequest
+
+// SweepScenarioArtInternalScenarioArtDailyPostJSONRequestBody defines body for SweepScenarioArtInternalScenarioArtDailyPost for application/json ContentType.
+type SweepScenarioArtInternalScenarioArtDailyPostJSONRequestBody = SweepScenarioArtInternalScenarioArtDailyPostJSONBody
+
+// GenerateScenarioArtInternalScenarioArtScenarioIdPostJSONRequestBody defines body for GenerateScenarioArtInternalScenarioArtScenarioIdPost for application/json ContentType.
+type GenerateScenarioArtInternalScenarioArtScenarioIdPostJSONRequestBody = GenerateScenarioArtInternalScenarioArtScenarioIdPostJSONBody
 
 // SweepSiteTranslationsInternalSiteTranslationsSweepPostJSONRequestBody defines body for SweepSiteTranslationsInternalSiteTranslationsSweepPost for application/json ContentType.
 type SweepSiteTranslationsInternalSiteTranslationsSweepPostJSONRequestBody = SweepSiteTranslationsInternalSiteTranslationsSweepPostJSONBody
@@ -25615,6 +27971,9 @@ type HandlePrepareInternalWorkerHandlePreparePostJSONRequestBody = PubSubMessage
 // HandleRunPrefetchInternalWorkerHandleRunPrefetchPostJSONRequestBody defines body for HandleRunPrefetchInternalWorkerHandleRunPrefetchPost for application/json ContentType.
 type HandleRunPrefetchInternalWorkerHandleRunPrefetchPostJSONRequestBody = PubSubMessage
 
+// HandleSyllableJudgeInternalWorkerHandleSyllableJudgePostJSONRequestBody defines body for HandleSyllableJudgeInternalWorkerHandleSyllableJudgePost for application/json ContentType.
+type HandleSyllableJudgeInternalWorkerHandleSyllableJudgePostJSONRequestBody = PubSubMessage
+
 // HandleTopicListGenerationInternalWorkerHandleTopicListGenerationPostJSONRequestBody defines body for HandleTopicListGenerationInternalWorkerHandleTopicListGenerationPost for application/json ContentType.
 type HandleTopicListGenerationInternalWorkerHandleTopicListGenerationPostJSONRequestBody = PubSubMessage
 
@@ -25687,6 +28046,30 @@ type CreateDeckKlearnApiV3DecksUsersUserIdDecksPostJSONRequestBody = WordDeckCre
 // IngestBehavioralEventKlearnApiV3EventsBehavioralPostJSONRequestBody defines body for IngestBehavioralEventKlearnApiV3EventsBehavioralPost for application/json ContentType.
 type IngestBehavioralEventKlearnApiV3EventsBehavioralPostJSONRequestBody = BehavioralEventCreate
 
+// GenerateKlearnApiV3ExamPrepAdminGeneratePostJSONRequestBody defines body for GenerateKlearnApiV3ExamPrepAdminGeneratePost for application/json ContentType.
+type GenerateKlearnApiV3ExamPrepAdminGeneratePostJSONRequestBody = GenerateRequest
+
+// EditItemKlearnApiV3ExamPrepAdminItemsItemIdEditPostJSONRequestBody defines body for EditItemKlearnApiV3ExamPrepAdminItemsItemIdEditPost for application/json ContentType.
+type EditItemKlearnApiV3ExamPrepAdminItemsItemIdEditPostJSONRequestBody = EditRequest
+
+// SubmitItemKlearnApiV3ExamPrepItemsItemIdSubmitPostJSONRequestBody defines body for SubmitItemKlearnApiV3ExamPrepItemsItemIdSubmitPost for application/json ContentType.
+type SubmitItemKlearnApiV3ExamPrepItemsItemIdSubmitPostJSONRequestBody = SubmitRequest
+
+// TranscribeLongTakeKlearnApiV3ExamPrepLongTasksSpeechPostMultipartRequestBody defines body for TranscribeLongTakeKlearnApiV3ExamPrepLongTasksSpeechPost for multipart/form-data ContentType.
+type TranscribeLongTakeKlearnApiV3ExamPrepLongTasksSpeechPostMultipartRequestBody = BodyTranscribeLongTakeKlearnApiV3ExamPrepLongTasksSpeechPost
+
+// DebriefLongTaskKlearnApiV3ExamPrepLongTasksPromptIdDebriefPostJSONRequestBody defines body for DebriefLongTaskKlearnApiV3ExamPrepLongTasksPromptIdDebriefPost for application/json ContentType.
+type DebriefLongTaskKlearnApiV3ExamPrepLongTasksPromptIdDebriefPostJSONRequestBody = LongDebriefRequest
+
+// StartMockTestKlearnApiV3ExamPrepMockTestsPostJSONRequestBody defines body for StartMockTestKlearnApiV3ExamPrepMockTestsPost for application/json ContentType.
+type StartMockTestKlearnApiV3ExamPrepMockTestsPostJSONRequestBody = StartRequest
+
+// MockTestProgressKlearnApiV3ExamPrepMockTestsMockIdProgressPostJSONRequestBody defines body for MockTestProgressKlearnApiV3ExamPrepMockTestsMockIdProgressPost for application/json ContentType.
+type MockTestProgressKlearnApiV3ExamPrepMockTestsMockIdProgressPostJSONRequestBody = ProgressRequest
+
+// DebriefSituationSetKlearnApiV3ExamPrepSituationSetsSetIdDebriefPostJSONRequestBody defines body for DebriefSituationSetKlearnApiV3ExamPrepSituationSetsSetIdDebriefPost for application/json ContentType.
+type DebriefSituationSetKlearnApiV3ExamPrepSituationSetsSetIdDebriefPostJSONRequestBody = DebriefRequest
+
 // AdminCreateRoadmapLessonKlearnApiV3RoadmapAdminLessonsPostJSONRequestBody defines body for AdminCreateRoadmapLessonKlearnApiV3RoadmapAdminLessonsPost for application/json ContentType.
 type AdminCreateRoadmapLessonKlearnApiV3RoadmapAdminLessonsPostJSONRequestBody = RoadmapLessonUpsertRequestKielolearnEngine
 
@@ -25737,6 +28120,15 @@ type AddTopicListItemKlearnApiV3TopicListsTopicListIdItemsPostJSONRequestBody = 
 
 // UpdateUserPersonalizationProfileKlearnApiV3UserUserIdProfilePersonalizationPutJSONRequestBody defines body for UpdateUserPersonalizationProfileKlearnApiV3UserUserIdProfilePersonalizationPut for application/json ContentType.
 type UpdateUserPersonalizationProfileKlearnApiV3UserUserIdProfilePersonalizationPutJSONRequestBody = UserProfilePersonalizationUpdate
+
+// PostLivekitProfilesJSONRequestBody defines body for PostLivekitProfiles for application/json ContentType.
+type PostLivekitProfilesJSONRequestBody = LiveKitProfileCreateRequest
+
+// PatchLivekitProfilesProfileIdJSONRequestBody defines body for PatchLivekitProfilesProfileId for application/json ContentType.
+type PatchLivekitProfilesProfileIdJSONRequestBody = LiveKitProfileUpdateRequest
+
+// PostLivekitProfilesProfileIdExhaustJSONRequestBody defines body for PostLivekitProfilesProfileIdExhaust for application/json ContentType.
+type PostLivekitProfilesProfileIdExhaustJSONRequestBody = LiveKitExhaustRequest
 
 // PostLoginGithubJSONRequestBody defines body for PostLoginGithub for application/json ContentType.
 type PostLoginGithubJSONRequestBody = GitHubLoginRequest
@@ -25961,6 +28353,21 @@ func (t *ChallengeSection_Exercises_Item) FromScenarioChoiceExercise(v ScenarioC
 	return err
 }
 
+// AsSpeakLineExercise returns the union data inside the ChallengeSection_Exercises_Item as a SpeakLineExercise
+func (t ChallengeSection_Exercises_Item) AsSpeakLineExercise() (SpeakLineExercise, error) {
+	var body SpeakLineExercise
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromSpeakLineExercise overwrites any union data inside the ChallengeSection_Exercises_Item as the provided SpeakLineExercise
+func (t *ChallengeSection_Exercises_Item) FromSpeakLineExercise(v SpeakLineExercise) error {
+	v.ExerciseType = "speak_line"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
 // AsPlaceholderExercise returns the union data inside the ChallengeSection_Exercises_Item as a PlaceholderExercise
 func (t ChallengeSection_Exercises_Item) AsPlaceholderExercise() (PlaceholderExercise, error) {
 	var body PlaceholderExercise
@@ -26008,6 +28415,8 @@ func (t ChallengeSection_Exercises_Item) ValueByDiscriminator() (interface{}, er
 		return t.AsScenarioChoiceExercise()
 	case "sentence_construction":
 		return t.AsSentenceConstructionExercise()
+	case "speak_line":
+		return t.AsSpeakLineExercise()
 	case "spelling_challenge":
 		return t.AsSpellingChallengeExercise()
 	default:
@@ -26160,6 +28569,21 @@ func (t *LearningSessionKielolearnEngine_Exercises_Item) FromScenarioChoiceExerc
 	return err
 }
 
+// AsSpeakLineExercise returns the union data inside the LearningSessionKielolearnEngine_Exercises_Item as a SpeakLineExercise
+func (t LearningSessionKielolearnEngine_Exercises_Item) AsSpeakLineExercise() (SpeakLineExercise, error) {
+	var body SpeakLineExercise
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromSpeakLineExercise overwrites any union data inside the LearningSessionKielolearnEngine_Exercises_Item as the provided SpeakLineExercise
+func (t *LearningSessionKielolearnEngine_Exercises_Item) FromSpeakLineExercise(v SpeakLineExercise) error {
+	v.ExerciseType = "speak_line"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
 // AsPlaceholderExercise returns the union data inside the LearningSessionKielolearnEngine_Exercises_Item as a PlaceholderExercise
 func (t LearningSessionKielolearnEngine_Exercises_Item) AsPlaceholderExercise() (PlaceholderExercise, error) {
 	var body PlaceholderExercise
@@ -26207,6 +28631,8 @@ func (t LearningSessionKielolearnEngine_Exercises_Item) ValueByDiscriminator() (
 		return t.AsScenarioChoiceExercise()
 	case "sentence_construction":
 		return t.AsSentenceConstructionExercise()
+	case "speak_line":
+		return t.AsSpeakLineExercise()
 	case "spelling_challenge":
 		return t.AsSpellingChallengeExercise()
 	default:
@@ -26220,6 +28646,44 @@ func (t LearningSessionKielolearnEngine_Exercises_Item) MarshalJSON() ([]byte, e
 }
 
 func (t *LearningSessionKielolearnEngine_Exercises_Item) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsTrackRoadmapLesson returns the union data inside the TrackRoadmapChapter_Lessons_Item as a TrackRoadmapLesson
+func (t TrackRoadmapChapter_Lessons_Item) AsTrackRoadmapLesson() (TrackRoadmapLesson, error) {
+	var body TrackRoadmapLesson
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromTrackRoadmapLesson overwrites any union data inside the TrackRoadmapChapter_Lessons_Item as the provided TrackRoadmapLesson
+func (t *TrackRoadmapChapter_Lessons_Item) FromTrackRoadmapLesson(v TrackRoadmapLesson) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// AsTrackRoadmapItem returns the union data inside the TrackRoadmapChapter_Lessons_Item as a TrackRoadmapItem
+func (t TrackRoadmapChapter_Lessons_Item) AsTrackRoadmapItem() (TrackRoadmapItem, error) {
+	var body TrackRoadmapItem
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromTrackRoadmapItem overwrites any union data inside the TrackRoadmapChapter_Lessons_Item as the provided TrackRoadmapItem
+func (t *TrackRoadmapChapter_Lessons_Item) FromTrackRoadmapItem(v TrackRoadmapItem) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+func (t TrackRoadmapChapter_Lessons_Item) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *TrackRoadmapChapter_Lessons_Item) UnmarshalJSON(b []byte) error {
 	err := t.union.UnmarshalJSON(b)
 	return err
 }
