@@ -352,6 +352,34 @@ class AdminDigestSection(BaseModel):
     label: str
 
 
+class AdoptSkip(BaseModel):
+    field: str
+    reason: str
+
+
+class AgentBriefChangeSet(BaseModel):
+    agent_name: str
+    created_at: AwareDatetime
+    id: UUID_aliased
+    item_count: int
+    reason: str
+    status: str
+
+
+class AgentBriefClaimRequest(BaseModel):
+    minutes: int
+
+
+class AgentBriefDoneRequest(BaseModel):
+    note: str
+
+
+class AgentBriefItem(BaseModel):
+    id: str
+    kind: str
+    title: str | None = None
+
+
 class AgentCaptionEdit(BaseModel):
     after_index: int | None = None
     before_index: int | None = None
@@ -375,6 +403,7 @@ class AgentChangeItem(BaseModel):
     applied_at: AwareDatetime | None = None
     before: Any | None = None
     change_set_id: UUID_aliased
+    diff: Any | None = None
     entity_id: str
     entity_type: str
     id: int
@@ -387,6 +416,7 @@ class AgentChangeSet(BaseModel):
     agent_name: str
     applied_at: AwareDatetime | None = None
     approval_reason: str | None = None
+    brief_id: UUID_aliased | None = None
     confidence: str
     created_at: AwareDatetime
     decided_at: AwareDatetime | None = None
@@ -422,8 +452,8 @@ class AgentClaimsRequest(BaseModel):
     minutes: int
 
 
-class AgentDecisionRequest(BaseModel):
-    note: str
+class AgentDecisionRequest(AgentBriefDoneRequest):
+    pass
 
 
 class AgentExercise(BaseModel):
@@ -1764,7 +1794,7 @@ class CommsLaneRuleField(BaseModel):
     unit: str | None = None
 
 
-class CommsLaneRuleResetRequest(AgentDecisionRequest):
+class CommsLaneRuleResetRequest(AgentBriefDoneRequest):
     pass
 
 
@@ -5848,7 +5878,7 @@ class LaneRuleChangeResponse(AppFeedbackUpdateStatusRequest):
     pass
 
 
-class LaneRuleResetRequest(AgentDecisionRequest):
+class LaneRuleResetRequest(AgentBriefDoneRequest):
     pass
 
 
@@ -9235,7 +9265,7 @@ class RoadmapLessonProgressSnapshot(BaseModel):
     completed_steps: int | None = Field(0, title="Completed Steps")
     current_step_index: int | None = Field(0, title="Current Step Index")
     is_completed: bool | None = Field(False, title="Is Completed")
-    progress_percent: float | None = Field(0.0, title="Progress Percent")
+    progress_percent: float | None = Field(0, title="Progress Percent")
     step_states: dict[str, Any] | None = Field(None, title="Step States")
     total_steps: int | None = Field(0, title="Total Steps")
 
@@ -9393,7 +9423,7 @@ class RoadmapStepTTSStreamSessionResponse(BaseModel):
 class RoadmapUserProgressResponse(BaseModel):
     active_lesson_id: UUID_aliased | None = Field(None, title="Active Lesson Id")
     completed_lessons: int = Field(..., title="Completed Lessons")
-    progress_percent: float | None = Field(0.0, title="Progress Percent")
+    progress_percent: float | None = Field(0, title="Progress Percent")
     total_lessons: int = Field(..., title="Total Lessons")
     user_id: UUID_aliased = Field(..., title="User Id")
 
@@ -11267,6 +11297,10 @@ class SocialPostUpdateRequest(BaseModel):
 class SocialProblem(BaseModel):
     field: str
     message: str
+
+
+class SocialProfileAdoptRequest(BaseModel):
+    fields: list[str] | None = None
 
 
 class SocialProfileClaimResponse(BaseModel):
@@ -13389,7 +13423,7 @@ class UserActionEnvelope(BaseModel):
 
 
 class UserActiveTrackResponse(BaseModel):
-    progress_percent: float | None = Field(0.0, title="Progress Percent")
+    progress_percent: float | None = Field(0, title="Progress Percent")
     track_color_hex: str | None = Field(None, title="Track Color Hex")
     track_icon_emoji: str | None = Field(None, title="Track Icon Emoji")
     track_id: UUID_aliased | None = Field(None, title="Track Id")
@@ -13799,6 +13833,28 @@ class WordImagesRequest(QuarantineReviewRequest):
     pass
 
 
+class WordReadingArticle(BaseModel):
+    article_type: str
+    content_entry_id: UUID_aliased
+    content_version_id: UUID_aliased
+    matched_item_ids: list[UUID_aliased]
+    published_at: AwareDatetime
+    title: str
+
+
+class WordReadingRequest(BaseModel):
+    item_ids: list[UUID_aliased]
+    learning_language_code: str
+    level: str | None = None
+    limit: int | None = None
+    within_days: int | None = None
+
+
+class WordReadingResponse(BaseModel):
+    articles: list[WordReadingArticle]
+    language_code: str
+
+
 class WordScrambleItem(BaseModel):
     is_correct_target_word: bool | None = Field(False, title="Is Correct Target Word")
     text: str = Field(..., title="Text")
@@ -13935,6 +13991,7 @@ class AIModelFamily(BaseModel):
     recent_changes: list[AIRouteChange]
     retry_rate: float
     service: str
+    spend_24h_usd: float
     spend_7d: list[AIUsageDay]
     spend_today_usd: float
     thinking_budget: int
@@ -13966,6 +14023,29 @@ class AdminDigestEmail(BaseModel):
     summary: str
 
 
+class AgentBrief(BaseModel):
+    brief: str
+    change_sets: list[AgentBriefChangeSet]
+    claim_expires_at: AwareDatetime | None = None
+    claimed_at: AwareDatetime | None = None
+    claimed_by_name: str | None = None
+    closed_at: AwareDatetime | None = None
+    closed_by: str | None = None
+    closing_note: str | None = None
+    created_at: AwareDatetime
+    created_by: str
+    id: UUID_aliased
+    items: list[AgentBriefItem]
+    learning_language_code: str
+    status: str
+
+
+class AgentBriefCreateRequest(BaseModel):
+    brief: str
+    items: list[AgentBriefItem]
+    learning_language_code: str
+
+
 class AgentChangeOp(BaseModel):
     captions: list[AgentCaptionPatch] | None = None
     ids: list[UUID_aliased] | None = None
@@ -13978,6 +14058,7 @@ class AgentChangeOp(BaseModel):
 
 
 class AgentChangeSetRequest(BaseModel):
+    brief_id: UUID_aliased | None = None
     confidence: str
     dry_run: bool | None = None
     ops: list[AgentChangeOp]
@@ -15624,6 +15705,7 @@ class NextStepRecommendation(BaseModel):
     subtitle: str | None = Field(None, title="Subtitle")
     title: str = Field(..., title="Title")
     type: Type1 = Field(..., title="Type")
+    words: list[str] | None = Field(None, title="Words")
 
 
 class NextStepRecommendationV3(BaseModel):
@@ -15643,6 +15725,7 @@ class NextStepRecommendationV3(BaseModel):
     subtitle: str | None = None
     title: str
     type: str
+    words: list[str] | None = None
 
 
 class NextStepsResponse(BaseModel):
@@ -16140,7 +16223,7 @@ class RoadmapLessonsResponse(BaseModel):
 
 class RoadmapSpeechEvaluationResponse(BaseModel):
     expected_text: str = Field(..., title="Expected Text")
-    language_probability: float | None = Field(0.0, title="Language Probability")
+    language_probability: float | None = Field(0, title="Language Probability")
     lesson_id: UUID_aliased = Field(..., title="Lesson Id")
     passed: bool = Field(..., title="Passed")
     recognized_text: str = Field(..., title="Recognized Text")
@@ -16929,6 +17012,10 @@ class SingletonWebIngestTargetList(BaseModel):
     data: list[WebIngestTarget]
 
 
+class SingletonWordReadingResponse(BaseModel):
+    data: WordReadingResponse
+
+
 class SitePostList(BaseModel):
     counts: SitePostCounts
     posts: list[SitePostSummary]
@@ -17051,6 +17138,12 @@ class SocialProfile(BaseModel):
     runner: ProfileRunner | None = None
     status: str
     updated_at: AwareDatetime | None = None
+
+
+class SocialProfileAdoptResponse(BaseModel):
+    adopted: list[str]
+    profile: SocialProfile
+    skipped: list[AdoptSkip]
 
 
 class SocialProfileListResponse(BaseModel):
@@ -17380,7 +17473,7 @@ class TrackRoadmapLevel(BaseModel):
     icon_emoji: str | None = Field(None, title="Icon Emoji")
     id: UUID_aliased = Field(..., title="Id")
     placed_past: bool | None = Field(False, title="Placed Past")
-    progress_percent: float | None = Field(0.0, title="Progress Percent")
+    progress_percent: float | None = Field(0, title="Progress Percent")
     status: Status18 = Field(..., title="Status")
     thumbnail_media_id: UUID_aliased | None = Field(None, title="Thumbnail Media Id")
     thumbnail_url: str | None = Field(None, title="Thumbnail Url")
@@ -17393,7 +17486,7 @@ class TrackRoadmapResponse(BaseModel):
     next_chapter_title: str | None = Field(None, title="Next Chapter Title")
     next_lesson_id: UUID_aliased | None = Field(None, title="Next Lesson Id")
     next_lesson_title: str | None = Field(None, title="Next Lesson Title")
-    progress_percent: float | None = Field(0.0, title="Progress Percent")
+    progress_percent: float | None = Field(0, title="Progress Percent")
     total_lessons: int | None = Field(0, title="Total Lessons")
     track_color_hex: str | None = Field(None, title="Track Color Hex")
     track_description: str | None = Field(None, title="Track Description")
@@ -17494,7 +17587,7 @@ class UserAchievementsResult(BaseModel):
 
 
 class UserActiveTrackWithRoadmapResponse(BaseModel):
-    progress_percent: float | None = Field(0.0, title="Progress Percent")
+    progress_percent: float | None = Field(0, title="Progress Percent")
     roadmap: TrackRoadmapResponse | None = None
     track_color_hex: str | None = Field(None, title="Track Color Hex")
     track_icon_emoji: str | None = Field(None, title="Track Icon Emoji")
@@ -18359,6 +18452,10 @@ class SingletonSocialPostListResponse(BaseModel):
 
 class SingletonSocialProfile(BaseModel):
     data: SocialProfile
+
+
+class SingletonSocialProfileAdoptResponse(BaseModel):
+    data: SocialProfileAdoptResponse
 
 
 class SingletonSocialProfileListResponse(BaseModel):
