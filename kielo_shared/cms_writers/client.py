@@ -229,6 +229,7 @@ class CMSWritersClient:
         senses: Optional[list[dict[str, Any]]] = None,
         only_if_blank: bool = False,
         source: Optional[str] = None,
+        cefr_level: Optional[str] = None,
     ) -> "BaseWordTranslationResult":
         """POST /internal/klearn/base-words/{id}/translation.
 
@@ -257,6 +258,8 @@ class CMSWritersClient:
             an unlocked word and never replaces a non-blank gloss; the
             label lands in base_words.meaning_source. Omitted = "llm"
             (cms default). "human" is rejected by the endpoint.
+          cefr_level: optional CEFR level (A1..C2) for the word. The
+            endpoint stores it only into a blank level of an unlocked word.
 
         Returns:
           BaseWordTranslationResult with .meaning_action
@@ -274,6 +277,8 @@ class CMSWritersClient:
         }
         if source:
             payload["source"] = source
+        if cefr_level:
+            payload["cefr_level"] = cefr_level
         response = await self._client.post(url, json=payload)
         if response.status_code == 404:
             raise CMSWriterNotFoundError(
