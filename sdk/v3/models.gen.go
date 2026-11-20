@@ -6949,6 +6949,16 @@ type EndSessionResponse struct {
 	Status string `json:"status"`
 }
 
+// Event defines model for Event.
+type Event struct {
+	Action    string    `json:"action"`
+	Actor     string    `json:"actor"`
+	CreatedAt time.Time `json:"created_at"`
+	Detail    string    `json:"detail"`
+	Id        int       `json:"id"`
+	ProfileId *string   `json:"profile_id,omitempty"`
+}
+
 // ExamItem defines model for ExamItem.
 type ExamItem struct {
 	Audio           interface{} `json:"audio"`
@@ -10919,6 +10929,68 @@ type ListeningComprehensionExerciseOptionKind string
 // ListeningComprehensionExerciseSourceType defines model for ListeningComprehensionExercise.SourceType.
 type ListeningComprehensionExerciseSourceType string
 
+// LiveKitExhaustRequest defines model for LiveKitExhaustRequest.
+type LiveKitExhaustRequest struct {
+	Reason string     `json:"reason"`
+	Until  *time.Time `json:"until,omitempty"`
+}
+
+// LiveKitPoolDesiredResponse defines model for LiveKitPoolDesiredResponse.
+type LiveKitPoolDesiredResponse struct {
+	Desired *Profile `json:"desired,omitempty"`
+	Serving *Profile `json:"serving,omitempty"`
+}
+
+// LiveKitPoolResponse defines model for LiveKitPoolResponse.
+type LiveKitPoolResponse struct {
+	ActiveProfileId  *uuid.UUID        `json:"active_profile_id,omitempty"`
+	MonthStart       time.Time         `json:"month_start"`
+	Profiles         []ProfileUsage    `json:"profiles"`
+	RecentEvents     []Event           `json:"recent_events"`
+	ServingProfileId *uuid.UUID        `json:"serving_profile_id,omitempty"`
+	Totals           LiveKitPoolTotals `json:"totals"`
+}
+
+// LiveKitPoolTotals defines model for LiveKitPoolTotals.
+type LiveKitPoolTotals struct {
+	Calls              int     `json:"calls"`
+	LimitMinutes       int     `json:"limit_minutes"`
+	ParticipantMinutes float32 `json:"participant_minutes"`
+	Pct                float32 `json:"pct"`
+}
+
+// LiveKitProfileCreateRequest defines model for LiveKitProfileCreateRequest.
+type LiveKitProfileCreateRequest struct {
+	ApiKey                        *string `json:"api_key,omitempty"`
+	ApiSecret                     *string `json:"api_secret,omitempty"`
+	Enabled                       bool    `json:"enabled"`
+	MonthlyParticipantMinuteLimit int     `json:"monthly_participant_minute_limit"`
+	Name                          string  `json:"name"`
+	Notes                         *string `json:"notes,omitempty"`
+	Priority                      int     `json:"priority"`
+	SecretRef                     *string `json:"secret_ref,omitempty"`
+	Url                           string  `json:"url"`
+}
+
+// LiveKitProfileUpdateRequest defines model for LiveKitProfileUpdateRequest.
+type LiveKitProfileUpdateRequest struct {
+	ApiKey                        *string `json:"api_key,omitempty"`
+	ApiSecret                     *string `json:"api_secret,omitempty"`
+	Enabled                       *bool   `json:"enabled,omitempty"`
+	MonthlyParticipantMinuteLimit *int    `json:"monthly_participant_minute_limit,omitempty"`
+	Name                          *string `json:"name,omitempty"`
+	Notes                         *string `json:"notes,omitempty"`
+	Priority                      *int    `json:"priority,omitempty"`
+	SecretRef                     *string `json:"secret_ref,omitempty"`
+	Url                           *string `json:"url,omitempty"`
+}
+
+// LiveKitServingRequest defines model for LiveKitServingRequest.
+type LiveKitServingRequest struct {
+	Name      string `json:"name"`
+	ProfileId string `json:"profile_id"`
+}
+
 // LocalizationInvalidateCacheRequest defines model for LocalizationInvalidateCacheRequest.
 type LocalizationInvalidateCacheRequest struct {
 	Language *string `json:"language,omitempty"`
@@ -12876,18 +12948,30 @@ type PreparedInfo struct {
 	RetryAfterMs int `json:"retry_after_ms"`
 }
 
+// ProbeState defines model for ProbeState.
+type ProbeState struct {
+	At     time.Time `json:"at"`
+	Detail string    `json:"detail"`
+	Result string    `json:"result"`
+	Status int       `json:"status"`
+}
+
 // Profile defines model for Profile.
 type Profile struct {
-	ActiveDays           int                `json:"active_days"`
-	ComputedAt           time.Time          `json:"computed_at"`
-	Goal                 string             `json:"goal"`
-	SessionLen           string             `json:"session_len"`
-	SessionMinutesPerDay float32            `json:"session_minutes_per_day"`
-	Sources              map[string]string  `json:"sources"`
-	TopType              string             `json:"top_type"`
-	TypeMinutes          map[string]float32 `json:"type_minutes"`
-	TypeShare            map[string]float32 `json:"type_share"`
-	WindowDays           int                `json:"window_days"`
+	ApiKey                        *string    `json:"api_key,omitempty"`
+	CreatedAt                     time.Time  `json:"created_at"`
+	Enabled                       bool       `json:"enabled"`
+	ExhaustedUntil                *time.Time `json:"exhausted_until,omitempty"`
+	Id                            uuid.UUID  `json:"id"`
+	MonthlyParticipantMinuteLimit int        `json:"monthly_participant_minute_limit"`
+	Name                          string     `json:"name"`
+	Notes                         *string    `json:"notes,omitempty"`
+	Priority                      int        `json:"priority"`
+	SecretRef                     *string    `json:"secret_ref,omitempty"`
+	Serving                       bool       `json:"serving"`
+	Status                        string     `json:"status"`
+	UpdatedAt                     time.Time  `json:"updated_at"`
+	Url                           string     `json:"url"`
 }
 
 // ProfileChannel defines model for ProfileChannel.
@@ -13075,6 +13159,27 @@ type ProfileRunner struct {
 	RunnerId     string    `json:"runner_id"`
 	SessionState string    `json:"session_state"`
 	Version      string    `json:"version"`
+}
+
+// ProfileUsage defines model for ProfileUsage.
+type ProfileUsage struct {
+	Profile   Profile     `json:"Profile"`
+	LastProbe *ProbeState `json:"last_probe,omitempty"`
+	Usage     Usage       `json:"usage"`
+}
+
+// ProfileUserService defines model for ProfileUserService.
+type ProfileUserService struct {
+	ActiveDays           int                `json:"active_days"`
+	ComputedAt           time.Time          `json:"computed_at"`
+	Goal                 string             `json:"goal"`
+	SessionLen           string             `json:"session_len"`
+	SessionMinutesPerDay float32            `json:"session_minutes_per_day"`
+	Sources              map[string]string  `json:"sources"`
+	TopType              string             `json:"top_type"`
+	TypeMinutes          map[string]float32 `json:"type_minutes"`
+	TypeShare            map[string]float32 `json:"type_share"`
+	WindowDays           int                `json:"window_days"`
 }
 
 // ProgressRequest defines model for ProgressRequest.
@@ -13946,6 +14051,7 @@ type RedeemPromoCodeRequest struct {
 	Code     string  `json:"code"`
 	InApp    *bool   `json:"in_app,omitempty"`
 	Platform *string `json:"platform,omitempty"`
+	Source   *string `json:"source,omitempty"`
 	Via      *string `json:"via,omitempty"`
 }
 
@@ -17923,6 +18029,26 @@ type SingletonTopicListsForWordResponse struct {
 	Data TopicListsForWordResponse `json:"data"`
 }
 
+// SingletonTrackedLink defines model for SingletonTrackedLink.
+type SingletonTrackedLink struct {
+	Data TrackedLink `json:"data"`
+}
+
+// SingletonTrackedLinkClickResponse defines model for SingletonTrackedLinkClickResponse.
+type SingletonTrackedLinkClickResponse struct {
+	Data TrackedLinkClickResponse `json:"data"`
+}
+
+// SingletonTrackedLinkList defines model for SingletonTrackedLinkList.
+type SingletonTrackedLinkList struct {
+	Data TrackedLinkList `json:"data"`
+}
+
+// SingletonTrackedLinkStats defines model for SingletonTrackedLinkStats.
+type SingletonTrackedLinkStats struct {
+	Data TrackedLinkStats `json:"data"`
+}
+
 // SingletonTransactionHistoryResponse defines model for SingletonTransactionHistoryResponse.
 type SingletonTransactionHistoryResponse struct {
 	Data TransactionHistoryResponse `json:"data"`
@@ -20884,6 +21010,74 @@ type TrackRoadmapResponse struct {
 	TrackTitleOriginal    *string              `json:"track_title_original"`
 }
 
+// TrackedLink defines model for TrackedLink.
+type TrackedLink struct {
+	ArchivedAt  *time.Time `json:"archived_at,omitempty"`
+	CampaignId  *uuid.UUID `json:"campaign_id,omitempty"`
+	Code        string     `json:"code"`
+	CreatedAt   time.Time  `json:"created_at"`
+	CreatedBy   *uuid.UUID `json:"created_by,omitempty"`
+	Destination string     `json:"destination"`
+	Id          uuid.UUID  `json:"id"`
+	Language    string     `json:"language"`
+	Name        string     `json:"name"`
+	Platform    string     `json:"platform"`
+	UpdatedAt   time.Time  `json:"updated_at"`
+}
+
+// TrackedLinkArchiveRequest defines model for TrackedLinkArchiveRequest.
+type TrackedLinkArchiveRequest struct {
+	Archived bool `json:"archived"`
+}
+
+// TrackedLinkClickRequest defines model for TrackedLinkClickRequest.
+type TrackedLinkClickRequest struct {
+	UserAgent string `json:"user_agent"`
+}
+
+// TrackedLinkClickResponse defines model for TrackedLinkClickResponse.
+type TrackedLinkClickResponse struct {
+	Url string `json:"url"`
+}
+
+// TrackedLinkDay defines model for TrackedLinkDay.
+type TrackedLinkDay struct {
+	BotClicks int    `json:"bot_clicks"`
+	Claims    int    `json:"claims"`
+	Clicks    int    `json:"clicks"`
+	Day       string `json:"day"`
+	Purchases int    `json:"purchases"`
+	StoreTaps int    `json:"store_taps"`
+}
+
+// TrackedLinkInput defines model for TrackedLinkInput.
+type TrackedLinkInput struct {
+	CampaignId  *uuid.UUID `json:"campaign_id,omitempty"`
+	Code        string     `json:"code"`
+	Destination string     `json:"destination"`
+	Language    string     `json:"language"`
+	Name        string     `json:"name"`
+	Platform    string     `json:"platform"`
+}
+
+// TrackedLinkList defines model for TrackedLinkList.
+type TrackedLinkList struct {
+	Links       []TrackedLink `json:"links"`
+	NextPageKey *string       `json:"next_page_key,omitempty"`
+	TotalCount  int           `json:"total_count"`
+}
+
+// TrackedLinkStats defines model for TrackedLinkStats.
+type TrackedLinkStats struct {
+	Days           []TrackedLinkDay `json:"days"`
+	Link           TrackedLink      `json:"link"`
+	TotalBotClicks int              `json:"total_bot_clicks"`
+	TotalClaims    int              `json:"total_claims"`
+	TotalClicks    int              `json:"total_clicks"`
+	TotalPurchases int              `json:"total_purchases"`
+	TotalStoreTaps int              `json:"total_store_taps"`
+}
+
 // Transaction defines model for Transaction.
 type Transaction struct {
 	Amount        float32 `json:"amount"`
@@ -21429,6 +21623,13 @@ type UpsertTierLimitResponse struct {
 	Tier       string `json:"tier"`
 }
 
+// Usage defines model for Usage.
+type Usage struct {
+	Calls              int     `json:"calls"`
+	ParticipantMinutes float32 `json:"participant_minutes"`
+	Pct                float32 `json:"pct"`
+}
+
 // UserAchievementProgress defines model for UserAchievementProgress.
 type UserAchievementProgress struct {
 	AchievementCode string    `json:"achievement_code"`
@@ -21630,33 +21831,33 @@ type UserProfilePersonalizationUpdate struct {
 
 // UserProfileUserService defines model for UserProfileUserService.
 type UserProfileUserService struct {
-	AvatarMediaId             *string    `json:"avatar_media_id,omitempty"`
-	CountryCode               *string    `json:"country_code,omitempty"`
-	CurrentStreakDays         int        `json:"current_streak_days"`
-	EffectiveLevelSource      *string    `json:"effective_level_source,omitempty"`
-	EffectiveSkillLevel       *string    `json:"effective_skill_level,omitempty"`
-	Email                     string     `json:"email"`
-	EstimatedSkillLevel       *string    `json:"estimated_skill_level,omitempty"`
-	HowDidYouFindOut          *string    `json:"how_did_you_find_out,omitempty"`
-	Id                        uuid.UUID  `json:"id"`
-	Intent                    *Profile   `json:"intent,omitempty"`
-	IsGuest                   bool       `json:"is_guest"`
-	LastActiveDate            *time.Time `json:"last_active_date,omitempty"`
-	LearnerStage              *string    `json:"learner_stage,omitempty"`
-	LearnerStageSince         *time.Time `json:"learner_stage_since,omitempty"`
-	LearningLanguageCode      *string    `json:"learning_language_code,omitempty"`
-	LearningMinutesGoal       *int       `json:"learning_minutes_goal,omitempty"`
-	LearningReason            *string    `json:"learning_reason,omitempty"`
-	LongestStreakDays         int        `json:"longest_streak_days"`
-	Name                      *string    `json:"name,omitempty"`
-	NewsletterConsent         *bool      `json:"newsletter_consent,omitempty"`
-	OnboardingCompletedAt     *time.Time `json:"onboarding_completed_at,omitempty"`
-	OnboardingFirstExperience *string    `json:"onboarding_first_experience,omitempty"`
-	OnboardingVariant         *string    `json:"onboarding_variant,omitempty"`
-	ReminderHour              *int       `json:"reminder_hour,omitempty"`
-	StreakGraceUsedOn         *time.Time `json:"streak_grace_used_on,omitempty"`
-	SupportLanguageCode       *string    `json:"support_language_code,omitempty"`
-	SupportLanguageSource     *string    `json:"support_language_source,omitempty"`
+	AvatarMediaId             *string             `json:"avatar_media_id,omitempty"`
+	CountryCode               *string             `json:"country_code,omitempty"`
+	CurrentStreakDays         int                 `json:"current_streak_days"`
+	EffectiveLevelSource      *string             `json:"effective_level_source,omitempty"`
+	EffectiveSkillLevel       *string             `json:"effective_skill_level,omitempty"`
+	Email                     string              `json:"email"`
+	EstimatedSkillLevel       *string             `json:"estimated_skill_level,omitempty"`
+	HowDidYouFindOut          *string             `json:"how_did_you_find_out,omitempty"`
+	Id                        uuid.UUID           `json:"id"`
+	Intent                    *ProfileUserService `json:"intent,omitempty"`
+	IsGuest                   bool                `json:"is_guest"`
+	LastActiveDate            *time.Time          `json:"last_active_date,omitempty"`
+	LearnerStage              *string             `json:"learner_stage,omitempty"`
+	LearnerStageSince         *time.Time          `json:"learner_stage_since,omitempty"`
+	LearningLanguageCode      *string             `json:"learning_language_code,omitempty"`
+	LearningMinutesGoal       *int                `json:"learning_minutes_goal,omitempty"`
+	LearningReason            *string             `json:"learning_reason,omitempty"`
+	LongestStreakDays         int                 `json:"longest_streak_days"`
+	Name                      *string             `json:"name,omitempty"`
+	NewsletterConsent         *bool               `json:"newsletter_consent,omitempty"`
+	OnboardingCompletedAt     *time.Time          `json:"onboarding_completed_at,omitempty"`
+	OnboardingFirstExperience *string             `json:"onboarding_first_experience,omitempty"`
+	OnboardingVariant         *string             `json:"onboarding_variant,omitempty"`
+	ReminderHour              *int                `json:"reminder_hour,omitempty"`
+	StreakGraceUsedOn         *time.Time          `json:"streak_grace_used_on,omitempty"`
+	SupportLanguageCode       *string             `json:"support_language_code,omitempty"`
+	SupportLanguageSource     *string             `json:"support_language_source,omitempty"`
 }
 
 // UserProgress defines model for UserProgress.
@@ -22512,6 +22713,18 @@ type GetAdminApiV3SubscriptionTransactionsPendingParams struct {
 
 	// Limit Max rows (default 100, cap 500).
 	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// GetAdminApiV3TrackedLinksParams defines parameters for GetAdminApiV3TrackedLinks.
+type GetAdminApiV3TrackedLinksParams struct {
+	// IncludeArchived true lists archived links too
+	IncludeArchived *bool `form:"include_archived,omitempty" json:"include_archived,omitempty"`
+
+	// PageSize Maximum number of items per page. Handler default applies if omitted.
+	PageSize *int `form:"page_size,omitempty" json:"page_size,omitempty"`
+
+	// NextPageKey Opaque pagination cursor returned by the previous response.
+	NextPageKey *string `form:"next_page_key,omitempty" json:"next_page_key,omitempty"`
 }
 
 // GetAdminApiV3UsersUserIdFeatureLimitsEffectiveParams defines parameters for GetAdminApiV3UsersUserIdFeatureLimitsEffective.
@@ -26519,6 +26732,15 @@ type PostAdminApiV3StoreReviewsReviewIdReplyJSONRequestBody = StoreReviewReplyRe
 // PostAdminApiV3StoreReviewsReviewIdReplyPreviewJSONRequestBody defines body for PostAdminApiV3StoreReviewsReviewIdReplyPreview for application/json ContentType.
 type PostAdminApiV3StoreReviewsReviewIdReplyPreviewJSONRequestBody = StoreReviewReplyRequest
 
+// PostAdminApiV3TrackedLinksJSONRequestBody defines body for PostAdminApiV3TrackedLinks for application/json ContentType.
+type PostAdminApiV3TrackedLinksJSONRequestBody = TrackedLinkInput
+
+// PatchAdminApiV3TrackedLinksLinkIdJSONRequestBody defines body for PatchAdminApiV3TrackedLinksLinkId for application/json ContentType.
+type PatchAdminApiV3TrackedLinksLinkIdJSONRequestBody = TrackedLinkInput
+
+// PostAdminApiV3TrackedLinksLinkIdArchiveJSONRequestBody defines body for PostAdminApiV3TrackedLinksLinkIdArchive for application/json ContentType.
+type PostAdminApiV3TrackedLinksLinkIdArchiveJSONRequestBody = TrackedLinkArchiveRequest
+
 // PostAdminApiV3UsersUserIdAchievementsCodeJSONRequestBody defines body for PostAdminApiV3UsersUserIdAchievementsCode for application/json ContentType.
 type PostAdminApiV3UsersUserIdAchievementsCodeJSONRequestBody = AwardAchievementByPathRequest
 
@@ -27485,6 +27707,9 @@ type PutInternalApiV3LocalizationTtsRoutesLanguageCodeSurfaceJSONRequestBody = T
 // PostInternalApiV3NotificationDedupeClaimsJSONRequestBody defines body for PostInternalApiV3NotificationDedupeClaims for application/json ContentType.
 type PostInternalApiV3NotificationDedupeClaimsJSONRequestBody = NotificationDedupeClaimRequest
 
+// PostInternalApiV3TrackedLinksCodeClickJSONRequestBody defines body for PostInternalApiV3TrackedLinksCodeClick for application/json ContentType.
+type PostInternalApiV3TrackedLinksCodeClickJSONRequestBody = TrackedLinkClickRequest
+
 // PostInternalApiV3UsersJSONRequestBody defines body for PostInternalApiV3Users for application/json ContentType.
 type PostInternalApiV3UsersJSONRequestBody = CreateAuthUserRequest
 
@@ -27637,6 +27862,9 @@ type ReviewQuarantinedWordsInternalLexiconQuarantineReviewDailyPostJSONRequestBo
 
 // FillWordImagesInternalLexiconWordImagesDailyPostJSONRequestBody defines body for FillWordImagesInternalLexiconWordImagesDailyPost for application/json ContentType.
 type FillWordImagesInternalLexiconWordImagesDailyPostJSONRequestBody = FillWordImagesInternalLexiconWordImagesDailyPostJSONBody
+
+// PostInternalLivekitPoolServingJSONRequestBody defines body for PostInternalLivekitPoolServing for application/json ContentType.
+type PostInternalLivekitPoolServingJSONRequestBody = LiveKitServingRequest
 
 // PostInAppNudgeStateInternalMeInAppNudgesNudgeIdStatePostJSONRequestBody defines body for PostInAppNudgeStateInternalMeInAppNudgesNudgeIdStatePost for application/json ContentType.
 type PostInAppNudgeStateInternalMeInAppNudgesNudgeIdStatePostJSONRequestBody = InAppNudgeStateTransitionKielolearnEngine
@@ -27892,6 +28120,15 @@ type AddTopicListItemKlearnApiV3TopicListsTopicListIdItemsPostJSONRequestBody = 
 
 // UpdateUserPersonalizationProfileKlearnApiV3UserUserIdProfilePersonalizationPutJSONRequestBody defines body for UpdateUserPersonalizationProfileKlearnApiV3UserUserIdProfilePersonalizationPut for application/json ContentType.
 type UpdateUserPersonalizationProfileKlearnApiV3UserUserIdProfilePersonalizationPutJSONRequestBody = UserProfilePersonalizationUpdate
+
+// PostLivekitProfilesJSONRequestBody defines body for PostLivekitProfiles for application/json ContentType.
+type PostLivekitProfilesJSONRequestBody = LiveKitProfileCreateRequest
+
+// PatchLivekitProfilesProfileIdJSONRequestBody defines body for PatchLivekitProfilesProfileId for application/json ContentType.
+type PatchLivekitProfilesProfileIdJSONRequestBody = LiveKitProfileUpdateRequest
+
+// PostLivekitProfilesProfileIdExhaustJSONRequestBody defines body for PostLivekitProfilesProfileIdExhaust for application/json ContentType.
+type PostLivekitProfilesProfileIdExhaustJSONRequestBody = LiveKitExhaustRequest
 
 // PostLoginGithubJSONRequestBody defines body for PostLoginGithub for application/json ContentType.
 type PostLoginGithubJSONRequestBody = GitHubLoginRequest

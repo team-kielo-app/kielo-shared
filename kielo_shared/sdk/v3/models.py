@@ -3805,6 +3805,15 @@ class EndSessionResponse(AppFeedbackUpdateStatusRequest):
     pass
 
 
+class Event(BaseModel):
+    action: str
+    actor: str
+    created_at: AwareDatetime
+    detail: str
+    id: int
+    profile_id: str | None = None
+
+
 class ExamItem(BaseModel):
     audio: Any
     content: Any
@@ -6638,6 +6647,47 @@ class ListeningComprehensionExercise(BaseModel):
     validation_signature: str | None = Field(None, title="Validation Signature")
 
 
+class LiveKitExhaustRequest(BaseModel):
+    reason: str
+    until: AwareDatetime | None = None
+
+
+class LiveKitPoolTotals(BaseModel):
+    calls: int
+    limit_minutes: int
+    participant_minutes: float
+    pct: float
+
+
+class LiveKitProfileCreateRequest(BaseModel):
+    api_key: str | None = None
+    api_secret: str | None = None
+    enabled: bool
+    monthly_participant_minute_limit: int
+    name: str
+    notes: str | None = None
+    priority: int
+    secret_ref: str | None = None
+    url: str
+
+
+class LiveKitProfileUpdateRequest(BaseModel):
+    api_key: str | None = None
+    api_secret: str | None = None
+    enabled: bool | None = None
+    monthly_participant_minute_limit: int | None = None
+    name: str | None = None
+    notes: str | None = None
+    priority: int | None = None
+    secret_ref: str | None = None
+    url: str | None = None
+
+
+class LiveKitServingRequest(BaseModel):
+    name: str
+    profile_id: str
+
+
 class LocalizationInvalidateCacheRequest(BaseModel):
     language: str | None = None
 
@@ -8019,17 +8069,28 @@ class PreparedInfo(BaseModel):
     retry_after_ms: int
 
 
+class ProbeState(BaseModel):
+    at: AwareDatetime
+    detail: str
+    result: str
+    status: int
+
+
 class Profile(BaseModel):
-    active_days: int
-    computed_at: AwareDatetime
-    goal: str
-    session_len: str
-    session_minutes_per_day: float
-    sources: dict[str, str]
-    top_type: str
-    type_minutes: dict[str, float]
-    type_share: dict[str, float]
-    window_days: int
+    api_key: str | None = None
+    created_at: AwareDatetime
+    enabled: bool
+    exhausted_until: AwareDatetime | None = None
+    id: UUID_aliased
+    monthly_participant_minute_limit: int
+    name: str
+    notes: str | None = None
+    priority: int
+    secret_ref: str | None = None
+    serving: bool
+    status: str
+    updated_at: AwareDatetime
+    url: str
 
 
 class ProfileChannel(BaseModel):
@@ -8157,6 +8218,19 @@ class ProfileRunner(BaseModel):
     runner_id: str
     session_state: str
     version: str
+
+
+class ProfileUserService(BaseModel):
+    active_days: int
+    computed_at: AwareDatetime
+    goal: str
+    session_len: str
+    session_minutes_per_day: float
+    sources: dict[str, str]
+    top_type: str
+    type_minutes: dict[str, float]
+    type_share: dict[str, float]
+    window_days: int
 
 
 class Action(StrEnum):
@@ -8698,6 +8772,7 @@ class RedeemPromoCodeRequest(BaseModel):
     code: str
     in_app: bool | None = None
     platform: str | None = None
+    source: str | None = None
     via: str | None = None
 
 
@@ -12971,6 +13046,66 @@ class TrackRoadmapLesson(BaseModel):
     title_original: str | None = Field(None, title="Title Original")
 
 
+class TrackedLink(BaseModel):
+    archived_at: AwareDatetime | None = None
+    campaign_id: UUID_aliased | None = None
+    code: str
+    created_at: AwareDatetime
+    created_by: UUID_aliased | None = None
+    destination: str
+    id: UUID_aliased
+    language: str
+    name: str
+    platform: str
+    updated_at: AwareDatetime
+
+
+class TrackedLinkArchiveRequest(BaseModel):
+    archived: bool
+
+
+class TrackedLinkClickRequest(BaseModel):
+    user_agent: str
+
+
+class TrackedLinkClickResponse(BaseModel):
+    url: str
+
+
+class TrackedLinkDay(BaseModel):
+    bot_clicks: int
+    claims: int
+    clicks: int
+    day: str
+    purchases: int
+    store_taps: int
+
+
+class TrackedLinkInput(BaseModel):
+    campaign_id: UUID_aliased | None = None
+    code: str
+    destination: str
+    language: str
+    name: str
+    platform: str
+
+
+class TrackedLinkList(BaseModel):
+    links: list[TrackedLink]
+    next_page_key: str | None = None
+    total_count: int
+
+
+class TrackedLinkStats(BaseModel):
+    days: list[TrackedLinkDay]
+    link: TrackedLink
+    total_bot_clicks: int
+    total_claims: int
+    total_clicks: int
+    total_purchases: int
+    total_store_taps: int
+
+
 class Transaction(BaseModel):
     amount: float
     currency: str
@@ -13367,6 +13502,12 @@ class UpsertTierLimitResponse(BaseModel):
     tier: str
 
 
+class Usage(BaseModel):
+    calls: int
+    participant_minutes: float
+    pct: float
+
+
 class UserAchievementProgress(BaseModel):
     achievement_code: str
     current_value: int
@@ -13504,7 +13645,7 @@ class UserProfileUserService(BaseModel):
     estimated_skill_level: str | None = None
     how_did_you_find_out: str | None = None
     id: UUID_aliased
-    intent: Profile | None = None
+    intent: ProfileUserService | None = None
     is_guest: bool
     last_active_date: AwareDatetime | None = None
     learner_stage: str | None = None
@@ -15557,6 +15698,11 @@ class ListScenariosResponse(BaseModel):
     items: list[ScenarioListItem]
 
 
+class LiveKitPoolDesiredResponse(BaseModel):
+    desired: Profile | None = None
+    serving: Profile | None = None
+
+
 class LongDebriefResponse(BaseModel):
     better_answer: str = Field(..., title="Better Answer")
     criteria: dict[str, int] = Field(..., title="Criteria")
@@ -15940,6 +16086,12 @@ class ProfileRun(BaseModel):
     result: ProfileRunResult
     run_id: UUID_aliased
     status: str
+
+
+class ProfileUsage(BaseModel):
+    Profile_1: Profile = Field(..., alias="Profile")
+    last_probe: ProbeState | None = None
+    usage: Usage
 
 
 class ProgressSummary(BaseModel):
@@ -16834,6 +16986,22 @@ class SingletonTopicListWithWordsResponse(BaseModel):
 
 class SingletonTopicListsForWordResponse(BaseModel):
     data: TopicListsForWordResponse
+
+
+class SingletonTrackedLink(BaseModel):
+    data: TrackedLink
+
+
+class SingletonTrackedLinkClickResponse(BaseModel):
+    data: TrackedLinkClickResponse
+
+
+class SingletonTrackedLinkList(BaseModel):
+    data: TrackedLinkList
+
+
+class SingletonTrackedLinkStats(BaseModel):
+    data: TrackedLinkStats
 
 
 class SingletonTransactionHistoryResponse(BaseModel):
@@ -18255,6 +18423,15 @@ class LearningSessionKielolearnEngine(BaseModel):
     version: int | None = Field(2, title="Version")
     xp_earned: int | None = Field(None, title="Xp Earned")
     xp_target: int | None = Field(None, title="Xp Target")
+
+
+class LiveKitPoolResponse(BaseModel):
+    active_profile_id: UUID_aliased | None = None
+    month_start: AwareDatetime
+    profiles: list[ProfileUsage]
+    recent_events: list[Event]
+    serving_profile_id: UUID_aliased | None = None
+    totals: LiveKitPoolTotals
 
 
 class MarketingCampaignListResponse(BaseModel):
