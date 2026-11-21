@@ -37,3 +37,19 @@ async def test_translation_upsert_omits_cefr_level_when_absent():
     client, post = _client_with_capture()
     await client.upsert_base_word_translation(uuid4(), "to say", source="lookup")
     assert "cefr_level" not in post.call_args.kwargs["json"]
+
+
+@pytest.mark.asyncio
+async def test_translation_upsert_sends_pronunciation_ipa_when_given():
+    client, post = _client_with_capture()
+    await client.upsert_base_word_translation(
+        uuid4(), "shirt", source="lookup", pronunciation_ipa="ˈɧʊʈa"
+    )
+    assert post.call_args.kwargs["json"]["pronunciation_ipa"] == "ˈɧʊʈa"
+
+
+@pytest.mark.asyncio
+async def test_translation_upsert_omits_pronunciation_ipa_when_absent():
+    client, post = _client_with_capture()
+    await client.upsert_base_word_translation(uuid4(), "shirt", source="lookup")
+    assert "pronunciation_ipa" not in post.call_args.kwargs["json"]
