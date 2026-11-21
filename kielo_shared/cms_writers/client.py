@@ -230,6 +230,7 @@ class CMSWritersClient:
         only_if_blank: bool = False,
         source: Optional[str] = None,
         cefr_level: Optional[str] = None,
+        pronunciation_ipa: Optional[str] = None,
     ) -> "BaseWordTranslationResult":
         """POST /internal/klearn/base-words/{id}/translation.
 
@@ -260,6 +261,9 @@ class CMSWritersClient:
             (cms default). "human" is rejected by the endpoint.
           cefr_level: optional CEFR level (A1..C2) for the word. The
             endpoint stores it only into a blank level of an unlocked word.
+          pronunciation_ipa: optional IPA for a language with no rule-based
+            pronunciation (Swedish). The endpoint cleans it and stores it only
+            into a blank pronunciation of an unlocked word; Finnish ignores it.
 
         Returns:
           BaseWordTranslationResult with .meaning_action
@@ -279,6 +283,8 @@ class CMSWritersClient:
             payload["source"] = source
         if cefr_level:
             payload["cefr_level"] = cefr_level
+        if pronunciation_ipa:
+            payload["pronunciation_ipa"] = pronunciation_ipa
         response = await self._client.post(url, json=payload)
         if response.status_code == 404:
             raise CMSWriterNotFoundError(
