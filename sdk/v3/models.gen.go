@@ -334,8 +334,11 @@ const (
 
 // Defines values for LearningStatusUpdateRequestSource.
 const (
-	Reader        LearningStatusUpdateRequestSource = "reader"
-	ReaderPickDue LearningStatusUpdateRequestSource = "reader_pick_due"
+	Reader            LearningStatusUpdateRequestSource = "reader"
+	ReaderPickDue     LearningStatusUpdateRequestSource = "reader_pick_due"
+	ReaderPickMistake LearningStatusUpdateRequestSource = "reader_pick_mistake"
+	ReaderPickNew     LearningStatusUpdateRequestSource = "reader_pick_new"
+	ReaderPickPath    LearningStatusUpdateRequestSource = "reader_pick_path"
 )
 
 // Defines values for LessonDraftRequestDifficultyLevel.
@@ -1543,14 +1546,15 @@ type AgentChangeItem struct {
 
 // AgentChangeOp defines model for AgentChangeOp.
 type AgentChangeOp struct {
-	Captions      *[]AgentCaptionPatch `json:"captions,omitempty"`
-	Ids           *[]uuid.UUID         `json:"ids,omitempty"`
-	Items         *[]AgentPatchItem    `json:"items,omitempty"`
-	Merges        *[]AgentMergeItem    `json:"merges,omitempty"`
-	Op            string               `json:"op"`
-	Reader        *[]AgentReaderEdit   `json:"reader,omitempty"`
-	RetiredReason *string              `json:"retired_reason,omitempty"`
-	Roadmap       *[]AgentRoadmapEdit  `json:"roadmap,omitempty"`
+	Captions      *[]AgentCaptionPatch           `json:"captions,omitempty"`
+	Ids           *[]uuid.UUID                   `json:"ids,omitempty"`
+	Items         *[]AgentPatchItem              `json:"items,omitempty"`
+	Merges        *[]AgentMergeItem              `json:"merges,omitempty"`
+	Op            string                         `json:"op"`
+	Pronunciation *[]AgentPronunciationJudgement `json:"pronunciation,omitempty"`
+	Reader        *[]AgentReaderEdit             `json:"reader,omitempty"`
+	RetiredReason *string                        `json:"retired_reason,omitempty"`
+	Roadmap       *[]AgentRoadmapEdit            `json:"roadmap,omitempty"`
 }
 
 // AgentChangeSet defines model for AgentChangeSet.
@@ -1772,6 +1776,15 @@ type AgentMergeItem struct {
 type AgentPatchItem struct {
 	Id  uuid.UUID         `json:"id"`
 	Set map[string]string `json:"set"`
+}
+
+// AgentPronunciationJudgement defines model for AgentPronunciationJudgement.
+type AgentPronunciationJudgement struct {
+	CandidateId uuid.UUID `json:"candidate_id"`
+	Confidence  float32   `json:"confidence"`
+	Dimension   string    `json:"dimension"`
+	Note        *string   `json:"note,omitempty"`
+	Value       float32   `json:"value"`
 }
 
 // AgentReaderEdit defines model for AgentReaderEdit.
@@ -5344,7 +5357,7 @@ type CreateCustomDeckRequest struct {
 	// Intent Pedagogical intent for the practice set.
 	Intent *CreateCustomDeckRequestIntent `json:"intent,omitempty"`
 
-	// ItemIds List of item IDs (BaseWord or GrammarConcept) to include in deck
+	// ItemIds List of item IDs (BaseWord or GrammarConcept) to include in deck. Empty asks for a round of the learner's due kept sentences alone.
 	ItemIds        []uuid.UUID        `json:"item_ids"`
 	ItemSourceRefs *map[string]string `json:"item_source_refs,omitempty"`
 
@@ -10451,6 +10464,7 @@ type LearningItemsCountsResponse struct {
 	AverageVocabularyCefr float32   `json:"average_vocabulary_cefr"`
 	BaseWords             int       `json:"base_words"`
 	DueItems              int       `json:"due_items"`
+	DueSentences          int       `json:"due_sentences"`
 	GrammarConcepts       int       `json:"grammar_concepts"`
 	KnownItems            int       `json:"known_items"`
 	LearningItems         int       `json:"learning_items"`
@@ -10466,6 +10480,7 @@ type LearningItemsCountsResponseV3 struct {
 	AverageVocabularyCefr float32   `json:"average_vocabulary_cefr"`
 	BaseWords             int       `json:"base_words"`
 	DueItems              int       `json:"due_items"`
+	DueSentences          int       `json:"due_sentences"`
 	GrammarConcepts       int       `json:"grammar_concepts"`
 	KnownItems            int       `json:"known_items"`
 	LearningItems         int       `json:"learning_items"`
@@ -13407,6 +13422,16 @@ type PronunciationJudgementInput struct {
 // PronunciationJudgementsBody defines model for PronunciationJudgementsBody.
 type PronunciationJudgementsBody struct {
 	Judgements []PronunciationJudgementInput `json:"judgements"`
+}
+
+// PronunciationKnownWordsBody defines model for PronunciationKnownWordsBody.
+type PronunciationKnownWordsBody struct {
+	Terms []string `json:"terms"`
+}
+
+// PronunciationSelectionRequest defines model for PronunciationSelectionRequest.
+type PronunciationSelectionRequest struct {
+	Languages *[]string `json:"languages"`
 }
 
 // PronunciationSourceInput defines model for PronunciationSourceInput.
@@ -20977,6 +21002,7 @@ type TrackRoadmapLevel struct {
 	ChapterCount          *int                    `json:"chapter_count,omitempty"`
 	Chapters              *[]TrackRoadmapChapter  `json:"chapters,omitempty"`
 	CompletedChapterCount *int                    `json:"completed_chapter_count,omitempty"`
+	Description           *string                 `json:"description"`
 	IconEmoji             *string                 `json:"icon_emoji"`
 	Id                    uuid.UUID               `json:"id"`
 	PlacedPast            *bool                   `json:"placed_past,omitempty"`
@@ -25268,6 +25294,12 @@ type GetInternalAgentReaderCollectionsIdParams struct {
 	Days *int `form:"days,omitempty" json:"days,omitempty"`
 }
 
+// GetInternalAgentReaderStoriesEntryIdSignalsParams defines parameters for GetInternalAgentReaderStoriesEntryIdSignals.
+type GetInternalAgentReaderStoriesEntryIdSignalsParams struct {
+	// Days Window in days (1-180, default 30)
+	Days *int `form:"days,omitempty" json:"days,omitempty"`
+}
+
 // PostInternalAgentReviewsParams defines parameters for PostInternalAgentReviews.
 type PostInternalAgentReviewsParams struct {
 	// IdempotencyKey Unique per request; a retry with the same key replays the first answer
@@ -25938,6 +25970,9 @@ type GetLearnerProfileInternalLearnerProfileGetParams struct {
 	// LearningLanguageCode Learning-language code (canonical)
 	LearningLanguageCode string `form:"learning_language_code" json:"learning_language_code"`
 }
+
+// RunPronunciationSelectionInternalLexiconPronunciationSelectionDailyPostJSONBody defines parameters for RunPronunciationSelectionInternalLexiconPronunciationSelectionDailyPost.
+type RunPronunciationSelectionInternalLexiconPronunciationSelectionDailyPostJSONBody = PronunciationSelectionRequest
 
 // ReviewQuarantinedWordsInternalLexiconQuarantineReviewDailyPostJSONBody defines parameters for ReviewQuarantinedWordsInternalLexiconQuarantineReviewDailyPost.
 type ReviewQuarantinedWordsInternalLexiconQuarantineReviewDailyPostJSONBody = QuarantineReviewRequest
@@ -27827,6 +27862,9 @@ type PatchInternalKlearnPronunciationCandidatesCandidateIdAggregateJSONRequestBo
 // PostInternalKlearnPronunciationCandidatesCandidateIdJudgementsJSONRequestBody defines body for PostInternalKlearnPronunciationCandidatesCandidateIdJudgements for application/json ContentType.
 type PostInternalKlearnPronunciationCandidatesCandidateIdJudgementsJSONRequestBody = PronunciationJudgementsBody
 
+// PostInternalKlearnPronunciationKnownWordsJSONRequestBody defines body for PostInternalKlearnPronunciationKnownWords for application/json ContentType.
+type PostInternalKlearnPronunciationKnownWordsJSONRequestBody = PronunciationKnownWordsBody
+
 // ClusterTopicListsInternalKlearnTopicListsClusterPostJSONRequestBody defines body for ClusterTopicListsInternalKlearnTopicListsClusterPost for application/json ContentType.
 type ClusterTopicListsInternalKlearnTopicListsClusterPostJSONRequestBody = TopicListClusteringRequest
 
@@ -27856,6 +27894,9 @@ type BatchUpdateItemSchedulesInternalKlearnUsersUserIdSchedulesPostJSONRequestBo
 
 // GetTextPicksInternalKlearnUsersUserIdTextPicksPostJSONRequestBody defines body for GetTextPicksInternalKlearnUsersUserIdTextPicksPost for application/json ContentType.
 type GetTextPicksInternalKlearnUsersUserIdTextPicksPostJSONRequestBody = TextPicksRequest
+
+// RunPronunciationSelectionInternalLexiconPronunciationSelectionDailyPostJSONRequestBody defines body for RunPronunciationSelectionInternalLexiconPronunciationSelectionDailyPost for application/json ContentType.
+type RunPronunciationSelectionInternalLexiconPronunciationSelectionDailyPostJSONRequestBody = RunPronunciationSelectionInternalLexiconPronunciationSelectionDailyPostJSONBody
 
 // ReviewQuarantinedWordsInternalLexiconQuarantineReviewDailyPostJSONRequestBody defines body for ReviewQuarantinedWordsInternalLexiconQuarantineReviewDailyPost for application/json ContentType.
 type ReviewQuarantinedWordsInternalLexiconQuarantineReviewDailyPostJSONRequestBody = ReviewQuarantinedWordsInternalLexiconQuarantineReviewDailyPostJSONBody

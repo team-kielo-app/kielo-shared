@@ -588,6 +588,14 @@ class AgentPatchItem(BaseModel):
     set: dict[str, str]
 
 
+class AgentPronunciationJudgement(BaseModel):
+    candidate_id: UUID_aliased
+    confidence: float
+    dimension: str
+    note: str | None = None
+    value: float
+
+
 class AgentReaderEdit(BaseModel):
     entry_id: UUID_aliased | None = None
     id: UUID_aliased
@@ -2880,9 +2888,8 @@ class CreateCustomDeckRequest(BaseModel):
     )
     item_ids: list[UUID_aliased] = Field(
         ...,
-        description="List of item IDs (BaseWord or GrammarConcept) to include in deck",
+        description="List of item IDs (BaseWord or GrammarConcept) to include in deck. Empty asks for a round of the learner's due kept sentences alone.",
         max_length=32,
-        min_length=1,
         title="Item Ids",
     )
     item_source_refs: dict[str, str] | None = Field(
@@ -6239,6 +6246,7 @@ class LearningItemsCountsResponse(BaseModel):
     average_vocabulary_cefr: float
     base_words: int
     due_items: int
+    due_sentences: int
     grammar_concepts: int
     known_items: int
     learning_items: int
@@ -6320,6 +6328,9 @@ class LearningSessionV3(BaseModel):
 class Source1(StrEnum):
     reader = "reader"
     reader_pick_due = "reader_pick_due"
+    reader_pick_mistake = "reader_pick_mistake"
+    reader_pick_new = "reader_pick_new"
+    reader_pick_path = "reader_pick_path"
 
 
 class LearningStatusUpdateRequest(BaseModel):
@@ -8379,6 +8390,14 @@ class PronunciationJudgementInput(BaseModel):
 
 class PronunciationJudgementsBody(BaseModel):
     judgements: list[PronunciationJudgementInput]
+
+
+class PronunciationKnownWordsBody(BaseModel):
+    terms: list[str]
+
+
+class PronunciationSelectionRequest(BaseModel):
+    languages: list[str] | None = Field(None, title="Languages")
 
 
 class PronunciationSourceInput(BaseModel):
@@ -14193,6 +14212,7 @@ class AgentChangeOp(BaseModel):
     items: list[AgentPatchItem] | None = None
     merges: list[AgentMergeItem] | None = None
     op: str
+    pronunciation: list[AgentPronunciationJudgement] | None = None
     reader: list[AgentReaderEdit] | None = None
     retired_reason: str | None = None
     roadmap: list[AgentRoadmapEdit] | None = None
@@ -17638,6 +17658,7 @@ class TrackRoadmapLevel(BaseModel):
     chapter_count: int | None = Field(0, title="Chapter Count")
     chapters: list[TrackRoadmapChapter] | None = Field(None, title="Chapters")
     completed_chapter_count: int | None = Field(0, title="Completed Chapter Count")
+    description: str | None = Field(None, title="Description")
     icon_emoji: str | None = Field(None, title="Icon Emoji")
     id: UUID_aliased = Field(..., title="Id")
     placed_past: bool | None = Field(False, title="Placed Past")
