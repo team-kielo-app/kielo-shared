@@ -372,6 +372,13 @@ const (
 	LessonDraftResponseReviewSkipped LessonDraftResponseReview = "skipped"
 )
 
+// Defines values for LessonLearnerPreviewTranslationStatus.
+const (
+	NotTranslatedYet LessonLearnerPreviewTranslationStatus = "not_translated_yet"
+	SourceLanguage   LessonLearnerPreviewTranslationStatus = "source_language"
+	Translated       LessonLearnerPreviewTranslationStatus = "translated"
+)
+
 // Defines values for LevelCheckResponseDirection.
 const (
 	LevelCheckResponseDirectionDown LevelCheckResponseDirection = "down"
@@ -10748,6 +10755,35 @@ type LessonDraftResponse struct {
 
 // LessonDraftResponseReview defines model for LessonDraftResponse.Review.
 type LessonDraftResponseReview string
+
+// LessonLearnerPreview defines model for LessonLearnerPreview.
+type LessonLearnerPreview struct {
+	Category                 string                          `json:"category"`
+	CefrLevel                *string                         `json:"cefr_level"`
+	ChapterTitle             *string                         `json:"chapter_title"`
+	Description              *string                         `json:"description"`
+	EstimatedDurationMinutes int                             `json:"estimated_duration_minutes"`
+	IsPublished              bool                            `json:"is_published"`
+	LearningLanguageCode     string                          `json:"learning_language_code"`
+	LessonContent            map[string]interface{}          `json:"lesson_content"`
+	LessonId                 uuid.UUID                       `json:"lesson_id"`
+	SupportLanguageCode      string                          `json:"support_language_code"`
+	Targets                  *[]RoadmapLessonTargetItem      `json:"targets,omitempty"`
+	Title                    string                          `json:"title"`
+	Translation              LessonLearnerPreviewTranslation `json:"translation"`
+}
+
+// LessonLearnerPreviewTranslation defines model for LessonLearnerPreviewTranslation.
+type LessonLearnerPreviewTranslation struct {
+	BuiltNow              *bool                                 `json:"built_now,omitempty"`
+	DescriptionTranslated bool                                  `json:"description_translated"`
+	Status                LessonLearnerPreviewTranslationStatus `json:"status"`
+	StepsTranslated       bool                                  `json:"steps_translated"`
+	TitleTranslated       bool                                  `json:"title_translated"`
+}
+
+// LessonLearnerPreviewTranslationStatus defines model for LessonLearnerPreviewTranslation.Status.
+type LessonLearnerPreviewTranslationStatus string
 
 // LessonOverviewResponse defines model for LessonOverviewResponse.
 type LessonOverviewResponse struct {
@@ -24766,6 +24802,15 @@ type GetApiV3RoadmapLessonsLessonIdHistoryParams struct {
 	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
+// GetApiV3RoadmapLessonsLessonIdLearnerPreviewParams defines parameters for GetApiV3RoadmapLessonsLessonIdLearnerPreview.
+type GetApiV3RoadmapLessonsLessonIdLearnerPreviewParams struct {
+	// SupportLanguageCode Support language to preview (en, vi, ru, ...)
+	SupportLanguageCode *string `form:"support_language_code,omitempty" json:"support_language_code,omitempty"`
+
+	// Translate Build the missing translation of this lesson (paid, default false)
+	Translate *bool `form:"translate,omitempty" json:"translate,omitempty"`
+}
+
 // GetApiV3RoadmapLessonsLessonIdSignalsParams defines parameters for GetApiV3RoadmapLessonsLessonIdSignals.
 type GetApiV3RoadmapLessonsLessonIdSignalsParams struct {
 	// Days Window in days (1-180, default 30)
@@ -26441,6 +26486,12 @@ type AdminGenerateRoadmapLessonKlearnApiV3RoadmapAdminLessonsGeneratePostParams 
 type AdminRoadmapLessonOverviewKlearnApiV3RoadmapAdminLessonsOverviewGetParams struct {
 	// Days Window for starts, stops and reports
 	Days *int `form:"days,omitempty" json:"days,omitempty"`
+}
+
+// AdminRoadmapLessonLearnerPreviewKlearnApiV3RoadmapAdminLessonsLessonIdLearnerPreviewGetParams defines parameters for AdminRoadmapLessonLearnerPreviewKlearnApiV3RoadmapAdminLessonsLessonIdLearnerPreviewGet.
+type AdminRoadmapLessonLearnerPreviewKlearnApiV3RoadmapAdminLessonsLessonIdLearnerPreviewGetParams struct {
+	// Translate Build the missing translation of this one lesson now (paid). Default reads stored translations only and spends nothing.
+	Translate *bool `form:"translate,omitempty" json:"translate,omitempty"`
 }
 
 // AdminRoadmapLessonSignalsKlearnApiV3RoadmapAdminLessonsLessonIdSignalsGetParams defines parameters for AdminRoadmapLessonSignalsKlearnApiV3RoadmapAdminLessonsLessonIdSignalsGet.
