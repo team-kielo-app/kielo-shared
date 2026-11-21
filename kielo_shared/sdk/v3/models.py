@@ -6486,6 +6486,20 @@ class LessonDraftResponse(BaseModel):
     title: str = Field(..., title="Title")
 
 
+class Status5(StrEnum):
+    source_language = "source_language"
+    translated = "translated"
+    not_translated_yet = "not_translated_yet"
+
+
+class LessonLearnerPreviewTranslation(BaseModel):
+    built_now: bool | None = Field(False, title="Built Now")
+    description_translated: bool = Field(..., title="Description Translated")
+    status: Status5 = Field(..., title="Status")
+    steps_translated: bool = Field(..., title="Steps Translated")
+    title_translated: bool = Field(..., title="Title Translated")
+
+
 class LessonOverviewRow(BaseModel):
     attention: float = Field(..., title="Attention")
     cefr_level: str | None = Field(None, title="Cefr Level")
@@ -6716,14 +6730,14 @@ class LocalizationStatus(BaseModel):
     status: str
 
 
-class Status5(StrEnum):
+class Status6(StrEnum):
     pending = "pending"
     ready = "ready"
 
 
 class LocalizationStatusKielolearnEngine(BaseModel):
     locale: str | None = Field(None, title="Locale")
-    status: Status5 = Field(..., title="Status")
+    status: Status6 = Field(..., title="Status")
 
 
 class LoginRequest(ClaimEmailRequest):
@@ -7080,7 +7094,7 @@ class Mindmap(BaseModel):
     video_id: UUID_aliased
 
 
-class Status6(StrEnum):
+class Status7(StrEnum):
     todo = "todo"
     running = "running"
     paused = "paused"
@@ -7099,7 +7113,7 @@ class MockTask(BaseModel):
     title: str | None = Field(None, title="Title")
 
 
-class Status7(StrEnum):
+class Status8(StrEnum):
     in_progress = "in_progress"
     finished = "finished"
     abandoned = "abandoned"
@@ -7687,7 +7701,7 @@ class PartResult(BaseModel):
     meets_target: bool | None = Field(None, title="Meets Target")
     not_enough: NotEnough | None = Field(None, title="Not Enough")
     part: str = Field(..., title="Part")
-    status: Status6 = Field(..., title="Status")
+    status: Status7 = Field(..., title="Status")
     tasks_done: int = Field(..., title="Tasks Done")
     tasks_total: int = Field(..., title="Tasks Total")
     total: int | None = Field(None, title="Total")
@@ -9190,7 +9204,7 @@ class ReviewMissesRequestV3(BaseModel):
     missed_item_ids: list[str] | None = None
 
 
-class Status9(StrEnum):
+class Status10(StrEnum):
     composed = "composed"
     nothing_missed = "nothing_missed"
     round_limit = "round_limit"
@@ -9931,7 +9945,7 @@ class SessionProgressSummary(BaseModel):
     total_stages: int | None = Field(0, title="Total Stages")
 
 
-class Status10(StrEnum):
+class Status11(StrEnum):
     applied = "applied"
     duplicate = "duplicate"
     skipped = "skipped"
@@ -9943,7 +9957,7 @@ class SessionReconcileRequestKielolearnEngine(BaseModel):
     submissions: list[ExerciseSubmission] | None = Field(None, title="Submissions")
 
 
-class Status11(StrEnum):
+class Status12(StrEnum):
     not_started = "not_started"
     in_progress = "in_progress"
     completed = "completed"
@@ -9954,7 +9968,7 @@ class SessionResumeState(BaseModel):
     current_exercise_index: int | None = Field(0, title="Current Exercise Index")
     current_stage_key: str | None = Field(None, title="Current Stage Key")
     current_stage_title: str | None = Field(None, title="Current Stage Title")
-    status: Status11 | None = Field("not_started", title="Status")
+    status: Status12 | None = Field("not_started", title="Status")
     total_exercises: int | None = Field(0, title="Total Exercises")
 
 
@@ -12554,7 +12568,7 @@ class TTSGenerateRequest(BaseModel):
     language_code: str | None = Field("", title="Language Code")
 
 
-class Status12(StrEnum):
+class Status13(StrEnum):
     ready = "ready"
     generating = "generating"
     failed = "failed"
@@ -12568,7 +12582,7 @@ class TTSGenerateResponse(BaseModel):
     job_status: Status1 | None = Field(None, title="Job Status")
     media_id: UUID_aliased | None = Field(None, title="Media Id")
     stage: str | None = Field(None, title="Stage")
-    status: Status12 = Field(..., title="Status")
+    status: Status13 = Field(..., title="Status")
 
 
 class TTSJobStatusResponse(BaseModel):
@@ -12596,7 +12610,7 @@ class TTSParagraphGenerateResponse(BaseModel):
     media_id: UUID_aliased | None = Field(None, title="Media Id")
     paragraph_id: UUID_aliased = Field(..., title="Paragraph Id")
     stage: str | None = Field(None, title="Stage")
-    status: Status12 = Field(..., title="Status")
+    status: Status13 = Field(..., title="Status")
 
 
 class TTSPreviewRequest(BaseModel):
@@ -12943,7 +12957,7 @@ class TopicListResponseKielolearnEngine(BaseModel):
     word_count: int | None = Field(0, title="Word Count")
 
 
-class Status17(StrEnum):
+class Status18(StrEnum):
     found = "found"
     generating = "generating"
     draft_pending = "draft_pending"
@@ -13019,7 +13033,7 @@ class TrackListResponse(BaseModel):
     tracks: list[TrackListItem] = Field(..., title="Tracks")
 
 
-class Status18(StrEnum):
+class Status19(StrEnum):
     completed = "completed"
     active = "active"
     locked = "locked"
@@ -13031,7 +13045,7 @@ class Kind3(StrEnum):
     scene = "scene"
 
 
-class Status19(StrEnum):
+class Status20(StrEnum):
     done = "done"
     in_progress = "in_progress"
     available = "available"
@@ -13045,7 +13059,7 @@ class TrackRoadmapItem(BaseModel):
     optional: Literal[True] = Field(True, title="Optional")
     order_index: int = Field(..., title="Order Index")
     ref: str = Field(..., title="Ref")
-    status: Status19 = Field(..., title="Status")
+    status: Status20 = Field(..., title="Status")
     thumbnail_media_id: UUID_aliased | None = Field(None, title="Thumbnail Media Id")
     thumbnail_url: str | None = Field(None, title="Thumbnail Url")
     title: str = Field(..., title="Title")
@@ -13057,7 +13071,7 @@ class TrackRoadmapLesson(BaseModel):
     kind: str | None = Field(None, title="Kind")
     lesson_id: UUID_aliased = Field(..., title="Lesson Id")
     order_index: int = Field(..., title="Order Index")
-    state: Status18 = Field(..., title="State")
+    state: Status19 = Field(..., title="State")
     thumbnail_media_id: UUID_aliased | None = Field(None, title="Thumbnail Media Id")
     thumbnail_url: str | None = Field(None, title="Thumbnail Url")
     title: str = Field(..., title="Title")
@@ -15700,6 +15714,22 @@ class LearningSession(BaseModel):
     user_id: UUID_aliased | None = None
 
 
+class LessonLearnerPreview(BaseModel):
+    category: str = Field(..., title="Category")
+    cefr_level: str | None = Field(None, title="Cefr Level")
+    chapter_title: str | None = Field(None, title="Chapter Title")
+    description: str | None = Field(None, title="Description")
+    estimated_duration_minutes: int = Field(..., title="Estimated Duration Minutes")
+    is_published: bool = Field(..., title="Is Published")
+    learning_language_code: str = Field(..., title="Learning Language Code")
+    lesson_content: dict[str, Any] = Field(..., title="Lesson Content")
+    lesson_id: UUID_aliased = Field(..., title="Lesson Id")
+    support_language_code: str = Field(..., title="Support Language Code")
+    targets: list[RoadmapLessonTargetItem] | None = Field(None, title="Targets")
+    title: str = Field(..., title="Title")
+    translation: LessonLearnerPreviewTranslation
+
+
 class LessonOverviewResponse(BaseModel):
     days: int = Field(..., title="Days")
     lessons: list[LessonOverviewRow] = Field(..., title="Lessons")
@@ -15810,7 +15840,7 @@ class MockPartOut(BaseModel):
     done: list[str] = Field(..., title="Done")
     part: str = Field(..., title="Part")
     remaining_seconds: int = Field(..., title="Remaining Seconds")
-    status: Status6 = Field(..., title="Status")
+    status: Status7 = Field(..., title="Status")
     tasks: list[MockTask] = Field(..., title="Tasks")
     time_basis: str = Field(..., title="Time Basis")
     used_seconds: int = Field(..., title="Used Seconds")
@@ -15846,7 +15876,7 @@ class MockTestOut(BaseModel):
     left_out: list[dict[str, str]] = Field(..., title="Left Out")
     parts: list[MockPartOut] = Field(..., title="Parts")
     started_at: AwareDatetime = Field(..., title="Started At")
-    status: Status7 = Field(..., title="Status")
+    status: Status8 = Field(..., title="Status")
     warn_seconds: int | None = Field(60, title="Warn Seconds")
 
 
@@ -17628,7 +17658,7 @@ class TopicListStatusResponse(BaseModel):
     preview: TopicListPreview | None = None
     seed_word_id: UUID_aliased = Field(..., title="Seed Word Id")
     stage: str | None = Field(None, title="Stage")
-    status: Status17 = Field(..., title="Status")
+    status: Status18 = Field(..., title="Status")
     topic_lists: list[TopicListTeaserKielolearnEngine] | None = Field(
         None, title="Topic Lists"
     )
@@ -17643,7 +17673,7 @@ class TrackRoadmapChapter(BaseModel):
     lessons: list[TrackRoadmapLesson | TrackRoadmapItem] | None = Field(
         None, title="Lessons"
     )
-    status: Status18 = Field(..., title="Status")
+    status: Status19 = Field(..., title="Status")
     test_out: ChapterTestOutOffer | None = None
     tested_out_lesson_count: int | None = Field(0, title="Tested Out Lesson Count")
     thumbnail_media_id: UUID_aliased | None = Field(None, title="Thumbnail Media Id")
@@ -17663,7 +17693,7 @@ class TrackRoadmapLevel(BaseModel):
     id: UUID_aliased = Field(..., title="Id")
     placed_past: bool | None = Field(False, title="Placed Past")
     progress_percent: float | None = Field(0, title="Progress Percent")
-    status: Status18 = Field(..., title="Status")
+    status: Status19 = Field(..., title="Status")
     thumbnail_media_id: UUID_aliased | None = Field(None, title="Thumbnail Media Id")
     thumbnail_url: str | None = Field(None, title="Thumbnail Url")
     title: str = Field(..., title="Title")
@@ -18513,13 +18543,13 @@ class ReviewMissesResponse(BaseModel):
     review_item_ids: list[UUID_aliased] | None = Field(None, title="Review Item Ids")
     round: int | None = Field(0, title="Round")
     session: LearningSessionKielolearnEngine | None = None
-    status: Status9 = Field(..., title="Status")
+    status: Status10 = Field(..., title="Status")
 
 
 class SessionReconcileItemResult(BaseModel):
     exercise_id: UUID_aliased = Field(..., title="Exercise Id")
     result: SubmissionResult | None = None
-    status: Status10 | None = Field("applied", title="Status")
+    status: Status11 | None = Field("applied", title="Status")
     submission_id: str | None = Field(None, title="Submission Id")
 
 
