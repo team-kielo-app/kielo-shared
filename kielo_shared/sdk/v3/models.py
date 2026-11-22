@@ -11362,6 +11362,7 @@ class SocialPostCreateRequest(BaseModel):
     carousel_mode: str
     channel_ids: list[str]
     due_at: AwareDatetime
+    first_comment: str | None = None
     format: str
     images: list[SocialImage]
     label: str
@@ -11390,6 +11391,7 @@ class SocialPostUpdateRequest(BaseModel):
     caption: str
     carousel_mode: str
     due_at: AwareDatetime
+    first_comment: str | None = None
     format: str
     images: list[SocialImage]
     label: str
@@ -17296,6 +17298,7 @@ class SocialPost(BaseModel):
     channel_id: str
     due_at: AwareDatetime
     external_url: str
+    first_comment: str
     format: str
     hand_off_at: AwareDatetime | None = None
     id: UUID_aliased
