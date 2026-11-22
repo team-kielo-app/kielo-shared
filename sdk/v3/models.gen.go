@@ -18677,6 +18677,7 @@ type SocialPost struct {
 	ChannelId    string          `json:"channel_id"`
 	DueAt        time.Time       `json:"due_at"`
 	ExternalUrl  string          `json:"external_url"`
+	FirstComment string          `json:"first_comment"`
 	Format       string          `json:"format"`
 	HandOffAt    *time.Time      `json:"hand_off_at,omitempty"`
 	Id           uuid.UUID       `json:"id"`
@@ -18712,6 +18713,7 @@ type SocialPostCreateRequest struct {
 	CarouselMode string        `json:"carousel_mode"`
 	ChannelIds   []string      `json:"channel_ids"`
 	DueAt        time.Time     `json:"due_at"`
+	FirstComment *string       `json:"first_comment,omitempty"`
 	Format       string        `json:"format"`
 	Images       []SocialImage `json:"images"`
 	Label        string        `json:"label"`
@@ -18761,6 +18763,7 @@ type SocialPostUpdateRequest struct {
 	Caption      string        `json:"caption"`
 	CarouselMode string        `json:"carousel_mode"`
 	DueAt        time.Time     `json:"due_at"`
+	FirstComment *string       `json:"first_comment,omitempty"`
 	Format       string        `json:"format"`
 	Images       []SocialImage `json:"images"`
 	Label        string        `json:"label"`
