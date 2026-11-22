@@ -11327,11 +11327,31 @@ class SituationSummaryResponse(BaseModel):
 
 
 class SocialChannel(BaseModel):
+    comment_max_per_run: int
+    comments_enabled: bool
     connected: bool
     id: str
     language: str
     name: str
     platform: str
+
+
+class SocialChannelCommentsRequest(BaseModel):
+    enabled: bool
+    max_per_run: int
+
+
+class SocialCommentRunItem(BaseModel):
+    channel_id: str
+    comment_url: str
+    error: str
+    label: str
+    post_id: UUID_aliased
+    status: str
+
+
+class SocialCommentRunRequest(BaseModel):
+    language: str
 
 
 class SocialGap(BaseModel):
@@ -16820,6 +16840,10 @@ class SingletonSitePost(BaseModel):
     data: SitePost
 
 
+class SingletonSocialChannel(BaseModel):
+    data: SocialChannel
+
+
 class SingletonSocialHoldResponse(BaseModel):
     data: SocialHoldResponse
 
@@ -17289,6 +17313,29 @@ class SituationResponse(BaseModel):
     title: str = Field(..., title="Title")
 
 
+class SocialCommentRun(BaseModel):
+    created_at: AwareDatetime
+    error: str
+    failed: int
+    finished_at: AwareDatetime | None = None
+    id: UUID_aliased
+    items: list[SocialCommentRunItem]
+    language: str
+    lease_until: AwareDatetime | None = None
+    posted: int
+    requested_by: str
+    runner_id: str
+    skipped: int
+    started_at: AwareDatetime | None = None
+    status: str
+
+
+class SocialCommentRunListResponse(BaseModel):
+    paused: bool
+    paused_message: str
+    runs: list[SocialCommentRun]
+
+
 class SocialPost(BaseModel):
     audio_media_id: UUID_aliased | None = None
     audio_url: str
@@ -17296,6 +17343,8 @@ class SocialPost(BaseModel):
     caption: str
     carousel_mode: str
     channel_id: str
+    comment_error: str
+    comment_status: str
     due_at: AwareDatetime
     external_url: str
     first_comment: str
@@ -18667,6 +18716,14 @@ class SingletonSitePostList(BaseModel):
 
 class SingletonSituation(BaseModel):
     data: Situation
+
+
+class SingletonSocialCommentRun(BaseModel):
+    data: SocialCommentRun
+
+
+class SingletonSocialCommentRunListResponse(BaseModel):
+    data: SocialCommentRunListResponse
 
 
 class SingletonSocialPost(BaseModel):
