@@ -17710,6 +17710,21 @@ type SingletonSituationMap struct {
 	Data SituationMap `json:"data"`
 }
 
+// SingletonSocialChannel defines model for SingletonSocialChannel.
+type SingletonSocialChannel struct {
+	Data SocialChannel `json:"data"`
+}
+
+// SingletonSocialCommentRun defines model for SingletonSocialCommentRun.
+type SingletonSocialCommentRun struct {
+	Data SocialCommentRun `json:"data"`
+}
+
+// SingletonSocialCommentRunListResponse defines model for SingletonSocialCommentRunListResponse.
+type SingletonSocialCommentRunListResponse struct {
+	Data SocialCommentRunListResponse `json:"data"`
+}
+
 // SingletonSocialHoldResponse defines model for SingletonSocialHoldResponse.
 type SingletonSocialHoldResponse struct {
 	Data SocialHoldResponse `json:"data"`
@@ -18635,11 +18650,59 @@ type SituationSummaryResponse struct {
 
 // SocialChannel defines model for SocialChannel.
 type SocialChannel struct {
-	Connected bool   `json:"connected"`
-	Id        string `json:"id"`
-	Language  string `json:"language"`
-	Name      string `json:"name"`
-	Platform  string `json:"platform"`
+	CommentMaxPerRun int    `json:"comment_max_per_run"`
+	CommentsEnabled  bool   `json:"comments_enabled"`
+	Connected        bool   `json:"connected"`
+	Id               string `json:"id"`
+	Language         string `json:"language"`
+	Name             string `json:"name"`
+	Platform         string `json:"platform"`
+}
+
+// SocialChannelCommentsRequest defines model for SocialChannelCommentsRequest.
+type SocialChannelCommentsRequest struct {
+	Enabled   bool `json:"enabled"`
+	MaxPerRun int  `json:"max_per_run"`
+}
+
+// SocialCommentRun defines model for SocialCommentRun.
+type SocialCommentRun struct {
+	CreatedAt   time.Time              `json:"created_at"`
+	Error       string                 `json:"error"`
+	Failed      int                    `json:"failed"`
+	FinishedAt  *time.Time             `json:"finished_at,omitempty"`
+	Id          uuid.UUID              `json:"id"`
+	Items       []SocialCommentRunItem `json:"items"`
+	Language    string                 `json:"language"`
+	LeaseUntil  *time.Time             `json:"lease_until,omitempty"`
+	Posted      int                    `json:"posted"`
+	RequestedBy string                 `json:"requested_by"`
+	RunnerId    string                 `json:"runner_id"`
+	Skipped     int                    `json:"skipped"`
+	StartedAt   *time.Time             `json:"started_at,omitempty"`
+	Status      string                 `json:"status"`
+}
+
+// SocialCommentRunItem defines model for SocialCommentRunItem.
+type SocialCommentRunItem struct {
+	ChannelId  string    `json:"channel_id"`
+	CommentUrl string    `json:"comment_url"`
+	Error      string    `json:"error"`
+	Label      string    `json:"label"`
+	PostId     uuid.UUID `json:"post_id"`
+	Status     string    `json:"status"`
+}
+
+// SocialCommentRunListResponse defines model for SocialCommentRunListResponse.
+type SocialCommentRunListResponse struct {
+	Paused        bool               `json:"paused"`
+	PausedMessage string             `json:"paused_message"`
+	Runs          []SocialCommentRun `json:"runs"`
+}
+
+// SocialCommentRunRequest defines model for SocialCommentRunRequest.
+type SocialCommentRunRequest struct {
+	Language string `json:"language"`
 }
 
 // SocialGap defines model for SocialGap.
@@ -18669,40 +18732,42 @@ type SocialImportResponse struct {
 
 // SocialPost defines model for SocialPost.
 type SocialPost struct {
-	AudioMediaId *uuid.UUID      `json:"audio_media_id,omitempty"`
-	AudioUrl     string          `json:"audio_url"`
-	BufferPostId string          `json:"buffer_post_id"`
-	Caption      string          `json:"caption"`
-	CarouselMode string          `json:"carousel_mode"`
-	ChannelId    string          `json:"channel_id"`
-	DueAt        time.Time       `json:"due_at"`
-	ExternalUrl  string          `json:"external_url"`
-	FirstComment string          `json:"first_comment"`
-	Format       string          `json:"format"`
-	HandOffAt    *time.Time      `json:"hand_off_at,omitempty"`
-	Id           uuid.UUID       `json:"id"`
-	Images       []SocialImage   `json:"images"`
-	InBuffer     bool            `json:"in_buffer"`
-	Kind         string          `json:"kind"`
-	Label        string          `json:"label"`
-	Language     string          `json:"language"`
-	LastError    string          `json:"last_error"`
-	MediaId      *uuid.UUID      `json:"media_id,omitempty"`
-	Platform     string          `json:"platform"`
-	Problems     []SocialProblem `json:"problems"`
-	PublishedAt  *time.Time      `json:"published_at,omitempty"`
-	Rendering    bool            `json:"rendering"`
-	RetryAt      *time.Time      `json:"retry_at,omitempty"`
-	SlideSeconds float32         `json:"slide_seconds"`
-	Source       string          `json:"source"`
-	Status       string          `json:"status"`
-	Thumbhash    *string         `json:"thumbhash,omitempty"`
-	ThumbnailUrl string          `json:"thumbnail_url"`
-	Title        string          `json:"title"`
-	UpdatedAt    time.Time       `json:"updated_at"`
-	UpdatedBy    string          `json:"updated_by"`
-	Version      int             `json:"version"`
-	VideoUrl     string          `json:"video_url"`
+	AudioMediaId  *uuid.UUID      `json:"audio_media_id,omitempty"`
+	AudioUrl      string          `json:"audio_url"`
+	BufferPostId  string          `json:"buffer_post_id"`
+	Caption       string          `json:"caption"`
+	CarouselMode  string          `json:"carousel_mode"`
+	ChannelId     string          `json:"channel_id"`
+	CommentError  string          `json:"comment_error"`
+	CommentStatus string          `json:"comment_status"`
+	DueAt         time.Time       `json:"due_at"`
+	ExternalUrl   string          `json:"external_url"`
+	FirstComment  string          `json:"first_comment"`
+	Format        string          `json:"format"`
+	HandOffAt     *time.Time      `json:"hand_off_at,omitempty"`
+	Id            uuid.UUID       `json:"id"`
+	Images        []SocialImage   `json:"images"`
+	InBuffer      bool            `json:"in_buffer"`
+	Kind          string          `json:"kind"`
+	Label         string          `json:"label"`
+	Language      string          `json:"language"`
+	LastError     string          `json:"last_error"`
+	MediaId       *uuid.UUID      `json:"media_id,omitempty"`
+	Platform      string          `json:"platform"`
+	Problems      []SocialProblem `json:"problems"`
+	PublishedAt   *time.Time      `json:"published_at,omitempty"`
+	Rendering     bool            `json:"rendering"`
+	RetryAt       *time.Time      `json:"retry_at,omitempty"`
+	SlideSeconds  float32         `json:"slide_seconds"`
+	Source        string          `json:"source"`
+	Status        string          `json:"status"`
+	Thumbhash     *string         `json:"thumbhash,omitempty"`
+	ThumbnailUrl  string          `json:"thumbnail_url"`
+	Title         string          `json:"title"`
+	UpdatedAt     time.Time       `json:"updated_at"`
+	UpdatedBy     string          `json:"updated_by"`
+	Version       int             `json:"version"`
+	VideoUrl      string          `json:"video_url"`
 }
 
 // SocialPostCreateRequest defines model for SocialPostCreateRequest.
@@ -22730,6 +22795,12 @@ type GetAdminApiV3ReferralsParams struct {
 
 	// NextPageKey Opaque pagination cursor returned by the previous response.
 	NextPageKey *string `form:"next_page_key,omitempty" json:"next_page_key,omitempty"`
+}
+
+// GetAdminApiV3SocialCommentRunsParams defines parameters for GetAdminApiV3SocialCommentRuns.
+type GetAdminApiV3SocialCommentRunsParams struct {
+	// Limit At most this many runs (default 20, cap 100)
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
 // GetAdminApiV3SocialPostsParams defines parameters for GetAdminApiV3SocialPosts.
@@ -26790,6 +26861,12 @@ type PostAdminApiV3PromoCampaignsCampaignIdCodesJSONRequestBody = GeneratePromoC
 
 // PutAdminApiV3ReferralProgramJSONRequestBody defines body for PutAdminApiV3ReferralProgram for application/json ContentType.
 type PutAdminApiV3ReferralProgramJSONRequestBody = SaveReferralProgramRequest
+
+// PutAdminApiV3SocialChannelsChannelIdCommentsJSONRequestBody defines body for PutAdminApiV3SocialChannelsChannelIdComments for application/json ContentType.
+type PutAdminApiV3SocialChannelsChannelIdCommentsJSONRequestBody = SocialChannelCommentsRequest
+
+// PostAdminApiV3SocialCommentRunsJSONRequestBody defines body for PostAdminApiV3SocialCommentRuns for application/json ContentType.
+type PostAdminApiV3SocialCommentRunsJSONRequestBody = SocialCommentRunRequest
 
 // PostAdminApiV3SocialPostsJSONRequestBody defines body for PostAdminApiV3SocialPosts for application/json ContentType.
 type PostAdminApiV3SocialPostsJSONRequestBody = SocialPostCreateRequest
