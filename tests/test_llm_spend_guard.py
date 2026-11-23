@@ -1,4 +1,5 @@
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 
@@ -222,7 +223,21 @@ def _prod_with_budget(monkeypatch):
     monkeypatch.setenv("LLM_DAILY_BUDGET_USD", "5")
 
 
-def test_an_unresponsive_store_fails_open_within_the_loop_wait(monkeypatch):
+@pytest.fixture
+def own_guard_executor(monkeypatch):
+    """The guard's executor work against an unresponsive store outlives the
+    test. Queued bookings resolve the store when they start, so left on the
+    shared executor they landed in a later test's store (the pipeline file's
+    round-trip count, gate 2026-11-23)."""
+    executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="llm-guard-test")
+    monkeypatch.setattr(sg, "_executor", executor)
+    yield
+    executor.shutdown(wait=True, cancel_futures=True)
+
+
+def test_an_unresponsive_store_fails_open_within_the_loop_wait(
+    monkeypatch, own_guard_executor
+):
     import asyncio
     import time
 
@@ -243,7 +258,7 @@ def test_an_unresponsive_store_fails_open_within_the_loop_wait(monkeypatch):
     assert elapsed < 0.6
 
 
-def test_the_audio_loop_never_stalls_on_the_guard(monkeypatch):
+def test_the_audio_loop_never_stalls_on_the_guard(monkeypatch, own_guard_executor):
     import asyncio
     import time
 
