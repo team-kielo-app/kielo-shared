@@ -233,9 +233,41 @@ _VERBATIM_RULE = (
 )
 
 
+# Prod 2026-11-23, a Russian learner: "translations are very inaccurate already
+# in the first words". Glosses and example meanings reach every support language
+# through their English, so Finnish mikä arrived as Russian «что» alone (mikä
+# asks «какой / который» as often; «что» as an object is mitä) and "Sinä puhut
+# hyvin suomea" as «Вы хорошо говорите» (sinä is ты). The learning-language
+# word or sentence is in the context; these rules make it the thing translated.
+_SOURCE_WORD_RULE = (
+    "When an item's context names the learning-language word the text glosses "
+    "(source_term or target_term), the text is that word's English gloss and the "
+    "answer is the gloss OF THAT WORD in the target language: the target-language "
+    "word a learner's dictionary gives for it in that sense. When the target "
+    "language splits that sense into separate everyday words the learner meets "
+    "with this word (Finnish mikä: Russian что; какой; который), give them, at "
+    "most three, separated by semicolons. That is not adding a sense; never add a "
+    "sense the English word has and the learning-language word does not."
+)
+
+_SOURCE_SENTENCE_RULE = (
+    "When an item's context has source_sentence, the text is the English "
+    "translation of that learning-language sentence: translate what the source "
+    "sentence says, with the English only as a guide. Keep the source's person, "
+    "number, tense, polarity and formality: Finnish sinä, sinun, sinulle, sinut "
+    "and Swedish du are the informal singular you (Russian ты, German du, French "
+    "tu); Finnish te and Swedish ni are the plural or polite you."
+)
+
+
 def _context_rule(contexts) -> str:
     rule = _CONTEXT_RULE
-    if any(isinstance(c, dict) and c.get("keep_verbatim") for c in contexts):
+    dicts = [c for c in contexts if isinstance(c, dict)]
+    if any(c.get("source_term") or c.get("target_term") for c in dicts):
+        rule += " " + _SOURCE_WORD_RULE
+    if any(c.get("source_sentence") for c in dicts):
+        rule += " " + _SOURCE_SENTENCE_RULE
+    if any(c.get("keep_verbatim") for c in dicts):
         rule += " " + _VERBATIM_RULE
     return rule
 
