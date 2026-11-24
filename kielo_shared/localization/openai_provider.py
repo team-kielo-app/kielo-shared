@@ -247,7 +247,17 @@ _SOURCE_WORD_RULE = (
     "language splits that sense into separate everyday words the learner meets "
     "with this word (Finnish mikä: Russian что; какой; который), give them, at "
     "most three, separated by semicolons. That is not adding a sense; never add a "
-    "sense the English word has and the learning-language word does not."
+    "sense the English word has and the learning-language word does not. "
+    # Audit 2026-11-24 (Russian, 308 words): the corrected glosses still read
+    # as bookish (заинтересованный, претендент, получить возможность) or gave a
+    # perfective verb alone (растрогаться) or no perfective where the word is
+    # mostly met completed (saada: Sain kirjeen = получил).
+    "Use the everyday word that dictionary gives first, never a bookish, official "
+    "or technical one (Russian разговор, not дискуссия; температура for a fever, "
+    "not жар). For a verb in a language with aspect pairs (Russian, Ukrainian, "
+    "Polish, Czech) give the imperfective infinitive first, and after a comma the "
+    "perfective when the learning-language verb is as often met as one completed "
+    "action (Russian говорить, сказать; брать, взять); never the perfective alone."
 )
 
 _SOURCE_SENTENCE_RULE = (
@@ -256,7 +266,14 @@ _SOURCE_SENTENCE_RULE = (
     "sentence says, with the English only as a guide. Keep the source's person, "
     "number, tense, polarity and formality: Finnish sinä, sinun, sinulle, sinut "
     "and Swedish du are the informal singular you (Russian ты, German du, French "
-    "tu); Finnish te and Swedish ni are the plural or polite you."
+    "tu); Finnish te and Swedish ni are the plural or polite you. "
+    # Same audit: 25 example meanings turned Finnish hän into он where the
+    # sentence says nothing about the person's gender.
+    "Finnish hän and Swedish hen do not say whether the person is a man or a "
+    "woman: keep the gender the English chose only when the source sentence "
+    "shows it (a name, a gendered noun), and otherwise prefer a wording that "
+    "needs no gendered pronoun where the target language has one that is just as "
+    "natural (dropping the pronoun, repeating the noun)."
 )
 
 

@@ -186,3 +186,21 @@ def test_every_prompt_states_the_output_language_and_bars_the_course_language(
 def test_a_finnish_target_is_not_told_to_avoid_finnish() -> None:
     plain = op._role_prompt("plain", "Finnish")
     assert "unless Finnish is that language" in plain
+
+
+def test_a_word_gloss_prefers_everyday_words_and_the_imperfective_first():
+    from kielo_shared.localization import openai_provider as op
+
+    rule = op._context_rule([{"source_term": "sanoa"}])
+    assert "never a bookish" in rule
+    assert "imperfective infinitive first" in rule
+    assert "never the perfective alone" in rule
+    assert "bookish" not in op._context_rule([{}])
+
+
+def test_a_sentence_meaning_does_not_invent_the_gender_of_han():
+    from kielo_shared.localization import openai_provider as op
+
+    rule = op._context_rule([{"source_sentence": "Hän puhuu suomea."}])
+    assert "Finnish hän and Swedish hen do not say" in rule
+    assert "hän and Swedish hen" not in op._context_rule([{"source_term": "hän"}])
