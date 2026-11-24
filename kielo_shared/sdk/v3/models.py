@@ -3525,6 +3525,16 @@ class SupportLanguageSource(StrEnum):
     unknown = "unknown"
 
 
+class DictionaryCacheInvalidateRequest(BaseModel):
+    base_word_ids: list[str]
+    learning_language_code: str
+
+
+class DictionaryCacheInvalidation(BaseModel):
+    keys_deleted: int
+    words: int
+
+
 class DictionaryConfusable(Confusable):
     pass
 
@@ -6809,6 +6819,14 @@ class LongDebriefRequest(BaseModel):
 class LongSpeechResponse(BaseModel):
     transcript: str = Field(..., title="Transcript")
     words: int = Field(..., title="Words")
+
+
+class LookupCacheInvalidateRequest(AddToStudyListRequestV3):
+    pass
+
+
+class LookupCacheInvalidation(DictionaryCacheInvalidation):
+    pass
 
 
 class ManageURLResponse(BaseModel):
@@ -10542,6 +10560,10 @@ class SingletonDeleteUserFeatureLimitResponse(BaseModel):
     data: DeleteUserFeatureLimitResponse
 
 
+class SingletonDictionaryCacheInvalidation(BaseModel):
+    data: DictionaryCacheInvalidation
+
+
 class SingletonDynamicTranslation(BaseModel):
     data: DynamicTranslation
 
@@ -10888,6 +10910,10 @@ class SingletonLoginResponse(BaseModel):
 
 class SingletonLogoutResponse(BaseModel):
     data: LogoutResponse
+
+
+class SingletonLookupCacheInvalidation(BaseModel):
+    data: LookupCacheInvalidation
 
 
 class SingletonManageURLResponse(BaseModel):
