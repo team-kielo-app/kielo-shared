@@ -100,6 +100,35 @@ def test_keep_verbatim_context_adds_an_explicit_binding_instruction():
     assert "never correct" in pinned
 
 
+def test_a_word_gloss_is_translated_from_the_learning_language_word():
+    """mikä reached a Russian learner as «что» alone through its English 'what'
+    (feedback 2026-11-23): with the word in the context, its own senses count."""
+    bare = op._context_rule([{"sense": "bank"}])
+    assert op._SOURCE_WORD_RULE not in bare
+    for context in (
+        {"source_term": "mikä"},
+        {"target_term": "mikä", "learning_language": "fi"},
+    ):
+        rule = op._context_rule([None, context])
+        assert rule.startswith(op._CONTEXT_RULE)
+        assert op._SOURCE_WORD_RULE in rule
+    assert "какой" in op._SOURCE_WORD_RULE
+    assert "never add a sense the English word has" in op._SOURCE_WORD_RULE
+
+
+def test_a_sentence_meaning_keeps_the_source_sentences_you():
+    """'Sinä puhut hyvin suomea.' came back «Вы хорошо говорите по-фински.»
+    from its English: the Finnish sentence decides ты or вы."""
+    assert op._SOURCE_SENTENCE_RULE not in op._context_rule([{"source_term": "sinä"}])
+    rule = op._context_rule([{"source_sentence": "Sinä puhut hyvin suomea."}])
+    assert op._SOURCE_SENTENCE_RULE in rule
+    assert "Russian ты" in rule
+    both = op._context_rule(
+        [{"source_sentence": "Sano 'talo'.", "keep_verbatim": ["talo"]}]
+    )
+    assert op._SOURCE_SENTENCE_RULE in both and "keep_verbatim" in both
+
+
 @pytest.mark.asyncio
 async def test_providers_put_the_instruction_in_the_prompt_the_model_sees():
     import json
