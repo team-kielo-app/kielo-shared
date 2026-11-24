@@ -6452,6 +6452,18 @@ type DevicePreferencesUserService struct {
 	UserId                uuid.UUID               `json:"user_id"`
 }
 
+// DictionaryCacheInvalidateRequest defines model for DictionaryCacheInvalidateRequest.
+type DictionaryCacheInvalidateRequest struct {
+	BaseWordIds          []string `json:"base_word_ids"`
+	LearningLanguageCode string   `json:"learning_language_code"`
+}
+
+// DictionaryCacheInvalidation defines model for DictionaryCacheInvalidation.
+type DictionaryCacheInvalidation struct {
+	KeysDeleted int `json:"keys_deleted"`
+	Words       int `json:"words"`
+}
+
 // DictionaryConfusable defines model for DictionaryConfusable.
 type DictionaryConfusable struct {
 	CefrLevel       *string  `json:"cefr_level,omitempty"`
@@ -11209,6 +11221,17 @@ type LongPromptOut struct {
 type LongSpeechResponse struct {
 	Transcript string `json:"transcript"`
 	Words      int    `json:"words"`
+}
+
+// LookupCacheInvalidateRequest defines model for LookupCacheInvalidateRequest.
+type LookupCacheInvalidateRequest struct {
+	BaseWordIds []string `json:"base_word_ids"`
+}
+
+// LookupCacheInvalidation defines model for LookupCacheInvalidation.
+type LookupCacheInvalidation struct {
+	KeysDeleted int `json:"keys_deleted"`
+	Words       int `json:"words"`
 }
 
 // ManageURLResponse defines model for ManageURLResponse.
@@ -16608,6 +16631,11 @@ type SingletonDevicePreferencesUserService struct {
 	Data DevicePreferencesUserService `json:"data"`
 }
 
+// SingletonDictionaryCacheInvalidation defines model for SingletonDictionaryCacheInvalidation.
+type SingletonDictionaryCacheInvalidation struct {
+	Data DictionaryCacheInvalidation `json:"data"`
+}
+
 // SingletonDictionaryEntry defines model for SingletonDictionaryEntry.
 type SingletonDictionaryEntry struct {
 	Data DictionaryEntry `json:"data"`
@@ -17256,6 +17284,11 @@ type SingletonLoginResponse struct {
 // SingletonLogoutResponse defines model for SingletonLogoutResponse.
 type SingletonLogoutResponse struct {
 	Data LogoutResponse `json:"data"`
+}
+
+// SingletonLookupCacheInvalidation defines model for SingletonLookupCacheInvalidation.
+type SingletonLookupCacheInvalidation struct {
+	Data LookupCacheInvalidation `json:"data"`
 }
 
 // SingletonManageURLResponse defines model for SingletonManageURLResponse.
@@ -24581,6 +24614,12 @@ type PatchApiV3LexiconBaseWordsBaseWordIdParams struct {
 	LearningLanguageCode *string `form:"learning_language_code,omitempty" json:"learning_language_code,omitempty"`
 }
 
+// PostApiV3LexiconCacheInvalidateParams defines parameters for PostApiV3LexiconCacheInvalidate.
+type PostApiV3LexiconCacheInvalidateParams struct {
+	// LearningLanguageCode Workspace language (fi, sv)
+	LearningLanguageCode *string `form:"learning_language_code,omitempty" json:"learning_language_code,omitempty"`
+}
+
 // GetApiV3LocalizationAuditParams defines parameters for GetApiV3LocalizationAudit.
 type GetApiV3LocalizationAuditParams struct {
 	// EntityType Filter by entity type (key, translation, language, namespace)
@@ -27791,6 +27830,9 @@ type PostApiV3LaneRulesLanesLaneKeyResetJSONRequestBody = LaneRuleResetRequest
 // PatchApiV3LexiconBaseWordsBaseWordIdJSONRequestBody defines body for PatchApiV3LexiconBaseWordsBaseWordId for application/json ContentType.
 type PatchApiV3LexiconBaseWordsBaseWordIdJSONRequestBody = ReviewBaseWordRequest
 
+// PostApiV3LexiconCacheInvalidateJSONRequestBody defines body for PostApiV3LexiconCacheInvalidate for application/json ContentType.
+type PostApiV3LexiconCacheInvalidateJSONRequestBody = LookupCacheInvalidateRequest
+
 // PostApiV3LocalizationCacheInvalidateJSONRequestBody defines body for PostApiV3LocalizationCacheInvalidate for application/json ContentType.
 type PostApiV3LocalizationCacheInvalidateJSONRequestBody = LocalizationInvalidateCacheRequest
 
@@ -28423,6 +28465,9 @@ type PostInternalContentBridgeWordsArticlesJSONRequestBody = WordReadingRequest
 
 // PostInternalContentVersionsVersionIdClaimForProcessingJSONRequestBody defines body for PostInternalContentVersionsVersionIdClaimForProcessing for application/json ContentType.
 type PostInternalContentVersionsVersionIdClaimForProcessingJSONRequestBody = ClaimContentVersionForProcessingRequest
+
+// PostInternalDictionaryCacheInvalidateJSONRequestBody defines body for PostInternalDictionaryCacheInvalidate for application/json ContentType.
+type PostInternalDictionaryCacheInvalidateJSONRequestBody = DictionaryCacheInvalidateRequest
 
 // EnrichDictionaryByIdsInternalDictionaryEnrichByIdsPostJSONRequestBody defines body for EnrichDictionaryByIdsInternalDictionaryEnrichByIdsPost for application/json ContentType.
 type EnrichDictionaryByIdsInternalDictionaryEnrichByIdsPostJSONRequestBody = EnrichDictionaryByIdsInternalDictionaryEnrichByIdsPostJSONBody
