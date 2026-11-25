@@ -1105,6 +1105,20 @@ class AwardAchievementResponse(BaseModel):
     reason: str | None = None
 
 
+class BaseWordExample(BaseModel):
+    text: str
+    translation: str | None = None
+
+
+class BaseWordExamplesBody(BaseModel):
+    examples: list[BaseWordExample]
+    replace: bool
+
+
+class BaseWordExamplesResponse(BaseModel):
+    updated: bool
+
+
 class BaseWordReviewResult(BaseModel):
     base_word_id: UUID_aliased
     exercises_restored: int
@@ -3914,9 +3928,8 @@ class Example(BaseModel):
     translation: str
 
 
-class ExampleSentencePair(BaseModel):
-    text: str
-    translation: str | None = None
+class ExampleSentencePair(BaseWordExample):
+    pass
 
 
 class ExampleSentencePairCms(ConceptHubExample):
@@ -6596,6 +6609,28 @@ class LevelCheckV3(BaseModel):
     evidence_days: int
     evidence_total: int
     suggested_level: str | None = None
+
+
+class LexiconCandidateInput(BaseModel):
+    source_key: str | None = None
+    term: str
+    user_id: UUID_aliased | None = None
+
+
+class LexiconCandidatesBody(BaseModel):
+    candidates: list[LexiconCandidateInput]
+    learning_language_code: str
+    source: str
+
+
+class LexiconCandidatesResponse(KieloTVPracticeAnswersAccepted):
+    pass
+
+
+class LexiconGrowthRequest(BaseModel):
+    languages: list[str] | None = Field(None, title="Languages")
+    max_words: conint(ge=1, le=200) | None = Field(None, title="Max Words")
+    write: bool | None = Field(True, title="Write")
 
 
 class Lift(BaseModel):
@@ -10309,6 +10344,10 @@ class SingletonAwardAchievementResponse(BaseModel):
     data: AwardAchievementResponse
 
 
+class SingletonBaseWordExamplesResponse(BaseModel):
+    data: BaseWordExamplesResponse
+
+
 class SingletonBaseWordReviewResult(BaseModel):
     data: BaseWordReviewResult
 
@@ -10891,6 +10930,10 @@ class SingletonLegalHoldResult(BaseModel):
 
 class SingletonLevelCheckV3(BaseModel):
     data: LevelCheckV3
+
+
+class SingletonLexiconCandidatesResponse(BaseModel):
+    data: LexiconCandidatesResponse
 
 
 class SingletonLinkRevenueCatUserResponse(BaseModel):
