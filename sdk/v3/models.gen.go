@@ -2760,6 +2760,23 @@ type BaseWordContentService struct {
 	UserStatus        *string                   `json:"user_status,omitempty"`
 }
 
+// BaseWordExample defines model for BaseWordExample.
+type BaseWordExample struct {
+	Text        string  `json:"text"`
+	Translation *string `json:"translation,omitempty"`
+}
+
+// BaseWordExamplesBody defines model for BaseWordExamplesBody.
+type BaseWordExamplesBody struct {
+	Examples []BaseWordExample `json:"examples"`
+	Replace  bool              `json:"replace"`
+}
+
+// BaseWordExamplesResponse defines model for BaseWordExamplesResponse.
+type BaseWordExamplesResponse struct {
+	Updated bool `json:"updated"`
+}
+
 // BaseWordResponse defines model for BaseWordResponse.
 type BaseWordResponse struct {
 	AudioPronunciationUrl *string                        `json:"audio_pronunciation_url"`
@@ -10927,6 +10944,32 @@ type LevelCheckV3 struct {
 	SuggestedLevel  *string `json:"suggested_level,omitempty"`
 }
 
+// LexiconCandidateInput defines model for LexiconCandidateInput.
+type LexiconCandidateInput struct {
+	SourceKey *string    `json:"source_key,omitempty"`
+	Term      string     `json:"term"`
+	UserId    *uuid.UUID `json:"user_id,omitempty"`
+}
+
+// LexiconCandidatesBody defines model for LexiconCandidatesBody.
+type LexiconCandidatesBody struct {
+	Candidates           []LexiconCandidateInput `json:"candidates"`
+	LearningLanguageCode string                  `json:"learning_language_code"`
+	Source               string                  `json:"source"`
+}
+
+// LexiconCandidatesResponse defines model for LexiconCandidatesResponse.
+type LexiconCandidatesResponse struct {
+	Accepted int `json:"accepted"`
+}
+
+// LexiconGrowthRequest defines model for LexiconGrowthRequest.
+type LexiconGrowthRequest struct {
+	Languages *[]string `json:"languages"`
+	MaxWords  *int      `json:"max_words"`
+	Write     *bool     `json:"write,omitempty"`
+}
+
 // Lift defines model for Lift.
 type Lift struct {
 	CiHigh float32 `json:"ci_high"`
@@ -16138,6 +16181,11 @@ type SingletonBaseWordContentService struct {
 	Data BaseWordContentService `json:"data"`
 }
 
+// SingletonBaseWordExamplesResponse defines model for SingletonBaseWordExamplesResponse.
+type SingletonBaseWordExamplesResponse struct {
+	Data BaseWordExamplesResponse `json:"data"`
+}
+
 // SingletonBaseWordList defines model for SingletonBaseWordList.
 type SingletonBaseWordList struct {
 	Data []BaseWordCms `json:"data"`
@@ -17261,6 +17309,11 @@ type SingletonLegalHoldResult struct {
 // SingletonLevelCheckV3 defines model for SingletonLevelCheckV3.
 type SingletonLevelCheckV3 struct {
 	Data LevelCheckV3 `json:"data"`
+}
+
+// SingletonLexiconCandidatesResponse defines model for SingletonLexiconCandidatesResponse.
+type SingletonLexiconCandidatesResponse struct {
+	Data LexiconCandidatesResponse `json:"data"`
 }
 
 // SingletonLinkRevenueCatUserResponse defines model for SingletonLinkRevenueCatUserResponse.
@@ -26563,6 +26616,9 @@ type GetLearnerProfileInternalLearnerProfileGetParams struct {
 	LearningLanguageCode string `form:"learning_language_code" json:"learning_language_code"`
 }
 
+// GrowDictionaryInternalLexiconGrowthDailyPostJSONBody defines parameters for GrowDictionaryInternalLexiconGrowthDailyPost.
+type GrowDictionaryInternalLexiconGrowthDailyPostJSONBody = LexiconGrowthRequest
+
 // RunPronunciationSelectionInternalLexiconPronunciationSelectionDailyPostJSONBody defines parameters for RunPronunciationSelectionInternalLexiconPronunciationSelectionDailyPost.
 type RunPronunciationSelectionInternalLexiconPronunciationSelectionDailyPostJSONBody = PronunciationSelectionRequest
 
@@ -28502,11 +28558,17 @@ type PostInternalIngestIngestedUrlsJSONRequestBody = IngestedURLsRequest
 // PostInternalKielotvVideoIdClaimForTranscriptionJSONRequestBody defines body for PostInternalKielotvVideoIdClaimForTranscription for application/json ContentType.
 type PostInternalKielotvVideoIdClaimForTranscriptionJSONRequestBody = ClaimContentVersionForProcessingRequest
 
+// PutInternalKlearnBaseWordsBaseWordIdExamplesJSONRequestBody defines body for PutInternalKlearnBaseWordsBaseWordIdExamples for application/json ContentType.
+type PutInternalKlearnBaseWordsBaseWordIdExamplesJSONRequestBody = BaseWordExamplesBody
+
 // CreateConversationDrillsInternalKlearnConversationDrillsPostJSONRequestBody defines body for CreateConversationDrillsInternalKlearnConversationDrillsPost for application/json ContentType.
 type CreateConversationDrillsInternalKlearnConversationDrillsPostJSONRequestBody = CreateConversationDrillsRequest
 
 // CreateCustomExerciseDeckInternalKlearnExerciseDecksPostJSONRequestBody defines body for CreateCustomExerciseDeckInternalKlearnExerciseDecksPost for application/json ContentType.
 type CreateCustomExerciseDeckInternalKlearnExerciseDecksPostJSONRequestBody = CreateCustomDeckRequest
+
+// PostInternalKlearnLexiconCandidatesJSONRequestBody defines body for PostInternalKlearnLexiconCandidates for application/json ContentType.
+type PostInternalKlearnLexiconCandidatesJSONRequestBody = LexiconCandidatesBody
 
 // PostInternalKlearnPronunciationCandidatesJSONRequestBody defines body for PostInternalKlearnPronunciationCandidates for application/json ContentType.
 type PostInternalKlearnPronunciationCandidatesJSONRequestBody = PronunciationCandidateBody
@@ -28549,6 +28611,9 @@ type BatchUpdateItemSchedulesInternalKlearnUsersUserIdSchedulesPostJSONRequestBo
 
 // GetTextPicksInternalKlearnUsersUserIdTextPicksPostJSONRequestBody defines body for GetTextPicksInternalKlearnUsersUserIdTextPicksPost for application/json ContentType.
 type GetTextPicksInternalKlearnUsersUserIdTextPicksPostJSONRequestBody = TextPicksRequest
+
+// GrowDictionaryInternalLexiconGrowthDailyPostJSONRequestBody defines body for GrowDictionaryInternalLexiconGrowthDailyPost for application/json ContentType.
+type GrowDictionaryInternalLexiconGrowthDailyPostJSONRequestBody = GrowDictionaryInternalLexiconGrowthDailyPostJSONBody
 
 // RunPronunciationSelectionInternalLexiconPronunciationSelectionDailyPostJSONRequestBody defines body for RunPronunciationSelectionInternalLexiconPronunciationSelectionDailyPost for application/json ContentType.
 type RunPronunciationSelectionInternalLexiconPronunciationSelectionDailyPostJSONRequestBody = RunPronunciationSelectionInternalLexiconPronunciationSelectionDailyPostJSONBody
