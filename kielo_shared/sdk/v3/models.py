@@ -846,6 +846,7 @@ class AppFeedback(BaseModel):
     platform: str | None = None
     rating: int | None = None
     status: str
+    unanswered: bool
     updated_at: AwareDatetime
     user_email: str | None = None
     user_id: UUID_aliased | None = None
