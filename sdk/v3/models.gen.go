@@ -18966,6 +18966,7 @@ type SocialCommentJob struct {
 	Attempt     int       `json:"attempt"`
 	ChannelId   string    `json:"channel_id"`
 	ChannelName string    `json:"channel_name"`
+	CheckOnly   bool      `json:"check_only"`
 	Comment     string    `json:"comment"`
 	ExternalUrl string    `json:"external_url"`
 	Language    string    `json:"language"`

@@ -11501,6 +11501,7 @@ class SocialCommentJob(BaseModel):
     attempt: int
     channel_id: str
     channel_name: str
+    check_only: bool
     comment: str
     external_url: str
     language: str
