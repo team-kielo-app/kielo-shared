@@ -2221,6 +2221,7 @@ type AppFeedback struct {
 	Platform                 *string                 `json:"platform,omitempty"`
 	Rating                   *int                    `json:"rating,omitempty"`
 	Status                   string                  `json:"status"`
+	Unanswered               bool                    `json:"unanswered"`
 	UpdatedAt                time.Time               `json:"updated_at"`
 	UserEmail                *string                 `json:"user_email,omitempty"`
 	UserId                   *uuid.UUID              `json:"user_id,omitempty"`
@@ -7559,6 +7560,7 @@ type Feedback struct {
 	Platform                 *string                 `json:"platform,omitempty"`
 	Rating                   *int                    `json:"rating,omitempty"`
 	Status                   string                  `json:"status"`
+	Unanswered               bool                    `json:"unanswered"`
 	UpdatedAt                time.Time               `json:"updated_at"`
 	UserEmail                *string                 `json:"user_email,omitempty"`
 	UserId                   *uuid.UUID              `json:"user_id,omitempty"`
@@ -24219,6 +24221,9 @@ type GetApiV3FeedbackParams struct {
 
 	// EndDate End of created_at range, YYYY-MM-DD (inclusive)
 	EndDate *string `form:"end_date,omitempty" json:"end_date,omitempty"`
+
+	// Unanswered true: only feedback with no admin reply after the learner's latest message, whatever its status; false: only answered.
+	Unanswered *bool `form:"unanswered,omitempty" json:"unanswered,omitempty"`
 }
 
 // GetApiV3FeedbackFeaturesParams defines parameters for GetApiV3FeedbackFeatures.
@@ -26065,6 +26070,9 @@ type GetInternalApiV3FeedbackParams struct {
 
 	// Status Filter results by status.
 	Status *string `form:"status,omitempty" json:"status,omitempty"`
+
+	// Unanswered true: only feedback with no admin reply after the learner's latest message; false: only answered.
+	Unanswered *bool `form:"unanswered,omitempty" json:"unanswered,omitempty"`
 
 	// UserId Filter feedback by user UUID.
 	UserId *string `form:"user_id,omitempty" json:"user_id,omitempty"`
