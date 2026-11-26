@@ -17691,7 +17691,12 @@ class SocialPost(BaseModel):
     carousel_mode: str
     channel_id: str
     comment_error: str
+    comment_posted_at: AwareDatetime | None = None
     comment_status: str
+    comment_text: str
+    comment_text_known: bool
+    comment_unconfirmed: bool
+    comment_url: str
     due_at: AwareDatetime
     external_url: str
     first_comment: str
