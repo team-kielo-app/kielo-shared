@@ -299,6 +299,7 @@ class AddTopicListItemRequest(BaseModel):
 class AdminBroadcastRequest(BaseModel):
     body: str
     deep_link: str | None = None
+    event: bool | None = None
     severity: str | None = None
     target_ids: list[str] | None = None
     target_type: str
@@ -7422,6 +7423,7 @@ class NotificationJob(BaseModel):
     data: dict[str, Any]
     dedup_key: str | None = None
     deferred_render_rule_id: UUID_aliased | None = None
+    event_message: bool | None = None
     failed_count: int
     job_id: UUID_aliased
     notification_type: str
