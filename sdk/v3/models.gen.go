@@ -1405,6 +1405,7 @@ type AddTopicListItemRequest struct {
 type AdminBroadcastRequest struct {
 	Body       string    `json:"body"`
 	DeepLink   *string   `json:"deep_link,omitempty"`
+	Event      *bool     `json:"event,omitempty"`
 	Severity   *string   `json:"severity,omitempty"`
 	TargetIds  *[]string `json:"target_ids,omitempty"`
 	TargetType string    `json:"target_type"`
@@ -3562,6 +3563,7 @@ type CommonMistake struct {
 type CommsAdminBroadcastRequest struct {
 	Body       string    `json:"body"`
 	DeepLink   *string   `json:"deep_link,omitempty"`
+	Event      *bool     `json:"event,omitempty"`
 	Severity   *string   `json:"severity,omitempty"`
 	TargetIds  *[]string `json:"target_ids,omitempty"`
 	TargetType string    `json:"target_type"`
@@ -12082,6 +12084,7 @@ type NotificationJob struct {
 	Data                 map[string]interface{} `json:"data"`
 	DedupKey             *string                `json:"dedup_key,omitempty"`
 	DeferredRenderRuleId *uuid.UUID             `json:"deferred_render_rule_id,omitempty"`
+	EventMessage         *bool                  `json:"event_message,omitempty"`
 	FailedCount          int                    `json:"failed_count"`
 	JobId                uuid.UUID              `json:"job_id"`
 	NotificationType     string                 `json:"notification_type"`
