@@ -3656,13 +3656,25 @@ class DiscountCampaignStats(BaseModel):
     shown: int
 
 
+class DiscountCampaignTheme(BaseModel):
+    cta: str
+    field: str
+    field_edge: str
+    figure: str
+    on_cta: str
+    on_field: str
+    on_field_soft: str
+
+
 class DiscountCampaignWrite(BaseModel):
     android_offer_tag: str | None = None
+    art_url: str | None = None
     audience_id: UUID_aliased | None = None
     claim_only: bool | None = None
     clear_audience: bool | None = None
     clear_ends_at: bool | None = None
     clear_starts_at: bool | None = None
+    clear_theme: bool | None = None
     copy_: list[DiscountCampaignCopy] | None = Field(None, alias="copy")
     eligibility: str | None = None
     ends_at: AwareDatetime | None = None
@@ -3676,6 +3688,7 @@ class DiscountCampaignWrite(BaseModel):
     rc_web_discount_code: str | None = None
     starts_at: AwareDatetime | None = None
     status: str | None = None
+    theme: DiscountCampaignTheme | None = None
 
 
 class DomainCount(BaseModel):
@@ -14472,6 +14485,7 @@ class AIModelFamily(BaseModel):
 
 
 class ActiveCampaign(BaseModel):
+    art_url: str | None = None
     copy_: DiscountCampaignCopy = Field(..., alias="copy")
     ends_at: AwareDatetime | None = None
     id: UUID_aliased
@@ -14480,6 +14494,7 @@ class ActiveCampaign(BaseModel):
     offer_ref: str | None = None
     offers: list[ActiveCampaignOffer]
     percent_off: int | None = None
+    theme: DiscountCampaignTheme | None = None
 
 
 class ActiveCampaignList(BaseModel):
@@ -15490,6 +15505,7 @@ class DictionaryParadigm(BaseModel):
 
 class DiscountCampaign(BaseModel):
     android_offer_tag: str
+    art_url: str
     audience_id: UUID_aliased | None = None
     claim_only: bool
     copy_: list[DiscountCampaignCopy] = Field(..., alias="copy")
@@ -15510,6 +15526,7 @@ class DiscountCampaign(BaseModel):
     starts_at: AwareDatetime | None = None
     stats: DiscountCampaignStats | None = None
     status: str
+    theme: DiscountCampaignTheme | None = None
     updated_at: AwareDatetime
 
 
