@@ -1342,14 +1342,16 @@ type ActivateAgentResponse struct {
 
 // ActiveCampaign defines model for ActiveCampaign.
 type ActiveCampaign struct {
-	Copy       DiscountCampaignCopy  `json:"copy"`
-	EndsAt     *time.Time            `json:"ends_at,omitempty"`
-	Id         uuid.UUID             `json:"id"`
-	Kind       string                `json:"kind"`
-	Mechanism  *string               `json:"mechanism,omitempty"`
-	OfferRef   *string               `json:"offer_ref,omitempty"`
-	Offers     []ActiveCampaignOffer `json:"offers"`
-	PercentOff *int                  `json:"percent_off,omitempty"`
+	ArtUrl     *string                `json:"art_url,omitempty"`
+	Copy       DiscountCampaignCopy   `json:"copy"`
+	EndsAt     *time.Time             `json:"ends_at,omitempty"`
+	Id         uuid.UUID              `json:"id"`
+	Kind       string                 `json:"kind"`
+	Mechanism  *string                `json:"mechanism,omitempty"`
+	OfferRef   *string                `json:"offer_ref,omitempty"`
+	Offers     []ActiveCampaignOffer  `json:"offers"`
+	PercentOff *int                   `json:"percent_off,omitempty"`
+	Theme      *DiscountCampaignTheme `json:"theme,omitempty"`
 }
 
 // ActiveCampaignList defines model for ActiveCampaignList.
@@ -6712,6 +6714,7 @@ type DictionaryWordForm struct {
 // DiscountCampaign defines model for DiscountCampaign.
 type DiscountCampaign struct {
 	AndroidOfferTag   string                  `json:"android_offer_tag"`
+	ArtUrl            string                  `json:"art_url"`
 	AudienceId        *uuid.UUID              `json:"audience_id,omitempty"`
 	ClaimOnly         bool                    `json:"claim_only"`
 	Copy              []DiscountCampaignCopy  `json:"copy"`
@@ -6732,6 +6735,7 @@ type DiscountCampaign struct {
 	StartsAt          *time.Time              `json:"starts_at,omitempty"`
 	Stats             *DiscountCampaignStats  `json:"stats,omitempty"`
 	Status            string                  `json:"status"`
+	Theme             *DiscountCampaignTheme  `json:"theme,omitempty"`
 	UpdatedAt         time.Time               `json:"updated_at"`
 }
 
@@ -6768,14 +6772,27 @@ type DiscountCampaignStats struct {
 	Shown            int               `json:"shown"`
 }
 
+// DiscountCampaignTheme defines model for DiscountCampaignTheme.
+type DiscountCampaignTheme struct {
+	Cta         string `json:"cta"`
+	Field       string `json:"field"`
+	FieldEdge   string `json:"field_edge"`
+	Figure      string `json:"figure"`
+	OnCta       string `json:"on_cta"`
+	OnField     string `json:"on_field"`
+	OnFieldSoft string `json:"on_field_soft"`
+}
+
 // DiscountCampaignWrite defines model for DiscountCampaignWrite.
 type DiscountCampaignWrite struct {
 	AndroidOfferTag   *string                  `json:"android_offer_tag,omitempty"`
+	ArtUrl            *string                  `json:"art_url,omitempty"`
 	AudienceId        *uuid.UUID               `json:"audience_id,omitempty"`
 	ClaimOnly         *bool                    `json:"claim_only,omitempty"`
 	ClearAudience     *bool                    `json:"clear_audience,omitempty"`
 	ClearEndsAt       *bool                    `json:"clear_ends_at,omitempty"`
 	ClearStartsAt     *bool                    `json:"clear_starts_at,omitempty"`
+	ClearTheme        *bool                    `json:"clear_theme,omitempty"`
 	Copy              *[]DiscountCampaignCopy  `json:"copy,omitempty"`
 	Eligibility       *string                  `json:"eligibility,omitempty"`
 	EndsAt            *time.Time               `json:"ends_at,omitempty"`
@@ -6789,6 +6806,7 @@ type DiscountCampaignWrite struct {
 	RcWebDiscountCode *string                  `json:"rc_web_discount_code,omitempty"`
 	StartsAt          *time.Time               `json:"starts_at,omitempty"`
 	Status            *string                  `json:"status,omitempty"`
+	Theme             *DiscountCampaignTheme   `json:"theme,omitempty"`
 }
 
 // DiscoveryItemsResponse defines model for DiscoveryItemsResponse.
