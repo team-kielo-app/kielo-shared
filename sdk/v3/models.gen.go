@@ -2578,6 +2578,7 @@ type Attribution struct {
 type Audience struct {
 	ArchivedAt  *time.Time  `json:"archived_at,omitempty"`
 	Count       *int        `json:"count,omitempty"`
+	CountedAt   *time.Time  `json:"counted_at,omitempty"`
 	CreatedAt   time.Time   `json:"created_at"`
 	CreatedBy   *uuid.UUID  `json:"created_by,omitempty"`
 	Definition  interface{} `json:"definition"`
@@ -2601,6 +2602,7 @@ type AudienceLanguageCount struct {
 // AudienceList defines model for AudienceList.
 type AudienceList struct {
 	Audiences []Audience `json:"audiences"`
+	Partial   *[]string  `json:"partial,omitempty"`
 }
 
 // AudiencePlatformCount defines model for AudiencePlatformCount.
@@ -8314,6 +8316,42 @@ type GrowthKPIs struct {
 	RefundsEur        float32 `json:"refunds_eur"`
 	Renewals          int     `json:"renewals"`
 	RevenueEur        float32 `json:"revenue_eur"`
+}
+
+// GrowthLanguageCount defines model for GrowthLanguageCount.
+type GrowthLanguageCount struct {
+	Language string `json:"language"`
+	New      int    `json:"new"`
+	Paying   int    `json:"paying"`
+}
+
+// GrowthLanguageUnattributed defines model for GrowthLanguageUnattributed.
+type GrowthLanguageUnattributed struct {
+	NoAppLanguage      int `json:"no_app_language"`
+	NoLearningLanguage int `json:"no_learning_language"`
+}
+
+// GrowthLearnerLanguageCell defines model for GrowthLearnerLanguageCell.
+type GrowthLearnerLanguageCell struct {
+	App      string `json:"app"`
+	Learning string `json:"learning"`
+	New      int    `json:"new"`
+	Paying   int    `json:"paying"`
+}
+
+// GrowthLearnerLanguages defines model for GrowthLearnerLanguages.
+type GrowthLearnerLanguages struct {
+	AsOf         time.Time                   `json:"as_of"`
+	ByApp        []GrowthLanguageCount       `json:"by_app"`
+	ByLearning   []GrowthLanguageCount       `json:"by_learning"`
+	Definitions  map[string]string           `json:"definitions"`
+	From         string                      `json:"from"`
+	Matrix       []GrowthLearnerLanguageCell `json:"matrix"`
+	NewInWindow  int                         `json:"new_in_window"`
+	Platform     *string                     `json:"platform,omitempty"`
+	To           string                      `json:"to"`
+	TotalPaying  int                         `json:"total_paying"`
+	Unattributed GrowthLanguageUnattributed  `json:"unattributed"`
 }
 
 // GrowthOverview defines model for GrowthOverview.
@@ -16997,6 +17035,11 @@ type SingletonGrowthFxRateList struct {
 	Data GrowthFxRateList `json:"data"`
 }
 
+// SingletonGrowthLearnerLanguages defines model for SingletonGrowthLearnerLanguages.
+type SingletonGrowthLearnerLanguages struct {
+	Data GrowthLearnerLanguages `json:"data"`
+}
+
 // SingletonGrowthOverview defines model for SingletonGrowthOverview.
 type SingletonGrowthOverview struct {
 	Data GrowthOverview `json:"data"`
@@ -23161,6 +23204,18 @@ type GetAdminApiV3GrowthFunnelParams struct {
 
 	// ExperimentId Only paywall views of this experiment.
 	ExperimentId *string `form:"experiment_id,omitempty" json:"experiment_id,omitempty"`
+}
+
+// GetAdminApiV3GrowthLearnerLanguagesParams defines parameters for GetAdminApiV3GrowthLearnerLanguages.
+type GetAdminApiV3GrowthLearnerLanguagesParams struct {
+	// From First day, YYYY-MM-DD (UTC). Default: 29 days before to.
+	From *string `form:"from,omitempty" json:"from,omitempty"`
+
+	// To Last day, inclusive, YYYY-MM-DD (UTC). Default: today.
+	To *string `form:"to,omitempty" json:"to,omitempty"`
+
+	// Platform ios, android or web. Default: all.
+	Platform *string `form:"platform,omitempty" json:"platform,omitempty"`
 }
 
 // GetAdminApiV3GrowthOverviewParams defines parameters for GetAdminApiV3GrowthOverview.
