@@ -1006,6 +1006,7 @@ class Attribution(BaseModel):
 class Audience(BaseModel):
     archived_at: AwareDatetime | None = None
     count: int | None = None
+    counted_at: AwareDatetime | None = None
     created_at: AwareDatetime
     created_by: UUID_aliased | None = None
     definition: Any
@@ -1022,6 +1023,7 @@ class AudienceLanguageCount(BaseModel):
 
 class AudienceList(BaseModel):
     audiences: list[Audience]
+    partial: list[str] | None = None
 
 
 class AudiencePlatformCount(BaseModel):
@@ -4757,6 +4759,38 @@ class GrowthKPIs(BaseModel):
     refunds_eur: float
     renewals: int
     revenue_eur: float
+
+
+class GrowthLanguageCount(BaseModel):
+    language: str
+    new: int
+    paying: int
+
+
+class GrowthLanguageUnattributed(BaseModel):
+    no_app_language: int
+    no_learning_language: int
+
+
+class GrowthLearnerLanguageCell(BaseModel):
+    app: str
+    learning: str
+    new: int
+    paying: int
+
+
+class GrowthLearnerLanguages(BaseModel):
+    as_of: AwareDatetime
+    by_app: list[GrowthLanguageCount]
+    by_learning: list[GrowthLanguageCount]
+    definitions: dict[str, str]
+    from_: str = Field(..., alias="from")
+    matrix: list[GrowthLearnerLanguageCell]
+    new_in_window: int
+    platform: str | None = None
+    to: str
+    total_paying: int
+    unattributed: GrowthLanguageUnattributed
 
 
 class GrowthOverviewDataSince(BaseModel):
@@ -10769,6 +10803,10 @@ class SingletonGrantSubscriptionResponse(BaseModel):
 
 class SingletonGrowthFxRateList(BaseModel):
     data: GrowthFxRateList
+
+
+class SingletonGrowthLearnerLanguages(BaseModel):
+    data: GrowthLearnerLanguages
 
 
 class SingletonHintResponse(BaseModel):
